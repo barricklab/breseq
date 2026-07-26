@@ -1,17 +1,17 @@
 #=GENOME_DIFF	1.0
-#=CREATED	20:44:04 22 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision db4e7789c1b7
-#=COMMAND	./src/breseq/breseq -j 4 --paired-mapping -o ./tests/tmv_plasmid_circular_deletion -r ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
-#=REFSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
-#=READSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz
-#=READSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=CREATED	18:26:06 25 Jul 2026
+#=PROGRAM	breseq 0.50.0 revision 95e88a5d8fc4
+#=COMMAND	./src/breseq/breseq -j 4 --predict-discordant-pairs -o tests/tmv_plasmid_circular_deletion -r tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=REFSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
+#=READSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz
+#=READSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
 #=CONVERTED-BASES	2733978
 #=CONVERTED-READS	18356
 #=INPUT-BASES	2738037
 #=INPUT-READS	18386
 #=MAPPED-BASES	2298942
 #=MAPPED-READS	15452
-DEL	1	4,5,7	TMV-plasmid	10205	7344	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=17548	position_start=10205	ref_seq=7344-bp
+DEL	1	4,5,7,200	TMV-plasmid	10205	7344	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=17548	position_start=10205	ref_seq=7344-bp
 RA	2	.	TMV-plasmid	1565	0	C	T	consensus_score=10.0	deleted=1	frequency=1	major_base=T	major_cov=1/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=1/3	polymorphism_frequency=1.000e+00	polymorphism_score=NA	prediction=consensus	ref_cov=0/0	total_cov=1/3
 RA	3	.	TMV-plasmid	5198	0	A	G	consensus_score=18.1	deleted=1	frequency=1	major_base=G	major_cov=3/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/3	polymorphism_frequency=1.000e+00	polymorphism_score=NA	prediction=consensus	ref_cov=0/0	total_cov=3/3
 MC	4	.	TMV-plasmid	1	7137	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=1	left_outside_cov=NA	locus_tag=–/–	right_inside_cov=41	right_outside_cov=815
@@ -210,7 +210,4 @@ UN	196	.	TMV-plasmid	6800	6800
 UN	197	.	TMV-plasmid	6802	6802
 UN	198	.	TMV-plasmid	6804	6888
 UN	199	.	TMV-plasmid	10254	10411
-DP	200	.	TMV-plasmid	7144	1	TMV-plasmid	10207	-1	candidate_discordant_count=23	discordant_count=21	neg_log10_discordance_p_value=0.2	side_1_annotate_key=gene	side_1_concordant_count=0	side_1_discordant_count=21	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=607	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_discordant_count=22	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=637
-DP	201	.	TMV-plasmid	8194	1	TMV-plasmid	8131	-1	candidate_discordant_count=13	discordant_count=6	neg_log10_discordance_p_value=1.7	side_1_annotate_key=gene	side_1_concordant_count=21	side_1_discordant_count=6	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=77	side_2_annotate_key=gene	side_2_concordant_count=16	side_2_discordant_count=10	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=132
-DP	202	.	TMV-plasmid	8475	-1	TMV-plasmid	8854	1	candidate_discordant_count=6	discordant_count=2	neg_log10_discordance_p_value=3.2	reject=CONCORDANT_PAIR_SKEW	side_1_annotate_key=gene	side_1_concordant_count=10	side_1_discordant_count=2	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=76	side_2_annotate_key=gene	side_2_concordant_count=4	side_2_discordant_count=2	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=79
-DP	203	.	TMV-plasmid	9593	-1	TMV-plasmid	10029	1	candidate_discordant_count=6	discordant_count=0	neg_log10_discordance_p_value=999999.0	reject=CONCORDANT_PAIR_SKEW	side_1_annotate_key=gene	side_1_concordant_count=21	side_1_discordant_count=0	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=98	side_2_annotate_key=gene	side_2_concordant_count=3	side_2_discordant_count=0	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=415
+DP	200	.	TMV-plasmid	7138	1	TMV-plasmid	10204	-1	background_e_value=2.396e-03	candidate_discordant_count=23	concordant_count=0.0	discordant_count=21	discordant_pair_frequency=1.0000	discordant_pair_frequency_lower_bound=0.8609	distinct_discordant_count=20	expected_concordant_count=5.3	neg_log10_discordance_p_value=0.2	side_1_annotate_key=gene	side_1_concordant_count=0	side_1_discordant_count=21	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=609	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_discordant_count=22	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=637

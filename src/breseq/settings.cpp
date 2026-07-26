@@ -357,6 +357,13 @@ namespace breseq
     ("predict-discordant-pairs", "Predict discordant read-pair (DP) evidence for structural variants. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("discordant-pair-skew-cutoff", "Reference cutoff for the discordant-pair (DP) skew score. The DP skew marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has at least 10^(cutoff+1) non-deletion positions; smaller references fall back to a negative-binomial fit (whose parametric tail is not capped near log10(N), but is conservative). (DEFAULT = 3.0)", 3.0, NORMAL_OPTION)
+    ("discordant-pair-minimum-pairs", "Minimum number of read pairs shared by two DP candidate regions for the junction between them to be examined at all. (DEFAULT = 2)", 2, NORMAL_OPTION)
+    ("discordant-pair-frequency-cutoff", "Only accept DP evidence when the lower confidence bound on its local variant frequency -- discordant pairs divided by discordant plus concordant pairs spanning the breakpoint -- is above this value. 0 = OFF. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("discordant-pair-minimum-crossing", "Only apply the DP skew test when at least this many concordant pairs are expected to span a normal position at the breakpoint's local coverage. Below this the skew test has no power (short paired-mapping distance distributions leave almost no concordant pair spanning any position) and is not used to reject. 0 = always apply. (DEFAULT = 10.0)", 10.0, NORMAL_OPTION)
+    // NOTE: pass sub-0.1 defaults as STRINGS. AnyOption stringifies a numeric default with
+    // to_string(double), whose default precision is 1 decimal place, so a 0.05 passed as a double
+    // silently becomes "0.1".
+    ("discordant-pair-background-e-value-cutoff", "Reject DP evidence whose number of supporting read pairs is expected to arise this many times or more across all candidate junctions by chance, given the genome-wide background of spurious discordant pairs. 0 = OFF. (DEFAULT = 0.05)", "0.05", NORMAL_OPTION)
     ;
 
     options.addUsage("", NORMAL_OPTION);
@@ -642,6 +649,12 @@ namespace breseq
     ASSERT(this->discordant_pair_seed >= 0, "Argument --discordant-pair-seed must be >= 0")
     this->discordant_pair_skew_cutoff = from_string<double>(options["discordant-pair-skew-cutoff"]);
     ASSERT(this->discordant_pair_skew_cutoff >= 0, "Argument --discordant-pair-skew-cutoff must be >= 0")
+    this->discordant_pair_minimum_pairs = from_string<int32_t>(options["discordant-pair-minimum-pairs"]);
+    ASSERT(this->discordant_pair_minimum_pairs >= 1, "Argument --discordant-pair-minimum-pairs must be >= 1")
+    this->discordant_pair_minimum_crossing = from_string<double>(options["discordant-pair-minimum-crossing"]);
+    ASSERT(this->discordant_pair_minimum_crossing >= 0, "Argument --discordant-pair-minimum-crossing must be >= 0")
+    this->discordant_pair_background_e_value_cutoff = from_string<double>(options["discordant-pair-background-e-value-cutoff"]);
+    ASSERT(this->discordant_pair_background_e_value_cutoff >= 0, "Argument --discordant-pair-background-e-value-cutoff must be >= 0")
 
     this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
@@ -756,8 +769,9 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
-      // Soft-clipping uses the same frequency floor as mutation prediction.
+      // Soft-clipping and discordant pairs use the same frequency floor as mutation prediction.
       this->soft_clipping_frequency_cutoff = 0.05;
+      this->discordant_pair_frequency_cutoff = 0.05;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       this->polymorphism_minimum_variant_coverage_each_strand = 2;
@@ -792,8 +806,9 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.2;
-      // Soft-clipping uses the same frequency floor as mutation prediction.
+      // Soft-clipping and discordant pairs use the same frequency floor as mutation prediction.
       this->soft_clipping_frequency_cutoff = 0.2;
+      this->discordant_pair_frequency_cutoff = 0.2;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       this->polymorphism_minimum_variant_coverage_each_strand = 0;
@@ -852,6 +867,12 @@ namespace breseq
       this->soft_clipping_frequency_cutoff = from_string<double>(options["soft-clipping-frequency-cutoff"]);
     ASSERT((this->soft_clipping_frequency_cutoff >= 0) && (this->soft_clipping_frequency_cutoff <= 1),
            "Argument --soft-clipping-frequency-cutoff must be in the range [0,1]")
+
+    // Same ordering requirement as soft-clipping: after the prediction-mode defaults.
+    if (options.count("discordant-pair-frequency-cutoff"))
+      this->discordant_pair_frequency_cutoff = from_string<double>(options["discordant-pair-frequency-cutoff"]);
+    ASSERT((this->discordant_pair_frequency_cutoff >= 0) && (this->discordant_pair_frequency_cutoff <= 1),
+           "Argument --discordant-pair-frequency-cutoff must be in the range [0,1]")
 
 
     if (options.count("polymorphism-minimum-variant-coverage"))
@@ -1136,6 +1157,14 @@ namespace breseq
     this->call_mutations_overlapping_missing_coverage = false;
     this->discordant_pair_seed = 3;
     this->discordant_pair_skew_cutoff = 3.0;
+    this->discordant_pair_minimum_pairs = 2;
+    // Overwritten per prediction mode above (in the cmdline constructor) to track
+    // polymorphism_frequency_cutoff.
+    this->discordant_pair_frequency_cutoff = 0.2;
+    // For a Poisson null with mean lambda, even k=0 only reaches -log10 P = lambda/ln(10), so the skew
+    // test cannot clear a cutoff of 3 on merit below lambda ~ 6.9, and cannot reject k=1 below ~9.6.
+    this->discordant_pair_minimum_crossing = 10.0;
+    this->discordant_pair_background_e_value_cutoff = 0.05;
     this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 12;
     this->soft_clipping_log10_e_value_cutoff = 3.0;
@@ -1179,6 +1208,7 @@ namespace breseq
 		this->max_rejected_read_alignment_evidence_to_show = 20;
 		this->max_rejected_junction_evidence_to_show = 10;
     this->max_rejected_soft_clipping_evidence_to_show = 20;
+    this->max_rejected_discordant_pair_evidence_to_show = 20;
 		this->hide_circular_genome_junctions = true;
     
 		this->lenski_format = false;
@@ -1335,6 +1365,7 @@ namespace breseq
 		this->dp_candidate_regions_file_name = this->mutation_identification_path + "/DP_candidate_regions.csv";
 		this->discordant_pair_done_file_name = this->mutation_identification_path + "/discordant_pair.done";
 		this->dp_genome_diff_file_name = this->mutation_identification_path + "/dp_evidence.gd";
+		this->discordant_pair_summary_file_name = this->mutation_identification_path + "/discordant_pair_summary.json";
 
 
     //! Paths: Copy Number Variation

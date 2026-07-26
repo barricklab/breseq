@@ -743,6 +743,18 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   sc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(SC_LOG10_E_VALUE)));
   mark_gd_entries_in_list_no_show(sc_list, settings.max_rejected_soft_clipping_evidence_to_show);
 
+  /////
+  // DP evidence
+  //////
+
+  // As for SC: show_list() filters no_show, so this also stops the evidence-file generator from drawing a
+  // read-pair plot for every rejected junction. Keep the ones that came closest to passing.
+  vector<gd_entry_type> dp_types = make_vector<gd_entry_type>(DP);
+  diff_entry_list_t dp_list = gd.filter_used_as_evidence(gd.get_list(dp_types));
+  dp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("discordant_pair_frequency")));
+  mark_gd_entries_in_list_no_show(dp_list, settings.max_rejected_discordant_pair_evidence_to_show);
+
 }
 
 void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
@@ -833,16 +845,17 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // Marginal DP evidence
   /////////////////////////
 
-  // DP items rejected for CONCORDANT_PAIR_SKEW (discordant support too low vs the concordant crossing).
+  // DP items rejected by any of the DP tests (local frequency, or concordant pair skew where it applies).
   diff_entry_list_t dp_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(DP)));
   dp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
   dp_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
 
   string marginal_dp_title = "Marginal discordant pair evidence";
   if (dp_list.size() > 0) {
-    // Highest skew (most anomalously low support) first.
-    dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("neg_log10_discordance_p_value")));
-    marginal_dp_title += " (sorted from high to low skew)";
+    // Highest local frequency (the ones that came closest to passing) first -- the frequency test is the
+    // operative gate now, so skew is no longer a meaningful ordering.
+    dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("discordant_pair_frequency")));
+    marginal_dp_title += " (sorted from high to low frequency)";
   }
 
   /////////////////////////
@@ -907,7 +920,9 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
 
   if (dp_list.size() > 0) {
     HTML << "<p>" << endl;
-    HTML << html_discordant_pair_table_string(dp_list, settings, true, marginal_dp_title, relative_path);
+    // show_details = false: the reject reasons belong on the per-item evidence page,
+    // not inline in the summary table -- same as the marginal RA, JC and SC tables.
+    HTML << html_discordant_pair_table_string(dp_list, settings, false, marginal_dp_title, relative_path);
   }
 
   if (sc_list.size() > 0) {
@@ -1158,6 +1173,12 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       HTML << "<p>" << b("Discordant pair skew model") + ": " + dp_model
            << ". The DP skew p-value marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has enough non-deletion positions (log<sub>10</sub>N &ge; discordant-pair-skew-cutoff + 1), otherwise a negative-binomial fit (conservative, but not capped near log<sub>10</sub>N)." << endl;
     }
+
+    // The gates that actually decided which DP items were kept. Most are derived per run rather than
+    // fixed by the command line (the shared-pair floor comes from a background fit to this run's own
+    // edge-weight spectrum, and the skew test switches off where it has no power), so the options
+    // alone do not tell a user why a run predicted few or many DP items.
+    HTML << html_discordant_pair_gates_string(settings, summary);
   }
 
   ////
@@ -2536,9 +2557,91 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
 // Modeled on html_new_junction_table_string. Each DP entry produces two rows
 // (side 1 and side 2), like a JC entry. Read-pair counts and a discordance
 // p-value stand in for the junction read counts and pos-hash p-value.
+// Two-column "gate / value" table for summary.html. Each row names a cutoff, what it is derived from,
+// and whether it is active -- the goal is that a user can tell WHY a run kept the DP items it did
+// without re-reading the source or the stderr log.
+string html_discordant_pair_gates_string(const Settings& settings, Summary& summary)
+{
+  const DiscordantPairSummary& d = summary.discordant_pair;
+  // Nothing was fit (DP not run, or it bailed before the background step).
+  if (d.candidate_junctions == 0 && d.items_tested == 0) return "";
+
+  stringstream ss;
+  ss << "<p>" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"3\" align=\"left\" class=\"discordant_pair_header_row\"",
+              "Discordant pair (DP) evidence gates")) << endl;
+  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+
+  // Library shape: what every DP test is ultimately derived from.
+  ss << tr(td("paired-mapping distance")
+           + td(to_string(d.pair_distance_median, 0, false) + " median, "
+                + to_string(d.pair_distance_mad, 0, false) + " MAD, "
+                + to_string(d.pair_distance_cutoff, 0, false) + " cutoff"
+                + (d.pair_orientation.empty() ? "" : ", " + d.pair_orientation))
+           + td("read length " + to_string(d.read_length_avg, 0, false)
+                + (d.pair_distance_median < 2.0 * d.read_length_avg
+                   ? " &mdash; fragments are shorter than two reads, so most pairs have no gap for a breakpoint to fall in"
+                   : ""))) << endl;
+
+  // Gate 1: minimum shared pairs, derived from the background fit.
+  string bg = (d.background_mean > 0.0)
+    ? ((d.background_size > 0.0)
+        ? ("negative binomial mean " + to_string(d.background_mean, 4, true) + ", size " + to_string(d.background_size, 3, false))
+        : ("Poisson mean " + to_string(d.background_mean, 4, true)))
+    : string("not fit");
+  ss << tr(td("minimum shared read pairs")
+           + td(to_string(d.minimum_pairs_used)
+                + (d.minimum_pairs_used > d.minimum_pairs_option
+                   ? (" (raised from " + to_string(d.minimum_pairs_option) + ")") : ""))
+           + td("spurious-pair background fit to " + to_string(d.candidate_junctions)
+                + " candidate junctions: " + bg
+                + "; E-value cutoff " + to_string(d.background_e_value_cutoff, 3, false))) << endl;
+
+  // Gate 2: the local frequency test -- the operative accept/reject rule.
+  ss << tr(td("local frequency")
+           + td(d.frequency_cutoff > 0.0
+                ? ("&ge; " + Html_Mutation_Table_String::freq_to_string(to_string(d.frequency_cutoff, 4, false)))
+                : string("OFF"))
+           + td("exact lower confidence bound on discordant / (discordant + concordant) pairs spanning "
+                "the breakpoint; tracks the prediction mode")) << endl;
+
+  // Gate 3: the skew test and its power gate.
+  ss << tr(td("concordant pair skew")
+           + td(d.skew_cutoff > 0.0
+                ? (to_string(d.skew_cutoff, 1, false) + (d.skew_in_force ? "" : " (not applied)"))
+                : string("OFF"))
+           + td("expected concordant pairs spanning a normal position: "
+                + to_string(d.expected_concordant_crossing, 1, false)
+                + (d.crossing_reference_seq_id.empty() ? "" : " in " + d.crossing_reference_seq_id)
+                + (d.minimum_crossing > 0.0
+                   ? (d.skew_in_force
+                        ? (" &ge; " + to_string(d.minimum_crossing, 1, false) + ", so the test can discriminate")
+                        : (" &lt; " + to_string(d.minimum_crossing, 1, false)
+                           + ", too few for the test to reject on merit &mdash; reported only"))
+                   : string())
+                + "; null = " + (d.crossing_use_empirical
+                                 ? ("empirical over " + to_string(d.crossing_normal_positions) + " positions")
+                                 : string("negative binomial fit")))) << endl;
+
+  // Outcome.
+  string tally = to_string(d.items_accepted) + " accepted";
+  if (d.items_rejected_frequency) tally += ", " + to_string(d.items_rejected_frequency) + " rejected (frequency)";
+  if (d.items_rejected_skew)      tally += ", " + to_string(d.items_rejected_skew) + " rejected (skew)";
+  if (d.items_ignored_circular)   tally += ", " + to_string(d.items_ignored_circular) + " circular-origin artifact";
+  if (d.items_dropped_unsupported)
+    tally += ", " + to_string(d.items_dropped_unsupported)
+           + " dropped with no read pair bridging the placed breakpoints";
+  ss << tr(td("outcome")
+           + td(to_string(d.items_tested + d.items_dropped_unsupported) + " examined")
+           + td(tally)) << endl;
+
+  ss << "</table>" << endl;
+  return ss.str();
+}
+
 string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Settings& settings, bool show_details, const string& title, const string& relative_link)
 {
-  (void)settings;
   if (list_ref.size()==0) return "";
 
   stringstream ss; //!<< Main Build Object for Function
@@ -2553,7 +2656,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
 
   ss << "<div id=\"discordant_pair_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = 8 + link_cols;
+  size_t total_cols = 9 + link_cols;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -2572,6 +2675,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         th("position")      << endl <<
         th("pairs")         << endl <<   // side_1 / side_2 pair count
         th("disc&nbsp;pairs") << endl <<  // discordant_pair_count
+        th("freq")          << endl <<   // discordant_pair_frequency (the operative accept/reject gate)
         th("skew")          << endl <<   // neg_log10_discordance_p_value
         th("annotation")    << endl <<
         th("gene")          << endl;
@@ -2623,6 +2727,13 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
       ss << td("align=\"center\"", c[key + "_concordant_count"]);
 
       ss << td("rowspan=\"2\" align=\"center\"", c["discordant_count"]) << endl;
+      // Rendered as a percentage through the shared helper, matching the JC/RA/SC freq columns.
+      // Guarded on the field existing: freq_to_string maps an empty string to "100%", and a DP item
+      // that never got a BAM rescan has no frequency at all.
+      ss << td("rowspan=\"2\" align=\"center\"",
+               c.entry_exists("discordant_pair_frequency") && !c["discordant_pair_frequency"].empty()
+                 ? Html_Mutation_Table_String::freq_to_string(c["discordant_pair_frequency"])
+                 : string("")) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_discordance_p_value"]) << endl;
 
       ss << td("align=\"center\"" + ak1,
@@ -2667,9 +2778,22 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
     if (show_details && c.entry_exists(REJECT)) {
       vector<string> reject_reasons = c.get_reject_reasons();
       for (vector<string>::iterator it = reject_reasons.begin(); it != reject_reasons.end(); it++) {
+        string reason = decode_reject_reason(*it);
+        // Spell out the frequency comparison. The freq column shows the point estimate, but the test
+        // uses its lower confidence bound, so without the two numbers side by side a 25.3% item
+        // rejected against a 20% cutoff reads as a contradiction.
+        if ((*it == "DISCORDANT_PAIR_FREQUENCY") && c.entry_exists("discordant_pair_frequency_lower_bound")) {
+          reason = "Discordant pair frequency "
+                 + Html_Mutation_Table_String::freq_to_string(c["discordant_pair_frequency"])
+                 + " has a 95% lower confidence bound of "
+                 + Html_Mutation_Table_String::freq_to_string(c["discordant_pair_frequency_lower_bound"])
+                 + ", below the "
+                 + Html_Mutation_Table_String::freq_to_string(to_string(settings.discordant_pair_frequency_cutoff, 4, false))
+                 + " cutoff.";
+        }
         ss << tr("class=\"reject_table_row\"",
                  td("colspan=\"" + to_string(total_cols) + "\"",
-                    "Rejected: " + decode_reject_reason(*it))) << endl;
+                    "Rejected: " + reason)) << endl;
       }
     }
 
@@ -2890,6 +3014,12 @@ string decode_reject_reason(const string& reject)
   else if (reject == "FREQUENCY_CUTOFF")
   {
     return "Frequency below/above cutoff threshold.";
+  }
+  else if (reject == "DISCORDANT_PAIR_FREQUENCY")
+  {
+    // The comparison is against the lower confidence bound, which is below the frequency shown in the
+    // table; the DP table replaces this with the actual numbers, so this is the fallback wording.
+    return "Lower confidence bound on discordant pair frequency below cutoff.";
   }
   else if (reject == "KS_BASE_QUALITY")
   {

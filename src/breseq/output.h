@@ -265,6 +265,10 @@ string html_discordant_pair_table_string(diff_entry_list_t& dp,
                                           const string& relative_link = ""
                                           );
 
+// summary.html block listing the cutoffs actually in force for discordant-pair (DP) evidence, the
+// library/background values they were derived from, and the resulting accept/reject tally.
+string html_discordant_pair_gates_string(const Settings& settings, Summary& summary);
+
 string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------

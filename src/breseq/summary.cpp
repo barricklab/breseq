@@ -397,6 +397,69 @@ void from_json(const json& j, SoftClippingSummary& s)
   s.soft_clipping_mean_tested_reads = get_double_or_default(j, "soft_clipping_mean_tested_reads");
 }
 
+void to_json(json& j, const DiscordantPairSummary& s)
+{
+  j = json{
+    {"read_length_avg", s.read_length_avg},
+    {"pair_distance_median", s.pair_distance_median},
+    {"pair_distance_mad", s.pair_distance_mad},
+    {"pair_distance_cutoff", s.pair_distance_cutoff},
+    {"pair_orientation", s.pair_orientation},
+    {"crossing_reference_seq_id", s.crossing_reference_seq_id},
+    {"crossing_reference_coverage", s.crossing_reference_coverage},
+    {"expected_concordant_crossing", s.expected_concordant_crossing},
+    {"crossing_use_empirical", s.crossing_use_empirical},
+    {"crossing_normal_positions", s.crossing_normal_positions},
+    {"frequency_cutoff", s.frequency_cutoff},
+    {"skew_cutoff", s.skew_cutoff},
+    {"minimum_crossing", s.minimum_crossing},
+    {"skew_in_force", s.skew_in_force},
+    {"background_e_value_cutoff", s.background_e_value_cutoff},
+    {"minimum_pairs_option", s.minimum_pairs_option},
+    {"minimum_pairs_used", s.minimum_pairs_used},
+    {"candidate_junctions", s.candidate_junctions},
+    {"background_mean", s.background_mean},
+    {"background_size", s.background_size},
+    {"items_tested", s.items_tested},
+    {"items_dropped_unsupported", s.items_dropped_unsupported},
+    {"items_accepted", s.items_accepted},
+    {"items_rejected_frequency", s.items_rejected_frequency},
+    {"items_rejected_skew", s.items_rejected_skew},
+    {"items_ignored_circular", s.items_ignored_circular},
+  };
+}
+
+void from_json(const json& j, DiscordantPairSummary& s)
+{
+  // All defaulted: a summary written before DP reporting existed must still load.
+  s.read_length_avg = get_double_or_default(j, "read_length_avg");
+  s.pair_distance_median = get_double_or_default(j, "pair_distance_median");
+  s.pair_distance_mad = get_double_or_default(j, "pair_distance_mad");
+  s.pair_distance_cutoff = get_double_or_default(j, "pair_distance_cutoff");
+  s.pair_orientation = j.count("pair_orientation") ? j.at("pair_orientation").get<string>() : string("");
+  s.crossing_reference_seq_id = j.count("crossing_reference_seq_id") ? j.at("crossing_reference_seq_id").get<string>() : string("");
+  s.crossing_reference_coverage = get_double_or_default(j, "crossing_reference_coverage");
+  s.expected_concordant_crossing = get_double_or_default(j, "expected_concordant_crossing");
+  s.crossing_use_empirical = j.count("crossing_use_empirical") ? j.at("crossing_use_empirical").get<bool>() : true;
+  s.crossing_normal_positions = get_uint64_or_default(j, "crossing_normal_positions");
+  s.frequency_cutoff = get_double_or_default(j, "frequency_cutoff");
+  s.skew_cutoff = get_double_or_default(j, "skew_cutoff");
+  s.minimum_crossing = get_double_or_default(j, "minimum_crossing");
+  s.skew_in_force = j.count("skew_in_force") ? j.at("skew_in_force").get<bool>() : false;
+  s.background_e_value_cutoff = get_double_or_default(j, "background_e_value_cutoff");
+  s.minimum_pairs_option = static_cast<int32_t>(get_double_or_default(j, "minimum_pairs_option"));
+  s.minimum_pairs_used = static_cast<int32_t>(get_double_or_default(j, "minimum_pairs_used"));
+  s.candidate_junctions = get_uint64_or_default(j, "candidate_junctions");
+  s.background_mean = get_double_or_default(j, "background_mean");
+  s.background_size = get_double_or_default(j, "background_size");
+  s.items_tested = get_uint64_or_default(j, "items_tested");
+  s.items_dropped_unsupported = get_uint64_or_default(j, "items_dropped_unsupported");
+  s.items_accepted = get_uint64_or_default(j, "items_accepted");
+  s.items_rejected_frequency = get_uint64_or_default(j, "items_rejected_frequency");
+  s.items_rejected_skew = get_uint64_or_default(j, "items_rejected_skew");
+  s.items_ignored_circular = get_uint64_or_default(j, "items_ignored_circular");
+}
+
 void to_json(json& j, const Summary& s)
 {
   j = json{
@@ -408,6 +471,7 @@ void to_json(json& j, const Summary& s)
     {"preprocess_error_count", s.preprocess_error_count},
     {"preprocess_alignments", s.preprocess_alignments},
     {"soft_clipping", s.soft_clipping},
+    {"discordant_pair", s.discordant_pair},
     {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
@@ -424,6 +488,8 @@ void from_json(const json& j, Summary& s)
   s.preprocess_error_count = j.at("preprocess_error_count").get<ErrorCountSummaries>();
   if (j.count("soft_clipping"))
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
+  if (j.count("discordant_pair"))
+    s.discordant_pair = j.at("discordant_pair").get<DiscordantPairSummary>();
   if (j.count("preliminary_paired_mapping_distance_distribution"))
     s.preliminary_paired_mapping_distance_distribution = j.at("preliminary_paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
   if (j.count("paired_mapping_distance_distribution"))
@@ -643,6 +709,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   , references(s, r, t.refseq_settings)
   , options(t)
   , soft_clipping(s.soft_clipping)
+  , discordant_pair(s.discordant_pair)
   , preliminary_paired_mapping_distance_distribution(s.preliminary_paired_mapping_distance_distribution)
   , paired_mapping_distance_distribution(s.paired_mapping_distance_distribution)
 { }
@@ -985,6 +1052,7 @@ void to_json(json& j, const PublicSummary& s)
     {"references", s.references},
     {"options", s.options},
     {"soft_clipping", s.soft_clipping},
+    {"discordant_pair", s.discordant_pair},
     {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
@@ -998,6 +1066,8 @@ void from_json(const json& j, PublicSummary& s)
   s.options = j.at("options").get<PublicOptionsSummary>();
   if (j.count("soft_clipping"))
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
+  if (j.count("discordant_pair"))
+    s.discordant_pair = j.at("discordant_pair").get<DiscordantPairSummary>();
   if (j.count("preliminary_paired_mapping_distance_distribution"))
     s.preliminary_paired_mapping_distance_distribution = j.at("preliminary_paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
   if (j.count("paired_mapping_distance_distribution"))

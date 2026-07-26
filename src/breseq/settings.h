@@ -401,6 +401,10 @@ namespace breseq
     //! Settings: Discordant Pair (DP) Evidence
     int32_t discordant_pair_seed;                         // Default = 3;         COMMAND-LINE OPTION
     double discordant_pair_skew_cutoff;                   // Default = 3.0;       COMMAND-LINE OPTION
+    int32_t discordant_pair_minimum_pairs;                // Default = 2;         COMMAND-LINE OPTION
+    double discordant_pair_frequency_cutoff;              // Default = 0.2/0.05;  COMMAND-LINE OPTION
+    double discordant_pair_minimum_crossing;              // Default = 10.0;      COMMAND-LINE OPTION
+    double discordant_pair_background_e_value_cutoff;     // Default = 0.05;      COMMAND-LINE OPTION
 
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
@@ -491,6 +495,7 @@ namespace breseq
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
     uint32_t max_rejected_soft_clipping_evidence_to_show;  // Default = 20
+    uint32_t max_rejected_discordant_pair_evidence_to_show; // Default = 20
 		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!
 		bool lenski_format;                                     // Default = false (not a public option!)
@@ -621,6 +626,9 @@ namespace breseq
     string dp_candidate_regions_file_name;
     string discordant_pair_done_file_name;
     string dp_genome_diff_file_name;
+    // DP gates/model/tally, persisted because the DP step is skipped on a restart but the Output step
+    // still needs these numbers for summary.html and summary.json.
+    string discordant_pair_summary_file_name;
 
 
 		//! Paths: Copy Number Variation

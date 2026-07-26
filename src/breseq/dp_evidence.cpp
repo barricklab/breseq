@@ -35,9 +35,12 @@ using namespace std;
 
 namespace breseq {
 
-  // Minimum number of shared read pairs for a paired region to be accepted as a DP item.
-  // Placeholder threshold; statistically-motivated accept/reject conditions come later.
-  static const int kDPMinSharedPairs = 5;
+  // Ceiling on the data-derived shared-pair floor: if even this many pairs cannot be distinguished from
+  // the spurious-pair background, the run has no usable DP evidence and there is nothing to search past.
+  static const int32_t kDPMaxBackgroundFloor = 100;
+
+  // One-sided confidence level for the DP local-frequency (Clopper-Pearson) lower bound.
+  static const double kDPFrequencyAlpha = 0.05;
 
   // ---------------------------------------------------------------------------------------------
   // Rescan of a DP junction side by direct BAM fetch.
@@ -306,16 +309,27 @@ namespace breseq {
         }
         return;
       }
-      if      (cat == 1) { m_supporting++; m_supporting_nums.insert(dp_read_num(a.read_name())); }
+      if      (cat == 1) {
+        m_supporting++;
+        // Remember each supporting read's OUTSIDE (away-from-junction) coordinate alongside its pair
+        // number. Intersecting the two sides then yields not just how many pairs bridge the junction but
+        // how many DISTINCT (outer_1, outer_2) fragment starts they represent -- the DP analogue of JC's
+        // pos_hash_score, so PCR duplicates of one molecule cannot inflate the support count.
+        int32_t rstart = static_cast<int32_t>(a.reference_start_1());
+        int32_t rend   = static_cast<int32_t>(a.reference_end_1());
+        m_supporting_nums[dp_read_num(a.read_name())] = (m_ctx.s == -1) ? rstart : rend;
+      }
       else if (cat == 2) m_concordant++;
       else if (cat == 3) m_unpaired++;
     }
 
     int supporting() const { return m_supporting; }
-    // Read-pair numbers of the discordant (supporting) reads at the last-scanned side. Intersecting the
-    // two sides' sets gives the true count of pairs that bridge THIS junction (a read at a breakpoint
-    // shared with a neighboring junction appears on only one side and is excluded).
-    const set<string>& supporting_nums() const { return m_supporting_nums; }
+    // Read-pair numbers of the discordant (supporting) reads at the last-scanned side, each mapped to
+    // that read's outside (away-from-junction) coordinate. Intersecting the two sides' key sets gives the
+    // true count of pairs that bridge THIS junction (a read at a breakpoint shared with a neighboring
+    // junction appears on only one side and is excluded); the paired-up values give the distinct-fragment
+    // count.
+    const map<string, int32_t>& supporting_nums() const { return m_supporting_nums; }
     int concordant() const { return m_concordant; }
     int unpaired()   const { return m_unpaired; }
 
@@ -329,7 +343,7 @@ namespace breseq {
     }
     dp_side_ctx m_ctx;
     int     m_supporting, m_concordant, m_unpaired;
-    set<string> m_supporting_nums;
+    map<string, int32_t> m_supporting_nums;   // pair number -> that side's outside coordinate
     bool    m_collect_outside;
     // Supporting reads' outside (away-from-junction) coordinates, accumulated during the collect pass,
     // plus the furthest junction-facing edge (soft-clip included) seen among them.
@@ -780,8 +794,118 @@ namespace breseq {
     double P = dp_crossing_cdf(hist_ref, lo, hi, avgcov_X / C_ref, k, use_empirical, nb_size, nb_mu);
     if (std::isnan(P)) return P;
     double sc = (P > 0.0) ? (-log10(P)) : kDPMaxScore;
-    if (sc < 0.0) sc = 0.0;   // P==1 -> -log10 gives -0.0
+    // P==1 gives -log10 = -0.0, which compares EQUAL to 0.0 (so a "< 0.0" test misses it) but still
+    // prints with its sign as "-0.0". Use <= so the negative zero is normalized away.
+    if (sc <= 0.0) sc = 0.0;
     return (sc > kDPMaxScore) ? kDPMaxScore : sc;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Local frequency test -- the accept/reject gate that survives a short pair distance distribution.
+  //
+  // A fragment whose unsequenced middle gap falls across the breakpoint is observed as a DISCORDANT
+  // pair when that molecule carries the variant junction and as a CONCORDANT pair when it does not.
+  // The two are the variant and reference observations of one sampling event, so k / (k + c) is the
+  // local frequency of the structural variant -- self-normalized to local coverage, local repeat
+  // content and local deletions, all of which cancel out of the ratio.
+  //
+  // Why this and not the concordant-pair skew below: the skew asks whether k is low compared with how
+  // many concordant pairs span a NORMAL position, an expectation of (coverage / 2*read_length) *
+  // E[(insert - 2*read_length)+]. As the insert distribution shortens toward twice the read length
+  // that expectation collapses toward zero, P(crossing <= k) goes to 1 for every k, and the skew test
+  // accepts everything -- which is exactly the regime where DP evidence over-predicts. The frequency
+  // test is indifferent: k and c shrink together and their ratio does not move.
+  //
+  // Reported as an exact (Clopper-Pearson) lower confidence bound, so a candidate is never rejected
+  // merely for having small counts -- only for being confidently LOW frequency. k of k observations
+  // therefore always passes, however small k is; ruling those out is the background test's job.
+  static double dp_frequency_lower_bound(double k, double c, double alpha)
+  {
+    if (!(k > 0.0)) return 0.0;                       // no supporting pair at all -> bound is 0
+    if (!(c > 0.0)) return pow(alpha, 1.0 / k);       // beta bound with b = 1 degenerates to alpha^(1/k)
+    return incbi(k, c + 1.0, alpha);                  // BetaInv(alpha; k, n-k+1), n-k = c
+  }
+
+  // Mean of a crossing distribution over ALL bins, INCLUDING crossing = 0 -- the expected number of
+  // concordant pairs spanning a normal position. Deliberately uncensored: dp_crossing_censor drops the
+  // zero bin as a "deletion spike", but on a library whose fragments are barely longer than two reads
+  // zero IS the normal state (70% of positions is routine), and hiding it makes the skew null describe
+  // a library that was never sequenced. This uncensored mean is what says whether the skew test has any
+  // power at all at this coverage.
+  static double dp_crossing_mean(const vector<double>& hist)
+  {
+    double n = 0.0, s = 0.0;
+    for (int32_t c = 0; c < static_cast<int32_t>(hist.size()); c++) { n += hist[c]; s += hist[c] * static_cast<double>(c); }
+    return (n > 0.0) ? (s / n) : 0.0;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Background model for the number of read pairs that two UNRELATED candidate regions happen to
+  // share -- the null the old hard-coded "at least 5 shared pairs" was standing in for.
+  //
+  // Fitted from the observed edge-weight spectrum itself, using only the ratios between the first
+  // few bins. For a Poisson, n(w+1)/n(w) = mu/(w+1); for a negative binomial with size r and
+  // p = mu/(mu+r), n(w+1)/n(w) = p*(w+r)/(w+1). Ratios are unaffected by the fact that weight-0
+  // region pairs are never observed, so no zero-truncation correction is needed to estimate the
+  // parameters. A negative binomial rather than a Poisson because spurious discordant pairs are not
+  // placed uniformly -- they pile up at repeats, rRNA operons and mismapping hotspots -- and a
+  // Poisson null is anti-conservative in exactly those loci.
+  struct dp_background_model {
+    bool   ok;
+    double mu;        // background mean shared pairs between two regions
+    double size;      // negative binomial size; <= 0 means Poisson
+    double n_edges;   // candidate junctions tested (the multiple-testing correction)
+    dp_background_model() : ok(false), mu(0.0), size(0.0), n_edges(0.0) {}
+
+    // P(X >= k | X >= 1): the conditional tail, since only region pairs sharing at least one read
+    // pair ever become an edge.
+    double tail(int32_t k) const {
+      if (!ok || k <= 1) return 1.0;
+      double p0 = (size > 0.0) ? dp_nbinom_pmf(0, size, mu) : exp(-mu);
+      double denom = 1.0 - p0;
+      if (!(denom > 0.0)) return 1.0;
+      double below = 0.0;                                    // P(X <= k-1)
+      for (int32_t i = 0; i < k; i++)
+        below += (size > 0.0) ? dp_nbinom_pmf(i, size, mu) : exp(-mu + i * log(mu) - lgamma(i + 1.0));
+      double above = 1.0 - below;
+      if (above < 0.0) above = 0.0;
+      return above / denom;
+    }
+    double e_value(int32_t k) const { return n_edges * tail(k); }
+  };
+
+  // Fit the background from the edge-weight histogram (weights >= 1). `mu_floor` is the closed-form
+  // uniform-placement expectation (derived from p_out); the fit is never allowed below it, so a
+  // degenerate spectrum can only make the test more conservative, never less.
+  static void dp_fit_background(const vector<int>& weights, double mu_floor, dp_background_model& m)
+  {
+    m.ok = false;
+    m.n_edges = static_cast<double>(weights.size());
+    double n1 = 0, n2 = 0, n3 = 0;
+    for (size_t i = 0; i < weights.size(); i++) {
+      if      (weights[i] == 1) n1++;
+      else if (weights[i] == 2) n2++;
+      else if (weights[i] == 3) n3++;
+    }
+    double mu = 0.0, size = 0.0;
+    if (n1 > 0.0 && n2 > 0.0) {
+      double r1 = n2 / n1;
+      // Try the negative binomial first; it needs a third bin and must come out over-dispersed.
+      if (n3 > 0.0) {
+        double r2 = n3 / n2;
+        double q = 1.5 * r2 / r1;              // = (2 + size) / (1 + size)
+        if (q > 1.0 && q < 2.0) {
+          size = (2.0 - q) / (q - 1.0);
+          double p = 2.0 * r1 / (1.0 + size);
+          if (p > 0.0 && p < 1.0) mu = size * p / (1.0 - p);
+          else size = 0.0;
+        }
+      }
+      if (!(size > 0.0 && mu > 0.0)) { size = 0.0; mu = 2.0 * r1; }   // Poisson fallback
+    }
+    if (mu < mu_floor) { mu = mu_floor; size = 0.0; }
+    if (!(mu > 0.0) || m.n_edges <= 0.0) return;
+    m.mu = mu; m.size = size; m.ok = true;
   }
 
   // Poisson pmf P(X=v; mu).
@@ -912,8 +1036,18 @@ namespace breseq {
     if (!dp_load_crossing_reference(settings, summary, ref_seq_info, hist_ref, C_ref, R, ref_lo, ref_hi,
                                     N, use_empirical, nb_size, nb_mu)) return "";
     string npos = to_string(static_cast<uint64_t>(N)) + " positions in " + R;
-    return use_empirical ? ("empirical (" + npos + ")")
-                         : ("negative binomial (fallback; only " + npos + ")");
+    string s = use_empirical ? ("empirical (" + npos + ")")
+                             : ("negative binomial (fallback; only " + npos + ")");
+    // State whether the skew test is actually in force. Its effect size is the expected number of
+    // concordant pairs spanning a normal position; when that is small (a paired-mapping distance
+    // distribution barely longer than two reads) the test cannot discriminate and only the local
+    // frequency test rejects. Saying so is the quickest way to understand a short-insert run.
+    double mean_x = dp_crossing_mean(hist_ref);
+    s += ". Expected concordant pairs spanning a normal position in " + R + ": " + to_string(mean_x, 1, false);
+    if (settings.discordant_pair_minimum_crossing > 0.0 && mean_x < settings.discordant_pair_minimum_crossing)
+      s += " -- below --discordant-pair-minimum-crossing, so the skew test is reported but does not reject; "
+           "DP evidence is accepted or rejected on its local frequency alone";
+    return s;
   }
 
   void predict_discordant_pairs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
@@ -927,6 +1061,9 @@ namespace breseq {
     double crossing_N = 0.0; bool crossing_use_empirical = true; double crossing_nb_size = 0.0, crossing_nb_mu = 0.0;
     bool have_crossing = dp_load_crossing_reference(settings, summary, ref_seq_info, crossing_hist_ref, crossing_C_ref, crossing_ref_seq_id, crossing_lo, crossing_hi,
                                                     crossing_N, crossing_use_empirical, crossing_nb_size, crossing_nb_mu);
+    // Uncensored mean of that reference distribution -- the skew test's effect size (see the power gate
+    // in the emit loop). Kept separate from the censored window the skew null itself is built on.
+    double crossing_mean_ref = have_crossing ? dp_crossing_mean(crossing_hist_ref) : 0.0;
 
     //
     // Step 0: library orientation (inner3p) + rescan window (distance_cutoff). FF/RR unsupported.
@@ -945,11 +1082,21 @@ namespace breseq {
     bool have_insert = dp_load_insert_model(settings, summary, ref_seq_info, insert_model);
 
     // Passing split-read junction (JC) breakpoints, for snapping DP coordinates onto a validated
-    // junction when the pair evidence is consistent with it (see the snap block below). The snap
-    // window +/-(median - 2*read_length) is the neighborhood a DP edge can plausibly be off by.
+    // junction when the pair evidence is consistent with it (see the snap block below).
+    //
+    // The snap window is how far a pair-derived coordinate can plausibly sit from the true breakpoint.
+    // Placement puts it at the innermost supporting read's aligned edge, and the breakpoint lies
+    // somewhere in that fragment's unsequenced middle gap, so the error is bounded by the LARGEST such
+    // gap: distance_cutoff - 2*read_length. (It was previously median - 2*read_length, which is not a
+    // bound on anything and goes NEGATIVE whenever the paired-mapping distance distribution is shorter
+    // than two reads -- exactly the short-insert libraries at issue here. Every `abs(...) > snap_win`
+    // test then always fired, so neither the JC snap nor the circular-origin snap could ever run, and
+    // circular-origin artifacts were reported as ordinary DP junctions.) Widening this is safe: each
+    // snap is separately gated on the supporting pairs' inferred inserts favoring the candidate.
     vector<dp_jc_sides> passing_jcs;
     if (have_insert) dp_load_passing_jcs(settings.jc_genome_diff_file_name, passing_jcs);
-    int32_t snap_win = static_cast<int32_t>(pair_median - 2.0 * (summary.sequence_conversion.read_length_avg) + 0.5);
+    double read_len_avg = summary.sequence_conversion.read_length_avg;
+    int32_t snap_win = static_cast<int32_t>(max(read_len_avg, distance_cutoff - 2.0 * read_len_avg) + 0.5);
 
     //
     // Step 1: Re-read the candidate regions CSV.
@@ -1025,7 +1172,74 @@ namespace breseq {
          });
 
     //
-    // Step 4: Emit one DP item per edge with >= kDPMinSharedPairs shared read pairs.
+    // Step 3b: Fit the spurious-pair background to the edge-weight spectrum, and derive the minimum
+    // shared-pair count worth examining. This replaces a fixed "at least 5 shared pairs" threshold with
+    // one the run's own data sets: a candidate whose weight is explained by the background across all
+    // edges.size() junctions tested carries no information, so nothing below that floor is emitted.
+    // Because the edges are sorted by descending weight, this is applied as the loop's break point.
+    //
+    dp_background_model background;
+    {
+      vector<int> weights;
+      weights.reserve(edges.size());
+      for (size_t i = 0; i < edges.size(); i++) weights.push_back(edges[i].first);
+      // Closed-form floor: p_out is the probability that at least one chance discordant pair lands in
+      // this DP's two windows under uniform placement, so -log(1 - p_out) is the corresponding mean.
+      double mu_floor = (have_insert && insert_model.p_out > 0.0 && insert_model.p_out < 1.0)
+                        ? -log(1.0 - insert_model.p_out) : 0.0;
+      dp_fit_background(weights, mu_floor, background);
+    }
+    int32_t min_pairs = max(1, settings.discordant_pair_minimum_pairs);
+    if (background.ok && settings.discordant_pair_background_e_value_cutoff > 0.0) {
+      // Smallest weight whose background e-value clears the cutoff (tail is monotone in k).
+      for (int32_t k = min_pairs; k <= kDPMaxBackgroundFloor; k++) {
+        if (background.e_value(k) <= settings.discordant_pair_background_e_value_cutoff) { min_pairs = k; break; }
+        min_pairs = k;
+      }
+    }
+    // Record the model + gates for summary.html / summary.json (see DiscordantPairSummary).
+    {
+      DiscordantPairSummary& dps = summary.discordant_pair;
+      dps.read_length_avg = summary.sequence_conversion.read_length_avg;
+      const PairedMappingDistanceDistributionSummaries& pmdd = summary.preliminary_paired_mapping_distance_distribution;
+      double best_mapped = -1.0;
+      for (PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.begin(); it != pmdd.end(); it++) {
+        if (it->second.mapped_pairs > best_mapped) {
+          best_mapped = it->second.mapped_pairs;
+          dps.pair_distance_median = it->second.median;
+          dps.pair_distance_mad = it->second.mad;
+          dps.pair_distance_cutoff = it->second.distance_cutoff;
+          dps.pair_orientation = it->second.majority_orientation;
+        }
+      }
+      dps.crossing_reference_seq_id = crossing_ref_seq_id;
+      dps.crossing_reference_coverage = crossing_C_ref;
+      dps.expected_concordant_crossing = crossing_mean_ref;
+      dps.crossing_use_empirical = crossing_use_empirical;
+      dps.crossing_normal_positions = static_cast<uint64_t>(crossing_N);
+      dps.frequency_cutoff = settings.discordant_pair_frequency_cutoff;
+      dps.skew_cutoff = settings.discordant_pair_skew_cutoff;
+      dps.minimum_crossing = settings.discordant_pair_minimum_crossing;
+      // Reported at the crossing reference's own coverage; the per-item gate rescales by each side's.
+      dps.skew_in_force = (settings.discordant_pair_minimum_crossing <= 0.0)
+                          || (crossing_mean_ref >= settings.discordant_pair_minimum_crossing);
+      dps.background_e_value_cutoff = settings.discordant_pair_background_e_value_cutoff;
+      dps.minimum_pairs_option = settings.discordant_pair_minimum_pairs;
+      dps.minimum_pairs_used = min_pairs;
+      dps.candidate_junctions = static_cast<uint64_t>(edges.size());
+      dps.background_mean = background.ok ? background.mu : 0.0;
+      dps.background_size = background.ok ? background.size : 0.0;
+    }
+
+    cerr << "  Discordant pair (DP) background: " << edges.size() << " candidate junctions, "
+         << (background.ok ? ((background.size > 0.0)
+               ? ("negative binomial mean " + to_string(background.mu, 4, true) + ", size " + to_string(background.size, 3, false))
+               : ("Poisson mean " + to_string(background.mu, 4, true)))
+           : string("not fit"))
+         << "; requiring at least " << min_pairs << " shared read pairs." << endl;
+
+    //
+    // Step 4: Emit one DP item per edge with >= min_pairs shared read pairs.
     //  No one-to-one matching: a region whose discordant reads jump to several places (a rearrangement
     //  "hub") contributes one DP item per qualifying partner. A read pair's two mates may therefore
     //  appear in more than one DP item (counts across a hub's items can overlap).
@@ -1041,7 +1255,7 @@ namespace breseq {
 
     for (size_t e = 0; e < edges.size(); e++) {
       int weight = edges[e].first;
-      if (weight < kDPMinSharedPairs) break; // edges are sorted descending; nothing left qualifies
+      if (weight < min_pairs) break; // edges are sorted descending; nothing left qualifies
       int a = edges[e].second.first;
       int b = edges[e].second.second;
 
@@ -1284,6 +1498,9 @@ namespace breseq {
       dp["candidate_discordant_count"] = to_string(weight);
 
       int k_support = weight;
+      int k_distinct = weight;
+      bool have_local_concordant = false;
+      double c_local = 0.0;
       if (scanner) {
         // Count the three read categories at each side, classifying at the FINAL placed positions
         // (s1_pos/s2_pos) so the counts describe the reported breakpoint. The overlapping-mate
@@ -1291,50 +1508,131 @@ namespace breseq {
         // estimate now that placement is done).
         scanner->scan(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, s1_pos, s2_pos);
         int c1a = scanner->supporting(), c2a = scanner->concordant(), c3a = scanner->unpaired();
-        set<string> support_nums_1 = scanner->supporting_nums();   // copy before the next scan overwrites
+        map<string, int32_t> support_nums_1 = scanner->supporting_nums();   // copy before the next scan overwrites
 
         scanner->scan(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, s1_pos, s1_fwd, distance_cutoff, s2_pos, s1_pos);
         int c1b = scanner->supporting(), c2b = scanner->concordant(), c3b = scanner->unpaired();
-        const set<string>& support_nums_2 = scanner->supporting_nums();
+        const map<string, int32_t>& support_nums_2 = scanner->supporting_nums();
 
         // True support = read pairs whose BOTH mates qualify -- one at each side (intersect the sides'
         // supporting read-pair numbers). A single-side per-side count (c1a/c1b) over-counts at a
         // breakpoint SHARED with a neighboring junction: those reads' mates fall inside this junction's
         // wide (+/-D) partner window but land at the neighbor's breakpoint, so they appear on only one
         // side and drop out of the intersection. This matches exactly the pairs drawn in the joined plot.
+        //
+        // k_distinct counts the DISTINCT (outer_1, outer_2) fragment ends among those bridging pairs --
+        // the DP analogue of JC's pos_hash_score. PCR/optical duplicates of a single original molecule
+        // share both outer coordinates, so they collapse to one. Every statistical test below uses
+        // k_distinct; k_support is kept for reporting and for downstream IS-copy tie-breaking.
+        // (Strand adds nothing here: dp_classify_side_read already restricts each side to one strand.)
+        set<pair<int32_t, int32_t> > distinct_ends;
         k_support = 0;
-        for (set<string>::const_iterator n = support_nums_1.begin(); n != support_nums_1.end(); n++)
-          if (support_nums_2.count(*n)) k_support++;
+        for (map<string, int32_t>::const_iterator n = support_nums_1.begin(); n != support_nums_1.end(); n++) {
+          map<string, int32_t>::const_iterator m = support_nums_2.find(n->first);
+          if (m == support_nums_2.end()) continue;
+          k_support++;
+          distinct_ends.insert(make_pair(n->second, m->second));
+        }
+        k_distinct = static_cast<int>(distinct_ends.size());
 
         dp["discordant_count"] = to_string(k_support);
+        dp["distinct_discordant_count"] = to_string(k_distinct);
         dp["side_1_discordant_count"] = to_string(c1a);   // raw per-side counts (may exceed the paired
         dp["side_2_discordant_count"] = to_string(c1b);   // count when a side is a shared-breakpoint hub)
         dp["side_1_concordant_count"] = to_string(c2a);
         dp["side_2_concordant_count"] = to_string(c2b);
         dp["side_1_unpaired_count"] = to_string(c3a);
         dp["side_2_unpaired_count"] = to_string(c3b);
+        have_local_concordant = true;
+        c_local = 0.5 * (static_cast<double>(c2a) + static_cast<double>(c2b));
+
+        // Nothing survived verification: the candidate's shared-pair count came from the coarse
+        // region-overlap heuristic, but at the placed breakpoint not one read pair actually bridges the
+        // two sides. That is not weak evidence for a junction, it is the absence of any -- the frequency
+        // is 0/c, which measures the reference being intact rather than a variant being rare. Emitting it
+        // would put a "0 pairs, 0.0%" row in marginal.html and render a read-pair plot with nothing on it.
+        // Typical cause is a repeat-driven mismapping pile-up: both sides redundant, huge unpaired counts.
+        // Dropped rather than rejected, and counted in the run summary so the drop is not silent.
+        if (k_distinct <= 0) {
+          summary.discordant_pair.items_dropped_unsupported++;
+          continue;
+        }
       } else {
         // No BAM available: fall back to the heuristic count.
         dp["discordant_count"] = to_string(weight);
       }
 
+      // How many pairs the spurious-pair background would be expected to place at this junction, across
+      // every candidate junction tested. Reported for every item so the floor above can be audited.
+      if (background.ok)
+        dp["background_e_value"] = to_string(background.e_value(weight), 3, true);
+
+      // Local frequency: discordant pairs vs concordant pairs spanning the SAME breakpoint, i.e. the
+      // variant and reference observations of one sampling event. Both sides are averaged because each
+      // measures the same fragment population from one end. See dp_frequency_lower_bound.
+      double f_lcb = std::numeric_limits<double>::quiet_NaN();
+      if (have_local_concordant) {
+        double k = static_cast<double>(k_distinct < 0 ? 0 : k_distinct);
+        f_lcb = dp_frequency_lower_bound(k, c_local, kDPFrequencyAlpha);
+        // Deliberately NOT the shared FREQUENCY key: like JC's new_junction_frequency, DP carries its own
+        // so evidence-level frequency can never be mistaken for a mutation's allele frequency.
+        dp["discordant_pair_frequency"] = to_string((k + c_local > 0.0) ? (k / (k + c_local)) : 0.0, 4, false);
+        dp["concordant_count"] = to_string(c_local, 1, false);
+        dp["discordant_pair_frequency_lower_bound"] = to_string(f_lcb, 4, false);
+      }
+
       // Discordance "skew" score: -log10 P(a normal position on side_1's seq_id is spanned by <= k
       // concordant pairs), projecting the run-wide reference distribution to this seq_id's coverage.
+      double avgcov = dp_seq_coverage(summary, s1_seq_id);
       double dp_score = std::numeric_limits<double>::quiet_NaN();
       if (have_crossing) {
-        double avgcov = dp_seq_coverage(summary, s1_seq_id);
-        dp_score = dp_discordance_skew(crossing_hist_ref, crossing_lo, crossing_hi, crossing_C_ref, avgcov, static_cast<uint32_t>(k_support < 0 ? 0 : k_support),
+        dp_score = dp_discordance_skew(crossing_hist_ref, crossing_lo, crossing_hi, crossing_C_ref, avgcov, static_cast<uint32_t>(k_distinct < 0 ? 0 : k_distinct),
                                        crossing_use_empirical, crossing_nb_size, crossing_nb_mu);
       }
       dp[NEG_LOG10_DISCORDANCE_P_VALUE] = std::isnan(dp_score) ? string("NT") : to_string(dp_score, 1, false);
 
-      // Reject weakly-supported junctions: a skew above the cutoff means the discordant support (k) is
-      // anomalously low relative to the concordant crossing expected at this coverage -- i.e. too few
-      // discordant pairs where many concordant pairs still span the locus, so it reads as a contiguous
-      // (non-junction) position. Rejected DP items are moved to marginal.html (0 = cutoff off).
-      if (!std::isnan(dp_score) && settings.discordant_pair_skew_cutoff > 0.0
+      // Expected concordant pairs spanning a normal position HERE: the uncensored reference mean scaled
+      // to this sequence's coverage. This is the skew test's own effect size, and when it is small the
+      // test cannot separate a real junction from noise -- for a Poisson null with mean lambda even k=0
+      // only reaches -log10 P = lambda/ln(10), so below roughly 10 the skew can never clear a cutoff of
+      // 3 on merit. Any rejection it produces there comes from the shape of the censored null rather
+      // than from the data, so the test is reported but not allowed to reject.
+      double lambda_x = (crossing_C_ref > 0.0) ? crossing_mean_ref * (avgcov / crossing_C_ref) : 0.0;
+      bool skew_has_power = (settings.discordant_pair_minimum_crossing <= 0.0)
+                            || (lambda_x >= settings.discordant_pair_minimum_crossing);
+      dp["expected_concordant_count"] = to_string(lambda_x, 1, false);
+
+      // Reject a junction whose local variant frequency is confidently below the cutoff: many concordant
+      // pairs still span the breakpoint, so the reference is intact there and the discordant pairs are
+      // not reporting a real rearrangement. Rejected DP items move to marginal.html (0 = cutoff off).
+      if (!std::isnan(f_lcb) && settings.discordant_pair_frequency_cutoff > 0.0
+          && f_lcb < settings.discordant_pair_frequency_cutoff) {
+        // Its own reason string rather than the shared FREQUENCY_CUTOFF: what is compared against the
+        // cutoff is the lower CONFIDENCE BOUND, not the frequency shown in the table, and the generic
+        // "frequency below cutoff" wording makes a 25% item rejected on a 14% bound look like a bug.
+        dp.add_reject_reason("DISCORDANT_PAIR_FREQUENCY");
+      }
+
+      // The original skew test, now only applied where it has power (see above).
+      if (skew_has_power && !std::isnan(dp_score) && settings.discordant_pair_skew_cutoff > 0.0
           && dp_score > settings.discordant_pair_skew_cutoff) {
         dp.add_reject_reason("CONCORDANT_PAIR_SKEW");
+      }
+
+      // Tally the outcome for the run summary (an item can carry both reject reasons).
+      {
+        DiscordantPairSummary& dps = summary.discordant_pair;
+        dps.items_tested++;
+        if (circular_dp) dps.items_ignored_circular++;
+        vector<string> reasons = dp.get_reject_reasons();
+        bool by_freq = false, by_skew = false;
+        for (size_t i = 0; i < reasons.size(); i++) {
+          if (reasons[i] == "DISCORDANT_PAIR_FREQUENCY") by_freq = true;
+          if (reasons[i] == "CONCORDANT_PAIR_SKEW") by_skew = true;
+        }
+        if (by_freq) dps.items_rejected_frequency++;
+        if (by_skew) dps.items_rejected_skew++;
+        if (!by_freq && !by_skew && !circular_dp) dps.items_accepted++;
       }
 
       dp_gd.add(dp);
@@ -1374,6 +1672,20 @@ namespace breseq {
     for (size_t i = 0; i < sizeof(nice)/sizeof(nice[0]); i++)
       if (nice[i] >= raw) return nice[i];
     return 100000;
+  }
+
+  // Left margin, in base-font character widths, so the leftmost x tick label is not clipped.
+  //
+  // These plots carry no y-axis labels (read names sit on the RIGHT via y2tics), so gnuplot leaves the
+  // left axis almost no margin. But an x tick label is CENTERED on its tick and drawn at a larger font
+  // than the terminal's base font, so about half of the leftmost label hangs past the plot edge and is
+  // cut off by the canvas. Reserve half a label's width, converted from label-font to base-font
+  // character units (the average-character-width factor cancels in the ratio), plus a character of slack.
+  static int dp_lmargin_for_labels(size_t max_label_chars, double label_font, double base_font)
+  {
+    if (!(base_font > 0.0)) return 8;
+    double chars = ceil((static_cast<double>(max_label_chars) * label_font / 2.0) / base_font);
+    return static_cast<int>(chars) + 1;
   }
 
   // Build a gnuplot explicit-tics list ("label" pos, ...) at multiples of `step` within [lo, hi],
@@ -1483,10 +1795,13 @@ namespace breseq {
     string tics = dp_xtics_list(xmin, xmax, step);
     s << "set xtics (" << tics << ") nomirror font ',16'" << endl;
     s << "set x2tics (" << tics << ") font ',16'" << endl;
+    // Keep the widest label (the extremes of the range) inside the canvas.
+    s << "set lmargin " << dp_lmargin_for_labels(max(dp_commafy(xmin).size(), dp_commafy(xmax).size()), 16.0, 11.0) << endl;
 
     // Read-pair names as lane labels down the right side. For a concordant pair (both mates drawn) the
     // label shows both read names; a discordant lane shows the single in-window read.
-    s << "unset ytics" << endl;
+    // Unlabeled tick marks at each read lane on the left axis; the names stay on the right only.
+    s << "set ytics 1 nomirror format ''" << endl;
     {
       ostringstream y2;
       for (int i = 0; i < n; i++) {
@@ -1622,9 +1937,19 @@ namespace breseq {
       int64_t step = dp_nice_tick(xmax - xmin);
       ostringstream tks;
       bool first = true;
+      // Longest single ROW of a label -- these labels are two-row (embedded "\n"), and only the wider
+      // row governs how far the centered label sticks out past the plot edge.
+      size_t widest_row = 0;
       auto emit = [&](int64_t x, const string& label) {
         if (!first) tks << ", "; first = false;
         tks << double_quote(label) << " " << x;
+        for (size_t b = 0; b <= label.size(); ) {
+          size_t e = label.find("\\n", b);
+          size_t len = (e == string::npos ? label.size() : e) - b;
+          if (len > widest_row) widest_row = len;
+          if (e == string::npos) break;
+          b = e + 2;
+        }
       };
       // Seam: side_1_position (upper) over side_2_position (lower).
       emit(0, dp_commafy(p1) + "\\n" + dp_commafy(p2));
@@ -1640,10 +1965,12 @@ namespace breseq {
       }
       s << "set xtics ("  << tks.str() << ") nomirror font ',16'" << endl;  // bottom axis
       s << "set x2tics (" << tks.str() << ") font ',16'" << endl;           // top axis (same two rows)
+      s << "set lmargin " << dp_lmargin_for_labels(widest_row, 16.0, 11.0) << endl;
     }
 
     // Read-pair names down the right side (both mates).
-    s << "unset ytics" << endl;
+    // Unlabeled tick marks at each read lane on the left axis; the names stay on the right only.
+    s << "set ytics 1 nomirror format ''" << endl;
     if (n) {
       ostringstream y2;
       for (int i = 0; i < n; i++) {
