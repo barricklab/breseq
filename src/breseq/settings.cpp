@@ -370,7 +370,7 @@ namespace breseq
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", NORMAL_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", NORMAL_OPTION)
-    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.8)", "", NORMAL_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the UPPER 95% confidence bound on the variant allele frequency is at or above this value; i.e. a call is only demoted from consensus when the frequency is confidently below it. (DEFAULT = consensus mode, 0.90; polymorphism mode, 0.99)", "", NORMAL_OPTION)
     ("consensus-minimum-variant-coverage", "Only predict consensus mutations when at least this many reads support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("consensus-minimum-total-coverage", "Only predict consensus mutations when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("consensus-minimum-variant-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
@@ -384,12 +384,14 @@ namespace breseq
     options
 
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", NORMAL_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the minor variant allele frequency is greater than this value. For example, a setting of 0.05 will reject all polymorphisms with a non-reference frequency of <0.05, and any variants with a non-reference frequency of ≥ 0.95 (which is 1 - 0.05) will be rejected as polymorphisms and instead predicted to be consensus mutations (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the LOWER 95% confidence bound on the minor variant allele frequency is at or above this value, so a variant is never rejected merely for having shallow coverage -- only for being confidently below the cutoff. Variants that cannot be shown to lie below --consensus-frequency-cutoff are predicted as consensus mutations instead. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.01)", "", NORMAL_OPTION)
     ("polymorphism-minimum-variant-coverage", "Only predict polymorphisms when at least this many reads support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("polymorphism-minimum-total-coverage", "Only predict polymorphisms when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("polymorphism-minimum-variant-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", NORMAL_OPTION)
     ("polymorphism-minimum-total-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", NORMAL_OPTION)
+    ("polymorphism-strand-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias: reject a polymorphism whose variant reads are distributed across the two strands differently from the total read depth. (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, OFF)", "", NORMAL_OPTION)
+    ("polymorphism-quality-bias-cutoff", "P-value criterion for the K-S test for base-quality bias: reject a polymorphism whose variant reads have a different base-quality distribution from the reference reads. This also rejects strand-balanced, well-supported calls, so it is OFF by default. (0 = OFF) (DEFAULT = OFF)", "", NORMAL_OPTION)
+    ("polymorphism-bias-cutoff", "Shorthand that sets BOTH --polymorphism-strand-bias-cutoff and --polymorphism-quality-bias-cutoff. Either specific option overrides it. (0 = OFF)", "", EXPERT_OPTION)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", NORMAL_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 5)", "", NORMAL_OPTION)
@@ -759,7 +761,12 @@ namespace breseq
       this->minimum_mapping_quality = 0;
       
       this->mutation_log10_e_value_cutoff = 10;
-      this->consensus_frequency_cutoff = 0.8; // zero is OFF - ensures any rejected poly with high freq move to consensus!
+      // Recalibrated for the Clopper-Pearson tests. The frequency comparisons are now confidence
+      // bounds rather than point estimates, which shifts the effective threshold: the lower bound
+      // sits below the point estimate, so the floor comes down, and the upper bound sits above it,
+      // so the consensus cutoff goes up. Keeping consensus = 1 - floor makes the two-sided
+      // polymorphism test exactly symmetric.
+      this->consensus_frequency_cutoff = 0.99; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_variant_coverage = 0;
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
@@ -768,19 +775,30 @@ namespace breseq
       this->consensus_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       
       this->polymorphism_log10_e_value_cutoff = 2;
-      this->polymorphism_frequency_cutoff = 0.05;
-      // Soft-clipping and discordant pairs use the same frequency floor as mutation prediction.
+      this->polymorphism_frequency_cutoff = 0.01;
+      // Soft-clipping and discordant pairs keep their own floors; they are not part of the
+      // Clopper-Pearson recalibration above and their cutoffs were tuned against point estimates
+      // (SC) or an already-Clopper-Pearson test at a different scale (DP).
       this->soft_clipping_frequency_cutoff = 0.05;
       this->discordant_pair_frequency_cutoff = 0.05;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
+      // Polymorphism mode keeps its artifact guards on: it is explicitly hunting low-frequency
+      // variants, where a one-strand indel in a homopolymer run is far more likely to be a
+      // chemistry artifact than biology. These gate the POLYMORPHISM prediction only -- a call
+      // that snaps to consensus above never reaches them.
       this->polymorphism_minimum_variant_coverage_each_strand = 2;
       this->polymorphism_minimum_total_coverage_each_strand = 0;
       
       this->mixed_base_prediction = false;
-      this->polymorphism_reject_indel_homopolymer_length = 3; // zero is OFF!
-      this->polymorphism_reject_surrounding_homopolymer_length = 5; // zero is OFF!
-      this->polymorphism_bias_p_value_cutoff = 0;
+      // Homopolymer filters OFF pending a statistical replacement. These are hard length cutoffs
+      // standing in for a model of why homopolymer runs are indel hotspots; a per-context error
+      // model should express that as a rate, not as "reject any indel in a run of 3+". Still
+      // available via --polymorphism-reject-indel-homopolymer-length / -surrounding-.
+      this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
+      this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
+      this->polymorphism_fisher_strand_p_value_cutoff = 0.05;
+      this->polymorphism_ks_quality_p_value_cutoff = 0;
       this->polymorphism_no_indels = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 8;
@@ -796,7 +814,9 @@ namespace breseq
       this->minimum_mapping_quality = 0;
       
       this->mutation_log10_e_value_cutoff = 10;
-      this->consensus_frequency_cutoff = 0.8;
+      // Majority test: accept as consensus when the 95% lower confidence bound clears this, i.e.
+      // we are confident the variant is more than half the reads. Not an upper-bound test.
+      this->consensus_frequency_cutoff = 0.50;
       this->consensus_minimum_variant_coverage = 0;
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
@@ -805,18 +825,27 @@ namespace breseq
       this->consensus_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       
       this->polymorphism_log10_e_value_cutoff = 10;
-      this->polymorphism_frequency_cutoff = 0.2;
-      // Soft-clipping and discordant pairs use the same frequency floor as mutation prediction.
+      this->polymorphism_frequency_cutoff = 0.10;
+      // Soft-clipping and discordant pairs keep their own floors (see the note above).
       this->soft_clipping_frequency_cutoff = 0.2;
       this->discordant_pair_frequency_cutoff = 0.2;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
-      this->polymorphism_minimum_variant_coverage_each_strand = 0;
+      // These guard the POLYMORPHISM prediction only. Consensus mode asks one question first --
+      // is the variant the majority allele -- and answers it from the score and the frequency
+      // bound alone; a call that clears that never reaches these. They apply to what falls
+      // through, where a ~15% single-strand indel is far more likely to be a chemistry artifact
+      // than biology, so the variant must appear on both strands and must not fail Fisher's
+      // strand-bias or the K-S base-quality test.
+      this->polymorphism_minimum_variant_coverage_each_strand = 2;
       this->polymorphism_minimum_total_coverage_each_strand = 0;
 
       this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
-      this->polymorphism_bias_p_value_cutoff = 0;
+      this->polymorphism_fisher_strand_p_value_cutoff = 0.05;
+      // K-S quality bias also rejects strand-balanced, well-supported calls (e.g. a 48% variant
+      // with an 80/59 strand split and Fisher p = 0.81), so it is not on by default.
+      this->polymorphism_ks_quality_p_value_cutoff = 0;
       this->polymorphism_no_indels = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 3;
@@ -898,8 +927,15 @@ namespace breseq
       options.printUsage();
       exit(-1);
     }
-    if (options.count("polymorphism-bias-cutoff"))
-      this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
+    if (options.count("polymorphism-bias-cutoff")) {
+      double both = from_string<double>(options["polymorphism-bias-cutoff"]);
+      this->polymorphism_fisher_strand_p_value_cutoff = both;
+      this->polymorphism_ks_quality_p_value_cutoff = both;
+    }
+    if (options.count("polymorphism-strand-bias-cutoff"))
+      this->polymorphism_fisher_strand_p_value_cutoff = from_string<double>(options["polymorphism-strand-bias-cutoff"]);
+    if (options.count("polymorphism-quality-bias-cutoff"))
+      this->polymorphism_ks_quality_p_value_cutoff = from_string<double>(options["polymorphism-quality-bias-cutoff"]);
 
     // Warn of possibly confusing settings
     if (this->consensus_frequency_cutoff > 1 - this->polymorphism_frequency_cutoff) {
@@ -1186,8 +1222,12 @@ namespace breseq
     this->consensus_minimum_total_coverage_each_strand = 0;
     
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
-		this->polymorphism_bias_p_value_cutoff = 0;
+		this->polymorphism_fisher_strand_p_value_cutoff = 0;
+		this->polymorphism_ks_quality_p_value_cutoff = 0;
 		this->polymorphism_frequency_cutoff = 0.1;
+    // Was never initialized here, which left it indeterminate for the no-command-line Settings used
+    // by gdtools. The frequency tests branch on it, so give it the consensus-mode default.
+    this->consensus_frequency_cutoff = 0.90;
 		this->polymorphism_minimum_variant_coverage = 0;
     this->polymorphism_minimum_total_coverage = 0;
     this->polymorphism_minimum_variant_coverage_each_strand = 0;

@@ -1364,34 +1364,31 @@ namespace breseq {
             continue;
           }
           
-          // Determine consensus vs. polymorphism
-          if (settings.polymorphism_prediction) {
-            
-            // Above 1-cutoff, we reject unless we change to consensus
-            if (frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-              
-              if (frequency >= settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
-                mut[FREQUENCY] = "1";
-              } else {
-                mut.add_reject_reason("FREQUENCY_CUTOFF");
-                // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
-                continue;
-              }
-            }
-            // Below the cutoff, just reject
-            else if (frequency < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-              mut.add_reject_reason("FREQUENCY_CUTOFF");
-              // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
-              continue;
-            }
-          } else { // consensus mode
-            if (frequency >= settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
-              mut[FREQUENCY] = "1";
-            } else {
-              // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
-              mut.add_reject_reason("FREQUENCY_CUTOFF");
-              continue;
-            }
+          // Determine consensus vs. polymorphism from exact (Clopper-Pearson) confidence bounds on
+          // the combined read counts, matching how RA and JC evidence are classified: the lower
+          // bound gates "is this a real variant at all", the upper bound gates "is it fixed rather
+          // than polymorphic". Testing the high side with the lower bound would require
+          // ln(alpha)/ln(cutoff) reads even at 100% frequency and would drop real mutations for
+          // want of depth.
+          double combined_new = new_read_count_1 + new_read_count_2;
+          double combined_total = total_read_count_1 + total_read_count_2;
+          double freq_lower = binomial_frequency_lower_bound(combined_new, combined_total);
+          double freq_upper = binomial_frequency_upper_bound(combined_new, combined_total);
+
+          if ((settings.polymorphism_frequency_cutoff > 0.0)
+              && (freq_lower < settings.polymorphism_frequency_cutoff)) {
+            mut.add_reject_reason("FREQUENCY_CUTOFF");
+            // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
+            continue;
+          }
+          if ((settings.consensus_frequency_cutoff > 0.0)
+              && (freq_upper >= settings.consensus_frequency_cutoff)) {
+            mut[FREQUENCY] = "1";
+          } else if (!settings.polymorphism_prediction) {
+            // Consensus mode reports only fixed differences; an intermediate frequency it cannot
+            // call fixed is still not a consensus mutation.
+            mut.add_reject_reason("FREQUENCY_CUTOFF");
+            continue;
           }
         }
         

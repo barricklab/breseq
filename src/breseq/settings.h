@@ -449,7 +449,11 @@ namespace breseq
     double consensus_frequency_cutoff;                            // Default = 0.8
     
     double polymorphism_log10_e_value_cutoff;                     // Default = mutation_log10_e_value_cutoff = 10
-		double polymorphism_bias_p_value_cutoff;                      // Default = 0.05 for mixed base | 0 (OFF) for polymorphism
+		// Two independent bias tests, previously a single combined cutoff. Strand bias is the one
+		// that discriminates chemistry artifacts (a variant seen on only one strand); quality bias
+		// also rejects strand-balanced, well-supported calls, so it is OFF by default.
+		double polymorphism_fisher_strand_p_value_cutoff;             // Default = 0.05 for mixed base | 0 (OFF) for polymorphism
+		double polymorphism_ks_quality_p_value_cutoff;                // Default = 0 (OFF)
 		double polymorphism_frequency_cutoff;                         // Default = 0.1 for mixed base | 0.0 for polymorphism
     uint32_t polymorphism_minimum_variant_coverage;               // Default = 0
     uint32_t polymorphism_minimum_total_coverage;                 // Default = 0

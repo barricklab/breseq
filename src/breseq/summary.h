@@ -716,7 +716,8 @@ namespace breseq{
     
     double consensus_frequency_cutoff;
     double polymorphism_log10_e_value_cutoff;
-    double polymorphism_bias_p_value_cutoff;
+    double polymorphism_fisher_strand_p_value_cutoff;
+    double polymorphism_ks_quality_p_value_cutoff;
     double polymorphism_frequency_cutoff;
     uint32_t polymorphism_minimum_variant_coverage_each_strand;
     uint32_t polymorphism_minimum_total_coverage_each_strand;
