@@ -2391,5 +2391,27 @@ namespace breseq {
     return result;
   }
 
+  // Exact (Clopper-Pearson) one-sided lower confidence bound on k/n. See stats.h.
+  double binomial_frequency_lower_bound(double k, double n, double alpha)
+  {
+    if (!(alpha > 0.0) || !(alpha < 1.0) || !(n > 0.0)) return 0.0;
+    if (k < 0.0) k = 0.0;
+    if (k > n)   k = n;
+    if (k <= 0.0) return 0.0;                 // no successes -> nothing can be ruled out below
+    if (k >= n)   return pow(alpha, 1.0 / k); // beta bound with b = 1 degenerates to alpha^(1/k)
+    return incbi(k, n - k + 1.0, alpha);
+  }
+
+  // Exact (Clopper-Pearson) one-sided upper confidence bound on k/n. See stats.h.
+  double binomial_frequency_upper_bound(double k, double n, double alpha)
+  {
+    if (!(alpha > 0.0) || !(alpha < 1.0) || !(n > 0.0)) return 1.0;
+    if (k < 0.0) k = 0.0;
+    if (k > n)   k = n;
+    if (k >= n)   return 1.0;                        // every read supports it -> cannot bound below 1
+    if (k <= 0.0) return 1.0 - pow(alpha, 1.0 / n);  // mirror of the k = n case
+    return incbi(k + 1.0, n - k, 1.0 - alpha);
+  }
+
 } // namespace breseq
 
