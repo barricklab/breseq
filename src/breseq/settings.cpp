@@ -370,7 +370,7 @@ namespace breseq
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", NORMAL_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", NORMAL_OPTION)
-    ("consensus-frequency-cutoff", "Only predict consensus mutations when the UPPER 95% confidence bound on the variant allele frequency is at or above this value; i.e. a call is only demoted from consensus when the frequency is confidently below it. (DEFAULT = consensus mode, 0.90; polymorphism mode, 0.99)", "", NORMAL_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the UPPER 95% confidence bound on the variant allele frequency is at or above this value; i.e. a call is only demoted from consensus when the frequency is confidently below it. (DEFAULT = consensus mode, 0.90; polymorphism mode, 0.95)", "", NORMAL_OPTION)
     ("consensus-minimum-variant-coverage", "Only predict consensus mutations when at least this many reads support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("consensus-minimum-total-coverage", "Only predict consensus mutations when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("consensus-minimum-variant-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
@@ -384,7 +384,7 @@ namespace breseq
     options
 
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", NORMAL_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the LOWER 95% confidence bound on the minor variant allele frequency is at or above this value, so a variant is never rejected merely for having shallow coverage -- only for being confidently below the cutoff. Variants that cannot be shown to lie below --consensus-frequency-cutoff are predicted as consensus mutations instead. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.01)", "", NORMAL_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the LOWER 95% confidence bound on the minor variant allele frequency is at or above this value, so a variant is never rejected merely for having shallow coverage -- only for being confidently below the cutoff. Variants that cannot be shown to lie below --consensus-frequency-cutoff are predicted as consensus mutations instead. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ("polymorphism-minimum-variant-coverage", "Only predict polymorphisms when at least this many reads support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("polymorphism-minimum-total-coverage", "Only predict polymorphisms when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("polymorphism-minimum-variant-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", NORMAL_OPTION)
@@ -766,7 +766,7 @@ namespace breseq
       // sits below the point estimate, so the floor comes down, and the upper bound sits above it,
       // so the consensus cutoff goes up. Keeping consensus = 1 - floor makes the two-sided
       // polymorphism test exactly symmetric.
-      this->consensus_frequency_cutoff = 0.99; // zero is OFF - ensures any rejected poly with high freq move to consensus!
+      this->consensus_frequency_cutoff = 0.95; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_variant_coverage = 0;
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
@@ -775,7 +775,7 @@ namespace breseq
       this->consensus_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       
       this->polymorphism_log10_e_value_cutoff = 2;
-      this->polymorphism_frequency_cutoff = 0.01;
+      this->polymorphism_frequency_cutoff = 0.05;
       // Soft-clipping and discordant pairs keep their own floors; they are not part of the
       // Clopper-Pearson recalibration above and their cutoffs were tuned against point estimates
       // (SC) or an already-Clopper-Pearson test at a different scale (DP).
