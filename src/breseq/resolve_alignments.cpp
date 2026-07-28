@@ -3159,38 +3159,42 @@ void  assign_one_junction_read_counts(
     // We may have added FREQUENCY_CUTOFF previously, so clear it.
     j.remove_reject_reason("FREQUENCY_CUTOFF");
     
-    // Order of precedence depends on mode
-    if (settings.polymorphism_prediction) {
-      
-      // Above 1-cutoff, we reject unless we change to consensus
-      if (new_junction_frequency_value > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-        
-        if (new_junction_frequency_value >= settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
-          j[PREDICTION] = "consensus";
-          j[FREQUENCY] = "1";
-        } else {
-          j.add_reject_reason("FREQUENCY_CUTOFF");
-          j[PREDICTION] = "polymorphism";
-        }
-      }
-      // Below the cutoff, just reject
-      else if (new_junction_frequency_value < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-        j.add_reject_reason("FREQUENCY_CUTOFF");
-        j[PREDICTION] = "polymorphism";
-      } else {
-        j[PREDICTION] = "polymorphism";
-      }
-      
+    // Exact (Clopper-Pearson) confidence bounds on the junction frequency, so the cutoffs below are
+    // confidence statements rather than point-estimate comparisons -- a junction is never rejected
+    // merely for having few reads, only for being confidently on the wrong side of a cutoff.
+    //
+    // The bounds use the RAW integer read counts, not the register-normalized ones that form the
+    // displayed frequency, because a binomial needs genuine trials. The normalization corrects for
+    // the differing number of overlap registers at which the junction and its sides can be detected,
+    // and across the test goldens it moves the frequency by a median of 0.0000 (max 0.069), so the
+    // two describe the same proportion to well within the width of the interval.
+    double raw_new = from_string<double>(j[NEW_JUNCTION_READ_COUNT]);
+    double raw_sides = 0.0; double raw_side_n = 0.0;
+    if (j[SIDE_1_READ_COUNT] != "NA") { raw_sides += from_string<double>(j[SIDE_1_READ_COUNT]); raw_side_n++; }
+    if (j[SIDE_2_READ_COUNT] != "NA") { raw_sides += from_string<double>(j[SIDE_2_READ_COUNT]); raw_side_n++; }
+    double raw_total = raw_new + ((raw_side_n > 0.0) ? (raw_sides / raw_side_n) : 0.0);
+    double freq_lower = binomial_frequency_lower_bound(raw_new, raw_total);
+    double freq_upper = binomial_frequency_upper_bound(raw_new, raw_total);
+
+    // Two bounds decide all three outcomes. Note the asymmetry is deliberate: the LOWER bound gates
+    // "is there a junction here at all", while the UPPER bound gates "is it fixed rather than
+    // polymorphic". Testing the high side with the lower bound instead would require
+    // ln(alpha)/ln(cutoff) reads even at 100% frequency -- 14 at a cutoff of 0.8 -- and would drop
+    // real junctions for want of depth.
+    bool below_floor = (settings.polymorphism_frequency_cutoff > 0.0)
+                       && (freq_lower < settings.polymorphism_frequency_cutoff);
+    bool is_consensus = (settings.consensus_frequency_cutoff > 0.0)
+                        && (freq_upper >= settings.consensus_frequency_cutoff);
+
+    if (below_floor) {
+      // Not confidently a junction at all. Rejected in both modes.
+      j[PREDICTION] = "polymorphism";
+      j.add_reject_reason("FREQUENCY_CUTOFF");
+    } else if (is_consensus) {
+      j[PREDICTION] = "consensus";
+      j[FREQUENCY] = "1";
     } else {
-      if (new_junction_frequency_value >=  settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
-        j[PREDICTION] = "consensus";
-        j[FREQUENCY] = "1";
-      } else if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal)) {
-        j[PREDICTION] = "polymorphism";
-      } else {
-        j[PREDICTION] = "polymorphism";
-        j.add_reject_reason("FREQUENCY_CUTOFF");
-      }
+      j[PREDICTION] = "polymorphism";
     }
   }
   

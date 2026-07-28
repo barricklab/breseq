@@ -1481,8 +1481,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Polymorphism minimum total coverage")
                + td((settings.polymorphism_minimum_total_coverage == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_total_coverage))
                );
-    HTML << tr(td("Polymorphism bias cutoff")
-               + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_bias_p_value_cutoff))
+    HTML << tr(td("Polymorphism strand bias cutoff (Fisher)")
+               + td((settings.polymorphism_fisher_strand_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_fisher_strand_p_value_cutoff))
+               );
+    HTML << tr(td("Polymorphism quality bias cutoff (K-S)")
+               + td((settings.polymorphism_ks_quality_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_ks_quality_p_value_cutoff))
                );
     HTML << tr(td("Predict indel polymorphisms") 
                + td((settings.polymorphism_no_indels) ? "NO" : "YES")

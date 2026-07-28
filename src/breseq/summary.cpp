@@ -680,7 +680,8 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   consensus_minimum_total_coverage = t.consensus_minimum_total_coverage;
   consensus_frequency_cutoff = t.consensus_frequency_cutoff;
   polymorphism_log10_e_value_cutoff = t.polymorphism_log10_e_value_cutoff;
-  polymorphism_bias_p_value_cutoff = t.polymorphism_bias_p_value_cutoff;
+  polymorphism_fisher_strand_p_value_cutoff = t.polymorphism_fisher_strand_p_value_cutoff;
+  polymorphism_ks_quality_p_value_cutoff = t.polymorphism_ks_quality_p_value_cutoff;
   polymorphism_frequency_cutoff = t.polymorphism_frequency_cutoff;
   polymorphism_minimum_variant_coverage_each_strand = t.polymorphism_minimum_variant_coverage_each_strand;
   polymorphism_minimum_total_coverage_each_strand = t.polymorphism_minimum_total_coverage_each_strand;
@@ -1001,7 +1002,8 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"consensus_reject_indel_homopolymer_length", s.consensus_reject_indel_homopolymer_length},
       {"consensus_reject_surrounding_homopolymer_length", s.consensus_reject_surrounding_homopolymer_length},
       {"polymorphism_log10_e_value_cutoff", s.polymorphism_log10_e_value_cutoff},
-      {"polymorphism_bias_p_value_cutoff", s.polymorphism_bias_p_value_cutoff},
+      {"polymorphism_fisher_strand_p_value_cutoff", s.polymorphism_fisher_strand_p_value_cutoff},
+      {"polymorphism_ks_quality_p_value_cutoff", s.polymorphism_ks_quality_p_value_cutoff},
       {"polymorphism_frequency_cutoff", s.polymorphism_frequency_cutoff},
       {"polymorphism_minimum_variant_coverage_each_strand", s.polymorphism_minimum_variant_coverage_each_strand},
       {"polymorphism_minimum_total_coverage_each_strand", s.polymorphism_minimum_total_coverage_each_strand},

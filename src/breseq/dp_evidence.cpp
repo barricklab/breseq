@@ -816,15 +816,10 @@ namespace breseq {
   // accepts everything -- which is exactly the regime where DP evidence over-predicts. The frequency
   // test is indifferent: k and c shrink together and their ratio does not move.
   //
-  // Reported as an exact (Clopper-Pearson) lower confidence bound, so a candidate is never rejected
-  // merely for having small counts -- only for being confidently LOW frequency. k of k observations
-  // therefore always passes, however small k is; ruling those out is the background test's job.
-  static double dp_frequency_lower_bound(double k, double c, double alpha)
-  {
-    if (!(k > 0.0)) return 0.0;                       // no supporting pair at all -> bound is 0
-    if (!(c > 0.0)) return pow(alpha, 1.0 / k);       // beta bound with b = 1 degenerates to alpha^(1/k)
-    return incbi(k, c + 1.0, alpha);                  // BetaInv(alpha; k, n-k+1), n-k = c
-  }
+  // Reported as an exact (Clopper-Pearson) lower confidence bound -- binomial_frequency_lower_bound
+  // in stats.h, shared with the RA and JC frequency tests -- so a candidate is never rejected merely
+  // for having small counts, only for being confidently LOW frequency. k of k observations therefore
+  // always passes, however small k is; ruling those out is the background test's job.
 
   // Mean of a crossing distribution over ALL bins, INCLUDING crossing = 0 -- the expected number of
   // concordant pairs spanning a normal position. Deliberately uncensored: dp_crossing_censor drops the
@@ -1569,11 +1564,11 @@ namespace breseq {
 
       // Local frequency: discordant pairs vs concordant pairs spanning the SAME breakpoint, i.e. the
       // variant and reference observations of one sampling event. Both sides are averaged because each
-      // measures the same fragment population from one end. See dp_frequency_lower_bound.
+      // measures the same fragment population from one end. See the comment above dp_crossing_mean.
       double f_lcb = std::numeric_limits<double>::quiet_NaN();
       if (have_local_concordant) {
         double k = static_cast<double>(k_distinct < 0 ? 0 : k_distinct);
-        f_lcb = dp_frequency_lower_bound(k, c_local, kDPFrequencyAlpha);
+        f_lcb = binomial_frequency_lower_bound(k, k + c_local, kDPFrequencyAlpha);
         // Deliberately NOT the shared FREQUENCY key: like JC's new_junction_frequency, DP carries its own
         // so evidence-level frequency can never be mistaken for a mutation's allele frequency.
         dp["discordant_pair_frequency"] = to_string((k + c_local > 0.0) ? (k / (k + c_local)) : 0.0, 4, false);

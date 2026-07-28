@@ -114,6 +114,26 @@ namespace breseq {
   // Equivalent to R's ks.test(x, y, alternative="less")$p.value
   double ks_test_two_sample_less(const vector<double>& x, const vector<double>& y);
 
+  // ---------------------------------------------------------------------------------------------
+  // Exact (Clopper-Pearson) one-sided confidence bounds on a binomial proportion k/n.
+  //
+  // Used wherever a variant frequency is compared against a cutoff, so the comparison is a
+  // CONFIDENCE statement rather than a point estimate: a call is never rejected merely for having
+  // small counts, only for being confidently on the wrong side of the cutoff.
+  //
+  //   lower: L = BetaInv(alpha; k, n-k+1),  L = 0 when k = 0
+  //   upper: U = BetaInv(1-alpha; k+1, n-k), U = 1 when k = n
+  //
+  // Note the identity L(k of k) = alpha^(1/k). Requiring L >= c therefore implies a minimum count
+  // k >= ln(alpha)/ln(c) even at 100% frequency -- negligible for a small c (k >= 2 at c = 0.2) but
+  // a de facto coverage requirement for a large one (k >= 14 at c = 0.8). Test a HIGH cutoff with
+  // the upper bound instead of inverting the lower one.
+  //
+  // n is a double because some callers average counts from two junction sides; k is a genuine
+  // integer count. Both are clamped into range.
+  double binomial_frequency_lower_bound(double k, double n, double alpha = 0.05);
+  double binomial_frequency_upper_bound(double k, double n, double alpha = 0.05);
+
   // Result of a Nelder-Mead simplex minimization.
   struct nelder_mead_result_t {
     vector<double> estimate;
