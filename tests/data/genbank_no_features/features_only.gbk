@@ -1,0 +1,15 @@
+LOCUS       splitseq                  60 bp    DNA     linear   UNK 01-JAN-2020
+DEFINITION  Split reference: annotations only (sequence in a separate file).
+ACCESSION   splitseq
+FEATURES             Location/Qualifiers
+     source          1..60
+                     /organism="synthetic construct"
+     gene            10..39
+                     /locus_tag="split_g1"
+                     /gene="geneS"
+     CDS             10..39
+                     /locus_tag="split_g1"
+                     /gene="geneS"
+                     /product="hypothetical protein S"
+                     /transl_table=11
+//

@@ -1,0 +1,23 @@
+LOCUS       normrec                   60 bp    DNA     linear   UNK 01-JAN-2020
+DEFINITION  Normal record with a FEATURES table and sequence.
+ACCESSION   normrec
+FEATURES             Location/Qualifiers
+     source          1..60
+                     /organism="synthetic construct"
+     gene            1..30
+                     /locus_tag="norm_g1"
+                     /gene="geneA"
+     CDS             1..30
+                     /locus_tag="norm_g1"
+                     /gene="geneA"
+                     /product="hypothetical protein A"
+                     /transl_table=11
+ORIGIN
+        1 atgaaacgtc tggcagaata cgatctgtaa gcatgcatgc atgcatgcat gcatgcatgc
+//
+LOCUS       nofeatrec                 60 bp    DNA     linear   UNK 01-JAN-2020
+DEFINITION  Record with no FEATURES section but with sequence present.
+ACCESSION   nofeatrec
+ORIGIN
+        1 ttttaaaacc ccggggtttt aaaaccccgg ggttttaaaa ccccggggtt ttaaaaccgg
+//

@@ -1,0 +1,6 @@
+LOCUS       splitseq                  60 bp    DNA     linear   UNK 01-JAN-2020
+DEFINITION  Split reference: sequence only (annotations in a separate file).
+ACCESSION   splitseq
+ORIGIN
+        1 atgaaacgtc tggcagaata cgatctgtaa gcatgcatgc atgcatgcat gcatgcatgc
+//

@@ -1,0 +1,23 @@
+##gff-version 3
+##sequence-region	normrec	1	60
+##sequence-region	nofeatrec	1	60
+##sequence-region	splitseq	1	60
+##original-file-name	normrec	tests/breseq_convert_reference_6/../data/genbank_no_features/no_features.gbk
+##original-file-name	nofeatrec	tests/breseq_convert_reference_6/../data/genbank_no_features/no_features.gbk
+##original-file-name	splitseq	tests/breseq_convert_reference_6/../data/genbank_no_features/features_only.gbk
+normrec	.	region	1	60	.	+	.	Is_circular=false;Note=Normal record with a FEATURES table and sequence.
+normrec	.	source	1	60	.	+	0	Name=unknown
+normrec	.	gene	1	30	.	+	0	Alias=norm_g1;ID=norm_g1;Name=geneA
+normrec	.	CDS	1	30	.	+	0	Alias=norm_g1;ID=norm_g1;Name=geneA;Note=hypothetical protein A;transl_table=11
+nofeatrec	.	region	1	60	.	+	.	Is_circular=false;Note=Record with no FEATURES section but with sequence present.
+splitseq	.	region	1	60	.	+	.	Is_circular=false;Note=Split reference: annotations only (sequence in a separate file).
+splitseq	.	source	1	60	.	+	0	Name=unknown
+splitseq	.	gene	10	39	.	+	0	Alias=split_g1;ID=split_g1;Name=geneS
+splitseq	.	CDS	10	39	.	+	0	Alias=split_g1;ID=split_g1;Name=geneS;Note=hypothetical protein S;transl_table=11
+##FASTA
+>normrec
+ATGAAACGTCTGGCAGAATACGATCTGTAAGCATGCATGCATGCATGCATGCATGCATGC
+>nofeatrec
+TTTTAAAACCCCGGGGTTTTAAAACCCCGGGGTTTTAAAACCCCGGGGTTTTAAAACCGG
+>splitseq
+ATGAAACGTCTGGCAGAATACGATCTGTAAGCATGCATGCATGCATGCATGCATGCATGC
