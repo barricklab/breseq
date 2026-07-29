@@ -165,7 +165,8 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
     assert(static_cast<unsigned int>(len) == bam_header->target_len[i]);
     
     const string seq(cseq);
-    
+    free((void*)cseq);
+
     string output_filename(in_output_path);
     output_filename += "/";
     output_filename += bam_header->target_name[i];
@@ -174,6 +175,7 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
     calculate_trims_1(seq, output_filename);
 	}
   
+  fai_destroy(fasta_index);
   bam_header_destroy(bam_header);
 }
 
