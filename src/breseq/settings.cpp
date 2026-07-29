@@ -1558,18 +1558,40 @@ namespace breseq
     
     if (this->installed["bowtie2"].size() != 0) {
       string version_string = SYSTEM_CAPTURE(this->installed["bowtie2"] + " --version", true);
-      size_t start_version_pos = version_string.find("bowtie2-align-s version ");
-      if (start_version_pos != string::npos) {
-        start_version_pos = version_string.find_first_not_of(" \t\r\n", start_version_pos+24);
-        size_t end_version_pos = version_string.find_first_not_of("0123456789", start_version_pos+1);
-        string new_version_string = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
-        
-        start_version_pos = version_string.find_first_not_of(".", end_version_pos+1);
-        end_version_pos = version_string.find_first_of(" \t\r\n", start_version_pos+1);
-        
-        new_version_string += "." + version_string.substr(start_version_pos, end_version_pos - start_version_pos);
+
+      // The version is on the line that names the aligner executable. Do not assume a
+      // specific executable name or a fixed offset -- newer bowtie2 releases dispatch to
+      // a SIMD-specific binary, so the name varies. Examples of this line:
+      //
+      //   /usr/local/bin/bowtie2-align-s version 2.5.4
+      //   /usr/local/bowtie2-2.5.5/bowtie2-align-s-v256 version 2.5.5   (GitHub issue #422)
+      //   /usr/local/bin/bowtie2-align-s version 2.0.0-beta7
+      //
+      // Other lines may precede it and must be skipped, for example (GitHub issue #412):
+      //
+      //   [WARNING] Failed to launch x86-64-v3 version, staying with default
+      //
+      string new_version_string = "";
+      vector<string> version_lines = split_on_any(version_string, "\n\r");
+      for (vector<string>::iterator it=version_lines.begin(); it!=version_lines.end(); it++) {
+
+        // Only the line naming the bowtie2 executable can tell us the version
+        if (it->find("bowtie2") == string::npos) continue;
+
+        // Take the word after the word "version", requiring it to begin with a digit
+        vector<string> version_words = split_on_whitespace(*it);
+        for (size_t i=0; i+1<version_words.size(); i++) {
+          if (version_words[i] != "version") continue;
+          if (version_words[i+1].find_first_of("0123456789") != 0) continue;
+          new_version_string = version_words[i+1];
+          break;
+        }
+        if (new_version_string.size() > 0) break;
+      }
+
+      if (new_version_string.size() > 0) {
         this->installed["bowtie2_version_string"] = new_version_string;
-        
+
         // - instead of . appears with beta
         new_version_string = substitute(new_version_string, "-", ".");
 
