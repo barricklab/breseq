@@ -4443,17 +4443,24 @@ string Html_Mutation_Table_String::freq_to_string(const string& freq, bool multi
   stringstream ss;
   if (from_string<double>(freq) == 1.0 || freq.empty())
     ss << "100%";
-  
+
+  else if (from_string<double>(freq) == 0.0)
+    // Exactly zero has no significant figures to show, so show none. The branch below cannot
+    // handle it: log(0) is -infinity, so the computed precision is infinite and casting it to
+    // int32_t is undefined behavior -- in practice it fell through to the stream's default and
+    // printed "0.000000%".
+    ss << "0%";
+
   else { // want to show at minimum: one decimal place and two significant figures
     double conv_freq = from_string<double>(freq) * 100;
 
     double first_digit_magnitude = ceil(-log(conv_freq) / log(10));
-    
+
     //ss.width(4);
     ss.setf(ios_base::fixed);
     ss.precision( max(1, static_cast<int32_t>(first_digit_magnitude)+1));
     ss << conv_freq << "%";
-      
+
   }
   return ss.str();
 }
