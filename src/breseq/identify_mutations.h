@@ -54,7 +54,6 @@ namespace breseq {
                           const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
                           double polymorphism_cutoff,
-                          double polymorphism_frequency_cutoff,
                           double polymorphism_precision_decimal,
                           uint32_t polymorphism_precision_places,
                           bool print_per_position_file
@@ -131,85 +130,91 @@ namespace breseq {
 	 */
 	struct polymorphism_data {
 		//! Constructor.
-		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t f, const covariate_values_t& cv)
-		: _base_char(b), _quality(q), _strand(s), _fastq_file_index(f), _cv(cv) {
-		}
-		
-		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t f)
-		: _base_char(b), _quality(q), _strand(s), _fastq_file_index(f) {
+		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t f, int32_t mq, const covariate_values_t& cv)
+		: _base_char(b), _quality(q), _strand(s), _fastq_file_index(f), _mapping_quality(mq), _cv(cv)
+    , _log10_pr_max(0.0) {
+      for (uint8_t j=0; j<base_list_size; j++) { _log10_pr[j] = 0.0; _r[j] = 0.0; }
 		}
 
 		base_char _base_char;
 		uint8_t _quality;
 		int _strand;
 		int32_t _fastq_file_index;
+    int32_t _mapping_quality;
     covariate_values_t _cv;
+
+    // Cache of this read base's likelihood under each of the five candidate true bases, filled
+    // once by fill_read_base_likelihoods(). Every model in this file -- the pure-genotype scores
+    // and the allele mixture -- is a function of nothing but these numbers, so they are computed
+    // once per read base rather than re-queried from the error table per hypothesis per iteration.
+    //
+    // _r[] is the same vector rescaled so its maximum is exactly 1 (_log10_pr_max holds the
+    // subtracted exponent). The calibrated table floors probabilities near 1e-7, so a raw product
+    // over a hundred reads underflows; carrying the exponent separately keeps every mixture sum
+    // exact and lets log-likelihoods accumulate as Sum_i (log10 s_i + _log10_pr_max).
+    double _log10_pr[base_list_size];   //!< log10 P(observed base | true base b)
+    double _r[base_list_size];          //!< 10^(_log10_pr[b] - _log10_pr_max), max == 1
+    double _log10_pr_max;
 	};
 
-	/*! Polymorphism prediction data struct.
+	/*! Fitted allele frequencies at one position.
+
+   The position is modelled as a mixture over all five candidate alleles: a read draws a true base
+   b with probability f[b], then is observed according to the calibrated error table. Fitting all
+   five together rather than the top two is what makes every frequency here a fraction of TOTAL
+   depth, with the reference allele always in the model.
+
+   The log-likelihood is concave on the simplex (a sum of logs of linear functions of f), so the
+   maximum EM converges to is global -- which is why no local-minimum guard is needed here, unlike
+   the two-base bisection this replaces.
 	 */
-	struct polymorphism_prediction {
-		//! Constructor.
-		polymorphism_prediction(double f = 0.0, double l = 0.0, double p = 0.0)
-		: frequency(f), log10_base_likelihood(l), likelihood_ratio_test_p_value(p) {
+	struct allele_model {
+		allele_model()
+		: log10_likelihood(0.0), n(0), iterations(0) {
+			for (uint8_t b=0; b<base_list_size; b++) { f[b] = 0.0; sum_w[b] = 0.0; }
 		}
-		
-		double frequency;
-		double log10_base_likelihood;
-		long double likelihood_ratio_test_p_value;
+
+		double f[base_list_size];         //!< fitted frequencies, sum to 1 over the allowed alleles
+		double log10_likelihood;          //!< log10 L at the fit
+		double sum_w[base_list_size];     //!< Sum_i w_i(b), exactly n * f[b]
+		uint32_t n;                       //!< read bases in the fit
+		uint32_t iterations;              //!< EM iterations used
+
+		//! Frequency of allele b for reporting, floored to 0 below the half-read level.
+		double reported_frequency(base_index b) const;
+
+		//! The fitted spectrum as "A:0.01,C:0.55,G:0.44", omitting alleles below the half-read level.
+		string spectrum_string(uint32_t precision_places) const;
+
+		//! Index of the highest-frequency allele, or base_list_N_index if the fit is empty.
+		base_index major_index() const;
+
+		//! Index of the highest-frequency allele other than exclude_index, or base_list_N_index.
+		//  Alleles below the half-read level (f < 1/2n) are treated as absent.
+		base_index next_index(base_index exclude_index) const;
 	};
-	
-  /*! cDiscreteSNPCaller
-	 
-	 This class is used to predict SNPs in a single-genome sample.
-   
+
+
+  /*! Result of calling a single pure genotype at one position.
+
+   Replaces the incremental per-read Bayes update that cDiscreteSNPCaller used to perform. With
+   uniform genotype priors the per-read renormalization cancels out of the reported score, so the
+   whole thing reduces to a sum of per-read log-likelihoods per candidate base plus one closing
+   log-sum-exp -- see pure_genotype_call() in identify_mutations.cpp.
 	 */
-  
+
   struct cSNPCall {
-    
-    cSNPCall() 
+
+    cSNPCall()
     : genotype("N")
     , score(numeric_limits<double>::quiet_NaN())
     {}
-    
+
     string genotype;
     double score;
   };
-  
-  class cDiscreteSNPCaller {
-  public:
-    cDiscreteSNPCaller(
-                       const string& type, 
-                       uint32_t reference_length
-                       );
-    
-    virtual ~cDiscreteSNPCaller() {};
 
-    void add_genotype(const string& genotype, double probability);
-    void reset(uint8_t ref_base_index);
-    void update(
-                const covariate_values_t& cv, 
-                bool obs_top_strand, 
-                int32_t mapping_quality,
-                cErrorTable& et
-                );
-    void print();
-    
-    cSNPCall get_prediction();
-    
-    vector<double> get_genotype_log10_probabilities() { return _log10_genotype_probabilities; }
-    
-  protected:
-    uint32_t _observations;                        // number of read bases recorded
-    double _normalized_observations;               // observations, taking into account mapping quality probability
-    string _type;
-    vector<double> _log10_genotype_prior_probabilities;
-    vector<double> _log10_genotype_probabilities;
-    vector<vector<base_index> > _genotype_vector;  // holds all possible genotypes as lists of bases
-    uint32_t _best_genotype_index;
-  };
-  
-  
+
 	/*! identify_mutations_pileup
 	 
 	 */
@@ -279,7 +284,6 @@ namespace breseq {
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
                               double polymorphism_cutoff,
-                              double polymorphism_frequency_cutoff,
                               double polymorphism_precision_decimal,
                               uint32_t polymorphism_precision_places,                              
                               bool print_per_position_file
@@ -321,22 +325,29 @@ namespace breseq {
 
     //! Compute and annotate polymorphism bias statistics directly on the diff entry.
     void annotate_polymorphism_statistics(cDiffEntry& mut, char best_base_char, char second_best_base_char, position_base_info& pos_info, const vector<polymorphism_data>& pdata);
-    
-		//! Predict whether there is a significant polymorphism.
-    polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
 
-    //! Predict whether there is a mixed base.
-    polymorphism_prediction predict_mixed_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
-    
-    //! Helper function
-    double slope_at_percentage_best_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata, const double guess, const double precision, double& middle_point_log10_likelihood); 
-    
-		//! Find best mixture of two bases and likelihood of producing observed read bases.
-    pair<double,double> best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata);
+    //! Fill a read base's per-hypothesis likelihood cache from the calibrated error table.
+    void fill_read_base_likelihoods(polymorphism_data& pd);
 
-		//! Calculate likelihood of a specific mixture of two bases producing observed read bases.
-    double calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq);
-		
+    //! Call the single most probable pure genotype from summed per-base log-likelihoods.
+    cSNPCall pure_genotype_call(const double log10_pr_sum[base_list_size], uint32_t observations) const;
+
+
+		//! Fit the allele frequency mixture at one position by EM.
+    //  allowed[b] == false holds allele b out of the model entirely, which is how the
+    //  "this allele is absent" null hypothesis behind the polymorphism score is evaluated.
+    allele_model fit_allele_frequencies(const vector<polymorphism_data>& pdata, const bool allowed[base_list_size]) const;
+
+    //! log10 evidence that allele variant_index is present at all, against the best fit without it.
+    double variant_presence_score(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index) const;
+
+    //! Maximum log10 likelihood with allele variant_index's frequency held at f_fixed.
+    double profile_log10_likelihood(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index, double f_fixed) const;
+
+    //! Write the variant frequency's confidence bounds and effective depth onto an RA entry.
+    void write_RA_frequency_bounds(cDiffEntry& mut, const vector<polymorphism_data>& pdata, const allele_model& amodel, base_index variant_index) const;
+
+
     //! Settings passed at command line
     const Settings& _settings;
 		cGenomeDiff _gd; //!< Genome diff.
@@ -345,7 +356,6 @@ namespace breseq {
     vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.
 		double _consensus_score_cutoff; //!< phred score cutoff value for mutation predictions.
     double _polymorphism_score_cutoff; //!< phred score cutoff for predicted polymorphisms.
-    double _polymorphism_frequency_cutoff; //!< Frequency cutoff for predicted polymorphisms.
     double _polymorphism_precision_decimal; //!< Precision for estimating polymorphism models
     uint32_t _polymorphism_precision_places; //!< Precision for writing out polymorphism values
 
@@ -356,8 +366,7 @@ namespace breseq {
     
     //! Initialized once per pileup
     cErrorTable _error_table;
-    cDiscreteSNPCaller _snp_caller;
-    
+
 		vector<sequence_info> _seq_info; //!< information about each sequence.
 		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
 		shared_info s; // summary stats

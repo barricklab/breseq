@@ -4525,13 +4525,17 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
       double num_evidence(0.0);
       double quality(0.0);
       for(diff_entry_list_t::iterator it=ev.begin(); it != ev.end(); it++) {
-        if (ev.front()->entry_exists(PREDICTION)) {
-          if ( ((*it)->get(PREDICTION) == "consensus") && (ev.front()->entry_exists(CONSENSUS_SCORE)) ) {
+        // One score now covers both prediction kinds, so the branch on PREDICTION that used to
+        // pick which of two scores to read is gone.
+        if ((*it)->entry_exists(SCORE)) {
+          num_evidence++;
+          quality += from_string<double>((*it)->get(SCORE));
+        } else if ((*it)->entry_exists(CONSENSUS_SCORE) || (*it)->entry_exists(POLYMORPHISM_SCORE)) {
+          // Evidence written before the scores were merged.
+          const char* legacy = ((*it)->get(PREDICTION) == "consensus") ? CONSENSUS_SCORE : POLYMORPHISM_SCORE;
+          if ((*it)->entry_exists(legacy)) {
             num_evidence++;
-            quality += from_string<double>((*it)->get(CONSENSUS_SCORE));
-          } else if ( ((*it)->get(PREDICTION) == "polymorphism") && (ev.front()->entry_exists(POLYMORPHISM_SCORE)) ) {
-              num_evidence++;
-              quality += from_string<double>((*it)->get(POLYMORPHISM_SCORE));
+            quality += from_string<double>((*it)->get(legacy));
           }
         }
       }
@@ -4742,7 +4746,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       cDiffEntry& ev = *(ev_list.front());
       
       // Score
-      gvf[5] = ev[CONSENSUS_SCORE];
+      gvf[5] = ev.entry_exists(SCORE) ? ev[SCORE] : ev[CONSENSUS_SCORE];
         
       // Attributes - Total Reads 
       vector<string> covs = split( ev[TOTAL_COV], "/" );

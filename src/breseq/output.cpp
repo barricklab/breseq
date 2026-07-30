@@ -809,13 +809,13 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     if (!settings.polymorphism_prediction) {
       ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
     } else {
-      ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(POLYMORPHISM_SCORE)));
+      ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(SCORE)));
     }
     if (full_marginal_ra_list_size > ra_list.size()) {
       if (!settings.polymorphism_prediction) {
         marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown, sorted by frequency from high to low)";
       } else {
-        marginal_ra_title += " (highest polymorphism score " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown, sorted by polymorphism_score from high to low)";
+        marginal_ra_title += " (highest score " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown, sorted by score from high to low)";
       }
     }
   }
@@ -2056,16 +2056,13 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ssf.clear();
     ssf.precision(1);
     
-    if (c.entry_exists(CONSENSUS_SCORE)) {
-      ssf << fixed << c[CONSENSUS_SCORE] << endl;
-    } else {
-      ssf << "NA";
-    }
-
-    ssf << "/ ";
-
-    if (c.entry_exists(POLYMORPHISM_SCORE)) {
-      ssf << fixed << c[POLYMORPHISM_SCORE] << endl;
+    if (c.entry_exists(SCORE)) {
+      ssf << fixed << c[SCORE] << endl;
+    } else if (c.entry_exists(CONSENSUS_SCORE) || c.entry_exists(POLYMORPHISM_SCORE)) {
+      // Evidence written before the scores were merged: show whichever admitted the prediction.
+      const char* legacy = (c[PREDICTION] == "consensus") ? CONSENSUS_SCORE : POLYMORPHISM_SCORE;
+      if (c.entry_exists(legacy)) ssf << fixed << c[legacy] << endl;
+      else                        ssf << "NA";
     } else {
       ssf << "NA";
     }

@@ -42,7 +42,6 @@ void identify_mutations(
                 const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
 								double polymorphism_cutoff,
-								double polymorphism_frequency_cutoff,
                 double polymorphism_precision_decimal,
                 uint32_t polymorphism_precision_places,
 								bool print_per_position_file
@@ -58,7 +57,6 @@ void identify_mutations(
                 deletion_seed_cutoffs,
 								mutation_cutoff,
 								polymorphism_cutoff,
-								polymorphism_frequency_cutoff,
                 polymorphism_precision_decimal,
                 polymorphism_precision_places,
 								print_per_position_file
@@ -108,23 +106,50 @@ bool rejected_RA_polymorphism_bias(cDiffEntry& ra,
   return rejected;
 }
   
+// The single RA score: log10 evidence that the position carries a non-reference allele at all.
+//
+// Evidence files written before the two scores were merged carry consensus_score and
+// polymorphism_score instead. Those are still readable -- users re-run the Output step over an old
+// evidence .gd routinely -- and the better-supported of the two stands in, since each was the
+// admitting score for one of the two claims this one score now gates.
+static double RA_score(const cDiffEntry& ra)
+{
+  if (ra.entry_exists(SCORE)) return double_from_string(ra.get(SCORE));
+
+  double legacy = numeric_limits<double>::quiet_NaN();
+  if (ra.entry_exists(CONSENSUS_SCORE)) legacy = double_from_string(ra.get(CONSENSUS_SCORE));
+  if (ra.entry_exists(POLYMORPHISM_SCORE)) {
+    double p = double_from_string(ra.get(POLYMORPHISM_SCORE));
+    if (std::isnan(legacy) || (p > legacy)) legacy = p;
+  }
+  return legacy;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Exact (Clopper-Pearson) confidence bounds on the variant frequency at an RA position, so the
 // frequency cutoffs are a confidence statement rather than a point-estimate comparison: a call is
 // never rejected merely for having shallow coverage, only for being confidently on the wrong side.
 //
-// The interval is CENTRED on the reported POLYMORPHISM_FREQUENCY -- a maximum-likelihood fit that
-// weights by base quality -- rather than on the raw new_cov/total_cov ratio, and given the width
-// implied by the total read depth. The two centres agree to a median of 4e-5 across the test
-// goldens but can differ by up to 0.11 where quality is heterogeneous, and the bound has to
-// describe the same number the report shows; otherwise "rejected at frequency 0.43" carrying a
-// bound derived from 0.32 is unreadable. Depth still sets the width, so the interval widens
-// correctly where coverage is thin, which is the entire point.
+// The bounds are computed where the model lives (write_RA_frequency_bounds, below) and read back
+// from the entry here, so the interval that decides the call is the one the .gd and the report
+// show. It is centred on the reported frequency and widened by the error-model effective depth,
+// which is what a binomial "n" has to be once reads differ in how much they actually say: a
+// quality-2 base and a quality-40 base are not one trial each.
+//
+// The fallback path reconstructs the old interval from total_cov -- raw read count as n -- for
+// evidence written before the bounds were recorded. That is exactly the calibration-blind
+// construction this replaced, so it is a compatibility shim and not a second opinion.
 //
 // Returns false if the position has no usable depth, in which case callers fall back to the
 // point estimate.
 static bool RA_frequency_bounds(const cDiffEntry& ra, double& lower, double& upper)
 {
+  if (ra.entry_exists(POLYMORPHISM_FREQUENCY_LOWER) && ra.entry_exists(POLYMORPHISM_FREQUENCY_UPPER)) {
+    lower = from_string<double>(ra.get(POLYMORPHISM_FREQUENCY_LOWER));
+    upper = from_string<double>(ra.get(POLYMORPHISM_FREQUENCY_UPPER));
+    return true;
+  }
+
   if (!ra.entry_exists(TOTAL_COV) || !ra.entry_exists(POLYMORPHISM_FREQUENCY)) return false;
   vector<string> top_bot = split(ra.get(TOTAL_COV), "/");
   if (top_bot.size() < 2) return false;
@@ -135,13 +160,6 @@ static bool RA_frequency_bounds(const cDiffEntry& ra, double& lower, double& upp
   upper = binomial_frequency_upper_bound(k, n);
   return true;
 }
-
-
-
-// The bounds are deliberately NOT written onto the entry. They are recoverable at any time from
-// total_cov + polymorphism_frequency (see ra_frequency_confidence_bounds in output.cpp, which
-// recomputes them for the report), and storing them would add two fields to all ~840 RA entries in
-// the test goldens, burying the handful of genuine classification changes in cosmetic churn.
 
 bool rejected_RA_polymorphism_coverage(cDiffEntry& ra,
                                cReferenceSequences& ref_seq_info,
@@ -255,8 +273,8 @@ bool rejected_RA_consensus_coverage(cDiffEntry& ra,
   
   if (settings.consensus_minimum_total_coverage_each_strand > 0) {
     vector<string> top_bot = split(ra[TOTAL_COV], "/");
-    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_variant_coverage_each_strand) ||
-        (from_string<double>(top_bot[1]) < settings.consensus_minimum_variant_coverage_each_strand) ) {
+    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_total_coverage_each_strand) ||
+        (from_string<double>(top_bot[1]) < settings.consensus_minimum_total_coverage_each_strand) ) {
       ra.add_reject_reason("TOTAL_STRAND_COVERAGE");
       rejected = true;
     }
@@ -264,7 +282,7 @@ bool rejected_RA_consensus_coverage(cDiffEntry& ra,
   
   if (settings.consensus_minimum_variant_coverage > 0) {
     vector<string> top_bot = split(ra[MAJOR_COV], "/");
-    if ( from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]) < settings.consensus_minimum_total_coverage ) {
+    if ( from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]) < settings.consensus_minimum_variant_coverage ) {
       ra.add_reject_reason("VARIANT_COVERAGE");
       rejected = true;
     }
@@ -404,40 +422,54 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
 // Returns whether it should be deleted
 //
 // CONSENSUS MODE asks one question of every position: is there evidence that the variant is the
-// MAJORITY allele. That gives two flat attempts, in order, each gated on a score and on the exact
-// 95% lower confidence bound of the variant frequency:
+// MAJORITY allele. That gives two flat attempts, in order, each gated on the score and on the 95%
+// lower confidence bound of the variant frequency:
 //
-//   1. consensus     -- consensus_score clears its cutoff AND L >= consensus_frequency_cutoff
-//                       (0.50 by default: confidently more than half the reads)
-//   2. polymorphism  -- otherwise, polymorphism_score clears its cutoff AND
+//   1. consensus     -- score clears mutation_log10_e_value_cutoff AND
+//                       L >= consensus_frequency_cutoff (0.50 by default: confidently a majority)
+//   2. polymorphism  -- otherwise, score clears polymorphism_log10_e_value_cutoff AND
 //                       L >= polymorphism_frequency_cutoff (0.10 by default: confidently present)
 //   3. otherwise the position is dropped.
 //
 // Both tests read the LOWER bound, so a position is never accepted on thin coverage and never
 // rejected merely for having thin coverage -- only for failing to establish the claim being made.
-// The strand-minimum, Fisher strand-bias, K-S quality-bias and homopolymer filters are all OFF by
-// default here and run only when explicitly enabled; they are applied within whichever attempt
-// they belong to so those command-line options keep working.
+//
+// DO NOT "unify" this with polymorphism mode, which reads the UPPER bound in the same slot. The
+// asymmetry is the whole point: the two modes carry opposite defaults. Here the fixed
+// interpretation is the default, so the question is "is the variant confidently the majority" and
+// the lower bound answers it. There the polymorphic interpretation is the default, so the question
+// is "can we still rule out that it is fixed" and the upper bound answers that.
+//
+// The temptation to unify comes from an argument that no longer applies. Under the exact
+// Clopper-Pearson bounds this used to use, the identity L(k of k) = alpha^(1/k) meant a lower-bound
+// test against 0.50 demanded ln(0.05)/ln(0.50) = 4.32 variant reads even at 100% frequency, so
+// genuine fixed variants were dropped for want of depth. Profile-likelihood bounds do not have that
+// floor -- at two decisive reads the lower bound is already 0.505 -- and measured over the test
+// goldens, 0 of 218 consensus-mode fixed variants now fail this test. Meanwhile switching this slot
+// to the upper bound would relabel two well-measured ~48% variants (at 115x and 292x coverage) as
+// fixed 100% mutations, which is exactly what the lower bound is here to prevent.
+//
+// The Fisher strand-bias and variant-strand-minimum filters are ON by default; the K-S quality-bias
+// and homopolymer filters are off. They are applied within whichever attempt they belong to so
+// those command-line options keep working.
 bool test_RA_evidence_CONSENSUS_mode(
                                      cDiffEntry& ra,
                                      cReferenceSequences& ref_seq_info,
                                      const Settings& settings
                                      )
 {
-  double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
-  double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
+  double score = RA_score(ra);
 
-  // Exact 95% lower bound on the variant frequency; falls back to the point estimate if the
-  // position has no usable depth.
+  // Falls back to the point estimate if the entry carries neither recorded bounds nor usable depth.
   double lower, upper;
   if (!RA_frequency_bounds(ra, lower, upper))
-    lower = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
+    lower = upper = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
 
   /////////////////////////////////
   // 1. Is it the majority allele?
   /////////////////////////////////
 
-  if (consensus_score < settings.mutation_log10_e_value_cutoff) {
+  if (score < settings.mutation_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.consensus_frequency_cutoff > 0.0) && (lower < settings.consensus_frequency_cutoff)) {
@@ -464,7 +496,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   // 2. Is it present at all?
   /////////////////////////////////
 
-  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+  if (score < settings.polymorphism_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.polymorphism_frequency_cutoff > 0.0) && (lower < settings.polymorphism_frequency_cutoff)) {
@@ -500,24 +532,25 @@ bool test_RA_evidence_CONSENSUS_mode(
 // reversed: here a position is assumed to be POLYMORPHIC unless the data say otherwise, so the
 // bounds swap roles.
 //
-//   1. consensus     -- consensus_score clears its cutoff AND U >= consensus_frequency_cutoff
-//                       (0.99 by default). The upper bound, not the lower: a call snaps to a fixed
-//                       100% difference only when we cannot rule out that it IS fixed. Under
-//                       consensus mode the same slot asks "is it confidently the majority" with the
-//                       lower bound, because there the fixed interpretation is the default.
-//   2. polymorphism  -- otherwise, polymorphism_score clears its cutoff AND
-//                       L >= polymorphism_frequency_cutoff (0.01 by default: confidently present)
+//   1. consensus     -- score clears mutation_log10_e_value_cutoff AND
+//                       U >= consensus_frequency_cutoff (0.95 by default). The upper bound, not the
+//                       lower: a call snaps to a fixed 100% difference only when we cannot rule out
+//                       that it IS fixed. Under consensus mode the same slot asks "is it confidently
+//                       the majority" with the lower bound, because there the fixed interpretation
+//                       is the default. See the note there before trying to make these agree.
+//   2. polymorphism  -- otherwise, score clears polymorphism_log10_e_value_cutoff AND
+//                       L >= polymorphism_frequency_cutoff (0.05 by default: confidently present)
 //   3. otherwise the position is KEPT and marked rejected -- unlike consensus mode, which drops it.
 //
-// The optional guards sit in whichever attempt they belong to and are all OFF by default.
+// The Fisher strand-bias and variant-strand-minimum guards are ON by default here; the K-S
+// quality-bias and homopolymer guards are off. Each sits in whichever attempt it belongs to.
 bool test_RA_evidence_POLYMORPHISM_mode(
                                      cDiffEntry& ra,
                                      cReferenceSequences& ref_seq_info,
                                      const Settings& settings
                                      )
 {
-  double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
-  double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
+  double score = RA_score(ra);
 
   double lower, upper;
   if (!RA_frequency_bounds(ra, lower, upper))
@@ -527,7 +560,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // 1. Can we still call it fixed?
   /////////////////////////////////
 
-  if (consensus_score < settings.mutation_log10_e_value_cutoff) {
+  if (score < settings.mutation_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.consensus_frequency_cutoff > 0.0) && (upper < settings.consensus_frequency_cutoff)) {
@@ -554,7 +587,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // 2. Is it present at all?
   /////////////////////////////////
 
-  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+  if (score < settings.polymorphism_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.polymorphism_frequency_cutoff > 0.0) && (lower < settings.polymorphism_frequency_cutoff)) {
@@ -598,11 +631,11 @@ void test_RA_evidence(
   
   // Assumes these entries are present initially
   //  * REF_BASE
-  //  * CONSENSUS_SCORE is present for all entries        = maximumum likelihood frequency for 100% mutated model
-  //  * POLYMORPHISM_FREQUENCY is present for all entries = maximumum likelihood frequency for mixed model
-  //  * QUALITY is present for all entries                = consensus model
-  //  * POLYMORPHISM_SCORE may or may not be present      = mixed model
-  //  * NEW_COV, REF_COV present for all entries
+  //  * SCORE                  log10 evidence that a non-reference allele is present at all
+  //                           (or, on evidence written before the scores were merged, at least one
+  //                            of CONSENSUS_SCORE / POLYMORPHISM_SCORE -- see RA_score())
+  //  * POLYMORPHISM_FREQUENCY the variant allele's fitted frequency, as a fraction of total depth
+  //  * NEW_COV, REF_COV       present for all entries
   
   diff_entry_list_t list = gd.get_list();
   // Note nonstandard non-increment, since we remove items
@@ -620,11 +653,8 @@ void test_RA_evidence(
     if (!ra.entry_exists(REF_BASE)) {
       ERROR("Expected field 'ref_base' in evidence item\n" + ra.as_string());
     }
-    if (!ra.entry_exists(CONSENSUS_SCORE)) {
-      ERROR("Expected field 'consensus_score' in evidence item\n" + ra.as_string());
-    }
-    if (!ra.entry_exists(POLYMORPHISM_SCORE)) {
-      ERROR("Expected field 'polymorphism_score' in evidence item\n" + ra.as_string());
+    if (!ra.entry_exists(SCORE) && !ra.entry_exists(CONSENSUS_SCORE) && !ra.entry_exists(POLYMORPHISM_SCORE)) {
+      ERROR("Expected field 'score' in evidence item\n" + ra.as_string());
     }
     if (!ra.entry_exists(POLYMORPHISM_FREQUENCY)) {
       ERROR("Expected field '" + cString(POLYMORPHISM_FREQUENCY) + "' in evidence item\n" + ra.as_string());
@@ -668,7 +698,6 @@ identify_mutations_pileup::identify_mutations_pileup(
                               const vector<double>& deletion_seed_cutoffs,
 															double consensus_score_cutoff,
 															double polymorphism_score_cutoff,
-															double polymorphism_frequency_cutoff,
                               double polymorphism_precision_decimal,
                               uint32_t polymorphism_precision_places,
 															bool print_per_position_file
@@ -680,12 +709,10 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _deletion_propagation_cutoffs(deletion_propagation_cutoffs)
 , _consensus_score_cutoff(consensus_score_cutoff)
 , _polymorphism_score_cutoff(polymorphism_score_cutoff)
-, _polymorphism_frequency_cutoff(polymorphism_frequency_cutoff)
 , _polymorphism_precision_decimal(polymorphism_precision_decimal)
 , _polymorphism_precision_places(polymorphism_precision_places)
 , _log10_ref_length(0)
 , _total_reference_length(summary.sequence_conversion.total_reference_sequence_length)
-, _snp_caller("haploid", summary.sequence_conversion.total_reference_sequence_length)
 , _this_deletion_reaches_seed_value(false)
 , _this_deletion_redundant_reached_zero(false)
 , _last_position_coverage_printed(0)
@@ -1063,11 +1090,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		position_coverage this_position_coverage;
 		bool this_position_unique_only_coverage=true;
 		
-    //## reset SNP caller
-    _snp_caller.reset(basechar2index(ref_base_char));
-        
 		//## polymorphism prediction data
 		vector<polymorphism_data> pdata;
+
+    //## Summed log10 P(observed bases | this position is 100% base b), one entry per candidate
+    //## base. Every pure-genotype quantity at this position is a function of just these five
+    //## numbers; see pure_genotype_call().
+    double log10_pr_sum[base_list_size];
+    for (uint8_t j=0; j<base_list_size; j++) log10_pr_sum[j] = 0.0;
     
 		//## for each alignment within this pileup:
 		for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
@@ -1220,11 +1250,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         ++pos_info[baseindex2char(cv.obs_base())][1+strand];
         
         //##### this is for polymorphism prediction and making strings
-        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), cv));
-        
+        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), i->mapping_quality(), cv));
+
         //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
-        _snp_caller.update(cv, strand == 1, i->mapping_quality(), _error_table);
+        // One error-table query per hypothesis per read base, done once here. Everything
+        // downstream reads the cache.
+        fill_read_base_likelihoods(pdata.back());
+        for (uint8_t j=0; j<base_list_size; j++) log10_pr_sum[j] += pdata.back()._log10_pr[j];
       }
 		} // end for-each read
 		
@@ -1237,11 +1270,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		this_position_coverage.sum();
 				
 		//#we are trying to find the base with the most support
-    cSNPCall snp_call = _snp_caller.get_prediction();
+    cSNPCall snp_call = pure_genotype_call(log10_pr_sum, static_cast<uint32_t>(pdata.size()));
     
     base_char best_base_char('N');
     double consensus_bonferroni_score(numeric_limits<double>::quiet_NaN());
-    double polymorphism_bonferroni_score(numeric_limits<double>::quiet_NaN());
+    double variant_score(numeric_limits<double>::quiet_NaN());
 
     // SNP caller returns one genotype
     best_base_char = snp_call.genotype[0];
@@ -1323,75 +1356,46 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//###								
 
 		bool passed_as_polymorphism_prediction(false);
-    polymorphism_prediction ppred;
-    base_char second_best_base_char('N');
 
     cDiffEntry mut(RA);
-    
+
     //## evaluate whether to call an actual mutation!
     // -- note that we accept > 0 and only reject later
     // so that these can potentially make it into the marginal data
     bool passed_as_consensus_prediction = (best_base_char != ref_base_char) && (!std::isnan(consensus_bonferroni_score) && (consensus_bonferroni_score > 0));
-    
-    // Find the bases with the highest and second highest coverage
-    // We only predict polymorphisms involving these 'major' and 'minor' alleles
-    base_index best_base_index(base_list_N_index);
-    int best_base_coverage(0);
-    base_index second_best_base_index(base_list_N_index);
-    int second_best_base_coverage(0);
 
-    vector<double> snp_probs = _snp_caller.get_genotype_log10_probabilities();
-            
-    for (uint8_t i=0; i<base_list_size; i++) {
-      base_char this_base_char = base_char_list[i];
-      base_index this_base_index = i;
-      int this_base_coverage = pos_info[this_base_char][0] + pos_info[this_base_char][2];
-      
-      if (this_base_coverage==0) continue;
-      
-      // if better coverage or tied in coverage and better probability
-      if ((this_base_coverage > best_base_coverage) ||
-        ((this_base_coverage == best_base_coverage) && ((best_base_index==base_list_N_index) || (snp_probs[this_base_index] > snp_probs[best_base_index])))) {
-        second_best_base_index = best_base_index;
-        second_best_base_coverage = best_base_coverage;
-        best_base_index = this_base_index;
-        best_base_coverage = this_base_coverage;
-      }
-      else if ((this_base_coverage > second_best_base_coverage) 
-        || ((this_base_coverage == second_best_base_coverage) && (((second_best_base_index==base_list_N_index) ||snp_probs[this_base_index] > snp_probs[second_best_base_index])))) {
-        second_best_base_index = this_base_index;
-        second_best_base_coverage = this_base_coverage;
-      }
-    }
-    
-    int this_base_coverage = min(pos_info[best_base_char][0], pos_info[best_base_char][2]);
-    
-    // Only try mixed SNP model if there is coverage for more than one base!
-    ppred.frequency = 1;
-    if (second_best_base_index != base_list_N_index) {
-      best_base_char = base_char_list[best_base_index];
-      second_best_base_char = base_char_list[second_best_base_index];
+    //## Fit all five alleles at once, so every frequency below is a fraction of TOTAL depth and
+    //## the reference allele is in the model whether or not it is well supported. The two-base
+    //## fit this replaces chose its pair by raw coverage and renormalized within it, which made
+    //## the reported frequency a share of that pair rather than of the position.
+    bool all_alleles[base_list_size];
+    for (uint8_t i=0; i<base_list_size; i++) all_alleles[i] = true;
+    allele_model amodel = fit_allele_frequencies(pdata, all_alleles);
 
-      // tries all frequencies of the best two
-      if (_settings.polymorphism_prediction) {
-        ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
-      }
-      
-      // tries only the raw ML frequency of the best two
-      else /* if (_settings.mixed_base_prediction) */ {
-        ppred = predict_mixed_base(best_base_char, second_best_base_char, pdata);
-      }
-      
-      // Calculate E-value for polymorphism score (E theta)
-      polymorphism_bonferroni_score = (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
-      
+    //## Three questions, three bases, none of them reassigned into another:
+    //##   best_base_char (above)  the most probable single genotype -- consensus score, UN calling
+    //##   major_base_char         the highest-frequency allele in the fit
+    //##   variant_base_char       the highest-frequency allele that is not the reference
+    //## They agree except at genuinely mixed sites, where the disagreement is information. The
+    //## old code overwrote the first with the second partway through and reported a mixture of
+    //## the two.
+    const base_index ref_base_index = (ref_base_char == 'N') ? base_list_N_index : basechar2index(ref_base_char);
+    const base_index major_base_index = amodel.major_index();
+    const base_index minor_base_index = amodel.next_index(major_base_index);
+    const base_index variant_base_index = amodel.next_index(ref_base_index);
+
+    base_char major_base_char   = (major_base_index   == base_list_N_index) ? 'N' : base_char_list[major_base_index];
+    base_char minor_base_char   = (minor_base_index   == base_list_N_index) ? 'N' : base_char_list[minor_base_index];
+    base_char variant_base_char = (variant_base_index == base_list_N_index) ? 'N' : base_char_list[variant_base_index];
+
+    if (variant_base_index != base_list_N_index) {
+      variant_score = variant_presence_score(pdata, amodel, variant_base_index);
+
       // Do we accept this as a polymorphism?
-      if (polymorphism_bonferroni_score >= _polymorphism_score_cutoff)
+      if (variant_score >= _polymorphism_score_cutoff)
         passed_as_polymorphism_prediction = true;
-      
-      //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
     }
-		
+
 		//###
 		//## UNKNOWN UNKNOWN UNKNOWN
 		//###
@@ -1415,33 +1419,45 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[SEQ_ID] = p.target_name();
       mut[POSITION] = to_string<uint32_t>(position);
       mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
-      // Genotype quality is for the top called genotype
-      mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
-      mut[POLYMORPHISM_SCORE] = formatted_double(polymorphism_bonferroni_score, kMutationScorePrecision).to_string();
+      //## One score: the log10 evidence that this position carries a non-reference allele at all.
+      //## Whether that allele is then called fixed or polymorphic is decided by the frequency
+      //## cutoffs, not by a second score. The pure-genotype log-odds is still computed -- it gates
+      //## UN calling and the consensus emission test above -- but it answers a different question
+      //## ("which single base is this") and reporting both invited them to be compared.
+      mut[SCORE] = formatted_double(variant_score, kMutationScorePrecision).to_string();
       
       //## Specific initializations for polymorphisms. Must take precedence.
 
-      //# the frequency returned is the probability of the FIRST base
-      //# we want to quote the probability of the second base (the minor allele from the reference).
       mut[REF_BASE] = ref_base_char;
-      mut[NEW_BASE] = (best_base_char == ref_base_char) ? second_best_base_char : best_base_char;
-      
-      mut[MAJOR_BASE] = best_base_char;
-      mut[MINOR_BASE] = second_best_base_char;
-      mut[MAJOR_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
-      
-      double variant_frequency = ppred.frequency;
-      if (mut[REF_BASE] == mut[MAJOR_BASE]) {
-        variant_frequency = 1.0 - variant_frequency;
-      }
-      mut[POLYMORPHISM_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
+      mut[NEW_BASE] = variant_base_char;
 
+      mut[MAJOR_BASE] = major_base_char;
+      mut[MINOR_BASE] = minor_base_char;
 
-      // Add line to the polymorphism statistics input file if we are only a polymorphism
+      //## Both of these are fractions of TOTAL depth now, so unlike the old pair-relative
+      //## frequencies they do NOT sum to 1 -- the whole fitted spectrum does.
+      mut[MAJOR_FREQUENCY] = formatted_double(
+          amodel.reported_frequency(major_base_index), _polymorphism_precision_places, true).to_string();
+      mut[POLYMORPHISM_FREQUENCY] = formatted_double(
+          amodel.reported_frequency(variant_base_index), _polymorphism_precision_places, true).to_string();
 
-      if (ppred.frequency != 1) {
-        annotate_polymorphism_statistics(mut, best_base_char, second_best_base_char, pos_info, pdata);
-      }
+      //## The whole fitted spectrum, so a position with more than one credible non-reference
+      //## allele is inspectable rather than silently reduced to its strongest one.
+      mut[ALLELE_FREQUENCIES] = amodel.spectrum_string(_polymorphism_precision_places);
+
+      write_RA_frequency_bounds(mut, pdata, amodel, variant_base_index);
+
+      //## Strand and quality bias statistics, computed for every entry.
+      //##
+      //## These used to be skipped whenever the position had only one allele with coverage, which
+      //## sounds harmless -- with nothing to compare against, the tests are uninformative -- but it
+      //## silently exempted those entries from a filter that is ON by default:
+      //## polymorphism_fisher_strand_p_value_cutoff is 0.05 in BOTH modes, and
+      //## rejected_RA_polymorphism_bias() only applies it when fisher_strand_p_value exists. So the
+      //## absence of the field was doing the work of a passing test. Compute it always and let the
+      //## filter decide; annotate_polymorphism_statistics() already returns 1.0 for an empty
+      //## comparison, which is a pass on the merits rather than by omission.
+      annotate_polymorphism_statistics(mut, major_base_char, minor_base_char, pos_info, pdata);
 
       //## More fields common to consensus mutations and polymorphisms
       //## ...now that ref_base and new_base are defined
@@ -1506,33 +1522,43 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         //mut[POSITION] = to_string<uint32_t>(position);
         //mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
 
-        // tries all frequencies of the best two
-        
-        base_char best_base_char = from_string<base_char>(mut[REF_BASE]);
-        base_char second_best_base_char = from_string<base_char>(mut[NEW_BASE]);
-        
-        if (_settings.polymorphism_prediction) {
-          ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
+        //## Read the user's allele straight off the position's own fit, rather than re-fitting a
+        //## two-base model of (ref_base, new_base). The old private fit is what forced the major
+        //## and minor alleles here to be defined pair-relatively -- with the acknowledged caveat
+        //## that "there could be a 3rd base that matters" -- and it took the reference base as an
+        //## error-table lookup key, which asserts outright when the reference is 'N'. Neither
+        //## problem survives sharing the five-allele fit: a third allele is already in the model,
+        //## and the reference base is never used as a key.
+        const base_char user_ref_base_char = from_string<base_char>(mut[REF_BASE]);
+        const base_char user_new_base_char = from_string<base_char>(mut[NEW_BASE]);
+        const base_index user_ref_index = basechar2index(user_ref_base_char);
+        const base_index user_variant_index = basechar2index(user_new_base_char);
+
+        double user_polymorphism_score = numeric_limits<double>::quiet_NaN();
+        double user_variant_frequency = 0.0;
+        if (user_variant_index < base_list_size) {
+          user_polymorphism_score = variant_presence_score(pdata, amodel, user_variant_index);
+          user_variant_frequency = amodel.reported_frequency(user_variant_index);
         }
-        // tries only the raw ML frequency of the best two
-        else {
-          ppred = predict_mixed_base(best_base_char, second_best_base_char, pdata);
-        }
-        
-        double polymorphism_bonferroni_score = 10 * (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
-        
-        // These defs of major and minor base are not quite always accurate.
-        // because they only take into account ref_base and new_base of the RA line
-        // (and there could be a 3rd base that matters)
-        // ---> in the future it may be better to KEEP the major and minor alleles and work with
-        //      these instead, but that leads to its own issues
-        mut[MAJOR_BASE] = (ppred.frequency > 0.5) ? best_base_char : second_best_base_char;
-        mut[MINOR_BASE] = (ppred.frequency > 0.5) ? second_best_base_char : best_base_char;
-        mut[MAJOR_FREQUENCY] = formatted_double( ((ppred.frequency > 0.5) ? ppred.frequency : 1 - ppred.frequency), _polymorphism_precision_places, true).to_string();
-        
-        // The frequency of the variant is always this, due to the way the ref_base is set as best_base_char
-        mut[POLYMORPHISM_FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
-        
+        // A user entry may name a reference base of 'N', which has no allele in the model.
+        double user_ref_frequency = amodel.reported_frequency(user_ref_index);
+
+        //## Major and minor stay defined WITHIN the pair the user named, even though the
+        //## frequencies now come from the position's full fit. Reporting the position's own major
+        //## and minor here instead would silently discard the user's question:
+        //## mutation_predictor recovers the allele as (major == ref) ? minor : major, so at a
+        //## position carrying no real variant every user entry would come back as 'N'.
+        bool user_variant_is_major = (user_variant_frequency > user_ref_frequency);
+        mut[MAJOR_BASE] = user_variant_is_major ? user_new_base_char : user_ref_base_char;
+        mut[MINOR_BASE] = user_variant_is_major ? user_ref_base_char : user_new_base_char;
+        mut[MAJOR_FREQUENCY] = formatted_double(
+            user_variant_is_major ? user_variant_frequency : user_ref_frequency,
+            _polymorphism_precision_places, true).to_string();
+
+        mut[POLYMORPHISM_FREQUENCY] = formatted_double(user_variant_frequency, _polymorphism_precision_places, true).to_string();
+        mut[ALLELE_FREQUENCIES] = amodel.spectrum_string(_polymorphism_precision_places);
+        write_RA_frequency_bounds(mut, pdata, amodel, user_variant_index);
+
         // Consensus mode
         if (!_settings.polymorphism_prediction) {
           if (from_string<double>(mut[POLYMORPHISM_FREQUENCY]) > 0.5 ) {
@@ -1543,11 +1569,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         } else { // Polymorphism mode
           mut[FREQUENCY] =  mut[POLYMORPHISM_FREQUENCY];
         }
-        
-        // Genotype quality is for the top called genotype
-        mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
-        mut[POLYMORPHISM_SCORE] = formatted_double(polymorphism_bonferroni_score, kMutationScorePrecision).to_string();
-        
+
+        mut[SCORE] = formatted_double(user_polymorphism_score, kMutationScorePrecision).to_string();
+
         vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
         mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
         
@@ -1928,546 +1952,410 @@ void identify_mutations_pileup::annotate_polymorphism_statistics(cDiffEntry& mut
 
   double fisher_strand_p_value = fisher_exact_test_2x2(minor_top_strand, minor_bot_strand, major_top_strand, major_bot_strand);
 
-  double combined_log = -2.0 * (log(ks_quality_p_value) + log(fisher_strand_p_value));
-  double bias_p_value = isinf(combined_log) ? 0.0 : incompletegamma(2.0, combined_log / 2.0, true);
-  double bias_e_value = bias_p_value * static_cast<double>(_total_reference_length);
-
   mut["ks_quality_p_value"]    = formatted_double(ks_quality_p_value,    5, true).to_string();
   mut["fisher_strand_p_value"] = formatted_double(fisher_strand_p_value, 5, true).to_string();
-  mut["bias_p_value"]          = formatted_double(bias_p_value,          5, true).to_string();
-  mut["bias_e_value"]          = formatted_double(bias_e_value,          5, true).to_string();
 }
 
 
-/*! Predict the significance of putative polymorphisms.
- */
-polymorphism_prediction identify_mutations_pileup::predict_polymorphism(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
-  
-  //#calculate the likelihood of observed reads given this position is 100% the best base
-	double log10_likelihood_of_one_base_model = 0;
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-  
-    double log10_correct_pr;
+/*! Report a fitted frequency, flooring an allele the fit places below the half-read level to zero.
 
-    covariate_values_t this_cv = it->_cv;
-      
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
-      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-    }
-    log10_correct_pr = _error_table.get_log10_prob(this_cv);
-       
-    log10_likelihood_of_one_base_model  += log10_correct_pr;
-  }
-
-	vector<uint8_t> best_base_qualities;
-	vector<uint8_t> second_best_base_qualities;
-	uint32_t best_base_strand_hash[] = {0, 0};
-	uint32_t second_best_base_strand_hash[] = {0, 0};
-  
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-  
-    int8_t zp_strand = (it->_strand == +1) ? 1 : 0;
-    if (it->_base_char == best_base_char) {
-      best_base_qualities.push_back(it->_quality);
-      best_base_strand_hash[zp_strand]++;
-    }
-    else if (it->_base_char == second_best_base_char) {
-      second_best_base_qualities.push_back(it->_quality);
-      second_best_base_strand_hash[zp_strand]++;
-    }
-  }
-  
-	//## Maximum likelihood of observing alignment if sequenced bases were a mixture of the top two bases  
-  pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
-  double max_likelihood_fr_first_base = best_two_base_model.first;
-  double log10_likelihood_of_two_base_model = best_two_base_model.second;
-    
-  //## Likelihood ratio test
-  double log10_likelihood_difference = log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model;
-
-  //debug output 
-  /*
-  cerr  << "ML Best Base Fraction: " << max_likelihood_fr_first_base << endl;
-  cerr  << " Log10 Likelihood (one base model): " << log10_likelihood_of_one_base_model << endl;
-  cerr  << " Log10 Likelihood (two base model): " << log10_likelihood_of_two_base_model << endl;
-  cerr  << " Log10 Likelihood (different): " << log10_likelihood_difference << endl;
-  */
-    
-  long double p_value = 1;
-  if (max_likelihood_fr_first_base != 1.0) {
-    double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
-    
-    p_value = pchisq(1.0L, likelihood_ratio_test_value);
-    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
-  }
-
-  //debug output 
-  /*
-  cerr
-    << " Log10 Likelihood Difference (one vs two base model): " << (log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model) 
-    << " P-value: " << p_value 
-    << endl;
-  */
-   
-  polymorphism_prediction p(max_likelihood_fr_first_base, log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model, p_value);
-		
-	return p;
-}
-  
-/*! Predict the significance of putative polymorphisms.
- */
-polymorphism_prediction identify_mutations_pileup::predict_mixed_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
-  
-  //#calculate the likelihood of observed reads given this position is 100% the best base  
-  double log10_likelihood_of_one_base_model = 0;
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-    
-    double log10_correct_pr;
-    
-    covariate_values_t this_cv = it->_cv;
-    
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
-      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-    }
-    log10_correct_pr = _error_table.get_log10_prob(this_cv);
-    
-    log10_likelihood_of_one_base_model  += log10_correct_pr;
-  }
-  
-  vector<uint8_t> best_base_qualities;
-  vector<uint8_t> second_best_base_qualities;
-  uint32_t best_base_strand_hash[] = {0, 0};
-  uint32_t second_best_base_strand_hash[] = {0, 0};
-  
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-    
-    int8_t zp_strand = (it->_strand == +1) ? 1 : 0;
-
-    if (it->_base_char == best_base_char) {
-      best_base_qualities.push_back(it->_quality);
-      best_base_strand_hash[zp_strand]++;
-    }
-    else if (it->_base_char == second_best_base_char) {
-      second_best_base_qualities.push_back(it->_quality);
-      second_best_base_strand_hash[zp_strand]++;
-    }
-  }
-  
-  
-  
-  // Unlike full polymorphism prediction, we test just the raw frequency of the two bases
-  // and do not check for bias later.
-  
-  // This would calculate the true best frequency -- slower, but more accurate
-  // pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
-  
-  double max_likelihood_fr_first_base = static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1]) 
-    / static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1] + second_best_base_strand_hash[0] + second_best_base_strand_hash[1]);
-  
-  double log10_likelihood_of_two_base_model = calculate_two_base_model_log10_likelihood(
-                                                                                        best_base_char, 
-                                                                                        second_best_base_char, 
-                                                                                        pdata, 
-                                                                                        max_likelihood_fr_first_base
-                                                                                        );
-  
-  //## Likelihood ratio test
-  double log10_likelihood_difference = log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model;
-  
-  //debug output 
-  /*
-   cerr  << "ML Best Base Fraction: " << max_likelihood_fr_first_base << endl;
-   cerr  << " Log10 Likelihood (one base model): " << log10_likelihood_of_one_base_model << endl;
-   cerr  << " Log10 Likelihood (two base model): " << log10_likelihood_of_two_base_model << endl;
-   cerr  << " Log10 Likelihood (different): " << log10_likelihood_difference << endl;
-   */
-  
-  long double p_value = 1;
-  if (max_likelihood_fr_first_base != 1.0) {
-    double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
-    
-    p_value = pchisq(1.0L, likelihood_ratio_test_value);
-    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
-  }
-  
-  polymorphism_prediction p(max_likelihood_fr_first_base, log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model, p_value);
-  
-  return p;
-}
- 
-  
-double identify_mutations_pileup::slope_at_percentage_best_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata, const double guess, const double precision, double& middle_point_log10_likelihood)  
+  EM approaches an absent component asymptotically instead of reaching it, so an allele with no
+  supporting reads at all settles around 1e-13 rather than 0. Printing that is just noise, and it
+  is the same "below half a read is not a called allele" rule next_index() applies.
+*/
+double allele_model::reported_frequency(base_index b) const
 {
-  // precision is a fraction of the value
-  double point_1 = max(guess * (1 - precision), 0.0);  
-  double point_2 = min(guess * (1 + precision), 1.0);
-  
-  double point_1_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, point_1);
-  double point_2_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, point_2);
-  
-  middle_point_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, guess);
-
-  // Check for local minimum!
-  if ( (middle_point_log10_likelihood < point_1_log10_likelihood) && (middle_point_log10_likelihood < point_2_log10_likelihood) ) {
-    return 0;
-  }
-  
-  return (point_2_log10_likelihood - point_1_log10_likelihood) / (point_2 - point_1);
+  if ((n == 0) || (b >= base_list_size)) return 0.0;
+  return (f[b] < 0.5 / static_cast<double>(n)) ? 0.0 : f[b];
 }
 
-/*! Find the best fraction for the best base at a polymorphic site.
- */
-  
-pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
-{	
-  uint32_t iterations = 0;
-  double current_upper_pr_first_base = 1.0;
-  double current_lower_pr_first_base = 0.0;
-  
-  double current_upper_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_upper_pr_first_base);
-  double current_lower_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_lower_pr_first_base);
-  
-  // precision is a fraction of the value...
-  while (current_upper_pr_first_base - current_lower_pr_first_base > (current_upper_pr_first_base + current_lower_pr_first_base) / 2 * _polymorphism_precision_decimal) {
-    
-    iterations++;
-    //cout << iterations << " "  << current_lower_pr_first_base << " " << current_upper_pr_first_base << endl;
-    
-    double current_middle_pr_first_base = (current_upper_pr_first_base + current_lower_pr_first_base) / 2;
-    
-    double current_middle_pr_first_base_log10_likelihood;
-    double middle_slope = slope_at_percentage_best_base(best_base_char, second_best_base_char, pdata, current_middle_pr_first_base, _polymorphism_precision_decimal, current_middle_pr_first_base_log10_likelihood);
-    
-    // Slope is set to zero if the tested point is better than the ones 
-    // on either side, when calculating the slope.
-    if ( middle_slope == 0) {
-      return make_pair(current_middle_pr_first_base, current_middle_pr_first_base_log10_likelihood);
-    
-    } else if ( middle_slope < 0) {
-      
-      current_upper_pr_first_base = current_middle_pr_first_base;
-      current_upper_pr_first_base_log10_likelihood = current_middle_pr_first_base_log10_likelihood;
-      
-    } else {
-      
-      current_lower_pr_first_base = current_middle_pr_first_base;
-      current_lower_pr_first_base_log10_likelihood = current_middle_pr_first_base_log10_likelihood;
-    }
-  }  
-    
-  if (current_lower_pr_first_base_log10_likelihood > current_upper_pr_first_base_log10_likelihood) {
-
-    return make_pair(current_lower_pr_first_base, current_lower_pr_first_base_log10_likelihood);
-  }
-  
-  return make_pair(current_upper_pr_first_base, current_upper_pr_first_base_log10_likelihood);
-}
-  
-/*
-pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
-{	
-  
-	double cur_pr_first_base = 1;
-	double cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
-
-	double last_pr_first_base = 1;
-	double last_log_pr = cur_log_pr;
-
-	//print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
-
-	while (cur_log_pr >= last_log_pr)
-	{
-		last_log_pr = cur_log_pr;
-		last_pr_first_base = cur_pr_first_base;
-    if (cur_pr_first_base < 0) break;
-
-		cur_pr_first_base -= 0.001;
-		cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
-	}
-	
-	return make_pair(last_pr_first_base, last_log_pr);
-}
- */
-
-/*! Calculate the likelihood of a mixture model of two bases leading to the observed read bases.
- */
-double identify_mutations_pileup::calculate_two_base_model_log10_likelihood(
-                                                                            base_char best_base_char, 
-                                                                            base_char second_best_base_char, 
-                                                                            const vector<polymorphism_data>& pdata, 
-                                                                            double best_base_freq
-                                                                            )
+string allele_model::spectrum_string(uint32_t precision_places) const
 {
-	double log10_likelihood = 0;	
-	
-  for(vector<polymorphism_data>::const_iterator it=pdata.begin(); it<pdata.end(); ++it) {
-  
-    //## the first value is pr_base, second is pr_not_base
-    double best_base_log10pr;
-    double second_best_base_log10pr;
-    
-    covariate_values_t this_cv = it->_cv;
-    
-    if (it->_strand == -1) {
-      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-    }
-    
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char));
-    }
-    best_base_log10pr = _error_table.get_log10_prob(this_cv);
-    
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(second_best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(second_best_base_char));
-    }
-    second_best_base_log10pr = _error_table.get_log10_prob(this_cv);
-
-    //debug output
-    //cerr << "Base in Read: " << it->base << " Read Strand: " << it->strand << endl;
-    //cerr << "Best Base: " << best_base << " Key: " << best_base_key << " Chance of Observing: " << pow(10,best_base_log10pr) << endl;
-    //cerr << "Second Best Base: " << second_best_base << " Key: " << second_best_base_key << " Chance of Observing: " << pow(10,second_best_base_log10pr) << endl;
-
-    double pr_ref_base_given_obs = best_base_freq * pow(10, best_base_log10pr) + (1-best_base_freq) * pow(10, second_best_base_log10pr);
-
-    log10_likelihood += log(pr_ref_base_given_obs);		
+  string s;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    double fr = reported_frequency(b);
+    if (fr <= 0.0) continue;
+    if (!s.empty()) s += ",";
+    s += string(1, baseindex2char(b)) + ":" + formatted_double(fr, precision_places, true).to_string();
   }
-
-	log10_likelihood /= log(10);
-  
-  //debug output
-  /*
-  cerr << "Best Base: " << best_base << " Second Best Base: " << second_best_base << " Fraction Best Base: " << best_base_freq << " Log10 Likelihood " << log10_likelihood << endl;
-  */
-	return log10_likelihood;
+  return s;
 }
 
-cDiscreteSNPCaller::cDiscreteSNPCaller(
-                                       const string& type,
-                                       uint32_t reference_length
-                                       ) 
-: _type(type)
+base_index allele_model::major_index() const
 {
-  
+  if (n == 0) return base_list_N_index;
+  base_index best = 0;
+  for (uint8_t b=1; b<base_list_size; b++) {
+    if (f[b] > f[best]) best = b;
+  }
+  return (f[best] > 0.0) ? best : base_list_N_index;
+}
 
-  // Uniform priors across all bases.
-  if (_type == "haploid") {
-    
-    double uniform_probability = 1.0 / static_cast<double>(base_list_size);
-    add_genotype("A", uniform_probability);
-    add_genotype("C", uniform_probability);
-    add_genotype("G", uniform_probability);
-    add_genotype("T", uniform_probability);
-    add_genotype(".", uniform_probability);
-  }
-  
-  /*
-  // Prior that we expect one change from reference
-  else if (_type == "haploid-change") {
-    
-    // recall that first one counts as reference
-    double uniform_probability = 1.0 / reference_length;    
-    add_genotype("A", 1.0 - 4.0 * uniform_probability);
-    add_genotype("C", uniform_probability);
-    add_genotype("G", uniform_probability);
-    add_genotype("T", uniform_probability);
-    add_genotype(".", uniform_probability);
-  }
-  */
-  
-  // Extra states and priors for unexpected mixed states... experimental
-  else if (_type == "haploid-cnv") {
-    
-    double mixed_probability = 1.0 / reference_length;    
-    double uniform_probability = (1.0 - 10 * mixed_probability) / base_list_size;    
-    
-    add_genotype("A", uniform_probability);
-    add_genotype("C", uniform_probability);
-    add_genotype("G", uniform_probability);
-    add_genotype("T", uniform_probability);
-    add_genotype(".", uniform_probability);
-    
-    add_genotype("AC", mixed_probability);
-    add_genotype("AG", mixed_probability);
-    add_genotype("AT", mixed_probability);
-    add_genotype("A.", mixed_probability);
-    
-    add_genotype("CG", mixed_probability);
-    add_genotype("CT", mixed_probability);
-    add_genotype("C.", mixed_probability);
-    
-    add_genotype("GT", mixed_probability);
-    add_genotype("G.", mixed_probability);
-    
-    add_genotype("T.", mixed_probability);
-  }  
-  
-  else
-  {
-    ERROR("Unknown SNP Caller type:" + type);
-  }
-  
-  // Check priors
-  double total_probability = 0;
-  for(size_t i=0; i<_log10_genotype_prior_probabilities.size(); i++) {
-    total_probability += pow(10, _log10_genotype_prior_probabilities[i]);
-  }
-  ostringstream ss;
-  ss << setprecision(5) << total_probability;
-  
-  ASSERT( from_string<double>(ss.str()) == 1.0, "Prior probabilities do not sum to 1. (" + to_string(total_probability) + ").")
-  
-  reset(0);
-}
-  
-void cDiscreteSNPCaller::add_genotype(const string& genotype, double probability) {
-  
-  _log10_genotype_prior_probabilities.push_back(log10(probability));
-  
-  vector<base_index> gv;
-  for(size_t i=0; i<genotype.length(); i++) {
-    gv.push_back(basechar2index(genotype[i]));
-  }
-  _genotype_vector.push_back(gv);
-  
-}
-  
-  
-void cDiscreteSNPCaller::reset(uint8_t ref_base_index) {
-  _best_genotype_index = 0;
-  _observations = 0;
-  _normalized_observations = 0;
-  _log10_genotype_probabilities = _log10_genotype_prior_probabilities;
-  
-  (void) ref_base_index;
-  //this is for where there are unbalanced priors -- haploid-change
-  //they do not behave properly when the reference is 'N'
-  //swap(_genotype_probability[0], _genotype_probability[ref_base_index]);
-}
-  
-void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, int32_t mapping_quality, cErrorTable& et) {
+base_index allele_model::next_index(base_index exclude_index) const
+{
+  if (n == 0) return base_list_N_index;
 
-  covariate_values_t this_cv = cv;
-  //update probabilities give observation using Bayes rule
-  
+  // An allele the fit puts below the half-read level is not a called allele. EM approaches an
+  // absent component asymptotically rather than reaching zero, so without a floor every position
+  // would report all five alleles as present at frequencies like 1e-9.
+  const double present_threshold = 0.5 / static_cast<double>(n);
+
+  base_index best = base_list_N_index;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (b == exclude_index) continue;
+    if (f[b] < present_threshold) continue;
+    if ((best == base_list_N_index) || (f[b] > f[best])) best = b;
+  }
+  return best;
+}
+
+/*! Maximum log10 likelihood with one allele's frequency held fixed.
+
+  The same EM as the free fit, except that f[variant_index] is pinned and the remaining alleles are
+  renormalized to share what is left. Warm-started from the free fit, so it usually converges in a
+  handful of iterations.
+*/
+double identify_mutations_pileup::profile_log10_likelihood(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index, double f_fixed) const
+{
+  if ((full.n == 0) || (variant_index >= base_list_size)) return 0.0;
+
+  double f[base_list_size];
+  double other_total = 0.0;
+  for (uint8_t b=0; b<base_list_size; b++) { if (b != variant_index) other_total += full.f[b]; }
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (b == variant_index) f[b] = f_fixed;
+    else f[b] = (other_total > 0.0) ? (1.0 - f_fixed) * full.f[b] / other_total
+                                    : (1.0 - f_fixed) / static_cast<double>(base_list_size - 1);
+  }
+
+  const uint32_t k_max_iterations = 50;
+  double log10_likelihood = 0.0;
+
+  for (uint32_t iter = 0; iter < k_max_iterations; iter++) {
+
+    double sum_w[base_list_size];
+    for (uint8_t b=0; b<base_list_size; b++) sum_w[b] = 0.0;
+    log10_likelihood = 0.0;
+
+    for (vector<polymorphism_data>::const_iterator it=pdata.begin(); it!=pdata.end(); ++it) {
+      double s = 0.0;
+      for (uint8_t b=0; b<base_list_size; b++) s += f[b] * it->_r[b];
+      if (s > 0.0) {
+        log10_likelihood += log10(s) + it->_log10_pr_max;
+        for (uint8_t b=0; b<base_list_size; b++) sum_w[b] += f[b] * it->_r[b] / s;
+      } else {
+        for (uint8_t b=0; b<base_list_size; b++) sum_w[b] += f[b];
+      }
+    }
+
+    double others = 0.0;
+    for (uint8_t b=0; b<base_list_size; b++) { if (b != variant_index) others += sum_w[b]; }
+
+    double max_delta = 0.0;
+    for (uint8_t b=0; b<base_list_size; b++) {
+      if (b == variant_index) continue;
+      double f_new = (others > 0.0) ? (1.0 - f_fixed) * sum_w[b] / others
+                                    : (1.0 - f_fixed) / static_cast<double>(base_list_size - 1);
+      max_delta = max(max_delta, fabs(f_new - f[b]));
+      f[b] = f_new;
+    }
+
+    if (max_delta < _polymorphism_precision_decimal) break;
+  }
+
+  return log10_likelihood;
+}
+
+/*! Write the variant frequency's confidence bounds onto an RA entry.
+
+  A profile-likelihood interval on the variant allele's frequency: the set of f where holding the
+  allele at f and re-fitting everything else costs less than a fixed amount of log likelihood.
+
+    { f : log10 L_max - log10 L_profile(f) <= kProfileLikelihoodLog10Drop }
+
+  This is the interval the error model itself implies. Every read enters through the calibrated
+  per-base likelihoods, so a quality-2 base widens the interval and a quality-40 base narrows it
+  because of what they say about the data, not because of a weight assigned to them beforehand.
+
+  It replaces a binomial bound fed an "effective depth". That construction needed a scalar count of
+  how many reads "really" informed the call, and there is no non-arbitrary way to produce one: the
+  derivation from likelihood curvature is degenerate at f -> 1, which is where fixed variants sit,
+  and the discrimination heuristic that worked at both ends was not derived from anything. Since a
+  likelihood interval needs no such count, the whole question disappears -- and it handles the
+  boundary natively, becoming one-sided when the fit is pinned at 0 or 1.
+
+  The bounds are recorded rather than recomputed downstream from text, so the interval that decides
+  the call is the one the .gd and the report show. Previously they were derived during
+  classification and discarded, which meant a rejection reading "FREQUENCY_CUTOFF at frequency
+  0.43" could not be explained from the output at all.
+*/
+
+// Each endpoint is a ONE-SIDED 95% bound, matching the Clopper-Pearson bounds this replaces (and
+// the ones JC still uses). The interval { f : log10 L_max - log10 L(f) <= D } has two-sided
+// coverage P(chi2_1 <= 2*ln(10)*D), so one-sided 95% per side means 90% two-sided:
+//   2*ln(10)*D = chi2_1(0.90) = 2.705543  ->  D = 0.587566
+static const double kProfileLikelihoodLog10Drop = 0.587566;
+
+void identify_mutations_pileup::write_RA_frequency_bounds(cDiffEntry& mut, const vector<polymorphism_data>& pdata, const allele_model& amodel, base_index variant_index) const
+{
+  double lower = 0.0, upper = 1.0;
+
+  if ((amodel.n > 0) && (variant_index < base_list_size)) {
+
+    const double f_hat = amodel.f[variant_index];
+
+    // Evaluate the peak through the same routine as every other point, so that the profile is
+    // self-consistent and pl(f_hat) is exactly the maximum the threshold is measured from.
+    const double pl_max = profile_log10_likelihood(pdata, amodel, variant_index, f_hat);
+    const double target = pl_max - kProfileLikelihoodLog10Drop;
+
+    // Lower endpoint: the smallest f whose profile still clears the threshold.
+    if (profile_log10_likelihood(pdata, amodel, variant_index, 0.0) >= target) {
+      lower = 0.0;
+    } else {
+      double lo = 0.0, hi = f_hat;
+      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+        double mid = 0.5 * (lo + hi);
+        if (profile_log10_likelihood(pdata, amodel, variant_index, mid) >= target) hi = mid;
+        else                                                                       lo = mid;
+      }
+      lower = hi;
+    }
+
+    // Upper endpoint: the largest such f.
+    if (profile_log10_likelihood(pdata, amodel, variant_index, 1.0) >= target) {
+      upper = 1.0;
+    } else {
+      double lo = f_hat, hi = 1.0;
+      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+        double mid = 0.5 * (lo + hi);
+        if (profile_log10_likelihood(pdata, amodel, variant_index, mid) >= target) lo = mid;
+        else                                                                       hi = mid;
+      }
+      upper = lo;
+    }
+  }
+
+  mut[POLYMORPHISM_FREQUENCY_LOWER] = formatted_double(lower, _polymorphism_precision_places, true).to_string();
+  mut[POLYMORPHISM_FREQUENCY_UPPER] = formatted_double(upper, _polymorphism_precision_places, true).to_string();
+}
+
+/*! Fit the allele frequency mixture at one position by EM.
+
+  The position carries frequencies f over the five candidate alleles. Read i draws a true base b
+  with probability f[b] and is then observed with probability P_i(b), which the error table already
+  gave us (cached in polymorphism_data by fill_read_base_likelihoods):
+
+    E-step:  w_i(b) = f[b] r_i(b) / s_i,   s_i = Sum_b' f[b'] r_i(b')
+    M-step:  f[b]   = (1/n) Sum_i w_i(b)
+
+  Fitting all five alleles at once, rather than a mixture of the top two by coverage, is the whole
+  point: it puts every frequency on the same denominator (total depth) and keeps the reference
+  allele in the model even when it is not one of the two best-supported bases. That case is not
+  exotic -- across the test goldens, 44% of RA entries have neither the major nor the minor allele
+  equal to the reference.
+
+  The objective is concave on the simplex, so the fixed point EM reaches is the global maximum.
+  That is what lets this replace a bisection that needed an explicit local-minimum guard.
+
+  Everything is evaluated on the max-normalized r_i(b) rather than raw probabilities, so the
+  mixture sums cannot underflow; the discarded exponent comes back per read via _log10_pr_max.
+*/
+allele_model
+identify_mutations_pileup::fit_allele_frequencies(const vector<polymorphism_data>& pdata, const bool allowed[base_list_size]) const
+{
+  allele_model m;
+  m.n = static_cast<uint32_t>(pdata.size());
+  if (m.n == 0) return m;
+
+  // Start from Laplace-smoothed observed base counts. The half-count keeps every allowed component
+  // strictly interior: a component initialized at exactly zero is a fixed point of the E-step and
+  // could never be revived, so a hard zero would decide the answer instead of the data.
+  double init_total = 0.0;
+  uint32_t n_allowed = 0;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (!allowed[b]) continue;
+    n_allowed++;
+    m.f[b] = 0.5;
+  }
+  if (n_allowed == 0) return m;
+
+  for (vector<polymorphism_data>::const_iterator it=pdata.begin(); it!=pdata.end(); ++it) {
+    base_index obs = basechar2index(it->_base_char);
+    if ((obs < base_list_size) && allowed[obs]) m.f[obs] += 1.0;
+  }
+  for (uint8_t b=0; b<base_list_size; b++) init_total += m.f[b];
+  for (uint8_t b=0; b<base_list_size; b++) m.f[b] /= init_total;
+
+  const uint32_t k_max_iterations = 50;
+  const double k_tolerance = _polymorphism_precision_decimal;
+
+  for (m.iterations = 1; m.iterations <= k_max_iterations; m.iterations++) {
+
+    double sum_w[base_list_size];
+    for (uint8_t b=0; b<base_list_size; b++) sum_w[b] = 0.0;
+    double log10_likelihood = 0.0;
+
+    for (vector<polymorphism_data>::const_iterator it=pdata.begin(); it!=pdata.end(); ++it) {
+
+      double s = 0.0;
+      for (uint8_t b=0; b<base_list_size; b++) {
+        if (allowed[b]) s += m.f[b] * it->_r[b];
+      }
+
+      if (s > 0.0) {
+        log10_likelihood += log10(s) + it->_log10_pr_max;
+        for (uint8_t b=0; b<base_list_size; b++) {
+          if (!allowed[b]) continue;
+          sum_w[b] += m.f[b] * it->_r[b] / s;
+        }
+      } else {
+        // Unreachable with a calibrated table: every entry is Laplace-smoothed and the
+        // mapping-quality term adds a strictly positive floor. Fall back to the current
+        // frequencies so that Sum_b Sum_i w_i(b) == n stays exact regardless.
+        for (uint8_t b=0; b<base_list_size; b++) {
+          if (!allowed[b]) continue;
+          sum_w[b] += m.f[b];
+        }
+      }
+    }
+
+    double max_delta = 0.0;
+    for (uint8_t b=0; b<base_list_size; b++) {
+      if (!allowed[b]) continue;
+      double f_new = sum_w[b] / static_cast<double>(m.n);
+      max_delta = max(max_delta, fabs(f_new - m.f[b]));
+      m.f[b] = f_new;
+    }
+
+    // Commit the sums that produced the frequencies we just set. Because the M-step defines
+    // f[b] = sum_w[b]/n, the identity sum_w[b] == n * f[b] holds exactly for the committed pair,
+    // which is what the effective depth downstream relies on.
+    for (uint8_t b=0; b<base_list_size; b++) m.sum_w[b] = sum_w[b];
+    m.log10_likelihood = log10_likelihood;
+
+    if (max_delta < k_tolerance) break;
+  }
+  if (m.iterations > k_max_iterations) m.iterations = k_max_iterations;
+
+  return m;
+}
+
+/*! log10 evidence that a given allele is present at this position at all.
+
+  A profile likelihood ratio between the full fit and the best fit that holds this allele out
+  entirely, Bonferroni-corrected by the reference length as every score in this file is.
+
+  The null keeps the reference allele AND any third allele, which is what makes the number
+  meaningful when the two best-supported bases are both non-reference: the question asked is
+  "is THIS allele present", not "are the top two bases in different proportions".
+*/
+double identify_mutations_pileup::variant_presence_score(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index) const
+{
+  if ((full.n == 0) || (variant_index >= base_list_size)) return numeric_limits<double>::quiet_NaN();
+
+  bool without[base_list_size];
+  uint32_t n_remaining = 0;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    without[b] = (b != variant_index);
+    if (without[b]) n_remaining++;
+  }
+  if (n_remaining == 0) return numeric_limits<double>::quiet_NaN();
+
+  allele_model null_fit = fit_allele_frequencies(pdata, without);
+
+  return (full.log10_likelihood - null_fit.log10_likelihood) - _log10_ref_length;
+}
+
+
+/*! Per-read-base likelihoods under each of the five candidate true bases.
+
+  The calibrated error table is keyed in READ-strand space: count_alignment_position()
+  (error_count.cpp) complements both the reference and the observed base when the read is reversed,
+  so a hypothesis about the reference base has to be complemented to match before lookup.
+
+  The mapping-quality term mixes every hypothesis with a uniform base at the read's probability of
+  being misplaced, eps = 10^(-MQ/10). It puts a floor of eps/5 under each hypothesis -- about 1.3e-5
+  at bowtie2's typical MAPQ 42 -- which caps any single read base's log10 likelihood ratio near 4.9.
+  That is deliberate: a read that is probably somewhere else entirely should not get to decide a
+  position no matter how confident its base call is.
+*/
+void identify_mutations_pileup::fill_read_base_likelihoods(polymorphism_data& pd)
+{
+  const double incorrect_mapping_prob = pow(10, -static_cast<double>(pd._mapping_quality) / 10);
+  const double correct_mapping_prob = 1 - incorrect_mapping_prob;
+  const double uniform_prob = 1.0 / static_cast<double>(base_list_size);
+
+  covariate_values_t this_cv = pd._cv;
+  const bool obs_top_strand = (pd._strand == 1);
   if (!obs_top_strand) {
-    this_cv.obs_base() = complement_base_index(this_cv.obs_base()); 
-  }
-  
-  double incorrect_mapping_prob = pow(10, -static_cast<double>(mapping_quality) / 10);
-  double correct_mapping_prob = 1 - incorrect_mapping_prob;
-  this->_normalized_observations += correct_mapping_prob;
-  
-  double total_prob = 0.0;
-  for (uint32_t i=0; i<_genotype_vector.size(); i++) {
-  
-    vector<base_index>& gv = this->_genotype_vector[i];
-    double this_pr = 0.0;
-    
-    for (uint32_t j=0; j < gv.size(); j++) {
-      
-      this_cv.ref_base() = gv[j];
-      
-      if (!obs_top_strand) {
-        this_cv.ref_base() = complement_base_index(this_cv.ref_base()); 
-      }
-      this_pr += (correct_mapping_prob * et.get_prob(this_cv) + incorrect_mapping_prob * 1.0 / _genotype_vector.size()) * pow(10, this->_log10_genotype_probabilities[i]) / gv.size();
-      
-      // Floating point error can make this a very  negative number
-      if (this_pr < 0.0) this_pr = 0.0;
-    }
-    
-    total_prob += this_pr;
+    this_cv.obs_base() = complement_base_index(this_cv.obs_base());
   }
 
-  double highest_pr = -numeric_limits<double>::max();
-  for (uint32_t i=0; i<this->_genotype_vector.size(); i++) {
-    
-    vector<base_index>& gv = this->_genotype_vector[i];
-    double this_pr = 0.0;
-    
-    for (uint32_t j=0; j < gv.size(); j++) {
-      
-      this_cv.ref_base() = gv[j];
-      
-      if (!obs_top_strand) {
-        this_cv.ref_base() = complement_base_index(this_cv.ref_base()); 
-      }
-      this_pr += (correct_mapping_prob * et.get_prob(this_cv) + incorrect_mapping_prob * 1 / _genotype_vector.size()) / gv.size();
-    }
-    
-    this->_log10_genotype_probabilities[i] += log10(this_pr) - log10(total_prob);
-    
-    if (this->_log10_genotype_probabilities[i] > highest_pr) {
-      this->_best_genotype_index = i;
-      highest_pr = this->_log10_genotype_probabilities[i];
-    }
+  pd._log10_pr_max = -numeric_limits<double>::max();
+  for (uint8_t b=0; b<base_list_size; b++) {
+    this_cv.ref_base() = obs_top_strand ? b : complement_base_index(b);
+    double pr = correct_mapping_prob * _error_table.get_prob(this_cv)
+              + incorrect_mapping_prob * uniform_prob;
+    // Floating point error can make this a very slightly negative number.
+    if (pr < 0.0) pr = 0.0;
+    pd._log10_pr[b] = log10(pr);
+    pd._log10_pr_max = max(pd._log10_pr_max, pd._log10_pr[b]);
   }
-  
-  //print();
-  
-  _observations++;
-}
-  
-void cDiscreteSNPCaller::print() {
-  
-  for (uint32_t i=0; i<_genotype_vector.size(); i++) {
-    
-    vector<base_index>& gv = _genotype_vector[i];
-    
-    cout << "Genotype: " ;
-    for (uint32_t j=0; j < gv.size(); j++) {
-      
-      cout << baseindex2char(gv[j]);
-    }
-    
-    cout << " " << _log10_genotype_probabilities[i] << endl;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    pd._r[b] = pow(10, pd._log10_pr[b] - pd._log10_pr_max);
   }
 }
 
+/*! Call the single most probable pure genotype, and score it against the alternatives.
 
-cSNPCall cDiscreteSNPCaller::get_prediction()
+  With uniform priors over the five pure genotypes, the per-read renormalization that the old
+  incremental caller applied is a factor common to every genotype, so it cancels out of both the
+  argmax and the reported score. What is left is
+
+    score = log10 P(data | best) - log10 Sum_{b != best} P(data | b)
+
+  evaluated by log-sum-exp against the largest competing term -- which is exactly the number
+  cDiscreteSNPCaller::get_prediction() produced, from five accumulated sums instead of a
+  renormalized posterior vector carried across every read.
+*/
+cSNPCall identify_mutations_pileup::pure_genotype_call(const double log10_pr_sum[base_list_size], uint32_t observations) const
 {
   cSNPCall snp_call;
-  
-  if (_observations == 0) {
-    //Best base is 'N' and E-value is NAN
-    return snp_call;
+
+  // Best base is 'N' and the score is NaN when there is nothing to call.
+  if (observations == 0) return snp_call;
+
+  base_index best = 0;
+  for (uint8_t b=1; b<base_list_size; b++) {
+    if (log10_pr_sum[b] > log10_pr_sum[best]) best = b;
   }
-  
-  // need to go through and find the most probable
-  snp_call.genotype = "";
-  for(size_t i=0; i<_genotype_vector[_best_genotype_index].size(); i++)
-    snp_call.genotype += baseindex2char(_genotype_vector[_best_genotype_index][i]);
-    
-  // we want to normalize the probabilities, but avoid floating point errors    
+  snp_call.genotype = string(1, baseindex2char(best));
+
+  // Offset by the largest competing genotype so the exponentials below cannot overflow.
   double log10_offset_probability = -numeric_limits<double>::max();
-  for(size_t i=0; i < _log10_genotype_probabilities.size(); i++) {
-    if (i != _best_genotype_index)
-      log10_offset_probability = max(log10_offset_probability, _log10_genotype_probabilities[i]);
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (b != best) log10_offset_probability = max(log10_offset_probability, log10_pr_sum[b]);
   }
-  
+
+  // '.' (the gap state) is a genotype like any other, so it belongs in the error mass. Leaving it
+  // out while the offset above included it made the score claim more confidence than the data
+  // supported at exactly the positions where the competing genotype is a deletion: with '.' as the
+  // runner-up every remaining term is negligible against the offset, the sum underflows to zero,
+  // and the score comes back +inf. tests/bull_1/expected.gd had two such entries, one of them a
+  // 52/48 G/'.' mixture reported as an infinitely confident consensus call.
   double total_error_probability = 0;
-  for (uint32_t i=0; i<_genotype_vector.size()-1; i++) {
-    if (i != _best_genotype_index)
-      total_error_probability += pow(10, _log10_genotype_probabilities[i] - log10_offset_probability);
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (b != best) total_error_probability += pow(10, log10_pr_sum[b] - log10_offset_probability);
   }
   double log10_total_error_probability = log10(total_error_probability);
   log10_total_error_probability += log10_offset_probability;
-  
-  snp_call.score = (_log10_genotype_probabilities[_best_genotype_index] - log10_total_error_probability);
-  
+
+  snp_call.score = log10_pr_sum[best] - log10_total_error_probability;
+
   return snp_call;
 }
+
 
 } // namespace breseq
 
