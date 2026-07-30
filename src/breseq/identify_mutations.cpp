@@ -685,7 +685,6 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _polymorphism_precision_places(polymorphism_precision_places)
 , _log10_ref_length(0)
 , _total_reference_length(summary.sequence_conversion.total_reference_sequence_length)
-, _snp_caller("haploid", summary.sequence_conversion.total_reference_sequence_length)
 , _this_deletion_reaches_seed_value(false)
 , _this_deletion_redundant_reached_zero(false)
 , _last_position_coverage_printed(0)
@@ -1063,11 +1062,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		position_coverage this_position_coverage;
 		bool this_position_unique_only_coverage=true;
 		
-    //## reset SNP caller
-    _snp_caller.reset(basechar2index(ref_base_char));
-        
 		//## polymorphism prediction data
 		vector<polymorphism_data> pdata;
+
+    //## Summed log10 P(observed bases | this position is 100% base b), one entry per candidate
+    //## base. Every pure-genotype quantity at this position is a function of just these five
+    //## numbers; see pure_genotype_call().
+    double log10_pr_sum[base_list_size];
+    for (uint8_t j=0; j<base_list_size; j++) log10_pr_sum[j] = 0.0;
     
 		//## for each alignment within this pileup:
 		for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
@@ -1220,11 +1222,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         ++pos_info[baseindex2char(cv.obs_base())][1+strand];
         
         //##### this is for polymorphism prediction and making strings
-        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), cv));
-        
+        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), i->mapping_quality(), cv));
+
         //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
-        _snp_caller.update(cv, strand == 1, i->mapping_quality(), _error_table);
+        // One error-table query per hypothesis per read base, done once here. Everything
+        // downstream reads the cache.
+        fill_read_base_likelihoods(pdata.back());
+        for (uint8_t j=0; j<base_list_size; j++) log10_pr_sum[j] += pdata.back()._log10_pr[j];
       }
 		} // end for-each read
 		
@@ -1237,7 +1242,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		this_position_coverage.sum();
 				
 		//#we are trying to find the base with the most support
-    cSNPCall snp_call = _snp_caller.get_prediction();
+    cSNPCall snp_call = pure_genotype_call(log10_pr_sum, static_cast<uint32_t>(pdata.size()));
     
     base_char best_base_char('N');
     double consensus_bonferroni_score(numeric_limits<double>::quiet_NaN());
@@ -1340,8 +1345,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     base_index second_best_base_index(base_list_N_index);
     int second_best_base_coverage(0);
 
-    vector<double> snp_probs = _snp_caller.get_genotype_log10_probabilities();
-            
+    // Tie-break on the pure-genotype posterior. With uniform priors the per-read normalizers are
+    // common to every base, so ordering by the summed log-likelihoods is the same ordering the
+    // old normalized posteriors gave.
+    const double* snp_probs = log10_pr_sum;
+
     for (uint8_t i=0; i<base_list_size; i++) {
       base_char this_base_char = base_char_list[i];
       base_index this_base_index = i;
@@ -2251,223 +2259,94 @@ double identify_mutations_pileup::calculate_two_base_model_log10_likelihood(
 	return log10_likelihood;
 }
 
-cDiscreteSNPCaller::cDiscreteSNPCaller(
-                                       const string& type,
-                                       uint32_t reference_length
-                                       ) 
-: _type(type)
+/*! Per-read-base likelihoods under each of the five candidate true bases.
+
+  The calibrated error table is keyed in READ-strand space: count_alignment_position()
+  (error_count.cpp) complements both the reference and the observed base when the read is reversed,
+  so a hypothesis about the reference base has to be complemented to match before lookup.
+
+  The mapping-quality term mixes every hypothesis with a uniform base at the read's probability of
+  being misplaced, eps = 10^(-MQ/10). It puts a floor of eps/5 under each hypothesis -- about 1.3e-5
+  at bowtie2's typical MAPQ 42 -- which caps any single read base's log10 likelihood ratio near 4.9.
+  That is deliberate: a read that is probably somewhere else entirely should not get to decide a
+  position no matter how confident its base call is.
+*/
+void identify_mutations_pileup::fill_read_base_likelihoods(polymorphism_data& pd)
 {
-  
+  const double incorrect_mapping_prob = pow(10, -static_cast<double>(pd._mapping_quality) / 10);
+  const double correct_mapping_prob = 1 - incorrect_mapping_prob;
+  const double uniform_prob = 1.0 / static_cast<double>(base_list_size);
 
-  // Uniform priors across all bases.
-  if (_type == "haploid") {
-    
-    double uniform_probability = 1.0 / static_cast<double>(base_list_size);
-    add_genotype("A", uniform_probability);
-    add_genotype("C", uniform_probability);
-    add_genotype("G", uniform_probability);
-    add_genotype("T", uniform_probability);
-    add_genotype(".", uniform_probability);
-  }
-  
-  /*
-  // Prior that we expect one change from reference
-  else if (_type == "haploid-change") {
-    
-    // recall that first one counts as reference
-    double uniform_probability = 1.0 / reference_length;    
-    add_genotype("A", 1.0 - 4.0 * uniform_probability);
-    add_genotype("C", uniform_probability);
-    add_genotype("G", uniform_probability);
-    add_genotype("T", uniform_probability);
-    add_genotype(".", uniform_probability);
-  }
-  */
-  
-  // Extra states and priors for unexpected mixed states... experimental
-  else if (_type == "haploid-cnv") {
-    
-    double mixed_probability = 1.0 / reference_length;    
-    double uniform_probability = (1.0 - 10 * mixed_probability) / base_list_size;    
-    
-    add_genotype("A", uniform_probability);
-    add_genotype("C", uniform_probability);
-    add_genotype("G", uniform_probability);
-    add_genotype("T", uniform_probability);
-    add_genotype(".", uniform_probability);
-    
-    add_genotype("AC", mixed_probability);
-    add_genotype("AG", mixed_probability);
-    add_genotype("AT", mixed_probability);
-    add_genotype("A.", mixed_probability);
-    
-    add_genotype("CG", mixed_probability);
-    add_genotype("CT", mixed_probability);
-    add_genotype("C.", mixed_probability);
-    
-    add_genotype("GT", mixed_probability);
-    add_genotype("G.", mixed_probability);
-    
-    add_genotype("T.", mixed_probability);
-  }  
-  
-  else
-  {
-    ERROR("Unknown SNP Caller type:" + type);
-  }
-  
-  // Check priors
-  double total_probability = 0;
-  for(size_t i=0; i<_log10_genotype_prior_probabilities.size(); i++) {
-    total_probability += pow(10, _log10_genotype_prior_probabilities[i]);
-  }
-  ostringstream ss;
-  ss << setprecision(5) << total_probability;
-  
-  ASSERT( from_string<double>(ss.str()) == 1.0, "Prior probabilities do not sum to 1. (" + to_string(total_probability) + ").")
-  
-  reset(0);
-}
-  
-void cDiscreteSNPCaller::add_genotype(const string& genotype, double probability) {
-  
-  _log10_genotype_prior_probabilities.push_back(log10(probability));
-  
-  vector<base_index> gv;
-  for(size_t i=0; i<genotype.length(); i++) {
-    gv.push_back(basechar2index(genotype[i]));
-  }
-  _genotype_vector.push_back(gv);
-  
-}
-  
-  
-void cDiscreteSNPCaller::reset(uint8_t ref_base_index) {
-  _best_genotype_index = 0;
-  _observations = 0;
-  _normalized_observations = 0;
-  _log10_genotype_probabilities = _log10_genotype_prior_probabilities;
-  
-  (void) ref_base_index;
-  //this is for where there are unbalanced priors -- haploid-change
-  //they do not behave properly when the reference is 'N'
-  //swap(_genotype_probability[0], _genotype_probability[ref_base_index]);
-}
-  
-void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, int32_t mapping_quality, cErrorTable& et) {
-
-  covariate_values_t this_cv = cv;
-  //update probabilities give observation using Bayes rule
-  
+  covariate_values_t this_cv = pd._cv;
+  const bool obs_top_strand = (pd._strand == 1);
   if (!obs_top_strand) {
-    this_cv.obs_base() = complement_base_index(this_cv.obs_base()); 
-  }
-  
-  double incorrect_mapping_prob = pow(10, -static_cast<double>(mapping_quality) / 10);
-  double correct_mapping_prob = 1 - incorrect_mapping_prob;
-  this->_normalized_observations += correct_mapping_prob;
-  
-  double total_prob = 0.0;
-  for (uint32_t i=0; i<_genotype_vector.size(); i++) {
-  
-    vector<base_index>& gv = this->_genotype_vector[i];
-    double this_pr = 0.0;
-    
-    for (uint32_t j=0; j < gv.size(); j++) {
-      
-      this_cv.ref_base() = gv[j];
-      
-      if (!obs_top_strand) {
-        this_cv.ref_base() = complement_base_index(this_cv.ref_base()); 
-      }
-      this_pr += (correct_mapping_prob * et.get_prob(this_cv) + incorrect_mapping_prob * 1.0 / _genotype_vector.size()) * pow(10, this->_log10_genotype_probabilities[i]) / gv.size();
-      
-      // Floating point error can make this a very  negative number
-      if (this_pr < 0.0) this_pr = 0.0;
-    }
-    
-    total_prob += this_pr;
+    this_cv.obs_base() = complement_base_index(this_cv.obs_base());
   }
 
-  double highest_pr = -numeric_limits<double>::max();
-  for (uint32_t i=0; i<this->_genotype_vector.size(); i++) {
-    
-    vector<base_index>& gv = this->_genotype_vector[i];
-    double this_pr = 0.0;
-    
-    for (uint32_t j=0; j < gv.size(); j++) {
-      
-      this_cv.ref_base() = gv[j];
-      
-      if (!obs_top_strand) {
-        this_cv.ref_base() = complement_base_index(this_cv.ref_base()); 
-      }
-      this_pr += (correct_mapping_prob * et.get_prob(this_cv) + incorrect_mapping_prob * 1 / _genotype_vector.size()) / gv.size();
-    }
-    
-    this->_log10_genotype_probabilities[i] += log10(this_pr) - log10(total_prob);
-    
-    if (this->_log10_genotype_probabilities[i] > highest_pr) {
-      this->_best_genotype_index = i;
-      highest_pr = this->_log10_genotype_probabilities[i];
-    }
+  pd._log10_pr_max = -numeric_limits<double>::max();
+  for (uint8_t b=0; b<base_list_size; b++) {
+    this_cv.ref_base() = obs_top_strand ? b : complement_base_index(b);
+    double pr = correct_mapping_prob * _error_table.get_prob(this_cv)
+              + incorrect_mapping_prob * uniform_prob;
+    // Floating point error can make this a very slightly negative number.
+    if (pr < 0.0) pr = 0.0;
+    pd._log10_pr[b] = log10(pr);
+    pd._log10_pr_max = max(pd._log10_pr_max, pd._log10_pr[b]);
   }
-  
-  //print();
-  
-  _observations++;
-}
-  
-void cDiscreteSNPCaller::print() {
-  
-  for (uint32_t i=0; i<_genotype_vector.size(); i++) {
-    
-    vector<base_index>& gv = _genotype_vector[i];
-    
-    cout << "Genotype: " ;
-    for (uint32_t j=0; j < gv.size(); j++) {
-      
-      cout << baseindex2char(gv[j]);
-    }
-    
-    cout << " " << _log10_genotype_probabilities[i] << endl;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    pd._r[b] = pow(10, pd._log10_pr[b] - pd._log10_pr_max);
   }
 }
 
+/*! Call the single most probable pure genotype, and score it against the alternatives.
 
-cSNPCall cDiscreteSNPCaller::get_prediction()
+  With uniform priors over the five pure genotypes, the per-read renormalization that the old
+  incremental caller applied is a factor common to every genotype, so it cancels out of both the
+  argmax and the reported score. What is left is
+
+    score = log10 P(data | best) - log10 Sum_{b != best} P(data | b)
+
+  evaluated by log-sum-exp against the largest competing term -- which is exactly the number
+  cDiscreteSNPCaller::get_prediction() produced, from five accumulated sums instead of a
+  renormalized posterior vector carried across every read.
+*/
+cSNPCall identify_mutations_pileup::pure_genotype_call(const double log10_pr_sum[base_list_size], uint32_t observations) const
 {
   cSNPCall snp_call;
-  
-  if (_observations == 0) {
-    //Best base is 'N' and E-value is NAN
-    return snp_call;
+
+  // Best base is 'N' and the score is NaN when there is nothing to call.
+  if (observations == 0) return snp_call;
+
+  base_index best = 0;
+  for (uint8_t b=1; b<base_list_size; b++) {
+    if (log10_pr_sum[b] > log10_pr_sum[best]) best = b;
   }
-  
-  // need to go through and find the most probable
-  snp_call.genotype = "";
-  for(size_t i=0; i<_genotype_vector[_best_genotype_index].size(); i++)
-    snp_call.genotype += baseindex2char(_genotype_vector[_best_genotype_index][i]);
-    
-  // we want to normalize the probabilities, but avoid floating point errors    
+  snp_call.genotype = string(1, baseindex2char(best));
+
+  // Offset by the largest competing genotype so the exponentials below cannot overflow.
   double log10_offset_probability = -numeric_limits<double>::max();
-  for(size_t i=0; i < _log10_genotype_probabilities.size(); i++) {
-    if (i != _best_genotype_index)
-      log10_offset_probability = max(log10_offset_probability, _log10_genotype_probabilities[i]);
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (b != best) log10_offset_probability = max(log10_offset_probability, log10_pr_sum[b]);
   }
-  
+
+  // NOTE: this sum deliberately stops one short of the full base list, excluding '.' from the error
+  // mass while the offset above includes it. That asymmetry is a defect -- it inflates the score
+  // wherever '.' is the runner-up, all the way to +inf when '.' dominates (see the two
+  // consensus_score=inf entries in tests/bull_1/expected.gd, both at minor_base=.) -- and it is
+  // reproduced here only so that replacing the incremental caller is provably behaviour-preserving.
+  // The next commit fixes it.
   double total_error_probability = 0;
-  for (uint32_t i=0; i<_genotype_vector.size()-1; i++) {
-    if (i != _best_genotype_index)
-      total_error_probability += pow(10, _log10_genotype_probabilities[i] - log10_offset_probability);
+  for (uint8_t b=0; b<base_list_size-1; b++) {
+    if (b != best) total_error_probability += pow(10, log10_pr_sum[b] - log10_offset_probability);
   }
   double log10_total_error_probability = log10(total_error_probability);
   log10_total_error_probability += log10_offset_probability;
-  
-  snp_call.score = (_log10_genotype_probabilities[_best_genotype_index] - log10_total_error_probability);
-  
+
+  snp_call.score = log10_pr_sum[best] - log10_total_error_probability;
+
   return snp_call;
 }
+
 
 } // namespace breseq
 

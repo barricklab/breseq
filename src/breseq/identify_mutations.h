@@ -131,19 +131,31 @@ namespace breseq {
 	 */
 	struct polymorphism_data {
 		//! Constructor.
-		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t f, const covariate_values_t& cv)
-		: _base_char(b), _quality(q), _strand(s), _fastq_file_index(f), _cv(cv) {
-		}
-		
-		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t f)
-		: _base_char(b), _quality(q), _strand(s), _fastq_file_index(f) {
+		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t f, int32_t mq, const covariate_values_t& cv)
+		: _base_char(b), _quality(q), _strand(s), _fastq_file_index(f), _mapping_quality(mq), _cv(cv)
+    , _log10_pr_max(0.0) {
+      for (uint8_t j=0; j<base_list_size; j++) { _log10_pr[j] = 0.0; _r[j] = 0.0; }
 		}
 
 		base_char _base_char;
 		uint8_t _quality;
 		int _strand;
 		int32_t _fastq_file_index;
+    int32_t _mapping_quality;
     covariate_values_t _cv;
+
+    // Cache of this read base's likelihood under each of the five candidate true bases, filled
+    // once by fill_read_base_likelihoods(). Every model in this file -- the pure-genotype scores
+    // and the allele mixture -- is a function of nothing but these numbers, so they are computed
+    // once per read base rather than re-queried from the error table per hypothesis per iteration.
+    //
+    // _r[] is the same vector rescaled so its maximum is exactly 1 (_log10_pr_max holds the
+    // subtracted exponent). The calibrated table floors probabilities near 1e-7, so a raw product
+    // over a hundred reads underflows; carrying the exponent separately keeps every mixture sum
+    // exact and lets log-likelihoods accumulate as Sum_i (log10 s_i + _log10_pr_max).
+    double _log10_pr[base_list_size];   //!< log10 P(observed base | true base b)
+    double _r[base_list_size];          //!< 10^(_log10_pr[b] - _log10_pr_max), max == 1
+    double _log10_pr_max;
 	};
 
 	/*! Polymorphism prediction data struct.
@@ -159,57 +171,26 @@ namespace breseq {
 		long double likelihood_ratio_test_p_value;
 	};
 	
-  /*! cDiscreteSNPCaller
-	 
-	 This class is used to predict SNPs in a single-genome sample.
-   
+  /*! Result of calling a single pure genotype at one position.
+
+   Replaces the incremental per-read Bayes update that cDiscreteSNPCaller used to perform. With
+   uniform genotype priors the per-read renormalization cancels out of the reported score, so the
+   whole thing reduces to a sum of per-read log-likelihoods per candidate base plus one closing
+   log-sum-exp -- see pure_genotype_call() in identify_mutations.cpp.
 	 */
-  
+
   struct cSNPCall {
-    
-    cSNPCall() 
+
+    cSNPCall()
     : genotype("N")
     , score(numeric_limits<double>::quiet_NaN())
     {}
-    
+
     string genotype;
     double score;
   };
-  
-  class cDiscreteSNPCaller {
-  public:
-    cDiscreteSNPCaller(
-                       const string& type, 
-                       uint32_t reference_length
-                       );
-    
-    virtual ~cDiscreteSNPCaller() {};
 
-    void add_genotype(const string& genotype, double probability);
-    void reset(uint8_t ref_base_index);
-    void update(
-                const covariate_values_t& cv, 
-                bool obs_top_strand, 
-                int32_t mapping_quality,
-                cErrorTable& et
-                );
-    void print();
-    
-    cSNPCall get_prediction();
-    
-    vector<double> get_genotype_log10_probabilities() { return _log10_genotype_probabilities; }
-    
-  protected:
-    uint32_t _observations;                        // number of read bases recorded
-    double _normalized_observations;               // observations, taking into account mapping quality probability
-    string _type;
-    vector<double> _log10_genotype_prior_probabilities;
-    vector<double> _log10_genotype_probabilities;
-    vector<vector<base_index> > _genotype_vector;  // holds all possible genotypes as lists of bases
-    uint32_t _best_genotype_index;
-  };
-  
-  
+
 	/*! identify_mutations_pileup
 	 
 	 */
@@ -321,7 +302,14 @@ namespace breseq {
 
     //! Compute and annotate polymorphism bias statistics directly on the diff entry.
     void annotate_polymorphism_statistics(cDiffEntry& mut, char best_base_char, char second_best_base_char, position_base_info& pos_info, const vector<polymorphism_data>& pdata);
-    
+
+    //! Fill a read base's per-hypothesis likelihood cache from the calibrated error table.
+    void fill_read_base_likelihoods(polymorphism_data& pd);
+
+    //! Call the single most probable pure genotype from summed per-base log-likelihoods.
+    cSNPCall pure_genotype_call(const double log10_pr_sum[base_list_size], uint32_t observations) const;
+
+
 		//! Predict whether there is a significant polymorphism.
     polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
 
@@ -356,8 +344,7 @@ namespace breseq {
     
     //! Initialized once per pileup
     cErrorTable _error_table;
-    cDiscreteSNPCaller _snp_caller;
-    
+
 		vector<sequence_info> _seq_info; //!< information about each sequence.
 		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
 		shared_info s; // summary stats
