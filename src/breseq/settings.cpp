@@ -37,6 +37,22 @@ namespace breseq
   
   const char* kBreseqAlignmentScoreBAMTag = "X5";
   const char* kBreseqBestAlignmentScoreBAMTag = "X6";
+  // The two log-likelihood terms of the junction-vs-reference ratio for this read, carried into
+  // the BAMs so that the junction read counting in the Output stage can recover the comparison the
+  // resolution stage already made. Both are 100 * log10 P (see alignment_log10_likelihood(),
+  // reference_sequence.cpp).
+  //
+  // X8 is this record's OWN likelihood, under the reference it is aligned to. X7 is the best
+  // likelihood the same read achieved under the COMPETING hypothesis: on junction.bam that is the
+  // reference genome, on reference.bam it is the candidate junctions. X7 is constant across a
+  // read's records; X8 is not.
+  //
+  // These are NOT the alignment scores. Routing still uses AS/X5, which is quality-blind; only the
+  // read weighting reads these. Absent tags mean "no competing hypothesis on record" -> full weight
+  // toward whichever BAM the read sits in, which is the correct reading when a read aligned to only
+  // one of the two references.
+  const char* kBreseqOtherHypothesisLogLikelihoodBAMTag = "X7";
+  const char* kBreseqOwnHypothesisLogLikelihoodBAMTag = "X8";
 
   string Settings::global_bin_path;
   string Settings::global_program_data_path;
@@ -283,7 +299,7 @@ namespace breseq
     options.addUsage("Read File Options", NORMAL_OPTION);
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", NORMAL_OPTION)
-    ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) You EITHER have alignment scores as additional SAM fields with the form 'AS:i:n', where n is a positive integer and higher values indicate a better alignment OR it defaults to calculating an alignment score that is equal to the number of bases in the read minus the number of inserted bases, deleted bases, and soft clipped bases in the alignment to the reference. The default highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) Any 'AS:i:n' alignment scores already present in your SAM file are IGNORED and overwritten. breseq rescores every alignment itself from the CIGAR and the reference, scoring +1 per matching base, -3 per mismatching base, -2 per gap opened and -3 per gap extended, with soft- and hard-clipped bases costing nothing. It does this so that alternative placements of the same read are always compared on one consistent scale. Note this scoring highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, NORMAL_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, NORMAL_OPTION)
     ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, NORMAL_OPTION)
@@ -306,8 +322,8 @@ namespace breseq
     options.addUsage("Read Alignment Options", NORMAL_OPTION);
     options
     ("minimum-mapping-quality,m", "Ignore alignments with less than this mapping quality (MQ) when calling mutations. MQ scores are equal to -10log10(P), where P is the probability that the best alignment is not to the correct location in the reference genome. The range of MQ scores returned by bowtie2 is 0 to 255.", 0, NORMAL_OPTION)
-    ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, NORMAL_OPTION)
-    ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("base-quality-cutoff,b", "Ignore bases with quality scores lower than or equal to this value", 3, NORMAL_OPTION)
+    ("quality-score-trim", "Trim the ends of reads past any base with a quality score lower than or equal to --base-quality-cutoff.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, NORMAL_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, NORMAL_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", NORMAL_OPTION)
@@ -324,7 +340,7 @@ namespace breseq
     ("bowtie2-junction", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", EXPERT_OPTION)
     ("local-mapping", "Use --local (instead of the default --end-to-end) alignment mode for the stage 1 bowtie2 alignment and the candidate-junction realignment pass, restoring the complete --local defaults for --bowtie2-stage1/--bowtie2-junction (--ma 1, with --score-min bounded at 0). --bowtie2-stage2 always uses --local regardless of this option. Has no effect on either setting for which the corresponding --bowtie2-* option is also given explicitly, which always takes precedence. (DEFAULT=OFF, i.e. --end-to-end mapping)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
-    options.addUsage("In addition to these values, breseq automatically sets the seed size for bowtie2 read mapping (-L option) to a value that is scaled to the read length (r). This value is 0.5 * r for stage 1, 5 + 0.1 * r for stage 2, and 0.3 * r for junction mapping. In each case, it is bounded to the range [4,31] as required by bowtie2. Be warned that breseq internally rescores alignments with a scoring scheme setting +1 for match, -3 for mismatch, -2 for gap open, and -3 for gap extend for consistency when comparing alternative alignments present in the bowtie2 output.", EXPERT_OPTION);
+    options.addUsage("In addition to these values, breseq automatically sets the seed size for bowtie2 read mapping (-L option) to a value that is scaled to the read length (r). This value is 0.5 * r for stage 1 and 0.25 * r for both stage 2 and junction mapping. In each case, it is bounded to the range [9,32]. Be warned that breseq internally rescores alignments with a scoring scheme setting +1 for match, -3 for mismatch, -2 for gap open, and -3 for gap extend for consistency when comparing alternative alignments present in the bowtie2 output.", EXPERT_OPTION);
     
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Junction (JC) Evidence Options", NORMAL_OPTION);
@@ -340,6 +356,7 @@ namespace breseq
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", NORMAL_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, NORMAL_OPTION)
     ("junction-allow-suboptimal-matches", "Assign a read to the junction candidate with the most overall support as long as its match to this junction is better than to any location in the reference sequence, even if it matches a different junction candidate better. This behavior was the default before v0.35.0. It will align more reads to junctions but risks misassigning some reads to the wrong junction candidates. It is only recommended that you use this option in CONSENSUS mode", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("junction-no-read-weighting", "Count every junction-spanning read as full support, instead of splitting it between the junction and the reference according to how well its alignment scores tell them apart. By default breseq fits that split together with the junction frequency, so a read that barely distinguishes the two counts for less than one that clearly does.", TAKES_NO_ARGUMENT, EXPERT_OPTION)
     ("concordant-pairs-to-make-unique", "When paired-mapping is enabled (the default; disable with --no-paired-mapping), minimum number of concordant read pairs that must agree before a redundant junction side is reassigned to the specific repeat copy their mates map next to (and marked unique). Higher values make false disambiguations rarer. (DEFAULT = 3)", 3, EXPERT_OPTION)
     ;
     
@@ -738,6 +755,7 @@ namespace breseq
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
     this->junction_allow_suboptimal_matches = options.count("junction-allow-suboptimal-matches");
+    this->junction_weight_reads = !options.count("junction-no-read-weighting");
     
     //! Settings: Pipeline Control
     this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
@@ -804,7 +822,15 @@ namespace breseq
       this->polymorphism_precision_places = 8;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;
-      this->junction_minimum_side_match = 6;
+      // Was 6, matching consensus mode's 1 now that reads are weighted by how well they actually
+      // discriminate. The cutoff was a positional stand-in for that: it measured how far a read
+      // reached past the breakpoint, not whether those bases said anything. On 35 bp reads the two
+      // correlate at only r = 0.6, so it admitted 9% of reads carrying essentially no evidence
+      // while discarding 24% that carried two or more discriminating bases -- and it discarded
+      // 31% of all spanning reads to do it. It also widens the read-counting windows by
+      // 2*(value-1) (see minimum_side_match_correction), which on short reads distorts the
+      // junction count far more than the side counts and biases the frequency itself.
+      this->junction_minimum_side_match = 1;
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
       
     }
@@ -1184,6 +1210,7 @@ namespace breseq
     this->minimum_alignment_resolution_pos_hash_score = 3;
     this->minimum_pr_no_read_start_per_position = 0.1;
     this->junction_allow_suboptimal_matches = false;
+    this->junction_weight_reads = true;
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = 3;
@@ -1369,6 +1396,7 @@ namespace breseq
 		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
 
     this->junction_debug_file_name = this->alignment_resolution_path + "/junction_debug.txt";
+    this->junction_mapq_debug_file_name = this->alignment_resolution_path + "/junction_mapq_debug.tsv";
 
     //! Paths: BAM conversion
 		this->bam_path = "06_bam";

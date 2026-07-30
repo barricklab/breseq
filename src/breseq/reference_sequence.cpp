@@ -4499,6 +4499,175 @@ int32_t alignment_score(const alignment_wrapper& a, const cReferenceSequences& r
 }
 
 
+namespace {
+
+  // log10 P(base read correctly) and log10 P(base read as one specific WRONG base), indexed by the
+  // raw BAM quality score. Tabulated because alignment_log10_likelihood() runs a per-base walk for
+  // every alignment of every read, and a pow() per base would dominate it.
+  struct base_quality_log10_table {
+    double match[256];
+    double mismatch[256];
+    base_quality_log10_table() {
+      for (int32_t q = 0; q < 256; q++) {
+        // 0xff is the SAM/BAM sentinel for "quality unavailable", NOT a quality of 255. Read
+        // literally it would make a base infinitely trustworthy -- the single most dangerous
+        // misreading available here -- so it is given the no-information value instead.
+        double eps = (q == 0xff) ? 0.75 : pow(10.0, -static_cast<double>(q) / 10.0);
+        // Cap at 3/4, the error rate at which a base carries no information at all: there
+        // (1-eps) and eps/3 are both 1/4, so the base contributes the same term under every
+        // hypothesis and drops out of the ratio. Without the cap, Q0 gives eps = 1 and log10(0).
+        if (eps > 0.75) eps = 0.75;
+        match[q] = log10(1.0 - eps);
+        mismatch[q] = log10(eps / 3.0);
+      }
+    }
+  };
+  const base_quality_log10_table g_base_quality_log10;
+
+  inline double _base_log10_likelihood(char read_base, char ref_base, uint8_t qual)
+  {
+    return (read_base == ref_base) ? g_base_quality_log10.match[qual]
+                                   : g_base_quality_log10.mismatch[qual];
+  }
+
+  // Charge for a read base this hypothesis cannot place at all, because extending the alignment
+  // through its soft clip ran off the end of the reference sequence. log10(1/4) is the
+  // maximum-entropy reading -- the hypothesis has no information about the base -- and it is
+  // exactly the value the table above already assigns to a base whose quality carries no
+  // information, so "unplaceable" and "unreadable" cost the same thing.
+  //
+  // Charging zero instead is the failure this exists to prevent: it asserts that the two
+  // hypotheses are EQUALLY likely over bases only one of them explains, which is the same-data
+  // violation that makes a likelihood ratio meaningless. Measured on tmv_plasmid_circular_deletion
+  // _end_only, where the junction sits at the contig edge so every supporting read's reference
+  // alignment clips off the end: 39% of the junction's 770 reads scored an exact ratio of 0 and the
+  // reported frequency fell from 0.98 to 0.58 on evidence that was never weighed.
+  //
+  // KNOWN LIMITATION: a circular reference genuinely continues at the other end, and this does not
+  // wrap. breseq treats a contig end as a hard boundary elsewhere too -- it predicts a junction at
+  // the origin rather than joining across it -- so this is consistent with the surrounding model,
+  // not with the biology.
+  const double kUnplaceableBaseLog10 = -0.6020599913279624;   // log10(1/4)
+
+} // anonymous namespace
+
+
+/*
+ Quality-aware companion to alignment_score(), used ONLY by the junction read weighting.
+ See the declaration in reference_sequence.h for what it is for and why it is separate.
+
+ Returns 100 * log10 P(read bases | this alignment's reference).
+ */
+int32_t alignment_log10_likelihood(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
+{
+  // Gaps get no quality term -- a base quality says nothing about how likely an indel is -- so they
+  // keep the affine penalty alignment_score() charges (-2 to open, -3 per base), converted into
+  // log10 units at the 4-score-units-per-order-of-magnitude rate that the retired fixed `base` of
+  // junction_read_weight() used to encode. This is the one modelling constant that survives, and it
+  // applies only to indels; substitutions are now derived entirely from base qualities.
+  const double log10_per_score_unit = log10(4.0);
+  const double gap_open_log10   = -2.0 * log10_per_score_unit;
+  const double gap_extend_log10 = -3.0 * log10_per_score_unit;
+
+  const cAnnotatedSequence& target = ref_seq_info[a.reference_target_id()];
+  const int32_t target_length = static_cast<int32_t>(target.get_sequence_length());
+
+  uint32_t* cigar_list = a.cigar_array();
+  const uint32_t cigar_length = a.cigar_array_length();
+
+  // Soft-clipped bases are scored too, by extending the alignment straight through them against
+  // this same reference. A likelihood ratio is only valid over the SAME data: when one hypothesis
+  // explains a base and the other clips it, charging the clip nothing silently asserts that the two
+  // are equally likely there -- and the unexplained bases are precisely the discriminating ones
+  // this model exists to weigh. Under --end-to-end (breseq's default) bowtie2 clips little, so this
+  // rarely fires, but when it does it is exactly on the marginal read that matters.
+  uint32_t lead_clip = 0, trail_clip = 0;
+  if (cigar_length > 0) {
+    if ((cigar_list[0] & BAM_CIGAR_MASK) == BAM_CSOFT_CLIP)
+      lead_clip = cigar_list[0] >> BAM_CIGAR_SHIFT;
+    if ((cigar_list[cigar_length-1] & BAM_CIGAR_MASK) == BAM_CSOFT_CLIP)
+      trail_clip = cigar_list[cigar_length-1] >> BAM_CIGAR_SHIFT;
+  }
+
+  // Clamp the extension to the reference. Bases falling off the end of the sequence have no
+  // reference to be scored against and are charged kUnplaceableBaseLog10 instead -- see there for
+  // why charging them nothing is not an option.
+  const int32_t align_start_1 = static_cast<int32_t>(a.reference_start_1());
+  const int32_t align_end_1   = static_cast<int32_t>(a.reference_end_1());
+  int32_t window_start_1 = align_start_1 - static_cast<int32_t>(lead_clip);
+  if (window_start_1 < 1) window_start_1 = 1;
+  int32_t window_end_1 = align_end_1 + static_cast<int32_t>(trail_clip);
+  if (window_end_1 > target_length) window_end_1 = target_length;
+
+  const string ref_string = target.get_sequence_1(window_start_1, window_end_1);
+  const string read_string = a.read_char_sequence();
+
+  double ll = 0.0;
+
+  // Positions of the alignment's first aligned base, in ref_string and in the stored read.
+  int32_t ref_pos = align_start_1 - window_start_1;
+  int32_t read_pos = 0;
+  bool seen_aligned = false;
+
+  for (uint32_t i = 0; i < cigar_length; i++)
+  {
+    char op = cigar_list[i] & BAM_CIGAR_MASK;
+    uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+
+    if (op == BAM_CSOFT_CLIP)
+    {
+      if (!seen_aligned) {
+        // Leading clip: walk outward (leftward) from the alignment, over as much reference
+        // continuation as exists. The clipped bases nearest the alignment are the ones scored.
+        uint32_t n = min(len, static_cast<uint32_t>(ref_pos));
+        for (uint32_t j = 1; j <= n; j++)
+          ll += _base_log10_likelihood(read_string[read_pos + len - j], ref_string[ref_pos - j],
+                                       a.read_base_quality_0(read_pos + len - j));
+        ll += kUnplaceableBaseLog10 * (len - n);   // ran off the start of the sequence
+      } else {
+        // Trailing clip: walk rightward from just past the alignment.
+        uint32_t n = min(len, static_cast<uint32_t>(ref_string.size() - ref_pos));
+        for (uint32_t j = 0; j < n; j++)
+          ll += _base_log10_likelihood(read_string[read_pos + j], ref_string[ref_pos + j],
+                                       a.read_base_quality_0(read_pos + j));
+        ll += kUnplaceableBaseLog10 * (len - n);   // ran off the end of the sequence
+      }
+      read_pos += len;
+    }
+    else if (op == BAM_CDEL)
+    {
+      ll += gap_open_log10 + gap_extend_log10 * len;
+      ref_pos += len;
+      seen_aligned = true;
+    }
+    else if (op == BAM_CINS)
+    {
+      ll += gap_open_log10 + gap_extend_log10 * len;
+      read_pos += len;
+      seen_aligned = true;
+    }
+    else if ((op == BAM_CMATCH) || (op == BAM_CEQUAL) || (op == BAM_CDIFF))
+    {
+      for (uint32_t j = 0; j < len; j++)
+      {
+        ll += _base_log10_likelihood(read_string[read_pos], ref_string[ref_pos],
+                                     a.read_base_quality_0(read_pos));
+        read_pos++;
+        ref_pos++;
+      }
+      seen_aligned = true;
+    }
+    else if (op != BAM_CHARD_CLIP)
+    {
+      ERROR("Unrecognized CIGAR operation in string: " + a.cigar_string());
+    }
+  }
+
+  double scaled = ll * kAlignmentLogLikelihoodScale;
+  return static_cast<int32_t>((scaled < 0.0) ? (scaled - 0.5) : (scaled + 0.5));
+}
+
+
 // debug utility function
 // ref sequence is subsequence matching CIGAR string only
 // read sequence is the entire read sequence

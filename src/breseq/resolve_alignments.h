@@ -47,6 +47,45 @@ namespace breseq {
                    map<string,bool>& counted_read_names
                    );
 
+    // Weighting context for the counts. Each counted read is split between the two hypotheses by
+    // junction_read_weight() (stats.h): weight w to "came from the junction", 1-w to "came from
+    // the reference". delta_sign is +1 when this counter reads the junction BAM (where a record's
+    // own log-likelihood X8 belongs to the junction and the stamped X7 to the reference) and -1
+    // when it reads the reference BAM, where the two swap. With weighting off every read scores
+    // w = 1 toward whichever BAM it sits in and the sums reproduce the raw counts exactly.
+    //
+    // The sums produced here use a flat prior; they are a starting point, and the caller refits
+    // them against the junction frequency. Only the recorded per-read evidence is needed for that.
+    void set_weighting(bool enabled, int32_t delta_sign);
+
+    // Ignore bases at or below this quality when deciding how far a read reaches, so a read is not
+    // credited with spanning the counting window on the strength of a miscalled tail. 0 keeps raw
+    // alignment bounds.
+    void set_base_quality_cutoff(uint32_t cutoff) { _base_quality_cutoff = cutoff; }
+
+
+    // Valid after count(). Sums run over exactly the reads that count() tallied, and always add
+    // to that raw count -- each read's evidence is split between the two hypotheses but stays in
+    // this window, so both sums share the window's register normalization.
+    //
+    // "Weight" is always named from the point of view of the BAM being read: sum_weight() is the
+    // evidence supporting whichever hypothesis this BAM represents, sum_complement() the evidence
+    // for the other one. So on the junction BAM sum_weight() is junction support, while on the
+    // reference BAM it is reference support.
+    double sum_weight() const { return _sum_weight; }
+    double sum_weight_sq() const { return _sum_weight_sq; }       // for a Kish effective depth
+    double sum_complement() const { return _sum_complement; }
+
+    // Per-counted-read evidence, in the order counted: the log10 likelihood ratio in favour of
+    // THE JUNCTION (not of this window -- the reference window's sign flip is already folded in
+    // when the value is recorded), and how many places in the reference the read maps equally well.
+    // have_odds is false when the read carried no competing hypothesis, which is NOT the same as a
+    // ratio of zero (that would mean "the two hypotheses explain it equally well").
+    // Kept so the caller can re-weight without a second pileup pass -- the mixture below iterates,
+    // and re-fetching the same reads once per iteration would multiply the cost of counting.
+    struct read_evidence_t { double log10_odds_for_junction; uint32_t n_ref_placements; bool have_odds; };
+    const vector<read_evidence_t>& counted_read_evidence() const { return _read_evidence; }
+
     // Counts how many of the candidate reference start positions for a hypothetical,
     // gapless, average-length read spanning [window_start, window_end] would still
     // span it after being shrunk by the trims at that position (see fetch_callback).
@@ -66,6 +105,14 @@ namespace breseq {
     map<string,bool> _ignore_read_names, _counted_read_names;
     bool _verbose;
     SequenceTrimsList _trims_list;
+
+    bool _weighting_enabled;
+    uint32_t _base_quality_cutoff;
+    int32_t _delta_sign;
+    double _sum_weight;
+    double _sum_weight_sq;
+    double _sum_complement;
+    vector<read_evidence_t> _read_evidence;
   };
 
   class ResolveJunctionInfo : public JunctionInfo
@@ -145,21 +192,28 @@ namespace breseq {
 		uint32_t fastq_file_index;
 		int32_t mapping_quality_difference;
 		uint32_t degenerate_count;
-    
-    JunctionMatch() {}
-    
+    // The read's best alignment score against the reference genome. Kept alongside
+    // mapping_quality_difference (which is best-junction MINUS this) because the difference alone
+    // is best over ALL candidate junctions: to score a read against the ONE candidate under
+    // consideration we need this baseline plus that candidate's own X5 tag. See score_junction().
+    int32_t best_reference_score;
+
+    JunctionMatch() : fastq_file_index(0), mapping_quality_difference(0), degenerate_count(0), best_reference_score(0) {}
+
     JunctionMatch(
                     const alignment_list& _reference_alignments,
                     const alignment_list&  _junction_alignments,
                     uint32_t _fastq_file_index,
                     int32_t _mapping_quality_difference,
-                    uint32_t _degenerate_count
+                    uint32_t _degenerate_count,
+                    int32_t _best_reference_score = 0
                     )
           :reference_alignments(_reference_alignments)
           ,junction_alignments(_junction_alignments)
           ,fastq_file_index(_fastq_file_index)
           ,mapping_quality_difference(_mapping_quality_difference)
           ,degenerate_count(_degenerate_count)
+          ,best_reference_score(_best_reference_score)
     { }
 	};
 
@@ -356,17 +410,17 @@ namespace breseq {
                                         const counted_ptr<junction_read_counter>& junction_jrc
                                         );
   
+  // Builds the junction/reference read counters with identical configuration for every caller.
+  void make_junction_read_counters(const Settings& settings,
+                                   counted_ptr<junction_read_counter>& reference_jrc,
+                                   counted_ptr<junction_read_counter>& junction_jrc);
+
   void  assign_junction_read_counts(
                                     const Settings& settings,
                                     Summary& summary,
                                     cGenomeDiff& gd
                                     );
   
-  void  assign_junction_read_coverage(
-                                      const Settings& settings,
-                                      Summary& summary,
-                                      cGenomeDiff& gd
-                                      );
 
 
 }

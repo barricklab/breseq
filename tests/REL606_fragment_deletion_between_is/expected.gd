@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	15:43:06 05 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision 5251a64e0d3d
-#=COMMAND	./src/breseq/breseq -j 4 -b 0 -o ./tests/REL606_fragment_deletion_between_is -r ./tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk ./tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq.gz
-#=REFSEQ	./tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk
-#=READSEQ	./tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq.gz
+#=CREATED	12:09:51 29 Jul 2026
+#=PROGRAM	breseq 0.50.0 revision bb5cb58cb627
+#=COMMAND	./src/breseq/breseq -j 4 -b 0 -o tests/REL606_fragment_deletion_between_is -r tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq.gz
+#=REFSEQ	tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk
+#=READSEQ	tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq.gz
 #=CONVERTED-BASES	866700
 #=CONVERTED-READS	24075
 #=INPUT-BASES	866700

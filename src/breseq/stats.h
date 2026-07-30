@@ -134,6 +134,32 @@ namespace breseq {
   double binomial_frequency_lower_bound(double k, double n, double alpha = 0.05);
   double binomial_frequency_upper_bound(double k, double n, double alpha = 0.05);
 
+  // ---------------------------------------------------------------------------------------------
+  // Posterior probability that a read came from a candidate junction rather than from the
+  // reference, given the log-likelihood ratio between the two hypotheses.
+  //
+  //   w = 1 / (1 + prior_odds_against * n_ref_placements * 10^(-log10_odds_for_junction))
+  //
+  // log10_odds_for_junction is log10 P(read | THIS candidate) - log10 P(read | reference genome),
+  // both terms computed by alignment_log10_likelihood() (reference_sequence.cpp) and carried
+  // through the BAMs in the X8/X7 tags. Positions where the two references agree contribute the
+  // same term to both and cancel, so this measures DISCRIMINATING BASES, not overhang length: a
+  // read extending well past a breakpoint into sequence identical to the reference continuation
+  // contributes nothing and correctly scores ~0.
+  //
+  // There is no `base` and no error-rate constant. Each discriminating base is worth
+  // log10(3(1-eps)/eps) for its own quality -- ~4.5 at Q40, ~0.35 at Q3, ~0 at Q0 -- rather than a
+  // flat 4 score units under an assumed 1% error rate. The earlier score-based form had to convert
+  // score units to odds through exactly that assumption; with real qualities the ratio IS the odds.
+  //
+  // prior_odds_against is the only remaining input that is not read off the data, and callers set
+  // it to (1-f)/f from the junction's own frequency (see reweight_window(),
+  // resolve_alignments.cpp), which makes it a fitted quantity rather than a tuned one. The
+  // half-weight point then sits at log10_odds_for_junction = log10(prior_odds_against).
+  double junction_read_weight(double log10_odds_for_junction,
+                              uint32_t n_ref_placements,
+                              double prior_odds_against);
+
   // Result of a Nelder-Mead simplex minimization.
   struct nelder_mead_result_t {
     vector<double> estimate;
