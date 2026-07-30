@@ -821,10 +821,14 @@ namespace breseq {
     // the ones in assign_junction_read_counts(). That mattered: this function re-counts entries
     // that were already counted there, and it runs later, so a counter configured differently
     // here silently overwrites the earlier results -- with no error and no failing assertion.
+    // No assert_weighting_was_applied() here, deliberately. This function counts only the JC
+    // entries that sit near an IS element with positive overlap, which can be a handful or none,
+    // and a small enough subset could legitimately contain no read with a competing hypothesis.
+    // assign_junction_read_counts() runs earlier over every JC entry and already makes the check.
     counted_ptr<junction_read_counter> reference_jrc, junction_jrc;
     make_junction_read_counters(settings, reference_jrc, junction_jrc);
 
-    
+
     // Prepare the lists
     for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
 		{

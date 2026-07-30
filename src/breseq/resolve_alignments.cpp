@@ -3756,7 +3756,10 @@ void  assign_junction_read_counts(
     cDiffEntry& j = **it;
     assign_one_junction_read_counts(settings, summary, j, reference_jrc, junction_jrc);
   }
-  
+
+  // Checked after the whole pass, not per junction: a single junction can legitimately have no read
+  // with a competing hypothesis, but the whole dataset cannot.
+  if (junction_jrc.get() != NULL) junction_jrc->assert_weighting_was_applied("junction.bam");
 }
 
   
@@ -3766,6 +3769,7 @@ junction_read_counter::junction_read_counter(const string& bam, const string& fa
   , _base_quality_cutoff(0)   // raw bounds until set_base_quality_cutoff()
   , _delta_sign(1)
   , _sum_weight(0.0), _sum_weight_sq(0.0), _sum_complement(0.0)
+  , _total_counted_reads(0), _total_counted_reads_with_odds(0)
 {
 
   _trims_list.resize(num_targets());
@@ -3779,6 +3783,26 @@ void junction_read_counter::set_weighting(bool enabled, int32_t delta_sign)
 {
   _weighting_enabled = enabled;
   _delta_sign = delta_sign;
+}
+
+// See the declaration in resolve_alignments.h for what this is guarding and why it has to be a
+// runtime check.
+void junction_read_counter::assert_weighting_was_applied(const string& bam_description) const
+{
+  if (!_weighting_enabled) return;          // nothing claimed, nothing to check
+  if (_total_counted_reads == 0) return;    // no junctions had any support; not this check's business
+  if (_total_counted_reads_with_odds > 0) return;
+
+  ERROR("Junction read weighting is enabled, but not one of the " + to_string(_total_counted_reads)
+        + " reads counted in " + bam_description + " carries the per-read likelihood tags ("
+        + kBreseqOwnHypothesisLogLikelihoodBAMTag + "/" + kBreseqOtherHypothesisLogLikelihoodBAMTag
+        + ") that the weighting reads.\n"
+        + "Every junction frequency would silently fall back to the unweighted value.\n"
+        + "The usual cause is re-running only the Output stage over alignments resolved by an\n"
+        + "earlier run that used --junction-no-read-weighting: the tags are written during\n"
+        + "alignment resolution, and are not written when the weighting is off. Re-run alignment\n"
+        + "resolution (remove 05_alignment_correction/alignment_resolution.done and the later\n"
+        + "stages' done-files), or pass --junction-no-read-weighting here too.");
 }
 
 uint32_t junction_read_counter::count_confident_overlap_registers(
@@ -3959,6 +3983,10 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   ev.have_odds = have_odds;                         // false = no competing alignment on record
   ev.n_ref_placements = a.redundancy();
   _read_evidence.push_back(ev);
+
+  // Lifetime tallies for assert_weighting_was_applied(). Deliberately not reset per window.
+  _total_counted_reads++;
+  if (have_odds) _total_counted_reads_with_odds++;
 
   // record that we counted this read
   _counted_read_names[a.read_name()] = true;
