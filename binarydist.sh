@@ -265,6 +265,9 @@ chmod 644 $(find ${BINARYDIR} -type f)
 chmod a+x ${BINARYDIR}/run_tests.sh
 chmod a+x ${BINARYDIR}/bin/*
 chmod a+x ${BINARYDIR}/tests/*.sh
+# ...and the per-test scripts one level down, or run_tests.sh dies with
+# "Permission denied" on every test it tries to launch
+chmod a+x ${BINARYDIR}/tests/*/testcmd.sh
 
 tar -czf ${BINARYLOCALDIR}.tar.gz ${BINARYLOCALDIR}
 rm -r ${BINARYLOCALDIR}
