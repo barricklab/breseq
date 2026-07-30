@@ -2329,14 +2329,14 @@ cSNPCall identify_mutations_pileup::pure_genotype_call(const double log10_pr_sum
     if (b != best) log10_offset_probability = max(log10_offset_probability, log10_pr_sum[b]);
   }
 
-  // NOTE: this sum deliberately stops one short of the full base list, excluding '.' from the error
-  // mass while the offset above includes it. That asymmetry is a defect -- it inflates the score
-  // wherever '.' is the runner-up, all the way to +inf when '.' dominates (see the two
-  // consensus_score=inf entries in tests/bull_1/expected.gd, both at minor_base=.) -- and it is
-  // reproduced here only so that replacing the incremental caller is provably behaviour-preserving.
-  // The next commit fixes it.
+  // '.' (the gap state) is a genotype like any other, so it belongs in the error mass. Leaving it
+  // out while the offset above included it made the score claim more confidence than the data
+  // supported at exactly the positions where the competing genotype is a deletion: with '.' as the
+  // runner-up every remaining term is negligible against the offset, the sum underflows to zero,
+  // and the score comes back +inf. tests/bull_1/expected.gd had two such entries, one of them a
+  // 52/48 G/'.' mixture reported as an infinitely confident consensus call.
   double total_error_probability = 0;
-  for (uint8_t b=0; b<base_list_size-1; b++) {
+  for (uint8_t b=0; b<base_list_size; b++) {
     if (b != best) total_error_probability += pow(10, log10_pr_sum[b] - log10_offset_probability);
   }
   double log10_total_error_probability = log10(total_error_probability);
