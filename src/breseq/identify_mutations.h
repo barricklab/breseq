@@ -54,7 +54,6 @@ namespace breseq {
                           const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
                           double polymorphism_cutoff,
-                          double polymorphism_frequency_cutoff,
                           double polymorphism_precision_decimal,
                           uint32_t polymorphism_precision_places,
                           bool print_per_position_file
@@ -285,7 +284,6 @@ namespace breseq {
                               const vector<double>& deletion_seed_cutoffs,
 															double mutation_cutoff,
                               double polymorphism_cutoff,
-                              double polymorphism_frequency_cutoff,
                               double polymorphism_precision_decimal,
                               uint32_t polymorphism_precision_places,                              
                               bool print_per_position_file
@@ -358,7 +356,6 @@ namespace breseq {
     vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.
 		double _consensus_score_cutoff; //!< phred score cutoff value for mutation predictions.
     double _polymorphism_score_cutoff; //!< phred score cutoff for predicted polymorphisms.
-    double _polymorphism_frequency_cutoff; //!< Frequency cutoff for predicted polymorphisms.
     double _polymorphism_precision_decimal; //!< Precision for estimating polymorphism models
     uint32_t _polymorphism_precision_places; //!< Precision for writing out polymorphism values
 

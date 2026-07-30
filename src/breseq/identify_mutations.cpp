@@ -42,7 +42,6 @@ void identify_mutations(
                 const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
 								double polymorphism_cutoff,
-								double polymorphism_frequency_cutoff,
                 double polymorphism_precision_decimal,
                 uint32_t polymorphism_precision_places,
 								bool print_per_position_file
@@ -58,7 +57,6 @@ void identify_mutations(
                 deletion_seed_cutoffs,
 								mutation_cutoff,
 								polymorphism_cutoff,
-								polymorphism_frequency_cutoff,
                 polymorphism_precision_decimal,
                 polymorphism_precision_places,
 								print_per_position_file
@@ -275,8 +273,8 @@ bool rejected_RA_consensus_coverage(cDiffEntry& ra,
   
   if (settings.consensus_minimum_total_coverage_each_strand > 0) {
     vector<string> top_bot = split(ra[TOTAL_COV], "/");
-    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_variant_coverage_each_strand) ||
-        (from_string<double>(top_bot[1]) < settings.consensus_minimum_variant_coverage_each_strand) ) {
+    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_total_coverage_each_strand) ||
+        (from_string<double>(top_bot[1]) < settings.consensus_minimum_total_coverage_each_strand) ) {
       ra.add_reject_reason("TOTAL_STRAND_COVERAGE");
       rejected = true;
     }
@@ -284,7 +282,7 @@ bool rejected_RA_consensus_coverage(cDiffEntry& ra,
   
   if (settings.consensus_minimum_variant_coverage > 0) {
     vector<string> top_bot = split(ra[MAJOR_COV], "/");
-    if ( from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]) < settings.consensus_minimum_total_coverage ) {
+    if ( from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]) < settings.consensus_minimum_variant_coverage ) {
       ra.add_reject_reason("VARIANT_COVERAGE");
       rejected = true;
     }
@@ -462,11 +460,10 @@ bool test_RA_evidence_CONSENSUS_mode(
 {
   double score = RA_score(ra);
 
-  // Exact 95% lower bound on the variant frequency; falls back to the point estimate if the
-  // position has no usable depth.
+  // Falls back to the point estimate if the entry carries neither recorded bounds nor usable depth.
   double lower, upper;
   if (!RA_frequency_bounds(ra, lower, upper))
-    lower = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
+    lower = upper = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
 
   /////////////////////////////////
   // 1. Is it the majority allele?
@@ -701,7 +698,6 @@ identify_mutations_pileup::identify_mutations_pileup(
                               const vector<double>& deletion_seed_cutoffs,
 															double consensus_score_cutoff,
 															double polymorphism_score_cutoff,
-															double polymorphism_frequency_cutoff,
                               double polymorphism_precision_decimal,
                               uint32_t polymorphism_precision_places,
 															bool print_per_position_file
@@ -713,7 +709,6 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _deletion_propagation_cutoffs(deletion_propagation_cutoffs)
 , _consensus_score_cutoff(consensus_score_cutoff)
 , _polymorphism_score_cutoff(polymorphism_score_cutoff)
-, _polymorphism_frequency_cutoff(polymorphism_frequency_cutoff)
 , _polymorphism_precision_decimal(polymorphism_precision_decimal)
 , _polymorphism_precision_places(polymorphism_precision_places)
 , _log10_ref_length(0)
@@ -1957,14 +1952,8 @@ void identify_mutations_pileup::annotate_polymorphism_statistics(cDiffEntry& mut
 
   double fisher_strand_p_value = fisher_exact_test_2x2(minor_top_strand, minor_bot_strand, major_top_strand, major_bot_strand);
 
-  double combined_log = -2.0 * (log(ks_quality_p_value) + log(fisher_strand_p_value));
-  double bias_p_value = isinf(combined_log) ? 0.0 : incompletegamma(2.0, combined_log / 2.0, true);
-  double bias_e_value = bias_p_value * static_cast<double>(_total_reference_length);
-
   mut["ks_quality_p_value"]    = formatted_double(ks_quality_p_value,    5, true).to_string();
   mut["fisher_strand_p_value"] = formatted_double(fisher_strand_p_value, 5, true).to_string();
-  mut["bias_p_value"]          = formatted_double(bias_p_value,          5, true).to_string();
-  mut["bias_e_value"]          = formatted_double(bias_e_value,          5, true).to_string();
 }
 
 
