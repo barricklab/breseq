@@ -108,6 +108,25 @@ bool rejected_RA_polymorphism_bias(cDiffEntry& ra,
   return rejected;
 }
   
+// The single RA score: log10 evidence that the position carries a non-reference allele at all.
+//
+// Evidence files written before the two scores were merged carry consensus_score and
+// polymorphism_score instead. Those are still readable -- users re-run the Output step over an old
+// evidence .gd routinely -- and the better-supported of the two stands in, since each was the
+// admitting score for one of the two claims this one score now gates.
+static double RA_score(const cDiffEntry& ra)
+{
+  if (ra.entry_exists(SCORE)) return double_from_string(ra.get(SCORE));
+
+  double legacy = numeric_limits<double>::quiet_NaN();
+  if (ra.entry_exists(CONSENSUS_SCORE)) legacy = double_from_string(ra.get(CONSENSUS_SCORE));
+  if (ra.entry_exists(POLYMORPHISM_SCORE)) {
+    double p = double_from_string(ra.get(POLYMORPHISM_SCORE));
+    if (std::isnan(legacy) || (p > legacy)) legacy = p;
+  }
+  return legacy;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Exact (Clopper-Pearson) confidence bounds on the variant frequency at an RA position, so the
 // frequency cutoffs are a confidence statement rather than a point-estimate comparison: a call is
@@ -424,8 +443,7 @@ bool test_RA_evidence_CONSENSUS_mode(
                                      const Settings& settings
                                      )
 {
-  double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
-  double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
+  double score = RA_score(ra);
 
   // Exact 95% lower bound on the variant frequency; falls back to the point estimate if the
   // position has no usable depth.
@@ -437,7 +455,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   // 1. Is it the majority allele?
   /////////////////////////////////
 
-  if (consensus_score < settings.mutation_log10_e_value_cutoff) {
+  if (score < settings.mutation_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.consensus_frequency_cutoff > 0.0) && (lower < settings.consensus_frequency_cutoff)) {
@@ -464,7 +482,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   // 2. Is it present at all?
   /////////////////////////////////
 
-  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+  if (score < settings.polymorphism_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.polymorphism_frequency_cutoff > 0.0) && (lower < settings.polymorphism_frequency_cutoff)) {
@@ -516,8 +534,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
                                      const Settings& settings
                                      )
 {
-  double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
-  double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
+  double score = RA_score(ra);
 
   double lower, upper;
   if (!RA_frequency_bounds(ra, lower, upper))
@@ -527,7 +544,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // 1. Can we still call it fixed?
   /////////////////////////////////
 
-  if (consensus_score < settings.mutation_log10_e_value_cutoff) {
+  if (score < settings.mutation_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.consensus_frequency_cutoff > 0.0) && (upper < settings.consensus_frequency_cutoff)) {
@@ -554,7 +571,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // 2. Is it present at all?
   /////////////////////////////////
 
-  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+  if (score < settings.polymorphism_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
   if ((settings.polymorphism_frequency_cutoff > 0.0) && (lower < settings.polymorphism_frequency_cutoff)) {
@@ -598,11 +615,11 @@ void test_RA_evidence(
   
   // Assumes these entries are present initially
   //  * REF_BASE
-  //  * CONSENSUS_SCORE is present for all entries        = maximumum likelihood frequency for 100% mutated model
-  //  * POLYMORPHISM_FREQUENCY is present for all entries = maximumum likelihood frequency for mixed model
-  //  * QUALITY is present for all entries                = consensus model
-  //  * POLYMORPHISM_SCORE may or may not be present      = mixed model
-  //  * NEW_COV, REF_COV present for all entries
+  //  * SCORE                  log10 evidence that a non-reference allele is present at all
+  //                           (or, on evidence written before the scores were merged, at least one
+  //                            of CONSENSUS_SCORE / POLYMORPHISM_SCORE -- see RA_score())
+  //  * POLYMORPHISM_FREQUENCY the variant allele's fitted frequency, as a fraction of total depth
+  //  * NEW_COV, REF_COV       present for all entries
   
   diff_entry_list_t list = gd.get_list();
   // Note nonstandard non-increment, since we remove items
@@ -620,11 +637,8 @@ void test_RA_evidence(
     if (!ra.entry_exists(REF_BASE)) {
       ERROR("Expected field 'ref_base' in evidence item\n" + ra.as_string());
     }
-    if (!ra.entry_exists(CONSENSUS_SCORE)) {
-      ERROR("Expected field 'consensus_score' in evidence item\n" + ra.as_string());
-    }
-    if (!ra.entry_exists(POLYMORPHISM_SCORE)) {
-      ERROR("Expected field 'polymorphism_score' in evidence item\n" + ra.as_string());
+    if (!ra.entry_exists(SCORE) && !ra.entry_exists(CONSENSUS_SCORE) && !ra.entry_exists(POLYMORPHISM_SCORE)) {
+      ERROR("Expected field 'score' in evidence item\n" + ra.as_string());
     }
     if (!ra.entry_exists(POLYMORPHISM_FREQUENCY)) {
       ERROR("Expected field '" + cString(POLYMORPHISM_FREQUENCY) + "' in evidence item\n" + ra.as_string());
@@ -1246,7 +1260,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     
     base_char best_base_char('N');
     double consensus_bonferroni_score(numeric_limits<double>::quiet_NaN());
-    double polymorphism_bonferroni_score(numeric_limits<double>::quiet_NaN());
+    double variant_score(numeric_limits<double>::quiet_NaN());
 
     // SNP caller returns one genotype
     best_base_char = snp_call.genotype[0];
@@ -1361,10 +1375,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     base_char variant_base_char = (variant_base_index == base_list_N_index) ? 'N' : base_char_list[variant_base_index];
 
     if (variant_base_index != base_list_N_index) {
-      polymorphism_bonferroni_score = variant_presence_score(pdata, amodel, variant_base_index);
+      variant_score = variant_presence_score(pdata, amodel, variant_base_index);
 
       // Do we accept this as a polymorphism?
-      if (polymorphism_bonferroni_score >= _polymorphism_score_cutoff)
+      if (variant_score >= _polymorphism_score_cutoff)
         passed_as_polymorphism_prediction = true;
     }
 
@@ -1391,9 +1405,12 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[SEQ_ID] = p.target_name();
       mut[POSITION] = to_string<uint32_t>(position);
       mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
-      // Genotype quality is for the top called genotype
-      mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
-      mut[POLYMORPHISM_SCORE] = formatted_double(polymorphism_bonferroni_score, kMutationScorePrecision).to_string();
+      //## One score: the log10 evidence that this position carries a non-reference allele at all.
+      //## Whether that allele is then called fixed or polymorphic is decided by the frequency
+      //## cutoffs, not by a second score. The pure-genotype log-odds is still computed -- it gates
+      //## UN calling and the consensus emission test above -- but it answers a different question
+      //## ("which single base is this") and reporting both invited them to be compared.
+      mut[SCORE] = formatted_double(variant_score, kMutationScorePrecision).to_string();
       
       //## Specific initializations for polymorphisms. Must take precedence.
 
@@ -1525,9 +1542,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           mut[FREQUENCY] =  mut[POLYMORPHISM_FREQUENCY];
         }
 
-        // Genotype quality is for the top called genotype
-        mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
-        mut[POLYMORPHISM_SCORE] = formatted_double(user_polymorphism_score, kMutationScorePrecision).to_string();
+        mut[SCORE] = formatted_double(user_polymorphism_score, kMutationScorePrecision).to_string();
 
         vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
         mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
