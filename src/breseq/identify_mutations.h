@@ -172,18 +172,20 @@ namespace breseq {
 	struct allele_model {
 		allele_model()
 		: log10_likelihood(0.0), n(0), iterations(0) {
-			for (uint8_t b=0; b<base_list_size; b++) { f[b] = 0.0; sum_w[b] = 0.0; sum_w_sq[b] = 0.0; }
+			for (uint8_t b=0; b<base_list_size; b++) { f[b] = 0.0; sum_w[b] = 0.0; }
 		}
 
 		double f[base_list_size];         //!< fitted frequencies, sum to 1 over the allowed alleles
 		double log10_likelihood;          //!< log10 L at the fit
 		double sum_w[base_list_size];     //!< Sum_i w_i(b), exactly n * f[b]
-		double sum_w_sq[base_list_size];  //!< Sum_i w_i(b)^2, for the effective depth
 		uint32_t n;                       //!< read bases in the fit
 		uint32_t iterations;              //!< EM iterations used
 
 		//! Frequency of allele b for reporting, floored to 0 below the half-read level.
 		double reported_frequency(base_index b) const;
+
+		//! The fitted spectrum as "A:0.01,C:0.55,G:0.44", omitting alleles below the half-read level.
+		string spectrum_string(uint32_t precision_places) const;
 
 		//! Index of the highest-frequency allele, or base_list_N_index if the fit is empty.
 		base_index major_index() const;
@@ -340,6 +342,12 @@ namespace breseq {
 
     //! log10 evidence that allele variant_index is present at all, against the best fit without it.
     double variant_presence_score(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index) const;
+
+    //! Maximum log10 likelihood with allele variant_index's frequency held at f_fixed.
+    double profile_log10_likelihood(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index, double f_fixed) const;
+
+    //! Write the variant frequency's confidence bounds and effective depth onto an RA entry.
+    void write_RA_frequency_bounds(cDiffEntry& mut, const vector<polymorphism_data>& pdata, const allele_model& amodel, base_index variant_index) const;
 
 
     //! Settings passed at command line

@@ -132,18 +132,26 @@ static double RA_score(const cDiffEntry& ra)
 // frequency cutoffs are a confidence statement rather than a point-estimate comparison: a call is
 // never rejected merely for having shallow coverage, only for being confidently on the wrong side.
 //
-// The interval is CENTRED on the reported POLYMORPHISM_FREQUENCY -- a maximum-likelihood fit that
-// weights by base quality -- rather than on the raw new_cov/total_cov ratio, and given the width
-// implied by the total read depth. The two centres agree to a median of 4e-5 across the test
-// goldens but can differ by up to 0.11 where quality is heterogeneous, and the bound has to
-// describe the same number the report shows; otherwise "rejected at frequency 0.43" carrying a
-// bound derived from 0.32 is unreadable. Depth still sets the width, so the interval widens
-// correctly where coverage is thin, which is the entire point.
+// The bounds are computed where the model lives (write_RA_frequency_bounds, below) and read back
+// from the entry here, so the interval that decides the call is the one the .gd and the report
+// show. It is centred on the reported frequency and widened by the error-model effective depth,
+// which is what a binomial "n" has to be once reads differ in how much they actually say: a
+// quality-2 base and a quality-40 base are not one trial each.
+//
+// The fallback path reconstructs the old interval from total_cov -- raw read count as n -- for
+// evidence written before the bounds were recorded. That is exactly the calibration-blind
+// construction this replaced, so it is a compatibility shim and not a second opinion.
 //
 // Returns false if the position has no usable depth, in which case callers fall back to the
 // point estimate.
 static bool RA_frequency_bounds(const cDiffEntry& ra, double& lower, double& upper)
 {
+  if (ra.entry_exists(POLYMORPHISM_FREQUENCY_LOWER) && ra.entry_exists(POLYMORPHISM_FREQUENCY_UPPER)) {
+    lower = from_string<double>(ra.get(POLYMORPHISM_FREQUENCY_LOWER));
+    upper = from_string<double>(ra.get(POLYMORPHISM_FREQUENCY_UPPER));
+    return true;
+  }
+
   if (!ra.entry_exists(TOTAL_COV) || !ra.entry_exists(POLYMORPHISM_FREQUENCY)) return false;
   vector<string> top_bot = split(ra.get(TOTAL_COV), "/");
   if (top_bot.size() < 2) return false;
@@ -154,13 +162,6 @@ static bool RA_frequency_bounds(const cDiffEntry& ra, double& lower, double& upp
   upper = binomial_frequency_upper_bound(k, n);
   return true;
 }
-
-
-
-// The bounds are deliberately NOT written onto the entry. They are recoverable at any time from
-// total_cov + polymorphism_frequency (see ra_frequency_confidence_bounds in output.cpp, which
-// recomputes them for the report), and storing them would add two fields to all ~840 RA entries in
-// the test goldens, burying the handful of genuine classification changes in cosmetic churn.
 
 bool rejected_RA_polymorphism_coverage(cDiffEntry& ra,
                                cReferenceSequences& ref_seq_info,
@@ -1427,6 +1428,12 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[POLYMORPHISM_FREQUENCY] = formatted_double(
           amodel.reported_frequency(variant_base_index), _polymorphism_precision_places, true).to_string();
 
+      //## The whole fitted spectrum, so a position with more than one credible non-reference
+      //## allele is inspectable rather than silently reduced to its strongest one.
+      mut[ALLELE_FREQUENCIES] = amodel.spectrum_string(_polymorphism_precision_places);
+
+      write_RA_frequency_bounds(mut, pdata, amodel, variant_base_index);
+
       // Add line to the polymorphism statistics input file if we are only a polymorphism
 
       if (minor_base_char != 'N') {
@@ -1530,6 +1537,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             _polymorphism_precision_places, true).to_string();
 
         mut[POLYMORPHISM_FREQUENCY] = formatted_double(user_variant_frequency, _polymorphism_precision_places, true).to_string();
+        mut[ALLELE_FREQUENCIES] = amodel.spectrum_string(_polymorphism_precision_places);
+        write_RA_frequency_bounds(mut, pdata, amodel, user_variant_index);
 
         // Consensus mode
         if (!_settings.polymorphism_prediction) {
@@ -1947,6 +1956,18 @@ double allele_model::reported_frequency(base_index b) const
   return (f[b] < 0.5 / static_cast<double>(n)) ? 0.0 : f[b];
 }
 
+string allele_model::spectrum_string(uint32_t precision_places) const
+{
+  string s;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    double fr = reported_frequency(b);
+    if (fr <= 0.0) continue;
+    if (!s.empty()) s += ",";
+    s += string(1, baseindex2char(b)) + ":" + formatted_double(fr, precision_places, true).to_string();
+  }
+  return s;
+}
+
 base_index allele_model::major_index() const
 {
   if (n == 0) return base_list_N_index;
@@ -1973,6 +1994,137 @@ base_index allele_model::next_index(base_index exclude_index) const
     if ((best == base_list_N_index) || (f[b] > f[best])) best = b;
   }
   return best;
+}
+
+/*! Maximum log10 likelihood with one allele's frequency held fixed.
+
+  The same EM as the free fit, except that f[variant_index] is pinned and the remaining alleles are
+  renormalized to share what is left. Warm-started from the free fit, so it usually converges in a
+  handful of iterations.
+*/
+double identify_mutations_pileup::profile_log10_likelihood(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index, double f_fixed) const
+{
+  if ((full.n == 0) || (variant_index >= base_list_size)) return 0.0;
+
+  double f[base_list_size];
+  double other_total = 0.0;
+  for (uint8_t b=0; b<base_list_size; b++) { if (b != variant_index) other_total += full.f[b]; }
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (b == variant_index) f[b] = f_fixed;
+    else f[b] = (other_total > 0.0) ? (1.0 - f_fixed) * full.f[b] / other_total
+                                    : (1.0 - f_fixed) / static_cast<double>(base_list_size - 1);
+  }
+
+  const uint32_t k_max_iterations = 50;
+  double log10_likelihood = 0.0;
+
+  for (uint32_t iter = 0; iter < k_max_iterations; iter++) {
+
+    double sum_w[base_list_size];
+    for (uint8_t b=0; b<base_list_size; b++) sum_w[b] = 0.0;
+    log10_likelihood = 0.0;
+
+    for (vector<polymorphism_data>::const_iterator it=pdata.begin(); it!=pdata.end(); ++it) {
+      double s = 0.0;
+      for (uint8_t b=0; b<base_list_size; b++) s += f[b] * it->_r[b];
+      if (s > 0.0) {
+        log10_likelihood += log10(s) + it->_log10_pr_max;
+        for (uint8_t b=0; b<base_list_size; b++) sum_w[b] += f[b] * it->_r[b] / s;
+      } else {
+        for (uint8_t b=0; b<base_list_size; b++) sum_w[b] += f[b];
+      }
+    }
+
+    double others = 0.0;
+    for (uint8_t b=0; b<base_list_size; b++) { if (b != variant_index) others += sum_w[b]; }
+
+    double max_delta = 0.0;
+    for (uint8_t b=0; b<base_list_size; b++) {
+      if (b == variant_index) continue;
+      double f_new = (others > 0.0) ? (1.0 - f_fixed) * sum_w[b] / others
+                                    : (1.0 - f_fixed) / static_cast<double>(base_list_size - 1);
+      max_delta = max(max_delta, fabs(f_new - f[b]));
+      f[b] = f_new;
+    }
+
+    if (max_delta < _polymorphism_precision_decimal) break;
+  }
+
+  return log10_likelihood;
+}
+
+/*! Write the variant frequency's confidence bounds onto an RA entry.
+
+  A profile-likelihood interval on the variant allele's frequency: the set of f where holding the
+  allele at f and re-fitting everything else costs less than a fixed amount of log likelihood.
+
+    { f : log10 L_max - log10 L_profile(f) <= kProfileLikelihoodLog10Drop }
+
+  This is the interval the error model itself implies. Every read enters through the calibrated
+  per-base likelihoods, so a quality-2 base widens the interval and a quality-40 base narrows it
+  because of what they say about the data, not because of a weight assigned to them beforehand.
+
+  It replaces a binomial bound fed an "effective depth". That construction needed a scalar count of
+  how many reads "really" informed the call, and there is no non-arbitrary way to produce one: the
+  derivation from likelihood curvature is degenerate at f -> 1, which is where fixed variants sit,
+  and the discrimination heuristic that worked at both ends was not derived from anything. Since a
+  likelihood interval needs no such count, the whole question disappears -- and it handles the
+  boundary natively, becoming one-sided when the fit is pinned at 0 or 1.
+
+  The bounds are recorded rather than recomputed downstream from text, so the interval that decides
+  the call is the one the .gd and the report show. Previously they were derived during
+  classification and discarded, which meant a rejection reading "FREQUENCY_CUTOFF at frequency
+  0.43" could not be explained from the output at all.
+*/
+
+// Each endpoint is a ONE-SIDED 95% bound, matching the Clopper-Pearson bounds this replaces (and
+// the ones JC still uses). The interval { f : log10 L_max - log10 L(f) <= D } has two-sided
+// coverage P(chi2_1 <= 2*ln(10)*D), so one-sided 95% per side means 90% two-sided:
+//   2*ln(10)*D = chi2_1(0.90) = 2.705543  ->  D = 0.587566
+static const double kProfileLikelihoodLog10Drop = 0.587566;
+
+void identify_mutations_pileup::write_RA_frequency_bounds(cDiffEntry& mut, const vector<polymorphism_data>& pdata, const allele_model& amodel, base_index variant_index) const
+{
+  double lower = 0.0, upper = 1.0;
+
+  if ((amodel.n > 0) && (variant_index < base_list_size)) {
+
+    const double f_hat = amodel.f[variant_index];
+
+    // Evaluate the peak through the same routine as every other point, so that the profile is
+    // self-consistent and pl(f_hat) is exactly the maximum the threshold is measured from.
+    const double pl_max = profile_log10_likelihood(pdata, amodel, variant_index, f_hat);
+    const double target = pl_max - kProfileLikelihoodLog10Drop;
+
+    // Lower endpoint: the smallest f whose profile still clears the threshold.
+    if (profile_log10_likelihood(pdata, amodel, variant_index, 0.0) >= target) {
+      lower = 0.0;
+    } else {
+      double lo = 0.0, hi = f_hat;
+      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+        double mid = 0.5 * (lo + hi);
+        if (profile_log10_likelihood(pdata, amodel, variant_index, mid) >= target) hi = mid;
+        else                                                                       lo = mid;
+      }
+      lower = hi;
+    }
+
+    // Upper endpoint: the largest such f.
+    if (profile_log10_likelihood(pdata, amodel, variant_index, 1.0) >= target) {
+      upper = 1.0;
+    } else {
+      double lo = f_hat, hi = 1.0;
+      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+        double mid = 0.5 * (lo + hi);
+        if (profile_log10_likelihood(pdata, amodel, variant_index, mid) >= target) lo = mid;
+        else                                                                       hi = mid;
+      }
+      upper = lo;
+    }
+  }
+
+  mut[POLYMORPHISM_FREQUENCY_LOWER] = formatted_double(lower, _polymorphism_precision_places, true).to_string();
+  mut[POLYMORPHISM_FREQUENCY_UPPER] = formatted_double(upper, _polymorphism_precision_places, true).to_string();
 }
 
 /*! Fit the allele frequency mixture at one position by EM.
@@ -2027,8 +2179,8 @@ identify_mutations_pileup::fit_allele_frequencies(const vector<polymorphism_data
 
   for (m.iterations = 1; m.iterations <= k_max_iterations; m.iterations++) {
 
-    double sum_w[base_list_size], sum_w_sq[base_list_size];
-    for (uint8_t b=0; b<base_list_size; b++) { sum_w[b] = 0.0; sum_w_sq[b] = 0.0; }
+    double sum_w[base_list_size];
+    for (uint8_t b=0; b<base_list_size; b++) sum_w[b] = 0.0;
     double log10_likelihood = 0.0;
 
     for (vector<polymorphism_data>::const_iterator it=pdata.begin(); it!=pdata.end(); ++it) {
@@ -2042,9 +2194,7 @@ identify_mutations_pileup::fit_allele_frequencies(const vector<polymorphism_data
         log10_likelihood += log10(s) + it->_log10_pr_max;
         for (uint8_t b=0; b<base_list_size; b++) {
           if (!allowed[b]) continue;
-          double w = m.f[b] * it->_r[b] / s;
-          sum_w[b] += w;
-          sum_w_sq[b] += w * w;
+          sum_w[b] += m.f[b] * it->_r[b] / s;
         }
       } else {
         // Unreachable with a calibrated table: every entry is Laplace-smoothed and the
@@ -2053,7 +2203,6 @@ identify_mutations_pileup::fit_allele_frequencies(const vector<polymorphism_data
         for (uint8_t b=0; b<base_list_size; b++) {
           if (!allowed[b]) continue;
           sum_w[b] += m.f[b];
-          sum_w_sq[b] += m.f[b] * m.f[b];
         }
       }
     }
@@ -2069,7 +2218,7 @@ identify_mutations_pileup::fit_allele_frequencies(const vector<polymorphism_data
     // Commit the sums that produced the frequencies we just set. Because the M-step defines
     // f[b] = sum_w[b]/n, the identity sum_w[b] == n * f[b] holds exactly for the committed pair,
     // which is what the effective depth downstream relies on.
-    for (uint8_t b=0; b<base_list_size; b++) { m.sum_w[b] = sum_w[b]; m.sum_w_sq[b] = sum_w_sq[b]; }
+    for (uint8_t b=0; b<base_list_size; b++) m.sum_w[b] = sum_w[b];
     m.log10_likelihood = log10_likelihood;
 
     if (max_delta < k_tolerance) break;

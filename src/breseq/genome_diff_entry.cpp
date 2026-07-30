@@ -99,6 +99,9 @@ namespace breseq {
   const char* POLYMORPHISM_SCORE="polymorphism_score";
   const char* POLYMORPHISM_FREQUENCY="polymorphism_frequency";
   const char* MAJOR_FREQUENCY="major_frequency";            // frequency of major allele
+  const char* POLYMORPHISM_FREQUENCY_LOWER="polymorphism_frequency_lower"; // 95% lower bound
+  const char* POLYMORPHISM_FREQUENCY_UPPER="polymorphism_frequency_upper"; // 95% upper bound
+  const char* ALLELE_FREQUENCIES="allele_frequencies";      // full fitted spectrum
   //For MC
   const char* START_RANGE="start_range";
   const char* END_RANGE="end_range";
