@@ -921,14 +921,22 @@ static void reweight_window(const vector<junction_read_counter::read_evidence_t>
 // PERFECT match, the opposite of what is meant.
 static const int32_t kNoHypothesisLogLikelihood = INT32_MIN;
 
-// Whether the likelihood ratio is worth computing at all. Nothing else in the pipeline reads the
-// X8/X7 tags, so with the weighting disabled the whole per-alignment CIGAR walk is dead work -- and
-// it is the only cost this feature adds to a stage that runs over every alignment of every read.
-// --junction-debug keeps it on so the per-read table still reports real numbers.
-static inline bool _need_hypothesis_log_likelihoods(const Settings& settings)
-{
-  return settings.junction_weight_reads || settings.junction_debug;
-}
+// The likelihoods below are computed and stamped UNCONDITIONALLY, including under
+// --junction-no-read-weighting, which does not read them.
+//
+// Skipping the work when the weighting is off looks free -- it is the only cost this feature adds to
+// a stage that walks every alignment of every read, and it saves ~10% of that stage. It is not free.
+// The tags are written here, during alignment resolution, but consumed much later in the Output
+// stage, and re-running Output alone is the normal way to compare weighting configurations cheaply.
+// Make the tags conditional and an Output-only re-run WITH weighting, on top of a resolution stage
+// produced WITHOUT it, finds no tags and silently emits unweighted frequencies -- the failure this
+// model has already hit three times, and one that no test can catch because an unweighted read
+// conserves perfectly.
+//
+// The saving also applies only to a diagnostic flag: with the weighting on, which is the default,
+// the work happens either way. So the trade was a speedup on a path nobody takes for a silent wrong
+// answer on one they do. Keeping this unconditional makes "the tags are present" an invariant of any
+// resolution stage, which is why no runtime check for their absence is needed.
 
 // Fills per_alignment in list order. Kept as its own pass so the CIGAR walk runs once per
 // alignment rather than once to find the best and again to stamp each one.
@@ -1037,7 +1045,7 @@ static MateResolution resolve_one_mate(
   {
     m.this_reference_alignments = reference_alignments;
     reference_tam.read_alignments(reference_alignments, false);
-    if (_need_hypothesis_log_likelihoods(settings)) all_reference_alignments = m.this_reference_alignments;
+    all_reference_alignments = m.this_reference_alignments;
     m.best_reference_score = eligible_read_alignments(settings, ref_seq_info, m.this_reference_alignments);
   }
 
@@ -1081,7 +1089,7 @@ static MateResolution resolve_one_mate(
     // Snapshot AFTER the overlap filter above and before the pruning, so the likelihood ratio's
     // junction term is taken over the same set best_junction_score is: an alignment that misses the
     // junction entirely is not evidence for it.
-    if (_need_hypothesis_log_likelihoods(settings)) all_junction_alignments = m.this_junction_alignments;
+    all_junction_alignments = m.this_junction_alignments;
     m.best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, m.this_junction_alignments, settings.junction_allow_suboptimal_matches, 0);
   }
 
@@ -1108,17 +1116,15 @@ static MateResolution resolve_one_mate(
   // Both likelihoods must be computed before either is stamped: each list needs the OTHER list's
   // best value, and stamping does not change it, but reading it after a partial stamp would invite
   // exactly the kind of ordering bug that silently produces a self-referential ratio.
-  if (_need_hypothesis_log_likelihoods(settings)) {
-    int32_t best_reference_log_likelihood = _best_hypothesis_log_likelihood(all_reference_alignments, ref_seq_info);
-    int32_t best_junction_log_likelihood  = _best_hypothesis_log_likelihood(all_junction_alignments, junction_ref_seq_info);
+  int32_t best_reference_log_likelihood = _best_hypothesis_log_likelihood(all_reference_alignments, ref_seq_info);
+  int32_t best_junction_log_likelihood  = _best_hypothesis_log_likelihood(all_junction_alignments, junction_ref_seq_info);
 
-    vector<int32_t> reference_log_likelihoods, junction_log_likelihoods;
-    _hypothesis_log_likelihoods(m.this_reference_alignments, ref_seq_info, reference_log_likelihoods);
-    _hypothesis_log_likelihoods(m.this_junction_alignments, junction_ref_seq_info, junction_log_likelihoods);
+  vector<int32_t> reference_log_likelihoods, junction_log_likelihoods;
+  _hypothesis_log_likelihoods(m.this_reference_alignments, ref_seq_info, reference_log_likelihoods);
+  _hypothesis_log_likelihoods(m.this_junction_alignments, junction_ref_seq_info, junction_log_likelihoods);
 
-    _stamp_hypothesis_log_likelihoods(m.this_reference_alignments, reference_log_likelihoods, best_junction_log_likelihood);
-    _stamp_hypothesis_log_likelihoods(m.this_junction_alignments, junction_log_likelihoods, best_reference_log_likelihood);
-  }
+  _stamp_hypothesis_log_likelihoods(m.this_reference_alignments, reference_log_likelihoods, best_junction_log_likelihood);
+  _stamp_hypothesis_log_likelihoods(m.this_junction_alignments, junction_log_likelihoods, best_reference_log_likelihood);
 
   return m;
 }
@@ -1503,7 +1509,7 @@ void load_junction_alignments(
           if (verbose) {
             cerr << " Before Overlap Reference alignments = " << this_reference_alignments.size() << endl;
           }
-          if (_need_hypothesis_log_likelihoods(settings)) all_reference_alignments = this_reference_alignments;
+          all_reference_alignments = this_reference_alignments;
           best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
         }
 
@@ -1541,7 +1547,7 @@ void load_junction_alignments(
           // min_match_score of 0, not best_reference_score -- see the matching comment in
           // resolve_one_mate() for why the reference score must not be used as a floor here.
           // Snapshot after the overlap filter, before the pruning, as resolve_one_mate() does.
-          if (_need_hypothesis_log_likelihoods(settings)) all_junction_alignments = this_junction_alignments;
+          all_junction_alignments = this_junction_alignments;
           best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.junction_allow_suboptimal_matches, 0);
         }
 
@@ -1578,17 +1584,15 @@ void load_junction_alignments(
 
         // See the matching block in resolve_one_mate(): compute both terms of the likelihood ratio
         // before stamping either.
-        if (_need_hypothesis_log_likelihoods(settings)) {
-          int32_t best_reference_log_likelihood = _best_hypothesis_log_likelihood(all_reference_alignments, ref_seq_info);
-          int32_t best_junction_log_likelihood  = _best_hypothesis_log_likelihood(all_junction_alignments, junction_ref_seq_info);
+        int32_t best_reference_log_likelihood = _best_hypothesis_log_likelihood(all_reference_alignments, ref_seq_info);
+        int32_t best_junction_log_likelihood  = _best_hypothesis_log_likelihood(all_junction_alignments, junction_ref_seq_info);
 
-          vector<int32_t> reference_log_likelihoods, junction_log_likelihoods;
-          _hypothesis_log_likelihoods(this_reference_alignments, ref_seq_info, reference_log_likelihoods);
-          _hypothesis_log_likelihoods(this_junction_alignments, junction_ref_seq_info, junction_log_likelihoods);
+        vector<int32_t> reference_log_likelihoods, junction_log_likelihoods;
+        _hypothesis_log_likelihoods(this_reference_alignments, ref_seq_info, reference_log_likelihoods);
+        _hypothesis_log_likelihoods(this_junction_alignments, junction_ref_seq_info, junction_log_likelihoods);
 
-          _stamp_hypothesis_log_likelihoods(this_reference_alignments, reference_log_likelihoods, best_junction_log_likelihood);
-          _stamp_hypothesis_log_likelihoods(this_junction_alignments, junction_log_likelihoods, best_reference_log_likelihood);
-        }
+        _stamp_hypothesis_log_likelihoods(this_reference_alignments, reference_log_likelihoods, best_junction_log_likelihood);
+        _stamp_hypothesis_log_likelihoods(this_junction_alignments, junction_log_likelihoods, best_reference_log_likelihood);
 
         if (verbose)
         {
