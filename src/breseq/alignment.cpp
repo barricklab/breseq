@@ -286,53 +286,63 @@ uint32_t alignment_wrapper::query_end_1() const {
   return pos;
 }
   
+// Walk the CIGAR tracking the read and reference positions TOGETHER, and report the first and
+// last reference positions (0-based) whose aligned read base has quality above min_qual.
+// Returns false if no aligned base clears the cutoff.
+//
+// The previous implementations of the callers below indexed the READ's quality array with a
+// REFERENCE coordinate. On a genome-sized reference that trips the assert in read_base_quality_1();
+// on a short contig (a candidate junction) it silently returned the quality of an unrelated base.
+// The two coordinate spaces only coincide for a gapless alignment starting at reference position
+// zero, so the accessors could never have worked, which is why callers had them commented out.
+bool alignment_wrapper::confident_reference_bounds_0(uint32_t min_qual, uint32_t& first, uint32_t& last) const
+{
+  uint32_t* cigar = bam_get_cigar(_a);
+  uint32_t ref_pos = _a->core.pos;   // 0-based reference position
+  uint32_t read_pos = 0;             // 0-based into the stored read (soft clips included)
+  bool found = false;
+
+  for (uint32_t i = 0; i < _a->core.n_cigar; i++) {
+    uint32_t op = cigar[i] & BAM_CIGAR_MASK;
+    uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;
+
+    switch (op) {
+      case BAM_CMATCH:
+      case BAM_CEQUAL:
+      case BAM_CDIFF:
+        // The only ops where a read base and a reference base line up.
+        for (uint32_t j = 0; j < len; j++, read_pos++, ref_pos++) {
+          if (read_base_quality_0(read_pos) > min_qual) {
+            if (!found) { first = ref_pos; found = true; }
+            last = ref_pos;
+          }
+        }
+        break;
+
+      case BAM_CINS:
+      case BAM_CSOFT_CLIP:
+        read_pos += len;    // consumes read only
+        break;
+
+      case BAM_CDEL:
+      case BAM_CREF_SKIP:
+        ref_pos += len;     // consumes reference only
+        break;
+
+      default:              // hard clip, padding: consumes neither
+        break;
+    }
+  }
+
+  return found;
+}
+
 uint32_t alignment_wrapper::reference_start_0(uint32_t min_qual) const
 {
-  uint32_t start = _a->core.pos;
-  
-  if (min_qual) {
-    
-    uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
-    
-    // start:
-    uint32_t i;
-    uint32_t op;
-    uint32_t len;
-    for(i=0; i<=_a->core.n_cigar; i++) {
-      op = cigar[i] & BAM_CIGAR_MASK;
-      len = cigar[i] >> BAM_CIGAR_SHIFT;
-      // if we encounter padding, or a gap in reference then we are done
-      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
-        break;
-      }
-    }
-    
-    //move past low quality bases
-    for(; i<=_a->core.n_cigar; i++) {
-      
-      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) && (op != BAM_CDEL)) {
-        for(uint32_t j=0; j<len; j++) {
-          if (read_base_quality_1(start) > min_qual) {
-            goto finish_start;
-          }
-          start++;
-        }
-      }
-      // only move reference position for ref-skip or deletion in read releative to reference 
-      if ((op == BAM_CREF_SKIP) || (op == BAM_CDEL)) {
-        start += len;
-      }
-      op = cigar[i] & BAM_CIGAR_MASK;
-      len = cigar[i] >> BAM_CIGAR_SHIFT;
-    }
-  finish_start:
-    
-    // whole thing was below quality
-    if (i>_a->core.n_cigar)
-      return UNDEFINED_UINT32;
-  }
-  
-  return start; 
+  if (!min_qual) return _a->core.pos;
+  uint32_t first, last;
+  if (!confident_reference_bounds_0(min_qual, first, last)) return UNDEFINED_UINT32;
+  return first;
 }
   
 uint32_t alignment_wrapper::reference_start_1(uint32_t min_qual) const
@@ -343,84 +353,19 @@ uint32_t alignment_wrapper::reference_start_1(uint32_t min_qual) const
 }
 
 uint32_t alignment_wrapper::reference_end_0(uint32_t min_qual) const
-{ 
-  uint32_t end = reference_end_1(min_qual);
-  if (end != UNDEFINED_UINT32) end--;
-  return end; 
+{
+  if (!min_qual) return bam_endpos(_a) - 1;
+  uint32_t first, last;
+  if (!confident_reference_bounds_0(min_qual, first, last)) return UNDEFINED_UINT32;
+  return last;
 }
-uint32_t alignment_wrapper::reference_end_1(uint32_t min_qual ) const
-{ 
-  uint32_t end = bam_endpos(_a);
-  
-  if (min_qual) {
-    uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
 
-    uint32_t i;
-    uint32_t op;
-    uint32_t len;
-    for(i=_a->core.n_cigar-1; i>0; --i) {
-      op = cigar[i] & BAM_CIGAR_MASK;
-      len = cigar[i] >> BAM_CIGAR_SHIFT;    
-      // if we encounter padding, or a gap in reference then we are done
-      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
-        break;
-      }
-    }
-  
-  //move past low quality bases
-    
-    for(; i>0; --i) {
-      
-      if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) && (op != BAM_CDEL)) {
-        for(uint32_t j=0; j<len; j++) {
-          if (read_base_quality_1(end) > min_qual) {
-            goto finish_end;
-          }
-          end--;
-        }
-      }
-      
-      if ((op == BAM_CREF_SKIP) || (op == BAM_CDEL)) {
-        end -=len;
-      }
-
-      op = cigar[i] & BAM_CIGAR_MASK;
-      len = cigar[i] >> BAM_CIGAR_SHIFT;
-    }
-  finish_end:
-
-    
-    // whole thing was below quality
-    if (i == 0)
-      return UNDEFINED_UINT32;
-  }
-
-  
-  
-  return end; 
+uint32_t alignment_wrapper::reference_end_1(uint32_t min_qual) const
+{
+  uint32_t end = reference_end_0(min_qual);
+  if (end != UNDEFINED_UINT32) end++;
+  return end;
 }
-  
-/*uint32_t alignment::reference_end_0() const {
-
-  uint32_t pos = reference_start_0();
-  
-  uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
-	
-  for(uint32_t j=0; j<_a->core.n_cigar; j++) {
-    uint32_t op = cigar[j] & BAM_CIGAR_MASK;
-    uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
-    
-    // if we encounter padding, or a gap in reference then we are done
-    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
-      pos += len;
-    }
-  }
-  pos -= 1; // to get inclusive coords
-
-  return pos;
-}*/
-
-
 
 uint32_t alignment_wrapper::base_repeat_0(uint32_t q_pos_0) const {
 
@@ -927,6 +872,17 @@ void bam_file::write_alignments(
       aux_tags_ss << "\t" << "XP:Z:" << xp;
     }
 
+    // Own and competing hypothesis log-likelihoods, stamped during alignment resolution. Written
+    // as signed (a log-likelihood is <= 0) and only propagated when present, so nothing changes for
+    // reads that never had a competing alignment.
+    uint32_t own_log_likelihood, other_log_likelihood;
+    if (a.aux_get_i(kBreseqOwnHypothesisLogLikelihoodBAMTag, own_log_likelihood)) {
+      aux_tags_ss << "\t" << kBreseqOwnHypothesisLogLikelihoodBAMTag << ":i:" << static_cast<int32_t>(own_log_likelihood);
+    }
+    if (a.aux_get_i(kBreseqOtherHypothesisLogLikelihoodBAMTag, other_log_likelihood)) {
+      aux_tags_ss << "\t" << kBreseqOtherHypothesisLogLikelihoodBAMTag << ":i:" << static_cast<int32_t>(other_log_likelihood);
+    }
+
     string aux_tags = aux_tags_ss.str();
 
     string quality_score_string = a.read_base_quality_char_string();
@@ -1312,6 +1268,19 @@ void bam_file::write_moved_alignment(
 	//this flag indicates this is a junction match and which side of the match is in the middle of the read across the junction
 	int32_t within_side = (reference_strand == 1) ? junction_side : (junction_side + 1) % 2;
 	aux_tags_ss << "\t" << "XJ:i:" << within_side;
+
+	// Hypothesis log-likelihoods, as in write_alignments(). Carried through so a split read placed
+	// back on the reference is not silently missing the tags its whole-read siblings carry. The
+	// values still describe the whole read under each hypothesis -- re-expressing one alignment in
+	// reference coordinates does not change how likely the read was under it -- so they are copied
+	// rather than recomputed from the rewritten CIGAR.
+	uint32_t own_log_likelihood, other_log_likelihood;
+	if (a.aux_get_i(kBreseqOwnHypothesisLogLikelihoodBAMTag, own_log_likelihood)) {
+		aux_tags_ss << "\t" << kBreseqOwnHypothesisLogLikelihoodBAMTag << ":i:" << static_cast<int32_t>(own_log_likelihood);
+	}
+	if (a.aux_get_i(kBreseqOtherHypothesisLogLikelihoodBAMTag, other_log_likelihood)) {
+		aux_tags_ss << "\t" << kBreseqOtherHypothesisLogLikelihoodBAMTag << ":i:" << static_cast<int32_t>(other_log_likelihood);
+	}
 
 	// XL/XR trims for this split read. The junction (middle-of-read) side is never trimmed --
 	// it is a trustworthy boundary, not a read end -- so it gets 0. The outer genomic side is

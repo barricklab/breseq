@@ -193,6 +193,11 @@ class alignment_wrapper {
     //! Starting and ending coordinates of the alignment part of the read
     //  on the reference sequence. Start is always < End unless using 'stranded' version
     uint32_t reference_start_0(uint32_t min_qual = 0) const;
+    //! First and last reference positions (0-indexed) whose aligned read base exceeds min_qual.
+    //  False if no aligned base does. Tracks read and reference positions together, which the
+    //  bounds accessors below rely on -- see the note on the implementation.
+    bool confident_reference_bounds_0(uint32_t min_qual, uint32_t& first, uint32_t& last) const;
+
     uint32_t reference_start_1(uint32_t min_qual = 0) const;
 
     uint32_t reference_end_0(uint32_t min_qual = 0) const;

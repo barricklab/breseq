@@ -489,6 +489,17 @@ void resolve_alignments(
   // Score all of the matches.
   ////
   
+  // MEASUREMENT ONLY (--junction-debug): create/truncate the per-read scoring table once here,
+  // since score_junction() appends to it per candidate.
+  if (settings.junction_debug) {
+    ofstream mapq_debug_header(settings.junction_mapq_debug_file_name.c_str(), ios_base::out);
+    ASSERT(mapq_debug_header.good(), "Could not open file " + settings.junction_mapq_debug_file_name);
+    mapq_debug_header << "junction_id\tread_name\tdelta_this_candidate\tdelta_best_candidate"
+                         "\tbest_reference_score\tas_this_candidate\tis_best_tag\tdegenerate_count"
+                         "\tthis_left\tthis_right\tread_length\tn_ref_placements"
+                         "\tlog10_odds_for_junction\tweight" << endl;
+  }
+
   vector<string> junction_ids = get_keys(all_junction_ids);
   for(vector<string>::iterator it=junction_ids.begin(); it != junction_ids.end(); it++) {
     const string& junction_id = *it;
@@ -866,6 +877,123 @@ void resolve_alignments(
 
 }
     
+// Re-weight one window's reads at a given junction frequency and return the two evidence sums.
+// The per-read prior odds AGAINST the junction are (1-f)/f -- the frequency itself -- which is
+// the only self-consistent choice: the question "did THIS read come from the junction" has prior
+// exactly the fraction of molecules that carry it.
+//
+// A fixed prior cannot serve here. The intuition that most candidate junctions are false is a
+// statement about a JUNCTION, not about a read, so applying it per read charges it once for every
+// read of support and deflates a junction's frequency in proportion to its own depth. Measured on
+// 35 bp polymorphism data, a fixed prior of 512:1 lost 22 of 118 accepted junctions and no value
+// of the constant avoided it -- the error is in where the prior is applied, not in its size.
+// Suppressing spurious junctions is left to the junction-level tests that already exist
+// (pos_hash_score and the confidence bounds below).
+static void reweight_window(const vector<junction_read_counter::read_evidence_t>& evidence,
+                            double f, double& sum_own, double& sum_other, double& sum_own_sq,
+                            bool own_is_junction)
+{
+  sum_own = 0.0; sum_other = 0.0; sum_own_sq = 0.0;
+  // Guard the odds at the extremes so a frequency pinned at 0 or 1 cannot produce inf/NaN; at
+  // these magnitudes the weights are saturated anyway.
+  double prior_odds_against_junction = (f <= 1e-12) ? 1e12 : ((f >= 1.0 - 1e-12) ? 1e-12 : (1.0 - f) / f);
+
+  for (size_t i = 0; i < evidence.size(); i++) {
+    double w_own = 1.0;
+    if (evidence[i].have_odds) {
+      // The ratio is ALWAYS stored in favour of the junction, on both windows. fetch_callback folds
+      // the reference window's sign flip in when it records the value, so flipping again here
+      // would turn every decisively-reference read into a decisively-junction one -- which drives
+      // every junction to frequency 1. Only the ANSWER is flipped, to name this window's side.
+      double w_junction = junction_read_weight(evidence[i].log10_odds_for_junction, evidence[i].n_ref_placements,
+                                               prior_odds_against_junction);
+      w_own = own_is_junction ? w_junction : (1.0 - w_junction);
+    }
+    sum_own += w_own;
+    sum_own_sq += w_own * w_own;
+    sum_other += 1.0 - w_own;
+  }
+}
+
+// Best (least negative) quality-aware log-likelihood over a read's alignments to one reference.
+// kNoHypothesisLogLikelihood means the read had no alignment there at all, which is different from
+// having a bad one and must not be conflated with a numeric likelihood -- 0 would read as a
+// PERFECT match, the opposite of what is meant.
+static const int32_t kNoHypothesisLogLikelihood = INT32_MIN;
+
+// Whether the likelihood ratio is worth computing at all. Nothing else in the pipeline reads the
+// X8/X7 tags, so with the weighting disabled the whole per-alignment CIGAR walk is dead work -- and
+// it is the only cost this feature adds to a stage that runs over every alignment of every read.
+// --junction-debug keeps it on so the per-read table still reports real numbers.
+static inline bool _need_hypothesis_log_likelihoods(const Settings& settings)
+{
+  return settings.junction_weight_reads || settings.junction_debug;
+}
+
+// Fills per_alignment in list order. Kept as its own pass so the CIGAR walk runs once per
+// alignment rather than once to find the best and again to stamp each one.
+static void _hypothesis_log_likelihoods(alignment_list& alignments, const cReferenceSequences& ref_seq_info,
+                                        vector<int32_t>& per_alignment)
+{
+  per_alignment.clear();
+  per_alignment.reserve(alignments.size());
+  for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++) {
+    per_alignment.push_back(alignment_log10_likelihood(*(it->get()), ref_seq_info));
+  }
+}
+
+// Best log-likelihood the read achieves under one hypothesis, over the alignments as they stood
+// BEFORE eligible_read_alignments() pruned them -- which is the same list best_reference_score and
+// best_junction_score are computed from, and it matters.
+//
+// eligible_read_alignments() ends with test_read_alignment_requirements(), a minimum-mapped-length
+// rule that can empty the list while still returning a nonzero best score. The reads it empties are
+// exactly the ones this model exists to weigh: a read spanning a breakpoint matches the reference
+// over only part of its length, so its reference alignment is short and gets dropped. Reading the
+// competing likelihood off the pruned list therefore found nothing for those reads and fell back to
+// full weight -- leaving the weighting inert on its entire target population while every test
+// stayed green, because an unweighted read conserves perfectly. Measured on Ara-2_60K before the
+// fix: 8,831 of 13,029 junction-supporting reads had no competing likelihood on record.
+//
+// The length requirement is a routing and QC rule, not a claim about likelihood. A discarded
+// alignment is still the best explanation the reference genome can offer for the read, and that is
+// what the ratio needs.
+static int32_t _best_hypothesis_log_likelihood(const alignment_list& alignments, const cReferenceSequences& ref_seq_info)
+{
+  int32_t best = kNoHypothesisLogLikelihood;
+  for (alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
+    if (it->get()->unmapped()) continue;   // no coordinates to score against
+    int32_t ll = alignment_log10_likelihood(*(it->get()), ref_seq_info);
+    if ((best == kNoHypothesisLogLikelihood) || (ll > best)) best = ll;
+  }
+  return best;
+}
+
+// Stamp each alignment with both terms of its junction-vs-reference likelihood ratio -- its own
+// log-likelihood under the reference it is aligned to, and the best the same read achieved under
+// the COMPETING hypothesis -- so the comparison survives into the BAMs and can be recovered during
+// read counting in the Output stage (see kBreseqOwnHypothesisLogLikelihoodBAMTag, settings.cpp).
+// This is the only point in the pipeline where both hypotheses are in scope for the same read:
+// reads that go on to support a passing junction are written only to junction.bam, so their
+// reference alignments -- and with them any way to recompute the reference term -- are dropped.
+//
+// When the read had no alignment at all under the competing hypothesis, neither tag is written and
+// the read falls back to full weight toward the BAM it sits in. Stamping a placeholder instead
+// would be read downstream as a real likelihood.
+static void _stamp_hypothesis_log_likelihoods(alignment_list& alignments,
+                                              const vector<int32_t>& own_log_likelihoods,
+                                              int32_t other_log_likelihood)
+{
+  if (other_log_likelihood == kNoHypothesisLogLikelihood) return;
+
+  size_t i = 0;
+  for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++, i++) {
+    int32_t own_log_likelihood = own_log_likelihoods[i];
+    it->get()->aux_set(kBreseqOwnHypothesisLogLikelihoodBAMTag, 'i', sizeof(int32_t), (uint8_t*)&own_log_likelihood);
+    it->get()->aux_set(kBreseqOtherHypothesisLogLikelihoodBAMTag, 'i', sizeof(int32_t), (uint8_t*)&other_log_likelihood);
+  }
+}
+
 // Per-mate result of resolving one read's alignments against the reference and (optionally)
 // candidate junctions -- lifted out of the old single-file loop body so it can be called once
 // per mate when processing a paired read file set in lockstep.
@@ -899,11 +1027,17 @@ static MateResolution resolve_one_mate(
   read_file_summary_info.num_total_reads++;
   read_file_summary_info.num_total_bases += seq.length();
 
+  // Alignments as they stood before eligible_read_alignments() pruned them. The likelihood ratio is
+  // read off these, for the reason spelled out on _best_hypothesis_log_likelihood(); copying is
+  // cheap because the list holds counted pointers.
+  alignment_list all_reference_alignments, all_junction_alignments;
+
   // Does this read have eligible reference sequence matches?
   if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
   {
     m.this_reference_alignments = reference_alignments;
     reference_tam.read_alignments(reference_alignments, false);
+    if (_need_hypothesis_log_likelihoods(settings)) all_reference_alignments = m.this_reference_alignments;
     m.best_reference_score = eligible_read_alignments(settings, ref_seq_info, m.this_reference_alignments);
   }
 
@@ -931,7 +1065,24 @@ static MateResolution resolve_one_mate(
         it++;
     }
 
-    m.best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, m.this_junction_alignments, settings.junction_allow_suboptimal_matches, m.best_reference_score);
+    // min_match_score of 0, NOT best_reference_score. Passing the reference score here erases
+    // every junction alignment that fails to beat the reference, which destroys the score margin
+    // for exactly the reads that end up counted on a junction's reference SIDES: they are left
+    // with either an exact tie (difference 0) or an empty list, and an empty list makes
+    // eligible_read_alignments return 0 so the difference becomes a meaningless
+    // -best_reference_score. Keeping the true best junction score makes the difference a real
+    // signed number on both sides of the comparison.
+    //
+    // This cannot change which reads route to junctions. Routing tests difference > 0, i.e. best
+    // junction score > best reference score; any alignment meeting that already cleared the old
+    // floor, so its score is unchanged. Only reads that still route to the reference see a
+    // different (now meaningful) value, and their junction alignments are never written.
+    //
+    // Snapshot AFTER the overlap filter above and before the pruning, so the likelihood ratio's
+    // junction term is taken over the same set best_junction_score is: an alignment that misses the
+    // junction entirely is not evidence for it.
+    if (_need_hypothesis_log_likelihoods(settings)) all_junction_alignments = m.this_junction_alignments;
+    m.best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, m.this_junction_alignments, settings.junction_allow_suboptimal_matches, 0);
   }
 
   // Nothing to be done if there were no eligible matches to either
@@ -953,6 +1104,21 @@ static MateResolution resolve_one_mate(
 
   // if < 0, then the best match is to the reference
   m.mapping_quality_difference = static_cast<int32_t>(m.best_junction_score) - static_cast<int32_t>(m.best_reference_score);
+
+  // Both likelihoods must be computed before either is stamped: each list needs the OTHER list's
+  // best value, and stamping does not change it, but reading it after a partial stamp would invite
+  // exactly the kind of ordering bug that silently produces a self-referential ratio.
+  if (_need_hypothesis_log_likelihoods(settings)) {
+    int32_t best_reference_log_likelihood = _best_hypothesis_log_likelihood(all_reference_alignments, ref_seq_info);
+    int32_t best_junction_log_likelihood  = _best_hypothesis_log_likelihood(all_junction_alignments, junction_ref_seq_info);
+
+    vector<int32_t> reference_log_likelihoods, junction_log_likelihoods;
+    _hypothesis_log_likelihoods(m.this_reference_alignments, ref_seq_info, reference_log_likelihoods);
+    _hypothesis_log_likelihoods(m.this_junction_alignments, junction_ref_seq_info, junction_log_likelihoods);
+
+    _stamp_hypothesis_log_likelihoods(m.this_reference_alignments, reference_log_likelihoods, best_junction_log_likelihood);
+    _stamp_hypothesis_log_likelihoods(m.this_junction_alignments, junction_log_likelihoods, best_reference_log_likelihood);
+  }
 
   return m;
 }
@@ -991,7 +1157,8 @@ static void dispatch_mate_result(
                                                           m.this_junction_alignments,    // the BEST candidate junction alignments
                                                           fastq_file_index,              // index of the fastq file this read came from
                                                           m.mapping_quality_difference,  // difference between reference junction alignments (in # mismatches)
-                                                          0                              //
+                                                          0,                             //
+                                                          static_cast<int32_t>(m.best_reference_score)
                                                           )
                                         );
 
@@ -1322,6 +1489,10 @@ void load_junction_alignments(
         uint32_t best_junction_score = 0;
         uint32_t best_reference_score = 0;
 
+        // Alignments as they stood before eligible_read_alignments() pruned them; the likelihood
+        // ratio is read off these. See _best_hypothesis_log_likelihood().
+        alignment_list all_reference_alignments, all_junction_alignments;
+
         // Does this read have eligible reference sequence matches?
         alignment_list this_reference_alignments;
         if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
@@ -1332,6 +1503,7 @@ void load_junction_alignments(
           if (verbose) {
             cerr << " Before Overlap Reference alignments = " << this_reference_alignments.size() << endl;
           }
+          if (_need_hypothesis_log_likelihoods(settings)) all_reference_alignments = this_reference_alignments;
           best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
         }
 
@@ -1366,7 +1538,11 @@ void load_junction_alignments(
               it++;
           }
 
-          best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.junction_allow_suboptimal_matches, best_reference_score);
+          // min_match_score of 0, not best_reference_score -- see the matching comment in
+          // resolve_one_mate() for why the reference score must not be used as a floor here.
+          // Snapshot after the overlap filter, before the pruning, as resolve_one_mate() does.
+          if (_need_hypothesis_log_likelihoods(settings)) all_junction_alignments = this_junction_alignments;
+          best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.junction_allow_suboptimal_matches, 0);
         }
 
         // Nothing to be done if there were no eligible matches to either
@@ -1399,6 +1575,20 @@ void load_junction_alignments(
 
         // if < 0, then the best match is to the reference
         int32_t mapping_quality_difference = best_junction_score - best_reference_score;
+
+        // See the matching block in resolve_one_mate(): compute both terms of the likelihood ratio
+        // before stamping either.
+        if (_need_hypothesis_log_likelihoods(settings)) {
+          int32_t best_reference_log_likelihood = _best_hypothesis_log_likelihood(all_reference_alignments, ref_seq_info);
+          int32_t best_junction_log_likelihood  = _best_hypothesis_log_likelihood(all_junction_alignments, junction_ref_seq_info);
+
+          vector<int32_t> reference_log_likelihoods, junction_log_likelihoods;
+          _hypothesis_log_likelihoods(this_reference_alignments, ref_seq_info, reference_log_likelihoods);
+          _hypothesis_log_likelihoods(this_junction_alignments, junction_ref_seq_info, junction_log_likelihoods);
+
+          _stamp_hypothesis_log_likelihoods(this_reference_alignments, reference_log_likelihoods, best_junction_log_likelihood);
+          _stamp_hypothesis_log_likelihoods(this_junction_alignments, junction_log_likelihoods, best_reference_log_likelihood);
+        }
 
         if (verbose)
         {
@@ -1440,7 +1630,8 @@ void load_junction_alignments(
                                                                 this_junction_alignments,     // the BEST candidate junction alignments
                                                                 fastq_file_index,             // index of the fastq file this read came from
                                                                 mapping_quality_difference,   // difference between reference junction alignments (in # mismatches)
-                                                                0                             //
+                                                                0,                            //
+                                                                static_cast<int32_t>(best_reference_score)
                                                                 )
                                               );
 
@@ -2161,18 +2352,77 @@ void score_junction(
     for (map<string, JunctionMatchPtr>::iterator it = repeat_matches->begin(); it != repeat_matches->end(); it++)
       items.push_back(it->second);
   
+  // MEASUREMENT ONLY (--junction-debug). One row per (this candidate, read), recording the
+  // read's score against THIS candidate next to the best-over-all-candidates difference the
+  // pipeline currently uses. The two differ whenever a read aligns better to some OTHER candidate,
+  // which is the case the current argmax mishandles: near-identical candidates are alternative
+  // descriptions of one event, not competing origins. Writes nothing when the flag is off.
+  counted_ptr<ofstream> mapq_debug(NULL);
+  if (settings.junction_debug) {
+    mapq_debug = counted_ptr<ofstream>(new ofstream(settings.junction_mapq_debug_file_name.c_str(), ios_base::app));
+  }
+
 	for (uint32_t i = 0; i < items.size(); i++) // READ (loops over unique_matches, degenerate_matches)
 	{
 		JunctionMatchPtr& item = items[i];
-    
+
     if (verbose) cout << "  " << item->junction_alignments.front()->read_name() << endl;
+
+    if (mapq_debug.get() != NULL) {
+      // Deliberately a separate, non-asserting lookup of the alignment to this candidate: the
+      // real one below runs after guards that would skip some of the rows we want to see.
+      const alignment_wrapper* dbg_a = NULL;
+      for (alignment_list::iterator it = item->junction_alignments.begin(); it != item->junction_alignments.end(); it++) {
+        if ((*it)->reference_target_id() == junction_tid) { dbg_a = &(**it); break; }
+      }
+      if (dbg_a != NULL) {
+        uint32_t dbg_as = 0, dbg_is_best = 0;
+        dbg_a->aux_get_i(kBreseqAlignmentScoreBAMTag, dbg_as);
+        dbg_a->aux_get_i(kBreseqBestAlignmentScoreBAMTag, dbg_is_best);
+        int32_t delta_this = static_cast<int32_t>(dbg_as) - item->best_reference_score;
+        // The weight column reports what the model actually uses: the quality-aware log-likelihood
+        // ratio stamped on this alignment, not the score delta in the column beside it. They can
+        // disagree, and that disagreement is the point of the table.
+        //
+        // "NA" when the read carries no competing likelihood, which is NOT the same as a ratio of
+        // zero. Printing the missing case as 0 is how a bug that left the weighting inert on 8,831
+        // of 13,029 reads read as "these reads are simply undecidable" for a full measurement cycle.
+        uint32_t dbg_own_ll_raw = 0, dbg_other_ll_raw = 0;
+        double dbg_log10_odds = 0.0;
+        bool dbg_have_odds = dbg_a->aux_get_i(kBreseqOwnHypothesisLogLikelihoodBAMTag, dbg_own_ll_raw)
+                          && dbg_a->aux_get_i(kBreseqOtherHypothesisLogLikelihoodBAMTag, dbg_other_ll_raw);
+        if (dbg_have_odds) {
+          dbg_log10_odds = static_cast<double>(static_cast<int32_t>(dbg_own_ll_raw) - static_cast<int32_t>(dbg_other_ll_raw))
+                         / kAlignmentLogLikelihoodScale;
+        }
+        string dbg_odds_field = dbg_have_odds ? to_string(dbg_log10_odds) : string("NA");
+        string dbg_weight_field = dbg_have_odds
+                                ? to_string(junction_read_weight(dbg_log10_odds, dbg_a->redundancy(), 1.0))
+                                : string("NA");
+        *mapq_debug << junction_id
+                    << "\t" << dbg_a->read_name()
+                    << "\t" << delta_this                            // Delta against THIS candidate
+                    << "\t" << item->mapping_quality_difference      // Delta against the BEST candidate
+                    << "\t" << item->best_reference_score
+                    << "\t" << dbg_as
+                    << "\t" << dbg_is_best
+                    << "\t" << item->degenerate_count
+                    << "\t" << (flanking_left + 1 - static_cast<int32_t>(dbg_a->reference_start_1()))   // this_left
+                    << "\t" << (static_cast<int32_t>(dbg_a->reference_end_1()) - flanking_left - abs(alignment_overlap)) // this_right
+                    << "\t" << dbg_a->read_length()
+                    << "\t" << dbg_a->redundancy()
+                    << "\t" << dbg_odds_field
+                    << "\t" << dbg_weight_field
+                    << endl;
+      }
+    }
 
     //! Do not count reads that map the reference equally well toward the score.
 		if (item->mapping_quality_difference == 0) {
       if (verbose) cout << "    X Degenerate" << endl;
-      continue; 
+      continue;
     }
-    
+
     // Determine which alignment we are working with.
     
 		// If there were no degenerate matches, then we could just take the
@@ -2201,13 +2451,16 @@ void score_junction(
     // this_left and this_right are how far it extends into each side (past any overlap)
     ///
     
-    // The left side goes exactly up to the flanking length
-    uint32_t reference_start_1 = a->reference_start_1(); //settings.base_quality_cutoff);
+    // Measured over CONFIDENT bases only. this_left/this_right are how far the read reaches past
+    // the breakpoint, and that reach IS the evidence that it spans the junction -- so a tail of
+    // miscalled bases must not be allowed to supply it. The cutoff makes these accessors walk in
+    // past any base at or below it, the same definition the RA caller and the alignment viewer use.
+    uint32_t reference_start_1 = a->reference_start_1(settings.base_quality_cutoff);
     if (reference_start_1 == UNDEFINED_UINT32) continue;
 		int32_t this_left = flanking_left + 1 - reference_start_1;
-    
+
 		// The right side starts after moving past any overlap (negative or positive)
-    uint32_t reference_end_1 = a->reference_end_1(); //settings.base_quality_cutoff);
+    uint32_t reference_end_1 = a->reference_end_1(settings.base_quality_cutoff);
     if (reference_end_1 == UNDEFINED_UINT32) continue;
 		int32_t this_right = reference_end_1 - flanking_left - abs(alignment_overlap);
     
@@ -2955,11 +3208,33 @@ void  assign_one_junction_read_counts(
   j["junction_possible_overlap_registers_before_trimming"] = to_string(read_length_avg - abs(end - start));
   j["junction_possible_overlap_registers"] = (junction_jrc.get() != NULL) ? to_string(junction_jrc->count_confident_overlap_registers(j["key"], start, end, read_length_avg)) : "0";
 
+
   if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
   if (verbose) cerr << "JUNCTION: start " << start << " end " << end << endl;
 
   j[NEW_JUNCTION_READ_COUNT] = (junction_jrc.get() != NULL) ? to_string(junction_jrc->count(j["key"], start, end, empty_read_names, junction_read_names)) : "0";
-  
+
+  // Weighted counterparts of the raw counts above. The raw fields stay integers -- they are
+  // user-facing and cGenomeDiff::read_counts_for_entry() parses them with from_string<uint32_t> --
+  // so the weighted values live alongside rather than replacing them.
+  // Four sums, each staying in the window that produced it: the junction window's support for the
+  // junction and for the reference, and each side window's support for the reference and for the
+  // junction. Every window's two sums add to its own raw count.
+  double junction_weighted = 0.0, junction_reference_weighted = 0.0, junction_weight_sq = 0.0;
+  double side_weighted[2] = {0.0, 0.0};
+  double side_weight_sq[2] = {0.0, 0.0};
+  double side_junction_weighted[2] = {0.0, 0.0};
+  // Per-read evidence, captured per window so the mixture below can re-weight in memory. The
+  // reference counter is reused for both sides, so each side's list must be copied out before the
+  // next count() overwrites it.
+  vector<junction_read_counter::read_evidence_t> junction_evidence, side_evidence[2];
+  if (junction_jrc.get() != NULL) {
+    junction_weighted = junction_jrc->sum_weight();
+    junction_reference_weighted = junction_jrc->sum_complement();
+    junction_weight_sq = junction_jrc->sum_weight_sq();
+    junction_evidence = junction_jrc->counted_read_evidence();
+  }
+
   if (settings.junction_debug) {
     ofile << "JUNCTION" << endl;
     for (map<string,bool>::iterator it = junction_read_names.begin(); it != junction_read_names.end(); it++) {
@@ -3022,6 +3297,15 @@ void  assign_one_junction_read_counts(
     j["side_1_possible_overlap_registers"] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count_confident_overlap_registers(j[SIDE_1_SEQ_ID], start, end, read_length_avg)) : "0";
 
     j[SIDE_1_READ_COUNT] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
+
+    // This side's own weighted evidence. The junction reads' reference-hypothesis residual is
+    // added later, once we know which sides are actually usable -- see the consolidation below.
+    if (reference_jrc.get() != NULL) {
+      side_weighted[0] = reference_jrc->sum_weight();
+      side_weight_sq[0] = reference_jrc->sum_weight_sq();
+      side_junction_weighted[0] = reference_jrc->sum_complement();
+      side_evidence[0] = reference_jrc->counted_read_evidence();
+    }
     
     if (settings.junction_debug) {
       ofile << "SIDE_1" << endl;
@@ -3080,6 +3364,13 @@ void  assign_one_junction_read_counts(
 
     j[SIDE_2_READ_COUNT] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
 
+    if (reference_jrc.get() != NULL) {
+      side_weighted[1] = reference_jrc->sum_weight();
+      side_weight_sq[1] = reference_jrc->sum_weight_sq();
+      side_junction_weighted[1] = reference_jrc->sum_complement();
+      side_evidence[1] = reference_jrc->counted_read_evidence();
+    }
+
     if (settings.junction_debug) {
       ofile << "SIDE_2" << endl;
       for (map<string,bool>::iterator it = empty_read_names.begin(); it != empty_read_names.end(); it++) {
@@ -3120,7 +3411,7 @@ void  assign_one_junction_read_counts(
   double c = 0;
   bool have_c = (junction_possible_overlap_registers != 0);
   if (have_c) {
-    c = from_string<uint32_t>(j[NEW_JUNCTION_READ_COUNT]);
+    c = junction_weighted;
     c /= static_cast<double>(junction_possible_overlap_registers);
   }
 
@@ -3131,7 +3422,7 @@ void  assign_one_junction_read_counts(
     a = 0; //"NA" in read count sets value to 1 not 0
     d--;
   } else {
-    a = from_string<uint32_t>(j[SIDE_1_READ_COUNT]);
+    a = side_weighted[0];
     a /= static_cast<double>(side_1_possible_overlap_registers);
   }
 
@@ -3139,8 +3430,153 @@ void  assign_one_junction_read_counts(
     b = 0;
     d--;
   } else {
-    b = from_string<uint32_t>(j[SIDE_2_READ_COUNT]);
+    b = side_weighted[1];
     b /= static_cast<double>(side_2_possible_overlap_registers);
+  }
+
+  // Fit the frequency and the per-read assignments together (EM on a two-component mixture).
+  //
+  // The E-step asks, for each read, "did this come from the junction?" using the current frequency
+  // as the prior; the M-step recomputes the frequency from those soft assignments. Both steps run
+  // in the rate space defined below, so the register normalization is inside the loop rather than
+  // applied to a converged count. Reads are re-weighted from the stored evidence, not re-fetched.
+  //
+  // This is what removes the arbitrary constant: there is no prior to tune, because the only
+  // self-consistent per-read prior is the frequency being estimated. Convergence is fast (the
+  // mixture is one-dimensional and the likelihood is well behaved); the iteration cap is a
+  // backstop, not a tuning knob.
+  if (settings.junction_weight_reads && have_c && (d > 0)) {
+    const uint32_t k_max_iterations = 50;
+    const double k_tolerance = 1e-6;
+    double f_fit = (a + b) / d;
+    f_fit = (c + f_fit > 0.0) ? c / (c + f_fit) : 0.0;   // start from the unweighted estimate
+
+    for (uint32_t iter = 0; iter < k_max_iterations; iter++) {
+      double j_own, j_other, j_own_sq;
+      reweight_window(junction_evidence, f_fit, j_own, j_other, j_own_sq, true);
+
+      double s_own[2] = {0.0, 0.0}, s_other[2] = {0.0, 0.0}, s_own_sq[2] = {0.0, 0.0};
+      for (uint32_t k = 0; k < 2; k++) {
+        reweight_window(side_evidence[k], f_fit, s_own[k], s_other[k], s_own_sq[k], false);
+      }
+
+      // Rates, each in its own window's register basis (see the note below on why nothing moves
+      // between windows).
+      double junction_rate = j_own / static_cast<double>(junction_possible_overlap_registers);
+      double reference_rate = j_other / static_cast<double>(junction_possible_overlap_registers);
+      double side_ref = 0.0, side_junc = 0.0;
+      if ((j[SIDE_1_READ_COUNT] != "NA") && (side_1_possible_overlap_registers != 0)) {
+        side_ref  += s_own[0]   / static_cast<double>(side_1_possible_overlap_registers);
+        side_junc += s_other[0] / static_cast<double>(side_1_possible_overlap_registers);
+      }
+      if ((j[SIDE_2_READ_COUNT] != "NA") && (side_2_possible_overlap_registers != 0)) {
+        side_ref  += s_own[1]   / static_cast<double>(side_2_possible_overlap_registers);
+        side_junc += s_other[1] / static_cast<double>(side_2_possible_overlap_registers);
+      }
+      junction_rate += side_junc / d;
+      reference_rate += side_ref / d;
+
+      double f_new = (junction_rate + reference_rate > 0.0)
+                     ? junction_rate / (junction_rate + reference_rate) : 0.0;
+      bool converged = (fabs(f_new - f_fit) < k_tolerance);
+      f_fit = f_new;
+
+      if (converged || (iter + 1 == k_max_iterations)) {
+        junction_weighted = j_own;
+        junction_reference_weighted = j_other;
+        junction_weight_sq = j_own_sq;
+        for (uint32_t k = 0; k < 2; k++) {
+          side_weighted[k] = s_own[k];
+          side_junction_weighted[k] = s_other[k];
+          side_weight_sq[k] = s_own_sq[k];
+        }
+        // Recompute the per-window rates from the converged assignments.
+        c = junction_weighted / static_cast<double>(junction_possible_overlap_registers);
+        if ((j[SIDE_1_READ_COUNT] != "NA") && (side_1_possible_overlap_registers != 0)) {
+          a = side_weighted[0] / static_cast<double>(side_1_possible_overlap_registers);
+        }
+        if ((j[SIDE_2_READ_COUNT] != "NA") && (side_2_possible_overlap_registers != 0)) {
+          b = side_weighted[1] / static_cast<double>(side_2_possible_overlap_registers);
+        }
+        j["junction_mixture_iterations"] = to_string(iter + 1);
+        break;
+      }
+    }
+  }
+
+  // Record the split, and check that each window conserved its own reads.
+  //
+  // Conservation is PER WINDOW, not across windows. An earlier version moved a junction read's
+  // reference-hypothesis share over to a side window, which is wrong twice over: each window is
+  // normalized by its own register count, so a count moved across changes basis; and the sides
+  // enter the frequency as a mean, so weight w removed from the junction reappears as only w/2.
+  // Keeping every read's whole 1.0 inside the window that observed it makes the invariant exact
+  // and lets the frequency combine the pieces in rate space, where they are comparable.
+  bool side_usable[2] = { (j[SIDE_1_READ_COUNT] != "NA"), (j[SIDE_2_READ_COUNT] != "NA") };
+  {
+    j["new_junction_weighted_read_count"] = (junction_jrc.get() != NULL) ? to_string(junction_weighted, 2) : "0";
+    // The junction window's own reference evidence: reads that span the breakpoint but do not
+    // discriminate. It belongs in the frequency's denominator at the JUNCTION register basis,
+    // which is why it is reported separately rather than folded into a side.
+    j["new_junction_reference_weighted_read_count"] = (junction_jrc.get() != NULL) ? to_string(junction_reference_weighted, 2) : "0";
+    j["side_1_weighted_read_count"] = side_usable[0] ? to_string(side_weighted[0], 2) : "NA";
+    j["side_2_weighted_read_count"] = side_usable[1] ? to_string(side_weighted[1], 2) : "NA";
+
+    double junction_raw = from_string<double>(j[NEW_JUNCTION_READ_COUNT]);
+    ASSERT(fabs((junction_weighted + junction_reference_weighted) - junction_raw) < 1e-6 * (1.0 + junction_raw),
+           "Junction window weighting did not conserve reads for " + j["key"] + ": raw "
+           + to_string(junction_raw, 6) + " vs split "
+           + to_string(junction_weighted + junction_reference_weighted, 6));
+
+    for (uint32_t k = 0; k < 2; k++) {
+      if (!side_usable[k]) continue;
+      double side_raw = from_string<double>(j[(k == 0) ? SIDE_1_READ_COUNT : SIDE_2_READ_COUNT]);
+      ASSERT(fabs((side_weighted[k] + side_junction_weighted[k]) - side_raw) < 1e-6 * (1.0 + side_raw),
+             "Side " + to_string(k + 1) + " window weighting did not conserve reads for " + j["key"]
+             + ": raw " + to_string(side_raw, 6) + " vs split "
+             + to_string(side_weighted[k] + side_junction_weighted[k], 6));
+    }
+  }
+
+  // Kish effective sample size of the weighted evidence, (sum w)^2 / (sum w^2), pooled over the
+  // junction and the usable sides with the same side-averaging the frequency uses. Fractional
+  // weights are not binomial trials, so this is the honest "n" for a confidence bound built on
+  // them: it equals the raw count when every weight is 1 and falls as the weights spread out.
+  // Recorded now; the bounds start using it in a later change.
+  {
+    double n_sides_for_eff = 0.0, side_w = 0.0, side_w_sq = 0.0;
+    if (j[SIDE_1_READ_COUNT] != "NA") { side_w += side_weighted[0]; side_w_sq += side_weight_sq[0]; n_sides_for_eff++; }
+    if (j[SIDE_2_READ_COUNT] != "NA") { side_w += side_weighted[1]; side_w_sq += side_weight_sq[1]; n_sides_for_eff++; }
+    double total_w = junction_weighted + ((n_sides_for_eff > 0.0) ? side_w / n_sides_for_eff : 0.0);
+    double total_w_sq = junction_weight_sq + ((n_sides_for_eff > 0.0) ? side_w_sq / n_sides_for_eff : 0.0);
+    j["junction_effective_depth"] = (total_w_sq > 0.0) ? to_string(total_w * total_w / total_w_sq, 2) : "0";
+  }
+
+  // The cross terms: each window sees evidence for BOTH hypotheses, so the junction window
+  // contributes to the reference rate and the side windows contribute to the junction rate. Every
+  // term is divided by its own window's register count, because that is the number of chances that
+  // window had to observe the read -- this is why the split is not done by moving counts around.
+  //
+  // The read sets are disjoint (a read counted at the junction is excluded from the sides by
+  // name), so these are complementary observation channels and their rates ADD. The two side
+  // windows are instead two measurements of the same local reference coverage, so they are
+  // averaged -- which is exactly what the existing (a+b)/d already did.
+  //
+  // With weighting off every cross term is zero and this collapses to the original
+  // c / (c + (a+b)/d) identically; that exact reduction is what makes the change safe to land
+  // before the prior has been calibrated.
+  double c_from_sides = 0.0, r_from_sides = 0.0;
+  if (d > 0) {
+    if ((j[SIDE_1_READ_COUNT] != "NA") && (side_1_possible_overlap_registers != 0)) {
+      c_from_sides += side_junction_weighted[0] / static_cast<double>(side_1_possible_overlap_registers);
+    }
+    if ((j[SIDE_2_READ_COUNT] != "NA") && (side_2_possible_overlap_registers != 0)) {
+      c_from_sides += side_junction_weighted[1] / static_cast<double>(side_2_possible_overlap_registers);
+    }
+    c_from_sides /= d;
+  }
+  if (have_c) {
+    r_from_sides = junction_reference_weighted / static_cast<double>(junction_possible_overlap_registers);
   }
 
   // We cannot assign a frequency if the denominator is zero
@@ -3150,7 +3586,10 @@ void  assign_one_junction_read_counts(
 
     j[PREDICTION] = "unknown";
   } else {
-    double new_junction_frequency_value = c /(c + ((a+b)/d) );
+    double junction_rate = c + c_from_sides;
+    double reference_rate = ((a + b) / d) + r_from_sides;
+    double new_junction_frequency_value = (junction_rate + reference_rate > 0.0)
+                                          ? junction_rate / (junction_rate + reference_rate) : 0.0;
     j[POLYMORPHISM_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
     j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
 
@@ -3163,18 +3602,22 @@ void  assign_one_junction_read_counts(
     // confidence statements rather than point-estimate comparisons -- a junction is never rejected
     // merely for having few reads, only for being confidently on the wrong side of a cutoff.
     //
-    // The bounds use the RAW integer read counts, not the register-normalized ones that form the
-    // displayed frequency, because a binomial needs genuine trials. The normalization corrects for
-    // the differing number of overlap registers at which the junction and its sides can be detected,
-    // and across the test goldens it moves the frequency by a median of 0.0000 (max 0.069), so the
-    // two describe the same proportion to well within the width of the interval.
-    double raw_new = from_string<double>(j[NEW_JUNCTION_READ_COUNT]);
-    double raw_sides = 0.0; double raw_side_n = 0.0;
-    if (j[SIDE_1_READ_COUNT] != "NA") { raw_sides += from_string<double>(j[SIDE_1_READ_COUNT]); raw_side_n++; }
-    if (j[SIDE_2_READ_COUNT] != "NA") { raw_sides += from_string<double>(j[SIDE_2_READ_COUNT]); raw_side_n++; }
-    double raw_total = raw_new + ((raw_side_n > 0.0) ? (raw_sides / raw_side_n) : 0.0);
-    double freq_lower = binomial_frequency_lower_bound(raw_new, raw_total);
-    double freq_upper = binomial_frequency_upper_bound(raw_new, raw_total);
+    // The interval is CENTRED on the frequency this entry actually reports, and given the width
+    // implied by an effective depth. This mirrors RA_frequency_bounds() (identify_mutations.cpp),
+    // and for the same reason: a bound has to describe the number shown, or "rejected at frequency
+    // 0.43" carrying an interval computed from 0.21 is unreadable.
+    //
+    // It used to use the RAW integer counts instead, on the grounds that a binomial needs genuine
+    // trials, with the observation that raw and normalized frequencies then agreed to a median of
+    // 0.0000 across the goldens. That is true for long reads at high depth and false where it
+    // matters: on 35 bp polymorphism data the two differ by a median of 0.015 and up to 0.16, and
+    // once reads are weighted by how well they discriminate the gap grows to 0.83. The "genuine
+    // trials" property is restored instead by the effective depth below, which equals the read
+    // count when every read is decisive and shrinks as the weights spread out.
+    double freq_effective_depth = from_string<double>(j["junction_effective_depth"]);
+    double freq_successes = new_junction_frequency_value * freq_effective_depth;
+    double freq_lower = binomial_frequency_lower_bound(freq_successes, freq_effective_depth);
+    double freq_upper = binomial_frequency_upper_bound(freq_successes, freq_effective_depth);
 
     // Two bounds decide all three outcomes. Note the asymmetry is deliberate: the LOWER bound gates
     // "is there a junction here at all", while the UPPER bound gates "is it fixed rather than
@@ -3195,6 +3638,25 @@ void  assign_one_junction_read_counts(
       j[FREQUENCY] = "1";
     } else {
       j[PREDICTION] = "polymorphism";
+    }
+
+    // DIAGNOSTIC, not used for the call: what the old raw-count interval would have decided.
+    // Kept so a call that moves can be attributed to the re-centring rather than to the weighting.
+    if (settings.junction_debug) {
+      double raw_new = from_string<double>(j[NEW_JUNCTION_READ_COUNT]);
+      double raw_sides = 0.0; double raw_side_n = 0.0;
+      if (j[SIDE_1_READ_COUNT] != "NA") { raw_sides += from_string<double>(j[SIDE_1_READ_COUNT]); raw_side_n++; }
+      if (j[SIDE_2_READ_COUNT] != "NA") { raw_sides += from_string<double>(j[SIDE_2_READ_COUNT]); raw_side_n++; }
+      double raw_total = raw_new + ((raw_side_n > 0.0) ? (raw_sides / raw_side_n) : 0.0);
+      double raw_lower = binomial_frequency_lower_bound(raw_new, raw_total);
+      double raw_upper = binomial_frequency_upper_bound(raw_new, raw_total);
+      string old_call = "polymorphism";
+      if ((settings.polymorphism_frequency_cutoff > 0.0) && (raw_lower < settings.polymorphism_frequency_cutoff)) {
+        old_call = "rejected";
+      } else if ((settings.consensus_frequency_cutoff > 0.0) && (raw_upper >= settings.consensus_frequency_cutoff)) {
+        old_call = "consensus";
+      }
+      j["junction_rawbounds_prediction"] = old_call;
     }
   }
   
@@ -3229,6 +3691,39 @@ void  assign_one_junction_read_counts(
   
   
   
+// Build the pair of read counters used to tally junction evidence, configured identically for
+// every caller. Either may come back NULL when its BAM is absent, which callers already handle.
+//
+// This exists because there is more than one place that counts junction reads, and they must agree
+// on how a read is split between the junction and the reference and on which bases are trusted.
+// When they disagreed, the later caller silently overwrote the earlier one's results -- and no
+// assertion fired, because an unweighted count is internally consistent.
+void make_junction_read_counters(const Settings& settings,
+                                 counted_ptr<junction_read_counter>& reference_jrc,
+                                 counted_ptr<junction_read_counter>& junction_jrc)
+{
+  reference_jrc = counted_ptr<junction_read_counter>(NULL);
+  junction_jrc = counted_ptr<junction_read_counter>(NULL);
+
+  if (file_exists(settings.reference_bam_file_name.c_str())) {
+    reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose, settings.reference_trim_file_name));
+  }
+  if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
+    junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose, settings.candidate_junction_trim_file_name));
+  }
+
+  // Opposite delta signs: in the junction BAM a record's own score belongs to the junction
+  // hypothesis, in the reference BAM it belongs to the reference. See set_weighting().
+  if (reference_jrc.get() != NULL) {
+    reference_jrc->set_weighting(settings.junction_weight_reads, -1);
+    reference_jrc->set_base_quality_cutoff(settings.base_quality_cutoff);
+  }
+  if (junction_jrc.get() != NULL) {
+    junction_jrc->set_weighting(settings.junction_weight_reads, +1);
+    junction_jrc->set_base_quality_cutoff(settings.base_quality_cutoff);
+  }
+}
+
 void  assign_junction_read_counts(
                                   const Settings& settings,
                                   Summary& summary,
@@ -3254,16 +3749,8 @@ void  assign_junction_read_counts(
   // Keep track of how well they match the reference versus the putative new junctions.
   // right now this is in terms of mismatches (adding unmatched read bases as mismatches)
   
-  // Create read counters in a way that they will automatically be cleaned up
-  counted_ptr<junction_read_counter> reference_jrc(NULL);
-  if (file_exists(settings.reference_bam_file_name.c_str())) {
-    reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose, settings.reference_trim_file_name));
-  }
-
-  counted_ptr<junction_read_counter> junction_jrc(NULL);
-  if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
-    junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose, settings.candidate_junction_trim_file_name));
-  }
+  counted_ptr<junction_read_counter> reference_jrc, junction_jrc;
+  make_junction_read_counters(settings, reference_jrc, junction_jrc);
   
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) {
     cDiffEntry& j = **it;
@@ -3273,57 +3760,25 @@ void  assign_junction_read_counts(
 }
 
   
-void  assign_junction_read_coverage(
-                                  const Settings& settings,
-                                  Summary& summary,
-                                  cGenomeDiff& gd
-                                  )
-{
-  (void) settings;
-  diff_entry_list_t jc = gd.get_list(make_vector<gd_entry_type>(JC));
-  
-  if (jc.size() == 0) return;
-  // Next calls can fail if there are no junctions (and therefore no FASTA file of junctions).
-  
-    
-  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++)
-  {
-    cDiffEntry& j = **it;
-      
-    // This sections just normalizes read counts to the average coverage of the correct sequence fragment
-    
-    double side_1_correction = (summary.sequence_conversion.read_length_avg - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"])) / (summary.sequence_conversion.read_length_avg - 1);
-    
-    if (j[SIDE_1_READ_COUNT] == "NA")
-      j[SIDE_1_COVERAGE] = "NA";
-    else
-      j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
-    
-    double side_2_correction = (summary.sequence_conversion.read_length_avg - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.read_length_avg - 1);
-    
-    if (j[SIDE_2_READ_COUNT] == "NA")
-      j[SIDE_2_COVERAGE] = "NA";
-    else
-      j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average, 2);
-    
-    //corrects for overlap making it less likely for a read to span
-    double overlap_correction = (summary.sequence_conversion.read_length_avg - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"]) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.read_length_avg - 1);
-    double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
-    
-    j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
-    
-  }
-}
-  
-  
 junction_read_counter::junction_read_counter(const string& bam, const string& fasta, bool verbose, const string& trim_file_name)
   : pileup_base(bam, fasta), _verbose(verbose)
+  , _weighting_enabled(false)  // off until set_weighting() -- every read counts 1
+  , _base_quality_cutoff(0)   // raw bounds until set_base_quality_cutoff()
+  , _delta_sign(1)
+  , _sum_weight(0.0), _sum_weight_sq(0.0), _sum_complement(0.0)
 {
+
   _trims_list.resize(num_targets());
   for (uint32_t tid = 0; tid < num_targets(); tid++) {
     string this_file_name = Settings::file_name(trim_file_name, "@", target_name(tid));
     _trims_list[tid].ReadFile(this_file_name, target_length(tid));
   }
+}
+
+void junction_read_counter::set_weighting(bool enabled, int32_t delta_sign)
+{
+  _weighting_enabled = enabled;
+  _delta_sign = delta_sign;
 }
 
 uint32_t junction_read_counter::count_confident_overlap_registers(
@@ -3353,9 +3808,13 @@ uint32_t junction_read_counter::count(
   
   
   _count = 0;
+  _sum_weight = 0.0;
+  _sum_weight_sq = 0.0;
+  _sum_complement = 0.0;
+  _read_evidence.clear();
   _start = start;
   _end = end;
-  
+
   // it's possible that we will be sent negative values (by design)
   if (_start < 1) {
     return _count;
@@ -3409,7 +3868,13 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   }
   
   uint32_t q_start, q_end;
-  a.reference_bounds_1(q_start, q_end);
+  // Confident bounds: a read must reach the window with real bases, not a miscalled tail.
+  q_start = a.reference_start_1(_base_quality_cutoff);
+  q_end   = a.reference_end_1(_base_quality_cutoff);
+  if ((q_start == UNDEFINED_UINT32) || (q_end == UNDEFINED_UINT32)) {
+    if (_verbose) cout << "  NO CONFIDENT BASES" << endl;
+    return;
+  }
 
   // Shrink the reference span inward by any trimmed (untrustworthy, e.g. repeat-ambiguous)
   // bases at the ends of the read, so a read that only *appears* to reach a coordinate
@@ -3438,7 +3903,63 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
     if (_verbose) cout << "  NO OVERLAP" << endl;
     return;
   }
-    
+
+  // Split this read between the two hypotheses. w is the posterior that it came from the junction;
+  // 1-w is the matching evidence for the reference. Every counted read contributes exactly 1.0 in
+  // total, so the frequency's numerator and denominator stay on the same footing -- weighting one
+  // side only would shrink the denominator and inflate every frequency.
+  //
+  // A read missing either log-likelihood tag has no competing hypothesis on record (it aligned to
+  // only one of the two references), so it falls back to w = 1 toward the BAM it sits in.
+  //
+  // X8/X7, not AS: AS is breseq's rescored ALIGNMENT SCORE, which is quality-blind -- every bowtie2
+  // pass runs --ignore-quals and alignment_score() reads only the CIGAR and the reference, so a
+  // mismatch at Q40 and one at Q2 move it identically. The X8/X7 pair carries the quality-aware
+  // log-likelihood of each hypothesis instead (alignment_log10_likelihood(), stamped during
+  // resolution), which is what makes the ratio below a real likelihood ratio. Routing still uses
+  // AS; only this weighting reads the new tags.
+  //
+  // Watch the tag names: an earlier version read X5 here, which is set in memory during resolution
+  // but never serialized, so it silently found nothing and fell back to weight 1 -- and an
+  // unweighted read conserves perfectly, so no assertion could catch it.
+  //
+  // w is the weight toward THIS window's own hypothesis, so the fallback of 1.0 means "count this
+  // read exactly as before" whichever BAM we are reading. Deriving it by flipping a junction-side
+  // weight would break that: with weighting disabled the junction weight is 1.0, and flipping it
+  // would zero every reference side and force the frequency to 1.
+  double w = 1.0;
+  double read_log10_odds = 0.0;
+  bool have_odds = false;
+  uint32_t own_ll_raw, other_ll_raw;
+  if (a.aux_get_i(kBreseqOwnHypothesisLogLikelihoodBAMTag, own_ll_raw)
+      && a.aux_get_i(kBreseqOtherHypothesisLogLikelihoodBAMTag, other_ll_raw)) {
+    // aux_get_i hands back a uint32_t; these tags are signed (a log-likelihood is <= 0), so the
+    // round trip through int32_t is what recovers the value.
+    int32_t own_ll = static_cast<int32_t>(own_ll_raw);
+    int32_t other_ll = static_cast<int32_t>(other_ll_raw);
+    read_log10_odds = _delta_sign * static_cast<double>(own_ll - other_ll) / kAlignmentLogLikelihoodScale;
+    have_odds = true;
+    if (_weighting_enabled) {
+      double w_junction = junction_read_weight(read_log10_odds, a.redundancy(), 1.0);
+      w = (_delta_sign > 0) ? w_junction : (1.0 - w_junction);
+    }
+  }
+
+  // Both halves stay in THIS window. A read's evidence is not moved to another window, because
+  // each window is normalized by its own number of confident overlap registers and a count moved
+  // across would silently change register basis. The caller combines the four sums in rate space.
+  _sum_weight += w;
+  _sum_weight_sq += w * w;
+  _sum_complement += 1.0 - w;
+
+  // Keep the raw evidence so the caller can re-weight this read at a different prior without
+  // fetching it again.
+  read_evidence_t ev;
+  ev.log10_odds_for_junction = read_log10_odds;
+  ev.have_odds = have_odds;                         // false = no competing alignment on record
+  ev.n_ref_placements = a.redundancy();
+  _read_evidence.push_back(ev);
+
   // record that we counted this read
   _counted_read_names[a.read_name()] = true;
 }

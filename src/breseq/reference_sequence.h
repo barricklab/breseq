@@ -1309,6 +1309,26 @@ public:
   uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
   int32_t alignment_score(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
 
+  // Fixed-point scale of alignment_log10_likelihood(): the returned integer is 100 * log10 P.
+  // Integer because the value has to survive a BAM aux tag; 100 keeps a full base of resolution
+  // even at Q2 (0.25 log10 units), where the naive 10x scale would round the evidence to nothing.
+  const int32_t kAlignmentLogLikelihoodScale = 100;
+
+  // Quality-aware companion to alignment_score(): 100 * log10 P(read bases | the reference this
+  // alignment is against), for use as one term of a likelihood RATIO between two competing
+  // alignments of the same read (junction candidate vs. reference genome).
+  //
+  // This is deliberately NOT a replacement for alignment_score(). That function decides which
+  // alignment wins in eligible_read_alignments() and therefore how every read is routed; changing
+  // it would re-open routing and every result breseq produces. This one is only ever consumed by
+  // the junction read weighting (see junction_read_weight(), stats.h).
+  //
+  // Positions where the two competing references agree contribute the same term to both and cancel
+  // in the ratio, so only DISCRIMINATING positions survive -- exactly the behaviour alignment_score
+  // differences already had, except that each one is now worth log10(3(1-eps)/eps) for its own base
+  // quality instead of a flat 4 score units. That is ~4.5 at Q40, ~0.35 at Q3, and ~0 at Q0.
+  int32_t alignment_log10_likelihood(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
+
   string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
   void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array, const string& ref_seq, const string& read_seq);
   struct sort_by_file_name {

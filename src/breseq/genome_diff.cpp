@@ -3630,6 +3630,28 @@ bool cGenomeDiff::read_counts_for_entry(const cDiffEntry& de, double& new_read_c
         
       case JC:
       {
+        // Prefer the frequency the JC entry actually reports, expressed as a count out of its
+        // effective depth. Callers combine two junctions as (new_1+new_2)/(total_1+total_2), which
+        // then becomes a depth-weighted average of the two junction frequencies -- and the
+        // Clopper-Pearson bounds built on it end up centred on that average with the pooled depth,
+        // matching how the junctions themselves were classified.
+        //
+        // Recomputing from raw counts here instead would silently disagree with the entry: the
+        // reported frequency is normalized by each window's overlap registers and by how well each
+        // read distinguishes the junction from the reference, and neither correction is visible in
+        // the integer counts. A MOB and the JC evidence it was predicted from would then report
+        // different frequencies for the same event.
+        if (de.entry_exists(POLYMORPHISM_FREQUENCY) && de.entry_exists("junction_effective_depth")) {
+          double f = from_string<double>(de.get(POLYMORPHISM_FREQUENCY));
+          double n_eff = from_string<double>(de.get("junction_effective_depth"));
+          if (n_eff > 0.0) {
+            new_read_count = f * n_eff;
+            total_read_count = n_eff;
+            return true;
+          }
+        }
+
+        // Fall back to the raw counts for entries written before those fields existed.
         double a = from_string<uint32_t>(de.get(SIDE_1_READ_COUNT));
         double b = from_string<uint32_t>(de.get(SIDE_2_READ_COUNT));
         double c = from_string<uint32_t>(de.get(NEW_JUNCTION_READ_COUNT));

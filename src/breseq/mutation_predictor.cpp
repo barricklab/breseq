@@ -817,17 +817,13 @@ namespace breseq {
     (void)summary;
     bool verbose = false;
     
-    // Create read counters in a way that they will automatically be cleaned up
-    counted_ptr<junction_read_counter> reference_jrc(NULL);
-    if (file_exists(settings.reference_bam_file_name.c_str())) {
-      reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose, settings.reference_trim_file_name));
-    }
+    // Built through the shared factory so this function's counters cannot drift out of step with
+    // the ones in assign_junction_read_counts(). That mattered: this function re-counts entries
+    // that were already counted there, and it runs later, so a counter configured differently
+    // here silently overwrites the earlier results -- with no error and no failing assertion.
+    counted_ptr<junction_read_counter> reference_jrc, junction_jrc;
+    make_junction_read_counters(settings, reference_jrc, junction_jrc);
 
-    counted_ptr<junction_read_counter> junction_jrc(NULL);
-    if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
-      junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose, settings.candidate_junction_trim_file_name));
-    }
-    
     
     // Prepare the lists
     for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
@@ -1314,6 +1310,13 @@ namespace breseq {
         
         int32_t duplication_require_overlap = max(n(mut["duplication_size"]), 0);
         
+        // Snapshot before recounting, so the consensus-mode rejection path below can put the
+        // entries back by assignment instead of running the whole pileup a second time to undo
+        // itself. Recounting is not free: each call re-fetches every read overlapping three
+        // windows across two BAMs.
+        cDiffEntry j1_before_offset(j1);
+        cDiffEntry j2_before_offset(j2);
+
         if (verbose) cerr << "Before 1:" << endl << j1 << endl;
         j1["read_count_offset"] = to_string(duplication_require_overlap);
         assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
@@ -1327,13 +1330,13 @@ namespace breseq {
         if (!settings.polymorphism_prediction) { // consensus mode
           // at this point the prediction type (CONSENSUS/POLYMORPHISM) should be honored
           // in determining whether to include this mutation.
-          if ( (j1[PREDICTION]!="consensus") || (j1[PREDICTION]!="consensus") ) {
+          // Both junctions must be consensus. This previously tested j1 twice and never looked
+          // at j2, so a MOB whose second junction was not consensus was accepted regardless.
+          if ( (j1[PREDICTION]!="consensus") || (j2[PREDICTION]!="consensus") ) {
             
-            // heartbreakingly, we have to undo the changes that we just did
-            j1.erase("read_count_offset");
-            assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
-            j2.erase("read_count_offset");
-            assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
+            // Restore the pre-offset entries. This used to re-run the counting to undo itself.
+            j1 = j1_before_offset;
+            j2 = j2_before_offset;
             continue;
           }
           

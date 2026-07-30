@@ -2413,5 +2413,29 @@ namespace breseq {
     return incbi(k + 1.0, n - k, 1.0 - alpha);
   }
 
+  // Posterior that a read came from a candidate junction rather than the reference. See stats.h.
+  double junction_read_weight(double log10_odds_for_junction, uint32_t n_ref_placements, double prior_odds_against)
+  {
+    // A prior of zero means "no prior information" -- fall back to full weight rather than silently
+    // zeroing every read, so a misconfiguration degrades to unweighted behavior instead of erasing
+    // all junction evidence.
+    if (!(prior_odds_against > 0.0)) return 1.0;
+    if (n_ref_placements < 1) n_ref_placements = 1;
+
+    // Work in logs: 10^(-log10_odds) overflows for the large negative ratios that reference-side
+    // reads legitimately produce.
+    double log_odds_against = log(prior_odds_against)
+                            + log(static_cast<double>(n_ref_placements))
+                            - log10_odds_for_junction * log(10.0);
+
+    // exp() of a large positive argument would overflow to inf; both saturating cases are exact
+    // enough at these magnitudes (|log_odds| > 700 is a weight of 0 or 1 to far beyond double
+    // precision anyway).
+    if (log_odds_against > 700.0) return 0.0;
+    if (log_odds_against < -700.0) return 1.0;
+
+    return 1.0 / (1.0 + exp(log_odds_against));
+  }
+
 } // namespace breseq
 

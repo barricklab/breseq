@@ -35,6 +35,8 @@ namespace breseq
   extern const double kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end;
   extern const char* kBreseqAlignmentScoreBAMTag;
   extern const char* kBreseqBestAlignmentScoreBAMTag;
+  extern const char* kBreseqOtherHypothesisLogLikelihoodBAMTag;
+  extern const char* kBreseqOwnHypothesisLogLikelihoodBAMTag;
 
 	class ExecutionTime : public Storable {
   public:
@@ -382,6 +384,12 @@ namespace breseq
     int32_t junction_minimum_side_match;                  // Default = 1 or 6;
     double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 2.0, 0 = means don't calculate (to implement)
     bool junction_allow_suboptimal_matches;                       // Default = false
+    // Whether to split each junction-spanning read between the junction and the reference by how
+    // well its alignment scores discriminate them, fitting the split and the junction frequency
+    // together (see the mixture fit in assign_one_junction_read_counts). There is deliberately no
+    // tunable prior: the only self-consistent per-read prior is the frequency itself. Off makes
+    // every read count 1 toward whichever side it was assigned, reproducing the old behavior.
+    bool junction_weight_reads;                           // Default = true
     
     
     //! Settings: Mutation Identification
@@ -597,7 +605,11 @@ namespace breseq
     string jc_genome_diff_file_name;
     
     string junction_debug_file_name;
-    
+    // Tab-delimited, one row per (candidate junction, supporting read), written only under
+    // --junction-debug. Records the read's alignment score against THIS candidate next to the
+    // best-over-all-candidates difference, so the two can be compared directly.
+    string junction_mapq_debug_file_name;
+
     //! Paths: BAM conversion
 		string bam_path;
     string bam_done_file_name;
