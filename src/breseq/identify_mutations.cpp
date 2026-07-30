@@ -424,20 +424,36 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
 // Returns whether it should be deleted
 //
 // CONSENSUS MODE asks one question of every position: is there evidence that the variant is the
-// MAJORITY allele. That gives two flat attempts, in order, each gated on a score and on the exact
-// 95% lower confidence bound of the variant frequency:
+// MAJORITY allele. That gives two flat attempts, in order, each gated on the score and on the 95%
+// lower confidence bound of the variant frequency:
 //
-//   1. consensus     -- consensus_score clears its cutoff AND L >= consensus_frequency_cutoff
-//                       (0.50 by default: confidently more than half the reads)
-//   2. polymorphism  -- otherwise, polymorphism_score clears its cutoff AND
+//   1. consensus     -- score clears mutation_log10_e_value_cutoff AND
+//                       L >= consensus_frequency_cutoff (0.50 by default: confidently a majority)
+//   2. polymorphism  -- otherwise, score clears polymorphism_log10_e_value_cutoff AND
 //                       L >= polymorphism_frequency_cutoff (0.10 by default: confidently present)
 //   3. otherwise the position is dropped.
 //
 // Both tests read the LOWER bound, so a position is never accepted on thin coverage and never
 // rejected merely for having thin coverage -- only for failing to establish the claim being made.
-// The strand-minimum, Fisher strand-bias, K-S quality-bias and homopolymer filters are all OFF by
-// default here and run only when explicitly enabled; they are applied within whichever attempt
-// they belong to so those command-line options keep working.
+//
+// DO NOT "unify" this with polymorphism mode, which reads the UPPER bound in the same slot. The
+// asymmetry is the whole point: the two modes carry opposite defaults. Here the fixed
+// interpretation is the default, so the question is "is the variant confidently the majority" and
+// the lower bound answers it. There the polymorphic interpretation is the default, so the question
+// is "can we still rule out that it is fixed" and the upper bound answers that.
+//
+// The temptation to unify comes from an argument that no longer applies. Under the exact
+// Clopper-Pearson bounds this used to use, the identity L(k of k) = alpha^(1/k) meant a lower-bound
+// test against 0.50 demanded ln(0.05)/ln(0.50) = 4.32 variant reads even at 100% frequency, so
+// genuine fixed variants were dropped for want of depth. Profile-likelihood bounds do not have that
+// floor -- at two decisive reads the lower bound is already 0.505 -- and measured over the test
+// goldens, 0 of 218 consensus-mode fixed variants now fail this test. Meanwhile switching this slot
+// to the upper bound would relabel two well-measured ~48% variants (at 115x and 292x coverage) as
+// fixed 100% mutations, which is exactly what the lower bound is here to prevent.
+//
+// The Fisher strand-bias and variant-strand-minimum filters are ON by default; the K-S quality-bias
+// and homopolymer filters are off. They are applied within whichever attempt they belong to so
+// those command-line options keep working.
 bool test_RA_evidence_CONSENSUS_mode(
                                      cDiffEntry& ra,
                                      cReferenceSequences& ref_seq_info,
@@ -519,16 +535,18 @@ bool test_RA_evidence_CONSENSUS_mode(
 // reversed: here a position is assumed to be POLYMORPHIC unless the data say otherwise, so the
 // bounds swap roles.
 //
-//   1. consensus     -- consensus_score clears its cutoff AND U >= consensus_frequency_cutoff
-//                       (0.99 by default). The upper bound, not the lower: a call snaps to a fixed
-//                       100% difference only when we cannot rule out that it IS fixed. Under
-//                       consensus mode the same slot asks "is it confidently the majority" with the
-//                       lower bound, because there the fixed interpretation is the default.
-//   2. polymorphism  -- otherwise, polymorphism_score clears its cutoff AND
-//                       L >= polymorphism_frequency_cutoff (0.01 by default: confidently present)
+//   1. consensus     -- score clears mutation_log10_e_value_cutoff AND
+//                       U >= consensus_frequency_cutoff (0.95 by default). The upper bound, not the
+//                       lower: a call snaps to a fixed 100% difference only when we cannot rule out
+//                       that it IS fixed. Under consensus mode the same slot asks "is it confidently
+//                       the majority" with the lower bound, because there the fixed interpretation
+//                       is the default. See the note there before trying to make these agree.
+//   2. polymorphism  -- otherwise, score clears polymorphism_log10_e_value_cutoff AND
+//                       L >= polymorphism_frequency_cutoff (0.05 by default: confidently present)
 //   3. otherwise the position is KEPT and marked rejected -- unlike consensus mode, which drops it.
 //
-// The optional guards sit in whichever attempt they belong to and are all OFF by default.
+// The Fisher strand-bias and variant-strand-minimum guards are ON by default here; the K-S
+// quality-bias and homopolymer guards are off. Each sits in whichever attempt it belongs to.
 bool test_RA_evidence_POLYMORPHISM_mode(
                                      cDiffEntry& ra,
                                      cReferenceSequences& ref_seq_info,
@@ -1434,11 +1452,17 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
       write_RA_frequency_bounds(mut, pdata, amodel, variant_base_index);
 
-      // Add line to the polymorphism statistics input file if we are only a polymorphism
-
-      if (minor_base_char != 'N') {
-        annotate_polymorphism_statistics(mut, major_base_char, minor_base_char, pos_info, pdata);
-      }
+      //## Strand and quality bias statistics, computed for every entry.
+      //##
+      //## These used to be skipped whenever the position had only one allele with coverage, which
+      //## sounds harmless -- with nothing to compare against, the tests are uninformative -- but it
+      //## silently exempted those entries from a filter that is ON by default:
+      //## polymorphism_fisher_strand_p_value_cutoff is 0.05 in BOTH modes, and
+      //## rejected_RA_polymorphism_bias() only applies it when fisher_strand_p_value exists. So the
+      //## absence of the field was doing the work of a passing test. Compute it always and let the
+      //## filter decide; annotate_polymorphism_statistics() already returns 1.0 for an empty
+      //## comparison, which is a pass on the merits rather than by omission.
+      annotate_polymorphism_statistics(mut, major_base_char, minor_base_char, pos_info, pdata);
 
       //## More fields common to consensus mutations and polymorphisms
       //## ...now that ref_base and new_base are defined
