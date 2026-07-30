@@ -86,30 +86,6 @@ namespace breseq {
     struct read_evidence_t { double log10_odds_for_junction; uint32_t n_ref_placements; bool have_odds; };
     const vector<read_evidence_t>& counted_read_evidence() const { return _read_evidence; }
 
-    // Lifetime tallies across every count() call, NOT reset per window. They exist only so
-    // assert_weighting_was_applied() can tell "this read had no competing hypothesis" (legitimate,
-    // and common on the reference BAM) apart from "no read anywhere carried a likelihood" (a bug).
-    uint64_t total_counted_reads() const { return _total_counted_reads; }
-    uint64_t total_counted_reads_with_odds() const { return _total_counted_reads_with_odds; }
-
-    // Hard check that the weighting is actually weighting something.
-    //
-    // The failure this exists for is silent by construction: when no read carries a likelihood
-    // every read falls back to full weight toward its own BAM, which reproduces the unweighted
-    // counts exactly -- so the conservation invariant holds, every golden matches, and the reported
-    // frequencies are simply wrong. It has happened three times. Two causes were real bugs; the
-    // third is now a supported workflow, which is why this needs to be a runtime check rather than
-    // a comment: the X8/X7 tags are written during alignment resolution only when the weighting is
-    // enabled, so an Output-only re-run WITH weighting on top of a resolution stage produced with
-    // --junction-no-read-weighting finds no tags and quietly emits unweighted numbers.
-    //
-    // Only the junction BAM is checked. Every read routed to a junction had a junction alignment,
-    // and gets tags unless it had no reference alignment at all -- so a zero rate there means the
-    // tags are absent, not that the reads were undecidable. The reference BAM is a different story:
-    // most reference reads legitimately have no competing junction alignment (6,249 of 300,000 on
-    // Ara-2_60K), so a low or even zero rate there proves nothing.
-    void assert_weighting_was_applied(const string& bam_description) const;
-
     // Counts how many of the candidate reference start positions for a hypothetical,
     // gapless, average-length read spanning [window_start, window_end] would still
     // span it after being shrunk by the trims at that position (see fetch_callback).
@@ -137,8 +113,6 @@ namespace breseq {
     double _sum_weight_sq;
     double _sum_complement;
     vector<read_evidence_t> _read_evidence;
-    uint64_t _total_counted_reads;
-    uint64_t _total_counted_reads_with_odds;
   };
 
   class ResolveJunctionInfo : public JunctionInfo
