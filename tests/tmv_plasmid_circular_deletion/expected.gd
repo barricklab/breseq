@@ -1,10 +1,10 @@
 #=GENOME_DIFF	1.0
-#=CREATED	13:18:34 29 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision bb5cb58cb627
-#=COMMAND	./src/breseq/breseq -j 4 --predict-discordant-pairs -o tests/tmv_plasmid_circular_deletion -r tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
-#=REFSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
-#=READSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz
-#=READSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=CREATED	06:33:49 30 Jul 2026
+#=PROGRAM	breseq 0.50.0 revision 9dfd4ffd99d6
+#=COMMAND	./src/breseq/breseq -j 4 --predict-discordant-pairs -o ./tests/tmv_plasmid_circular_deletion -r ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=REFSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
+#=READSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz
+#=READSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
 #=CONVERTED-BASES	2733978
 #=CONVERTED-READS	18356
 #=INPUT-BASES	2738037
@@ -12,8 +12,8 @@
 #=MAPPED-BASES	2298942
 #=MAPPED-READS	15452
 DEL	1	4,5,7,200	TMV-plasmid	10205	7344	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=17548	position_start=10205	ref_seq=7344-bp
-RA	2	.	TMV-plasmid	5198	0	A	G	consensus_score=18.1	deleted=1	frequency=1	major_base=G	major_cov=3/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/3	polymorphism_frequency=1.000e+00	polymorphism_score=NA	prediction=consensus	ref_cov=0/0	total_cov=3/3
-RA	3	.	TMV-plasmid	7566	0	T	A	bias_e_value=1.00722e+04	bias_p_value=9.67453e-01	consensus_reject=FREQUENCY_CUTOFF	consensus_score=2119.2	fisher_strand_p_value=7.55961e-01	frequency=1.303e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=T	major_cov=359/355	major_frequency=8.697e-01	minor_base=A	minor_cov=56/51	new_cov=56/51	polymorphism_frequency=1.303e-01	polymorphism_score=227.0	prediction=polymorphism	ref_cov=359/355	snp_type=intergenic	total_cov=418/408
+RA	2	.	TMV-plasmid	5198	0	A	G	consensus_score=18.1	deleted=1	frequency=1	major_base=G	major_cov=3/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/3	polymorphism_frequency=1.000e+00	polymorphism_score=18.1	prediction=consensus	ref_cov=0/0	total_cov=3/3
+RA	3	.	TMV-plasmid	7566	0	T	A	bias_e_value=1.00722e+04	bias_p_value=9.67453e-01	consensus_reject=FREQUENCY_CUTOFF	consensus_score=2119.2	fisher_strand_p_value=7.55961e-01	frequency=1.260e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=T	major_cov=359/355	major_frequency=8.715e-01	minor_base=A	minor_cov=56/51	new_cov=56/51	polymorphism_frequency=1.260e-01	polymorphism_score=201.5	prediction=polymorphism	ref_cov=359/355	snp_type=intergenic	total_cov=418/408
 MC	4	.	TMV-plasmid	1	7137	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=1	left_outside_cov=NA	locus_tag=–/–	right_inside_cov=41	right_outside_cov=815
 MC	5	.	TMV-plasmid	10205	10411	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=84	left_outside_cov=859	locus_tag=–/–	right_inside_cov=1	right_outside_cov=NA
 JC	6	.	TMV-plasmid	7033	1	TMV-plasmid	10253	-1	0	alignment_overlap=0	coverage_minus=22	coverage_plus=17	flanking_left=151	flanking_right=151	frequency=1	junction_effective_depth=44.50	junction_mixture_iterations=1	junction_possible_overlap_registers=145	junction_possible_overlap_registers_before_trimming=147	key=TMV-plasmid__7033__1__TMV-plasmid__10253__-1__0____151__151__0__0	max_left=149	max_left_minus=149	max_left_plus=147	max_min_left=72	max_min_left_minus=71	max_min_left_plus=72	max_min_right=75	max_min_right_minus=75	max_min_right_plus=60	max_pos_hash_score=296	max_right=150	max_right_minus=150	max_right_plus=138	neg_log10_pos_hash_p_value=2.0	new_junction_coverage=0.15	new_junction_read_count=38	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=38.00	polymorphism_frequency=8.539e-01	pos_hash_score=28	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.04	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=145	side_1_possible_overlap_registers_before_trimming=147	side_1_read_count=10	side_1_redundant=0	side_1_weighted_read_count=10.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.01	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=145	side_2_possible_overlap_registers_before_trimming=147	side_2_read_count=3	side_2_redundant=0	side_2_weighted_read_count=3.00	total_non_overlap_reads=39

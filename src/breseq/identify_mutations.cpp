@@ -1328,78 +1328,46 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//###								
 
 		bool passed_as_polymorphism_prediction(false);
-    polymorphism_prediction ppred;
-    base_char second_best_base_char('N');
 
     cDiffEntry mut(RA);
-    
+
     //## evaluate whether to call an actual mutation!
     // -- note that we accept > 0 and only reject later
     // so that these can potentially make it into the marginal data
     bool passed_as_consensus_prediction = (best_base_char != ref_base_char) && (!std::isnan(consensus_bonferroni_score) && (consensus_bonferroni_score > 0));
-    
-    // Find the bases with the highest and second highest coverage
-    // We only predict polymorphisms involving these 'major' and 'minor' alleles
-    base_index best_base_index(base_list_N_index);
-    int best_base_coverage(0);
-    base_index second_best_base_index(base_list_N_index);
-    int second_best_base_coverage(0);
 
-    // Tie-break on the pure-genotype posterior. With uniform priors the per-read normalizers are
-    // common to every base, so ordering by the summed log-likelihoods is the same ordering the
-    // old normalized posteriors gave.
-    const double* snp_probs = log10_pr_sum;
+    //## Fit all five alleles at once, so every frequency below is a fraction of TOTAL depth and
+    //## the reference allele is in the model whether or not it is well supported. The two-base
+    //## fit this replaces chose its pair by raw coverage and renormalized within it, which made
+    //## the reported frequency a share of that pair rather than of the position.
+    bool all_alleles[base_list_size];
+    for (uint8_t i=0; i<base_list_size; i++) all_alleles[i] = true;
+    allele_model amodel = fit_allele_frequencies(pdata, all_alleles);
 
-    for (uint8_t i=0; i<base_list_size; i++) {
-      base_char this_base_char = base_char_list[i];
-      base_index this_base_index = i;
-      int this_base_coverage = pos_info[this_base_char][0] + pos_info[this_base_char][2];
-      
-      if (this_base_coverage==0) continue;
-      
-      // if better coverage or tied in coverage and better probability
-      if ((this_base_coverage > best_base_coverage) ||
-        ((this_base_coverage == best_base_coverage) && ((best_base_index==base_list_N_index) || (snp_probs[this_base_index] > snp_probs[best_base_index])))) {
-        second_best_base_index = best_base_index;
-        second_best_base_coverage = best_base_coverage;
-        best_base_index = this_base_index;
-        best_base_coverage = this_base_coverage;
-      }
-      else if ((this_base_coverage > second_best_base_coverage) 
-        || ((this_base_coverage == second_best_base_coverage) && (((second_best_base_index==base_list_N_index) ||snp_probs[this_base_index] > snp_probs[second_best_base_index])))) {
-        second_best_base_index = this_base_index;
-        second_best_base_coverage = this_base_coverage;
-      }
-    }
-    
-    int this_base_coverage = min(pos_info[best_base_char][0], pos_info[best_base_char][2]);
-    
-    // Only try mixed SNP model if there is coverage for more than one base!
-    ppred.frequency = 1;
-    if (second_best_base_index != base_list_N_index) {
-      best_base_char = base_char_list[best_base_index];
-      second_best_base_char = base_char_list[second_best_base_index];
+    //## Three questions, three bases, none of them reassigned into another:
+    //##   best_base_char (above)  the most probable single genotype -- consensus score, UN calling
+    //##   major_base_char         the highest-frequency allele in the fit
+    //##   variant_base_char       the highest-frequency allele that is not the reference
+    //## They agree except at genuinely mixed sites, where the disagreement is information. The
+    //## old code overwrote the first with the second partway through and reported a mixture of
+    //## the two.
+    const base_index ref_base_index = (ref_base_char == 'N') ? base_list_N_index : basechar2index(ref_base_char);
+    const base_index major_base_index = amodel.major_index();
+    const base_index minor_base_index = amodel.next_index(major_base_index);
+    const base_index variant_base_index = amodel.next_index(ref_base_index);
 
-      // tries all frequencies of the best two
-      if (_settings.polymorphism_prediction) {
-        ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
-      }
-      
-      // tries only the raw ML frequency of the best two
-      else /* if (_settings.mixed_base_prediction) */ {
-        ppred = predict_mixed_base(best_base_char, second_best_base_char, pdata);
-      }
-      
-      // Calculate E-value for polymorphism score (E theta)
-      polymorphism_bonferroni_score = (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
-      
+    base_char major_base_char   = (major_base_index   == base_list_N_index) ? 'N' : base_char_list[major_base_index];
+    base_char minor_base_char   = (minor_base_index   == base_list_N_index) ? 'N' : base_char_list[minor_base_index];
+    base_char variant_base_char = (variant_base_index == base_list_N_index) ? 'N' : base_char_list[variant_base_index];
+
+    if (variant_base_index != base_list_N_index) {
+      polymorphism_bonferroni_score = variant_presence_score(pdata, amodel, variant_base_index);
+
       // Do we accept this as a polymorphism?
       if (polymorphism_bonferroni_score >= _polymorphism_score_cutoff)
         passed_as_polymorphism_prediction = true;
-      
-      //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
     }
-		
+
 		//###
 		//## UNKNOWN UNKNOWN UNKNOWN
 		//###
@@ -1429,26 +1397,23 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
       //## Specific initializations for polymorphisms. Must take precedence.
 
-      //# the frequency returned is the probability of the FIRST base
-      //# we want to quote the probability of the second base (the minor allele from the reference).
       mut[REF_BASE] = ref_base_char;
-      mut[NEW_BASE] = (best_base_char == ref_base_char) ? second_best_base_char : best_base_char;
-      
-      mut[MAJOR_BASE] = best_base_char;
-      mut[MINOR_BASE] = second_best_base_char;
-      mut[MAJOR_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
-      
-      double variant_frequency = ppred.frequency;
-      if (mut[REF_BASE] == mut[MAJOR_BASE]) {
-        variant_frequency = 1.0 - variant_frequency;
-      }
-      mut[POLYMORPHISM_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
+      mut[NEW_BASE] = variant_base_char;
 
+      mut[MAJOR_BASE] = major_base_char;
+      mut[MINOR_BASE] = minor_base_char;
+
+      //## Both of these are fractions of TOTAL depth now, so unlike the old pair-relative
+      //## frequencies they do NOT sum to 1 -- the whole fitted spectrum does.
+      mut[MAJOR_FREQUENCY] = formatted_double(
+          amodel.reported_frequency(major_base_index), _polymorphism_precision_places, true).to_string();
+      mut[POLYMORPHISM_FREQUENCY] = formatted_double(
+          amodel.reported_frequency(variant_base_index), _polymorphism_precision_places, true).to_string();
 
       // Add line to the polymorphism statistics input file if we are only a polymorphism
 
-      if (ppred.frequency != 1) {
-        annotate_polymorphism_statistics(mut, best_base_char, second_best_base_char, pos_info, pdata);
+      if (minor_base_char != 'N') {
+        annotate_polymorphism_statistics(mut, major_base_char, minor_base_char, pos_info, pdata);
       }
 
       //## More fields common to consensus mutations and polymorphisms
@@ -1514,33 +1479,41 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         //mut[POSITION] = to_string<uint32_t>(position);
         //mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
 
-        // tries all frequencies of the best two
-        
-        base_char best_base_char = from_string<base_char>(mut[REF_BASE]);
-        base_char second_best_base_char = from_string<base_char>(mut[NEW_BASE]);
-        
-        if (_settings.polymorphism_prediction) {
-          ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
+        //## Read the user's allele straight off the position's own fit, rather than re-fitting a
+        //## two-base model of (ref_base, new_base). The old private fit is what forced the major
+        //## and minor alleles here to be defined pair-relatively -- with the acknowledged caveat
+        //## that "there could be a 3rd base that matters" -- and it took the reference base as an
+        //## error-table lookup key, which asserts outright when the reference is 'N'. Neither
+        //## problem survives sharing the five-allele fit: a third allele is already in the model,
+        //## and the reference base is never used as a key.
+        const base_char user_ref_base_char = from_string<base_char>(mut[REF_BASE]);
+        const base_char user_new_base_char = from_string<base_char>(mut[NEW_BASE]);
+        const base_index user_ref_index = basechar2index(user_ref_base_char);
+        const base_index user_variant_index = basechar2index(user_new_base_char);
+
+        double user_polymorphism_score = numeric_limits<double>::quiet_NaN();
+        double user_variant_frequency = 0.0;
+        if (user_variant_index < base_list_size) {
+          user_polymorphism_score = variant_presence_score(pdata, amodel, user_variant_index);
+          user_variant_frequency = amodel.reported_frequency(user_variant_index);
         }
-        // tries only the raw ML frequency of the best two
-        else {
-          ppred = predict_mixed_base(best_base_char, second_best_base_char, pdata);
-        }
-        
-        double polymorphism_bonferroni_score = 10 * (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
-        
-        // These defs of major and minor base are not quite always accurate.
-        // because they only take into account ref_base and new_base of the RA line
-        // (and there could be a 3rd base that matters)
-        // ---> in the future it may be better to KEEP the major and minor alleles and work with
-        //      these instead, but that leads to its own issues
-        mut[MAJOR_BASE] = (ppred.frequency > 0.5) ? best_base_char : second_best_base_char;
-        mut[MINOR_BASE] = (ppred.frequency > 0.5) ? second_best_base_char : best_base_char;
-        mut[MAJOR_FREQUENCY] = formatted_double( ((ppred.frequency > 0.5) ? ppred.frequency : 1 - ppred.frequency), _polymorphism_precision_places, true).to_string();
-        
-        // The frequency of the variant is always this, due to the way the ref_base is set as best_base_char
-        mut[POLYMORPHISM_FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
-        
+        // A user entry may name a reference base of 'N', which has no allele in the model.
+        double user_ref_frequency = amodel.reported_frequency(user_ref_index);
+
+        //## Major and minor stay defined WITHIN the pair the user named, even though the
+        //## frequencies now come from the position's full fit. Reporting the position's own major
+        //## and minor here instead would silently discard the user's question:
+        //## mutation_predictor recovers the allele as (major == ref) ? minor : major, so at a
+        //## position carrying no real variant every user entry would come back as 'N'.
+        bool user_variant_is_major = (user_variant_frequency > user_ref_frequency);
+        mut[MAJOR_BASE] = user_variant_is_major ? user_new_base_char : user_ref_base_char;
+        mut[MINOR_BASE] = user_variant_is_major ? user_ref_base_char : user_new_base_char;
+        mut[MAJOR_FREQUENCY] = formatted_double(
+            user_variant_is_major ? user_variant_frequency : user_ref_frequency,
+            _polymorphism_precision_places, true).to_string();
+
+        mut[POLYMORPHISM_FREQUENCY] = formatted_double(user_variant_frequency, _polymorphism_precision_places, true).to_string();
+
         // Consensus mode
         if (!_settings.polymorphism_prediction) {
           if (from_string<double>(mut[POLYMORPHISM_FREQUENCY]) > 0.5 ) {
@@ -1551,11 +1524,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         } else { // Polymorphism mode
           mut[FREQUENCY] =  mut[POLYMORPHISM_FREQUENCY];
         }
-        
+
         // Genotype quality is for the top called genotype
         mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
-        mut[POLYMORPHISM_SCORE] = formatted_double(polymorphism_bonferroni_score, kMutationScorePrecision).to_string();
-        
+        mut[POLYMORPHISM_SCORE] = formatted_double(user_polymorphism_score, kMutationScorePrecision).to_string();
+
         vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
         mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
         
@@ -1947,317 +1920,176 @@ void identify_mutations_pileup::annotate_polymorphism_statistics(cDiffEntry& mut
 }
 
 
-/*! Predict the significance of putative polymorphisms.
- */
-polymorphism_prediction identify_mutations_pileup::predict_polymorphism(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
-  
-  //#calculate the likelihood of observed reads given this position is 100% the best base
-	double log10_likelihood_of_one_base_model = 0;
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-  
-    double log10_correct_pr;
+/*! Report a fitted frequency, flooring an allele the fit places below the half-read level to zero.
 
-    covariate_values_t this_cv = it->_cv;
-      
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
-      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-    }
-    log10_correct_pr = _error_table.get_log10_prob(this_cv);
-       
-    log10_likelihood_of_one_base_model  += log10_correct_pr;
-  }
-
-	vector<uint8_t> best_base_qualities;
-	vector<uint8_t> second_best_base_qualities;
-	uint32_t best_base_strand_hash[] = {0, 0};
-	uint32_t second_best_base_strand_hash[] = {0, 0};
-  
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-  
-    int8_t zp_strand = (it->_strand == +1) ? 1 : 0;
-    if (it->_base_char == best_base_char) {
-      best_base_qualities.push_back(it->_quality);
-      best_base_strand_hash[zp_strand]++;
-    }
-    else if (it->_base_char == second_best_base_char) {
-      second_best_base_qualities.push_back(it->_quality);
-      second_best_base_strand_hash[zp_strand]++;
-    }
-  }
-  
-	//## Maximum likelihood of observing alignment if sequenced bases were a mixture of the top two bases  
-  pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
-  double max_likelihood_fr_first_base = best_two_base_model.first;
-  double log10_likelihood_of_two_base_model = best_two_base_model.second;
-    
-  //## Likelihood ratio test
-  double log10_likelihood_difference = log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model;
-
-  //debug output 
-  /*
-  cerr  << "ML Best Base Fraction: " << max_likelihood_fr_first_base << endl;
-  cerr  << " Log10 Likelihood (one base model): " << log10_likelihood_of_one_base_model << endl;
-  cerr  << " Log10 Likelihood (two base model): " << log10_likelihood_of_two_base_model << endl;
-  cerr  << " Log10 Likelihood (different): " << log10_likelihood_difference << endl;
-  */
-    
-  long double p_value = 1;
-  if (max_likelihood_fr_first_base != 1.0) {
-    double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
-    
-    p_value = pchisq(1.0L, likelihood_ratio_test_value);
-    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
-  }
-
-  //debug output 
-  /*
-  cerr
-    << " Log10 Likelihood Difference (one vs two base model): " << (log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model) 
-    << " P-value: " << p_value 
-    << endl;
-  */
-   
-  polymorphism_prediction p(max_likelihood_fr_first_base, log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model, p_value);
-		
-	return p;
-}
-  
-/*! Predict the significance of putative polymorphisms.
- */
-polymorphism_prediction identify_mutations_pileup::predict_mixed_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
-  
-  //#calculate the likelihood of observed reads given this position is 100% the best base  
-  double log10_likelihood_of_one_base_model = 0;
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-    
-    double log10_correct_pr;
-    
-    covariate_values_t this_cv = it->_cv;
-    
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char)); 
-      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-    }
-    log10_correct_pr = _error_table.get_log10_prob(this_cv);
-    
-    log10_likelihood_of_one_base_model  += log10_correct_pr;
-  }
-  
-  vector<uint8_t> best_base_qualities;
-  vector<uint8_t> second_best_base_qualities;
-  uint32_t best_base_strand_hash[] = {0, 0};
-  uint32_t second_best_base_strand_hash[] = {0, 0};
-  
-  for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-    
-    int8_t zp_strand = (it->_strand == +1) ? 1 : 0;
-
-    if (it->_base_char == best_base_char) {
-      best_base_qualities.push_back(it->_quality);
-      best_base_strand_hash[zp_strand]++;
-    }
-    else if (it->_base_char == second_best_base_char) {
-      second_best_base_qualities.push_back(it->_quality);
-      second_best_base_strand_hash[zp_strand]++;
-    }
-  }
-  
-  
-  
-  // Unlike full polymorphism prediction, we test just the raw frequency of the two bases
-  // and do not check for bias later.
-  
-  // This would calculate the true best frequency -- slower, but more accurate
-  // pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
-  
-  double max_likelihood_fr_first_base = static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1]) 
-    / static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1] + second_best_base_strand_hash[0] + second_best_base_strand_hash[1]);
-  
-  double log10_likelihood_of_two_base_model = calculate_two_base_model_log10_likelihood(
-                                                                                        best_base_char, 
-                                                                                        second_best_base_char, 
-                                                                                        pdata, 
-                                                                                        max_likelihood_fr_first_base
-                                                                                        );
-  
-  //## Likelihood ratio test
-  double log10_likelihood_difference = log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model;
-  
-  //debug output 
-  /*
-   cerr  << "ML Best Base Fraction: " << max_likelihood_fr_first_base << endl;
-   cerr  << " Log10 Likelihood (one base model): " << log10_likelihood_of_one_base_model << endl;
-   cerr  << " Log10 Likelihood (two base model): " << log10_likelihood_of_two_base_model << endl;
-   cerr  << " Log10 Likelihood (different): " << log10_likelihood_difference << endl;
-   */
-  
-  long double p_value = 1;
-  if (max_likelihood_fr_first_base != 1.0) {
-    double likelihood_ratio_test_value = -2*log(10)*log10_likelihood_difference;
-    
-    p_value = pchisq(1.0L, likelihood_ratio_test_value);
-    //cerr << "likelihood_ratio_test_value: " << likelihood_ratio_test_value << " p-value: " << p_value << endl;
-  }
-  
-  polymorphism_prediction p(max_likelihood_fr_first_base, log10_likelihood_of_one_base_model - log10_likelihood_of_two_base_model, p_value);
-  
-  return p;
-}
- 
-  
-double identify_mutations_pileup::slope_at_percentage_best_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata, const double guess, const double precision, double& middle_point_log10_likelihood)  
+  EM approaches an absent component asymptotically instead of reaching it, so an allele with no
+  supporting reads at all settles around 1e-13 rather than 0. Printing that is just noise, and it
+  is the same "below half a read is not a called allele" rule next_index() applies.
+*/
+double allele_model::reported_frequency(base_index b) const
 {
-  // precision is a fraction of the value
-  double point_1 = max(guess * (1 - precision), 0.0);  
-  double point_2 = min(guess * (1 + precision), 1.0);
-  
-  double point_1_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, point_1);
-  double point_2_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, point_2);
-  
-  middle_point_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, guess);
-
-  // Check for local minimum!
-  if ( (middle_point_log10_likelihood < point_1_log10_likelihood) && (middle_point_log10_likelihood < point_2_log10_likelihood) ) {
-    return 0;
-  }
-  
-  return (point_2_log10_likelihood - point_1_log10_likelihood) / (point_2 - point_1);
+  if ((n == 0) || (b >= base_list_size)) return 0.0;
+  return (f[b] < 0.5 / static_cast<double>(n)) ? 0.0 : f[b];
 }
 
-/*! Find the best fraction for the best base at a polymorphic site.
- */
-  
-pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
-{	
-  uint32_t iterations = 0;
-  double current_upper_pr_first_base = 1.0;
-  double current_lower_pr_first_base = 0.0;
-  
-  double current_upper_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_upper_pr_first_base);
-  double current_lower_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_lower_pr_first_base);
-  
-  // precision is a fraction of the value...
-  while (current_upper_pr_first_base - current_lower_pr_first_base > (current_upper_pr_first_base + current_lower_pr_first_base) / 2 * _polymorphism_precision_decimal) {
-    
-    iterations++;
-    //cout << iterations << " "  << current_lower_pr_first_base << " " << current_upper_pr_first_base << endl;
-    
-    double current_middle_pr_first_base = (current_upper_pr_first_base + current_lower_pr_first_base) / 2;
-    
-    double current_middle_pr_first_base_log10_likelihood;
-    double middle_slope = slope_at_percentage_best_base(best_base_char, second_best_base_char, pdata, current_middle_pr_first_base, _polymorphism_precision_decimal, current_middle_pr_first_base_log10_likelihood);
-    
-    // Slope is set to zero if the tested point is better than the ones 
-    // on either side, when calculating the slope.
-    if ( middle_slope == 0) {
-      return make_pair(current_middle_pr_first_base, current_middle_pr_first_base_log10_likelihood);
-    
-    } else if ( middle_slope < 0) {
-      
-      current_upper_pr_first_base = current_middle_pr_first_base;
-      current_upper_pr_first_base_log10_likelihood = current_middle_pr_first_base_log10_likelihood;
-      
-    } else {
-      
-      current_lower_pr_first_base = current_middle_pr_first_base;
-      current_lower_pr_first_base_log10_likelihood = current_middle_pr_first_base_log10_likelihood;
-    }
-  }  
-    
-  if (current_lower_pr_first_base_log10_likelihood > current_upper_pr_first_base_log10_likelihood) {
-
-    return make_pair(current_lower_pr_first_base, current_lower_pr_first_base_log10_likelihood);
-  }
-  
-  return make_pair(current_upper_pr_first_base, current_upper_pr_first_base_log10_likelihood);
-}
-  
-/*
-pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
-{	
-  
-	double cur_pr_first_base = 1;
-	double cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
-
-	double last_pr_first_base = 1;
-	double last_log_pr = cur_log_pr;
-
-	//print "$cur_pr_first_base $cur_log_pr\n" if ($verbose);
-
-	while (cur_log_pr >= last_log_pr)
-	{
-		last_log_pr = cur_log_pr;
-		last_pr_first_base = cur_pr_first_base;
-    if (cur_pr_first_base < 0) break;
-
-		cur_pr_first_base -= 0.001;
-		cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
-	}
-	
-	return make_pair(last_pr_first_base, last_log_pr);
-}
- */
-
-/*! Calculate the likelihood of a mixture model of two bases leading to the observed read bases.
- */
-double identify_mutations_pileup::calculate_two_base_model_log10_likelihood(
-                                                                            base_char best_base_char, 
-                                                                            base_char second_best_base_char, 
-                                                                            const vector<polymorphism_data>& pdata, 
-                                                                            double best_base_freq
-                                                                            )
+base_index allele_model::major_index() const
 {
-	double log10_likelihood = 0;	
-	
-  for(vector<polymorphism_data>::const_iterator it=pdata.begin(); it<pdata.end(); ++it) {
-  
-    //## the first value is pr_base, second is pr_not_base
-    double best_base_log10pr;
-    double second_best_base_log10pr;
-    
-    covariate_values_t this_cv = it->_cv;
-    
-    if (it->_strand == -1) {
-      this_cv.obs_base() = complement_base_index(this_cv.obs_base());
-    }
-    
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(best_base_char));
-    }
-    best_base_log10pr = _error_table.get_log10_prob(this_cv);
-    
-    if(it->_strand == 1) {
-      this_cv.ref_base() = basechar2index(second_best_base_char);
-    } else {
-      this_cv.ref_base() = basechar2index(complement_base_char(second_best_base_char));
-    }
-    second_best_base_log10pr = _error_table.get_log10_prob(this_cv);
-
-    //debug output
-    //cerr << "Base in Read: " << it->base << " Read Strand: " << it->strand << endl;
-    //cerr << "Best Base: " << best_base << " Key: " << best_base_key << " Chance of Observing: " << pow(10,best_base_log10pr) << endl;
-    //cerr << "Second Best Base: " << second_best_base << " Key: " << second_best_base_key << " Chance of Observing: " << pow(10,second_best_base_log10pr) << endl;
-
-    double pr_ref_base_given_obs = best_base_freq * pow(10, best_base_log10pr) + (1-best_base_freq) * pow(10, second_best_base_log10pr);
-
-    log10_likelihood += log(pr_ref_base_given_obs);		
+  if (n == 0) return base_list_N_index;
+  base_index best = 0;
+  for (uint8_t b=1; b<base_list_size; b++) {
+    if (f[b] > f[best]) best = b;
   }
-
-	log10_likelihood /= log(10);
-  
-  //debug output
-  /*
-  cerr << "Best Base: " << best_base << " Second Best Base: " << second_best_base << " Fraction Best Base: " << best_base_freq << " Log10 Likelihood " << log10_likelihood << endl;
-  */
-	return log10_likelihood;
+  return (f[best] > 0.0) ? best : base_list_N_index;
 }
+
+base_index allele_model::next_index(base_index exclude_index) const
+{
+  if (n == 0) return base_list_N_index;
+
+  // An allele the fit puts below the half-read level is not a called allele. EM approaches an
+  // absent component asymptotically rather than reaching zero, so without a floor every position
+  // would report all five alleles as present at frequencies like 1e-9.
+  const double present_threshold = 0.5 / static_cast<double>(n);
+
+  base_index best = base_list_N_index;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (b == exclude_index) continue;
+    if (f[b] < present_threshold) continue;
+    if ((best == base_list_N_index) || (f[b] > f[best])) best = b;
+  }
+  return best;
+}
+
+/*! Fit the allele frequency mixture at one position by EM.
+
+  The position carries frequencies f over the five candidate alleles. Read i draws a true base b
+  with probability f[b] and is then observed with probability P_i(b), which the error table already
+  gave us (cached in polymorphism_data by fill_read_base_likelihoods):
+
+    E-step:  w_i(b) = f[b] r_i(b) / s_i,   s_i = Sum_b' f[b'] r_i(b')
+    M-step:  f[b]   = (1/n) Sum_i w_i(b)
+
+  Fitting all five alleles at once, rather than a mixture of the top two by coverage, is the whole
+  point: it puts every frequency on the same denominator (total depth) and keeps the reference
+  allele in the model even when it is not one of the two best-supported bases. That case is not
+  exotic -- across the test goldens, 44% of RA entries have neither the major nor the minor allele
+  equal to the reference.
+
+  The objective is concave on the simplex, so the fixed point EM reaches is the global maximum.
+  That is what lets this replace a bisection that needed an explicit local-minimum guard.
+
+  Everything is evaluated on the max-normalized r_i(b) rather than raw probabilities, so the
+  mixture sums cannot underflow; the discarded exponent comes back per read via _log10_pr_max.
+*/
+allele_model
+identify_mutations_pileup::fit_allele_frequencies(const vector<polymorphism_data>& pdata, const bool allowed[base_list_size]) const
+{
+  allele_model m;
+  m.n = static_cast<uint32_t>(pdata.size());
+  if (m.n == 0) return m;
+
+  // Start from Laplace-smoothed observed base counts. The half-count keeps every allowed component
+  // strictly interior: a component initialized at exactly zero is a fixed point of the E-step and
+  // could never be revived, so a hard zero would decide the answer instead of the data.
+  double init_total = 0.0;
+  uint32_t n_allowed = 0;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    if (!allowed[b]) continue;
+    n_allowed++;
+    m.f[b] = 0.5;
+  }
+  if (n_allowed == 0) return m;
+
+  for (vector<polymorphism_data>::const_iterator it=pdata.begin(); it!=pdata.end(); ++it) {
+    base_index obs = basechar2index(it->_base_char);
+    if ((obs < base_list_size) && allowed[obs]) m.f[obs] += 1.0;
+  }
+  for (uint8_t b=0; b<base_list_size; b++) init_total += m.f[b];
+  for (uint8_t b=0; b<base_list_size; b++) m.f[b] /= init_total;
+
+  const uint32_t k_max_iterations = 50;
+  const double k_tolerance = _polymorphism_precision_decimal;
+
+  for (m.iterations = 1; m.iterations <= k_max_iterations; m.iterations++) {
+
+    double sum_w[base_list_size], sum_w_sq[base_list_size];
+    for (uint8_t b=0; b<base_list_size; b++) { sum_w[b] = 0.0; sum_w_sq[b] = 0.0; }
+    double log10_likelihood = 0.0;
+
+    for (vector<polymorphism_data>::const_iterator it=pdata.begin(); it!=pdata.end(); ++it) {
+
+      double s = 0.0;
+      for (uint8_t b=0; b<base_list_size; b++) {
+        if (allowed[b]) s += m.f[b] * it->_r[b];
+      }
+
+      if (s > 0.0) {
+        log10_likelihood += log10(s) + it->_log10_pr_max;
+        for (uint8_t b=0; b<base_list_size; b++) {
+          if (!allowed[b]) continue;
+          double w = m.f[b] * it->_r[b] / s;
+          sum_w[b] += w;
+          sum_w_sq[b] += w * w;
+        }
+      } else {
+        // Unreachable with a calibrated table: every entry is Laplace-smoothed and the
+        // mapping-quality term adds a strictly positive floor. Fall back to the current
+        // frequencies so that Sum_b Sum_i w_i(b) == n stays exact regardless.
+        for (uint8_t b=0; b<base_list_size; b++) {
+          if (!allowed[b]) continue;
+          sum_w[b] += m.f[b];
+          sum_w_sq[b] += m.f[b] * m.f[b];
+        }
+      }
+    }
+
+    double max_delta = 0.0;
+    for (uint8_t b=0; b<base_list_size; b++) {
+      if (!allowed[b]) continue;
+      double f_new = sum_w[b] / static_cast<double>(m.n);
+      max_delta = max(max_delta, fabs(f_new - m.f[b]));
+      m.f[b] = f_new;
+    }
+
+    // Commit the sums that produced the frequencies we just set. Because the M-step defines
+    // f[b] = sum_w[b]/n, the identity sum_w[b] == n * f[b] holds exactly for the committed pair,
+    // which is what the effective depth downstream relies on.
+    for (uint8_t b=0; b<base_list_size; b++) { m.sum_w[b] = sum_w[b]; m.sum_w_sq[b] = sum_w_sq[b]; }
+    m.log10_likelihood = log10_likelihood;
+
+    if (max_delta < k_tolerance) break;
+  }
+  if (m.iterations > k_max_iterations) m.iterations = k_max_iterations;
+
+  return m;
+}
+
+/*! log10 evidence that a given allele is present at this position at all.
+
+  A profile likelihood ratio between the full fit and the best fit that holds this allele out
+  entirely, Bonferroni-corrected by the reference length as every score in this file is.
+
+  The null keeps the reference allele AND any third allele, which is what makes the number
+  meaningful when the two best-supported bases are both non-reference: the question asked is
+  "is THIS allele present", not "are the top two bases in different proportions".
+*/
+double identify_mutations_pileup::variant_presence_score(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index) const
+{
+  if ((full.n == 0) || (variant_index >= base_list_size)) return numeric_limits<double>::quiet_NaN();
+
+  bool without[base_list_size];
+  uint32_t n_remaining = 0;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    without[b] = (b != variant_index);
+    if (without[b]) n_remaining++;
+  }
+  if (n_remaining == 0) return numeric_limits<double>::quiet_NaN();
+
+  allele_model null_fit = fit_allele_frequencies(pdata, without);
+
+  return (full.log10_likelihood - null_fit.log10_likelihood) - _log10_ref_length;
+}
+
 
 /*! Per-read-base likelihoods under each of the five candidate true bases.
 

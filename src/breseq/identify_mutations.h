@@ -158,19 +158,42 @@ namespace breseq {
     double _log10_pr_max;
 	};
 
-	/*! Polymorphism prediction data struct.
+	/*! Fitted allele frequencies at one position.
+
+   The position is modelled as a mixture over all five candidate alleles: a read draws a true base
+   b with probability f[b], then is observed according to the calibrated error table. Fitting all
+   five together rather than the top two is what makes every frequency here a fraction of TOTAL
+   depth, with the reference allele always in the model.
+
+   The log-likelihood is concave on the simplex (a sum of logs of linear functions of f), so the
+   maximum EM converges to is global -- which is why no local-minimum guard is needed here, unlike
+   the two-base bisection this replaces.
 	 */
-	struct polymorphism_prediction {
-		//! Constructor.
-		polymorphism_prediction(double f = 0.0, double l = 0.0, double p = 0.0)
-		: frequency(f), log10_base_likelihood(l), likelihood_ratio_test_p_value(p) {
+	struct allele_model {
+		allele_model()
+		: log10_likelihood(0.0), n(0), iterations(0) {
+			for (uint8_t b=0; b<base_list_size; b++) { f[b] = 0.0; sum_w[b] = 0.0; sum_w_sq[b] = 0.0; }
 		}
-		
-		double frequency;
-		double log10_base_likelihood;
-		long double likelihood_ratio_test_p_value;
+
+		double f[base_list_size];         //!< fitted frequencies, sum to 1 over the allowed alleles
+		double log10_likelihood;          //!< log10 L at the fit
+		double sum_w[base_list_size];     //!< Sum_i w_i(b), exactly n * f[b]
+		double sum_w_sq[base_list_size];  //!< Sum_i w_i(b)^2, for the effective depth
+		uint32_t n;                       //!< read bases in the fit
+		uint32_t iterations;              //!< EM iterations used
+
+		//! Frequency of allele b for reporting, floored to 0 below the half-read level.
+		double reported_frequency(base_index b) const;
+
+		//! Index of the highest-frequency allele, or base_list_N_index if the fit is empty.
+		base_index major_index() const;
+
+		//! Index of the highest-frequency allele other than exclude_index, or base_list_N_index.
+		//  Alleles below the half-read level (f < 1/2n) are treated as absent.
+		base_index next_index(base_index exclude_index) const;
 	};
-	
+
+
   /*! Result of calling a single pure genotype at one position.
 
    Replaces the incremental per-read Bayes update that cDiscreteSNPCaller used to perform. With
@@ -310,21 +333,15 @@ namespace breseq {
     cSNPCall pure_genotype_call(const double log10_pr_sum[base_list_size], uint32_t observations) const;
 
 
-		//! Predict whether there is a significant polymorphism.
-    polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
+		//! Fit the allele frequency mixture at one position by EM.
+    //  allowed[b] == false holds allele b out of the model entirely, which is how the
+    //  "this allele is absent" null hypothesis behind the polymorphism score is evaluated.
+    allele_model fit_allele_frequencies(const vector<polymorphism_data>& pdata, const bool allowed[base_list_size]) const;
 
-    //! Predict whether there is a mixed base.
-    polymorphism_prediction predict_mixed_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
-    
-    //! Helper function
-    double slope_at_percentage_best_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata, const double guess, const double precision, double& middle_point_log10_likelihood); 
-    
-		//! Find best mixture of two bases and likelihood of producing observed read bases.
-    pair<double,double> best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata);
+    //! log10 evidence that allele variant_index is present at all, against the best fit without it.
+    double variant_presence_score(const vector<polymorphism_data>& pdata, const allele_model& full, base_index variant_index) const;
 
-		//! Calculate likelihood of a specific mixture of two bases producing observed read bases.
-    double calculate_two_base_model_log10_likelihood (base_char best_base_char, base_char second_best_base_char, const vector<polymorphism_data>& pdata, double best_base_freq);
-		
+
     //! Settings passed at command line
     const Settings& _settings;
 		cGenomeDiff _gd; //!< Genome diff.
