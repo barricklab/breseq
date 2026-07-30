@@ -184,7 +184,11 @@ string htmlize(const string& input)
 string header_style_string()
 {
   stringstream ss;
-  ss << "body {font-family: sans-serif; font-size: 11pt; margin: 0; padding: 8px;}" << endl;
+  // No top padding: the page header supplies that 8px as its own padding-top, so the header
+  // starts at viewport y=0 and its "position: sticky; top: 0" pin never has to move it.
+  // Left/right/bottom stay at 8px (alignStickyColumns() reads paddingLeft and .sticky_left_mask
+  // assumes 8px). See the .breseq-page-header rule below -- the two are coupled.
+  ss << "body {font-family: sans-serif; font-size: 11pt; margin: 0; padding: 0 8px 8px 8px;}" << endl;
   ss << "th {background-color: rgb(0,0,0); color: rgb(255,255,255);}"      << endl;
   ss << "table {background-color: rgb(1,0,0); color: rgb(0,0,0);}"         << endl;
   ss << "tr {background-color: rgb(255,255,255);}"                         << endl;
@@ -218,8 +222,28 @@ string header_style_string()
   // Box model is kept separate from the sticky positioning so that pages which
   // are not sticky (the evidence entry pages) can share the exact same header
   // geometry and the header does not shift when navigating between them.
-  ss << ".breseq-page-header { background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }" << endl;
+  //
+  // padding-top is 12px = the 8px removed from body's padding-top + the header's own 4px, so the
+  // header's border box starts at viewport y=0 while its content still starts at y=12 exactly as
+  // before (everything below the header also lands on the same pixels as before). That makes
+  // "position: sticky; top: 0" a zero offset at every scroll position: the top material never
+  // moves as the page scrolls, and it sits on the same pixels on the non-sticky evidence pages.
+  // Do NOT express this as a negative margin-top instead: sticky clamps the MARGIN edge, not the
+  // border edge, so a -8px top margin lets the border box ride 8px above the scrollport once
+  // scrolled and the shift comes back at a different scroll threshold.
+  //
+  // The -8px left/right margins with matching 8px left/right padding bleed the white background
+  // and the bottom rule across the full window width while leaving the content box width
+  // unchanged (so nothing inside reflows). That also seals body's side-padding strips, where
+  // content of a horizontally scrolled table would otherwise show through beside the pinned
+  // header. Keep these in sync with body's padding above. (Not "width: 100vw" -- 100vw includes
+  // the scrollbar and would add a horizontal scrollbar.)
+  ss << ".breseq-page-header { background-color: white; border-bottom: 1px solid #ccc; padding: 12px 8px 4px 8px; margin: 0 -8px; }" << endl;
   ss << ".breseq-page-header p { margin: 0.3em 0; }"                           << endl;
+  // Reserve the logo's box before the PNG loads (breseq_icon.png is 54x32). Without this the
+  // header is ~25px short at first layout and grows when the image paints -- a visible jump on
+  // every page navigation, and alignStickyHeaders() measures the wrong height at DOMContentLoaded.
+  ss << ".breseq-page-header img { width: 54px; height: 32px; }"               << endl;
   ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; }"    << endl;
   ss << ".sample_name { font-size: 14pt; font-weight: bold; text-align: left; margin: 0 0 4px 0; }" << endl;
   // Sticky column-header cells. The tables use cellspacing="1" over a near-black table
@@ -281,6 +305,13 @@ string javascript_string()
   ss << "    var baseTop = pageHeader ? pageHeader.offsetHeight : 0;"          << endl;
   ss << "    var topMask = document.querySelector('.sticky_top_mask');"       << endl;
   ss << "    if (topMask) topMask.style.height = baseTop + 'px';"             << endl;
+  // Keep same-page anchor jumps ("Jump to: ...") from landing their target underneath the pinned
+  // page header. Applied to every in-page link target, so new jump links need no bookkeeping; a
+  // no-op where there is no sticky header (baseTop 0) or where the href is a bare "#".
+  ss << "    document.querySelectorAll('a[href^=\"#\"]').forEach(function(a) {" << endl;
+  ss << "      var t = document.getElementById(a.getAttribute('href').slice(1));" << endl;
+  ss << "      if (t) t.style.scrollMarginTop = baseTop + 'px';"              << endl;
+  ss << "    });"                                                             << endl;
   ss << "    document.querySelectorAll('thead').forEach(function(thead) {"     << endl;
   ss << "      var rows = thead.querySelectorAll('tr');"                       << endl;
   ss << "      var top = baseTop;"                                             << endl;
