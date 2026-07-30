@@ -3641,8 +3641,8 @@ bool cGenomeDiff::read_counts_for_entry(const cDiffEntry& de, double& new_read_c
         // read distinguishes the junction from the reference, and neither correction is visible in
         // the integer counts. A MOB and the JC evidence it was predicted from would then report
         // different frequencies for the same event.
-        if (de.entry_exists(POLYMORPHISM_FREQUENCY) && de.entry_exists("junction_effective_depth")) {
-          double f = from_string<double>(de.get(POLYMORPHISM_FREQUENCY));
+        if (de.entry_exists(FREQUENCY) && de.entry_exists("junction_effective_depth")) {
+          double f = from_string<double>(de.get(FREQUENCY));
           double n_eff = from_string<double>(de.get("junction_effective_depth"));
           if (n_eff > 0.0) {
             new_read_count = f * n_eff;
@@ -4758,8 +4758,10 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       uint32_t variant_cov = from_string<uint32_t>(variant_covs[0]) + from_string<uint32_t>(variant_covs[1]);
       gvf[8] = gvf[8].append(";Variant_reads=").append(to_string(variant_cov));
         
-      // Attributes - Frequency 
-      gvf[8].append(";Variant_freq=").append( ev[FREQUENCY] );
+      // Attributes - Frequency
+      // Through mutation_frequency(), since this describes the mutation: the RA entry holds its
+      // fitted estimate, and a consensus call is reported as 1 here as it always has been.
+      gvf[8].append(";Variant_freq=").append( ev.mutation_frequency() );
       
 
       if (de.entry_exists("snp_type")) {

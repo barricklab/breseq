@@ -783,7 +783,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   vector<gd_entry_type> dp_types = make_vector<gd_entry_type>(DP);
   diff_entry_list_t dp_list = gd.filter_used_as_evidence(gd.get_list(dp_types));
   dp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
-  dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("discordant_pair_frequency")));
+  dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(FREQUENCY)));
   mark_gd_entries_in_list_no_show(dp_list, settings.max_rejected_discordant_pair_evidence_to_show);
 
 }
@@ -885,7 +885,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   if (dp_list.size() > 0) {
     // Highest local frequency (the ones that came closest to passing) first -- the frequency test is the
     // operative gate now, so skew is no longer a meaningful ordering.
-    dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("discordant_pair_frequency")));
+    dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(FREQUENCY)));
     marginal_dp_title += " (sorted from high to low frequency)";
   }
 
@@ -2005,10 +2005,10 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   }
 
   //Determine Number of Columns in Table
-  size_t total_cols = link ? 12 : 11;
-  
+  size_t total_cols = link ? 13 : 12;
+
   //Create Column Titles
-  //seq_id/position/change/freq/score/cov/annotation/genes/product
+  //seq_id/position/change/freq/range/score/cov/annotation/genes/product
   ss << "<thead>" << endl;
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) +
@@ -2024,6 +2024,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   ss << th("ref")        << endl <<
         th("new")        << endl <<
         th("freq")       << endl <<
+        th("range")      << endl <<
         th("score&nbsp;(cons/poly)")      << endl <<
         th("reads")      << endl <<
         th("annotation") << endl <<
@@ -2040,10 +2041,10 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
        itr != list_ref.end(); itr ++) {
     cDiffEntry& c = **itr;
     
-    bool is_polymorphism = false;
-    if (c.entry_exists(FREQUENCY) && (from_string<double>(c[FREQUENCY]) != 1.0)) {
-      is_polymorphism = true;
-    }
+    // From [prediction], not from testing [frequency] against 1: the entry reports its fitted
+    // estimate, so a fixed call sits at 0.982 rather than 1 and a frequency test would shade
+    // every consensus row green.
+    bool is_polymorphism = (c[PREDICTION] == "polymorphism");
     
     string row_class = "normal_table_row";
     
@@ -2079,10 +2080,15 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ssf.clear();
     ssf.width(4);
     ssf.precision(1);
-    if (c.entry_exists(POLYMORPHISM_FREQUENCY))
-      ssf << fixed << from_string<double>(c[POLYMORPHISM_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
+    if (c.entry_exists(FREQUENCY))
+      ssf << fixed << from_string<double>(c[FREQUENCY]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
-    
+
+    // "range" column: the confidence limits the frequency cutoffs are actually applied to.
+    ss << td(ALIGN_RIGHT,
+             Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER]));
+
+
     ssf.str("");
     ssf.clear();
     ssf.precision(1);
@@ -2385,7 +2391,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
 
   ss << "<div id=\"new_junction_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 12 : 10; //@ded 12/10 instead of 11/9 for frequency addition. SNPS set up to only do so if frequency is != 1 should this be done here as well?
+  size_t total_cols = link ? 13 : 11; //@ded 12/10 instead of 11/9 for frequency addition, +1 more for its range. SNPS set up to only do so if frequency is != 1 should this be done here as well?
   
   ss << "<thead>" << endl;
   if (title != "") {
@@ -2409,6 +2415,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
         th("score")       << endl <<
         th("skew")        << endl <<
         th("freq")        << endl <<//@ded frequency added as 9th column.
+        th("range")       << endl <<
         th("annotation")  << endl <<
         th("gene")        << endl;
 
@@ -2488,8 +2495,12 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
       ss << td("rowspan=\"2\" align=\"center\"",
               c["neg_log10_pos_hash_p_value"]) << endl;
 
-      ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[POLYMORPHISM_FREQUENCY])) << endl;
-              
+      ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
+      // "range" column: the confidence limits the frequency cutoffs are actually applied to.
+      ss << td("rowspan=\"2\" align=\"center\"",
+               Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
+
+
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
               nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
@@ -2687,7 +2698,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
 
   ss << "<div id=\"discordant_pair_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = 9 + link_cols;
+  size_t total_cols = 10 + link_cols;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -2706,7 +2717,8 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         th("position")      << endl <<
         th("pairs")         << endl <<   // side_1 / side_2 pair count
         th("disc&nbsp;pairs") << endl <<  // discordant_pair_count
-        th("freq")          << endl <<   // discordant_pair_frequency (the operative accept/reject gate)
+        th("freq")          << endl <<   // frequency (the operative accept/reject gate)
+        th("range")         << endl <<   // frequency_lower / frequency_upper
         th("skew")          << endl <<   // neg_log10_discordance_p_value
         th("annotation")    << endl <<
         th("gene")          << endl;
@@ -2762,9 +2774,13 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
       // Guarded on the field existing: freq_to_string maps an empty string to "100%", and a DP item
       // that never got a BAM rescan has no frequency at all.
       ss << td("rowspan=\"2\" align=\"center\"",
-               c.entry_exists("discordant_pair_frequency") && !c["discordant_pair_frequency"].empty()
-                 ? Html_Mutation_Table_String::freq_to_string(c["discordant_pair_frequency"])
+               c.entry_exists(FREQUENCY) && !c[FREQUENCY].empty()
+                 ? Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])
                  : string("")) << endl;
+      // "range" column. No existence guard needed -- freq_range_to_string() blanks a missing pair,
+      // which is exactly the same never-rescanned case the freq cell guards for above.
+      ss << td("rowspan=\"2\" align=\"center\"",
+               Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_discordance_p_value"]) << endl;
 
       ss << td("align=\"center\"" + ak1,
@@ -2813,11 +2829,11 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         // Spell out the frequency comparison. The freq column shows the point estimate, but the test
         // uses its lower confidence bound, so without the two numbers side by side a 25.3% item
         // rejected against a 20% cutoff reads as a contradiction.
-        if ((*it == "DISCORDANT_PAIR_FREQUENCY") && c.entry_exists("discordant_pair_frequency_lower_bound")) {
+        if ((*it == "DISCORDANT_PAIR_FREQUENCY") && c.entry_exists(FREQUENCY_LOWER)) {
           reason = "Discordant pair frequency "
-                 + Html_Mutation_Table_String::freq_to_string(c["discordant_pair_frequency"])
+                 + Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])
                  + " has a 95% lower confidence bound of "
-                 + Html_Mutation_Table_String::freq_to_string(c["discordant_pair_frequency_lower_bound"])
+                 + Html_Mutation_Table_String::freq_to_string(c[FREQUENCY_LOWER])
                  + ", below the "
                  + Html_Mutation_Table_String::freq_to_string(to_string(settings.discordant_pair_frequency_cutoff, 4, false))
                  + " cutoff.";
@@ -2940,7 +2956,7 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
 
   ss << "<div id=\"soft_clipping_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 13 : 12;
+  size_t total_cols = link ? 14 : 13;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -2956,6 +2972,7 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
   ss << th("agree") << endl;
   ss << th("total") << endl;
   ss << th("freq") << endl;
+  ss << th("range") << endl;
   ss << th("score") << endl;
   ss << th(nonbreaking("clipped seq")) << endl;
   ss << th("annotation") << endl;
@@ -2984,6 +3001,10 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
     ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(SC_AGREE_COUNT) ? c[SC_AGREE_COUNT] : "&nbsp;")) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_TOTAL_COUNT])) << endl;
     ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
+    // "range" column: the confidence limits the frequency cutoff is actually applied to, which is
+    // why an item here can be rejected at a frequency that reads as above the cutoff.
+    ss << td(ALIGN_RIGHT,
+             Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_LOG10_E_VALUE])) << endl;
     // The consensus of the clipped read tails: the sequence that would have continued
     // the reference here. Always stored reference-forward regardless of clip direction.
@@ -3088,7 +3109,9 @@ string decode_reject_reason(const string& reject)
   {
     // Distinct from FREQUENCY_CUTOFF: soft-clipping is only ever rejected for being
     // too infrequent. A high clipped fraction means something really was detected.
-    return "Frequency below cutoff threshold.";
+    // What is compared is the lower confidence bound -- the left end of the range column --
+    // so an item can be rejected at a frequency that reads as above the cutoff.
+    return "Lower confidence bound on frequency below cutoff threshold.";
   }
   else if (reject == "CLIPPED_TAIL_CONSENSUS")
   {
@@ -4433,6 +4456,36 @@ string Html_Mutation_Table_String::freq_to_string(const string& freq, bool multi
       
   }
   return ss.str();
+}
+
+//===============================================================================
+//       CLASS: Html_Mutation_Table_String
+//      METHOD: freq_range_to_string
+// DESCRIPTION: Confidence limits on a frequency, as "X.X-X.X%", for the evidence
+//              tables' range column.
+//===============================================================================
+string Html_Mutation_Table_String::freq_range_to_string(const string& lower, const string& upper)
+{
+  // MUST come first. freq_to_string() maps an empty string to "100%", so an entry that carries no
+  // bounds -- a DP item that never got a BAM rescan, or evidence written before they were
+  // recorded -- would otherwise render a confident "100-100%" out of nothing at all.
+  if (lower.empty() || upper.empty())
+    return "";
+
+  // A frequency that could not be assigned has no interval either.
+  if ((lower == "NA") || (upper == "NA"))
+    return "NA";
+
+  string lo = freq_to_string(lower);
+  string hi = freq_to_string(upper);
+
+  // One trailing '%' for the pair, so the cell reads as a range rather than as two numbers.
+  // Conditional because the non-numeric passthroughs ("?", "&Delta;", "H") carry no '%'.
+  if (!lo.empty() && (lo[lo.size()-1] == '%'))
+    lo.erase(lo.size()-1);
+
+  // Non-breaking hyphen (what nonbreaking() would produce) so the range never wraps mid-cell.
+  return lo + "&#8209;" + hi;
 }
 
 //===============================================================================

@@ -37,6 +37,12 @@ namespace breseq {
   const char* INSERT_POSITION="insert_position";
   const char* PHYLOGENY_ID="phylogeny_id";
   const char* FREQUENCY="frequency";
+  // Confidence limits on [frequency]. Each endpoint is a ONE-SIDED 95% bound, so the interval is
+  // 90% two-sided. Every evidence type that reports a frequency reports these alongside it, and
+  // the accept/reject cutoffs are applied to THESE, not to the point estimate -- which is why an
+  // item can be rejected at a frequency that looks comfortably above its cutoff.
+  const char* FREQUENCY_LOWER="frequency_lower";
+  const char* FREQUENCY_UPPER="frequency_upper";
   const char* REJECT="reject";
   const char* POLYMORPHISM_REJECT="polymorphism_reject";
   const char* CONSENSUS_REJECT="consensus_reject";
@@ -97,10 +103,7 @@ namespace breseq {
   const char* SCORE="score";
   const char* CONSENSUS_SCORE="consensus_score";
   const char* POLYMORPHISM_SCORE="polymorphism_score";
-  const char* POLYMORPHISM_FREQUENCY="polymorphism_frequency";
   const char* MAJOR_FREQUENCY="major_frequency";            // frequency of major allele
-  const char* POLYMORPHISM_FREQUENCY_LOWER="polymorphism_frequency_lower"; // 95% lower bound
-  const char* POLYMORPHISM_FREQUENCY_UPPER="polymorphism_frequency_upper"; // 95% upper bound
   const char* ALLELE_FREQUENCIES="allele_frequencies";      // full fitted spectrum
   //For MC
   const char* START_RANGE="start_range";
@@ -127,7 +130,6 @@ namespace breseq {
   const char* SIDE_1_READ_COUNT="side_1_read_count";
   const char* SIDE_2_READ_COUNT="side_2_read_count";
   const char* NEW_JUNCTION_READ_COUNT="new_junction_read_count";
-  const char* NEW_JUNCTION_FREQUENCY = "new_junction_frequency";
   
   const char* SIDE_1_COVERAGE = "side_1_coverage";
   const char* SIDE_2_COVERAGE = "side_2_coverage";

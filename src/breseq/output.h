@@ -212,6 +212,11 @@ struct Html_Mutation_Table_String : public string
     void Item_Lines();
     //!Helper Functions
     static string freq_to_string(const string& freq, bool multiple_columns = false);//!< Used in Item_Lines()
+    //! A pair of confidence limits as "X.X-X.X%", for the evidence tables' range column.
+    //! Formats each endpoint through freq_to_string so the decimals match the freq cell beside it.
+    //! Returns "" when either bound is missing, which is what keeps an absent interval from
+    //! rendering as a confident "100-100%".
+    static string freq_range_to_string(const string& lower, const string& upper);
     string freq_cols(vector<string> freq_list);//!< Used in Item_Lines()
     size_t total_cols; //!< Shared between Factory Methods, set in Header_Line()
 

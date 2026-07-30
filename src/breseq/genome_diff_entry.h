@@ -49,6 +49,10 @@ namespace breseq {
   extern const char* INSERT_POSITION;
   extern const char* PHYLOGENY_ID;
   extern const char* FREQUENCY;
+  //! Confidence limits on FREQUENCY, reported by every evidence type that reports a frequency.
+  //! One-sided 95% per endpoint (90% two-sided). The frequency cutoffs test THESE, not FREQUENCY.
+  extern const char* FREQUENCY_LOWER;
+  extern const char* FREQUENCY_UPPER;
 
   // REJECT = comma delimited list of why evidence was rejected according to statistical criteria
   // Evidence is not rejected but is masked because it should not be used to predict mutations
@@ -116,10 +120,7 @@ namespace breseq {
   extern const char* SCORE;
   extern const char* CONSENSUS_SCORE;
   extern const char* POLYMORPHISM_SCORE;
-  extern const char* POLYMORPHISM_FREQUENCY;
   extern const char* MAJOR_FREQUENCY;
-  extern const char* POLYMORPHISM_FREQUENCY_LOWER;
-  extern const char* POLYMORPHISM_FREQUENCY_UPPER;
   extern const char* ALLELE_FREQUENCIES;
   //For MC
   extern const char* START_RANGE;
@@ -146,7 +147,6 @@ namespace breseq {
   extern const char* SIDE_1_READ_COUNT;
   extern const char* SIDE_2_READ_COUNT;
   extern const char* NEW_JUNCTION_READ_COUNT;
-  extern const char* NEW_JUNCTION_FREQUENCY;
   
   extern const char* SIDE_1_COVERAGE;
   extern const char* SIDE_2_COVERAGE;
@@ -310,6 +310,21 @@ namespace breseq {
               && ((from_string<double>((*this)["frequency"]) != 1))
               && ((from_string<double>((*this)["frequency"]) != 0))
       );
+    }
+
+    //! The frequency of this EVIDENCE item, as a MUTATION built from it should report it.
+    //!
+    //! Evidence stores the raw fitted estimate in [frequency] and records the consensus/polymorphism
+    //! decision separately in [prediction]; the two used to be conflated by writing a snapped 1 into
+    //! [frequency], which meant the number shown in the report was not the number the confidence
+    //! bounds bracketed. Mutations keep the snapped convention -- a consensus call is reported as
+    //! exactly 1 -- so this is the accessor that re-applies it at the evidence/mutation boundary.
+    //! Returns "" when there is no frequency at all (consensus-mode evidence carries none).
+    string mutation_frequency() const
+    {
+      if (!this->entry_exists(FREQUENCY)) return "";
+      if (this->entry_exists(PREDICTION) && (this->get(PREDICTION) == "consensus")) return "1";
+      return this->get(FREQUENCY);
     }
 
     

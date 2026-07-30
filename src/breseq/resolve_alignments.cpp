@@ -3585,8 +3585,11 @@ void  assign_one_junction_read_counts(
 
   // We cannot assign a frequency if the denominator is zero
   if ((d == 0) || !have_c) {
-    j[POLYMORPHISM_FREQUENCY] = "NA";
-    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
+    // "NA" rather than omission, matching the sentinel this entry already uses for an undefined
+    // side count. A frequency that could not be assigned has no interval either.
+    j[FREQUENCY] = "NA";
+    j[FREQUENCY_LOWER] = "NA";
+    j[FREQUENCY_UPPER] = "NA";
 
     j[PREDICTION] = "unknown";
   } else {
@@ -3594,8 +3597,7 @@ void  assign_one_junction_read_counts(
     double reference_rate = ((a + b) / d) + r_from_sides;
     double new_junction_frequency_value = (junction_rate + reference_rate > 0.0)
                                           ? junction_rate / (junction_rate + reference_rate) : 0.0;
-    j[POLYMORPHISM_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
-    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
+    j[FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
 
     // Determine what kind of prediction we are
     
@@ -3623,6 +3625,11 @@ void  assign_one_junction_read_counts(
     double freq_lower = binomial_frequency_lower_bound(freq_successes, freq_effective_depth);
     double freq_upper = binomial_frequency_upper_bound(freq_successes, freq_effective_depth);
 
+    // Recorded, not just used and discarded: the interval that decides the call below is then the
+    // one the .gd and the report show. Same formatting as the frequency it brackets.
+    j[FREQUENCY_LOWER] = to_string(freq_lower, settings.polymorphism_precision_places, true);
+    j[FREQUENCY_UPPER] = to_string(freq_upper, settings.polymorphism_precision_places, true);
+
     // Two bounds decide all three outcomes. Note the asymmetry is deliberate: the LOWER bound gates
     // "is there a junction here at all", while the UPPER bound gates "is it fixed rather than
     // polymorphic". Testing the high side with the lower bound instead would require
@@ -3638,8 +3645,11 @@ void  assign_one_junction_read_counts(
       j[PREDICTION] = "polymorphism";
       j.add_reject_reason("FREQUENCY_CUTOFF");
     } else if (is_consensus) {
+      // [frequency] keeps the fitted estimate; [prediction] carries the snap to 1, which
+      // mutation_predictor re-applies via cDiffEntry::mutation_frequency() when it builds the
+      // mutation. Overwriting the frequency here would leave the bounds bracketing a number the
+      // entry no longer reports.
       j[PREDICTION] = "consensus";
-      j[FREQUENCY] = "1";
     } else {
       j[PREDICTION] = "polymorphism";
     }

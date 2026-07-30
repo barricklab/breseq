@@ -4247,9 +4247,15 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
             if ((*this)[i_seq_id].get_circular_distance_1(i_position, j_position) != abs(i_codon_position-j_codon_position))
               continue;
             
-            // Only do this for SNPs that are not 100% frequency
-            if (   (i.entry_exists(FREQUENCY) && ( from_string<double>(i[FREQUENCY]) != 1.0 ))
-                || (j.entry_exists(FREQUENCY) && ( from_string<double>(j[FREQUENCY]) != 1.0 )) )
+            // Only do this for SNPs that are not 100% frequency.
+            //
+            // Through mutation_frequency(), because this list holds RA evidence as well as SNP
+            // mutations (see where snp_muts is filled). Evidence reports its fitted estimate in
+            // [frequency] and its call in [prediction], so a fixed RA entry reads 0.982 here and a
+            // bare != 1.0 test would treat two consensus SNPs sharing a codon as polymorphic --
+            // degrading their codon_new_seq to N and aa_new_seq to '?'.
+            if (   (i.entry_exists(FREQUENCY) && ( from_string<double>(i.mutation_frequency()) != 1.0 ))
+                || (j.entry_exists(FREQUENCY) && ( from_string<double>(j.mutation_frequency()) != 1.0 )) )
             {
               
               // Create the field for marking multiple SNPs in the same codon if necessary

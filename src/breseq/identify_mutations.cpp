@@ -144,18 +144,18 @@ static double RA_score(const cDiffEntry& ra)
 // point estimate.
 static bool RA_frequency_bounds(const cDiffEntry& ra, double& lower, double& upper)
 {
-  if (ra.entry_exists(POLYMORPHISM_FREQUENCY_LOWER) && ra.entry_exists(POLYMORPHISM_FREQUENCY_UPPER)) {
-    lower = from_string<double>(ra.get(POLYMORPHISM_FREQUENCY_LOWER));
-    upper = from_string<double>(ra.get(POLYMORPHISM_FREQUENCY_UPPER));
+  if (ra.entry_exists(FREQUENCY_LOWER) && ra.entry_exists(FREQUENCY_UPPER)) {
+    lower = from_string<double>(ra.get(FREQUENCY_LOWER));
+    upper = from_string<double>(ra.get(FREQUENCY_UPPER));
     return true;
   }
 
-  if (!ra.entry_exists(TOTAL_COV) || !ra.entry_exists(POLYMORPHISM_FREQUENCY)) return false;
+  if (!ra.entry_exists(TOTAL_COV) || !ra.entry_exists(FREQUENCY)) return false;
   vector<string> top_bot = split(ra.get(TOTAL_COV), "/");
   if (top_bot.size() < 2) return false;
   double n = from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]);
   if (!(n > 0.0)) return false;
-  double k = from_string<double>(ra.get(POLYMORPHISM_FREQUENCY)) * n;
+  double k = from_string<double>(ra.get(FREQUENCY)) * n;
   lower = binomial_frequency_lower_bound(k, n);
   upper = binomial_frequency_upper_bound(k, n);
   return true;
@@ -463,7 +463,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   // Falls back to the point estimate if the entry carries neither recorded bounds nor usable depth.
   double lower, upper;
   if (!RA_frequency_bounds(ra, lower, upper))
-    lower = upper = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
+    lower = upper = from_string<double>(ra[FREQUENCY]);
 
   /////////////////////////////////
   // 1. Is it the majority allele?
@@ -485,7 +485,6 @@ bool test_RA_evidence_CONSENSUS_mode(
 
   if (!ra.entry_exists(REJECT)) {
     ra[PREDICTION] = "consensus";
-    ra[FREQUENCY] = "1";
     // Delete if we are just the reference base!
     return (ra[REF_BASE] == ra[MAJOR_BASE]);
   }
@@ -513,7 +512,6 @@ bool test_RA_evidence_CONSENSUS_mode(
 
   if (!ra.entry_exists(REJECT)) {
     ra[PREDICTION] = "polymorphism";
-    ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
     return false;
   }
   ra[POLYMORPHISM_REJECT] = ra[REJECT];
@@ -554,7 +552,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
 
   double lower, upper;
   if (!RA_frequency_bounds(ra, lower, upper))
-    lower = upper = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
+    lower = upper = from_string<double>(ra[FREQUENCY]);
 
   /////////////////////////////////
   // 1. Can we still call it fixed?
@@ -576,7 +574,6 @@ bool test_RA_evidence_POLYMORPHISM_mode(
 
   if (!ra.entry_exists(REJECT)) {
     ra[PREDICTION] = "consensus";
-    ra[FREQUENCY] = "1";
     // Delete if we are just the reference base!
     return (ra[REF_BASE] == ra[MAJOR_BASE]);
   }
@@ -604,7 +601,6 @@ bool test_RA_evidence_POLYMORPHISM_mode(
 
   if (!ra.entry_exists(REJECT)) {
     ra[PREDICTION] = "polymorphism";
-    ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
     return false;
   }
 
@@ -615,7 +611,6 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   ra[POLYMORPHISM_REJECT] = ra[REJECT];
   ra.clear_reject_reasons();
   ra[PREDICTION] = "polymorphism";
-  ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
   ra[REJECT] = ra[POLYMORPHISM_REJECT];
   ra.erase(POLYMORPHISM_REJECT);
 
@@ -634,7 +629,7 @@ void test_RA_evidence(
   //  * SCORE                  log10 evidence that a non-reference allele is present at all
   //                           (or, on evidence written before the scores were merged, at least one
   //                            of CONSENSUS_SCORE / POLYMORPHISM_SCORE -- see RA_score())
-  //  * POLYMORPHISM_FREQUENCY the variant allele's fitted frequency, as a fraction of total depth
+  //  * FREQUENCY              the variant allele's fitted frequency, as a fraction of total depth
   //  * NEW_COV, REF_COV       present for all entries
   
   diff_entry_list_t list = gd.get_list();
@@ -656,8 +651,8 @@ void test_RA_evidence(
     if (!ra.entry_exists(SCORE) && !ra.entry_exists(CONSENSUS_SCORE) && !ra.entry_exists(POLYMORPHISM_SCORE)) {
       ERROR("Expected field 'score' in evidence item\n" + ra.as_string());
     }
-    if (!ra.entry_exists(POLYMORPHISM_FREQUENCY)) {
-      ERROR("Expected field '" + cString(POLYMORPHISM_FREQUENCY) + "' in evidence item\n" + ra.as_string());
+    if (!ra.entry_exists(FREQUENCY)) {
+      ERROR("Expected field '" + cString(FREQUENCY) + "' in evidence item\n" + ra.as_string());
     }
     
     bool delete_entry = false;
@@ -1003,6 +998,14 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
     // Frequency of the event actually tested: consensus-supporting clipped reads over
     // all reads reaching the position (total_count = clipped + read-through).
     sc_entry[FREQUENCY]        = formatted_double(c.frequency, 4).to_string();
+    // Exact (Clopper-Pearson) bounds on that same ratio -- k = agreeing clipped reads, n = all
+    // reads reaching the position -- so the cutoff below is a confidence statement rather than a
+    // point-estimate comparison, matching RA, JC and DP. A shallow position is then never rejected
+    // merely for being shallow, only for being confidently below the cutoff.
+    double sc_freq_lower = binomial_frequency_lower_bound(c.agree_count, c.total_count);
+    double sc_freq_upper = binomial_frequency_upper_bound(c.agree_count, c.total_count);
+    sc_entry[FREQUENCY_LOWER]  = formatted_double(sc_freq_lower, 4).to_string();
+    sc_entry[FREQUENCY_UPPER]  = formatted_double(sc_freq_upper, 4).to_string();
     sc_entry[SC_CONSENSUS_FRACTION] = formatted_double(c.consensus_fraction, 4).to_string();
     if (c.consensus_tail != ".") sc_entry[SC_CONSENSUS_TAIL] = c.consensus_tail;
     sc_entry[SC_LOG10_E_VALUE] = formatted_double(c.score, kMutationScorePrecision).to_string();
@@ -1018,8 +1021,14 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
     }
     // Only a frequency that is too LOW is a reason to reject: an unusually high clipped
     // fraction is the signal itself, not a problem. (Unlike RA, which rejects at both ends.)
+    //
+    // Tested on the LOWER confidence bound, so this asks "is it confidently below the cutoff"
+    // rather than "is the point estimate below the cutoff", as RA, JC and DP all do. No epsilon:
+    // that guarded a rational agree/total landing exactly on a round cutoff, and an incomplete-beta
+    // inverse never does. The bound sits below the point estimate, so this is strictly stricter --
+    // see the cutoff note in Settings for what has and has not been recalibrated for it.
     if ((_settings.soft_clipping_frequency_cutoff > 0.0) &&
-        (c.frequency < _settings.soft_clipping_frequency_cutoff - _settings.polymorphism_precision_decimal)) {
+        (sc_freq_lower < _settings.soft_clipping_frequency_cutoff)) {
       sc_entry.add_reject_reason("FREQUENCY_BELOW_CUTOFF");
     }
     if ((_settings.soft_clipping_consensus_base_fraction > 0.0) &&
@@ -1438,7 +1447,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       //## frequencies they do NOT sum to 1 -- the whole fitted spectrum does.
       mut[MAJOR_FREQUENCY] = formatted_double(
           amodel.reported_frequency(major_base_index), _polymorphism_precision_places, true).to_string();
-      mut[POLYMORPHISM_FREQUENCY] = formatted_double(
+      mut[FREQUENCY] = formatted_double(
           amodel.reported_frequency(variant_base_index), _polymorphism_precision_places, true).to_string();
 
       //## The whole fitted spectrum, so a position with more than one credible non-reference
@@ -1555,19 +1564,19 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             user_variant_is_major ? user_variant_frequency : user_ref_frequency,
             _polymorphism_precision_places, true).to_string();
 
-        mut[POLYMORPHISM_FREQUENCY] = formatted_double(user_variant_frequency, _polymorphism_precision_places, true).to_string();
+        mut[FREQUENCY] = formatted_double(user_variant_frequency, _polymorphism_precision_places, true).to_string();
         mut[ALLELE_FREQUENCIES] = amodel.spectrum_string(_polymorphism_precision_places);
         write_RA_frequency_bounds(mut, pdata, amodel, user_variant_index);
 
-        // Consensus mode
+        // [frequency] keeps the fitted estimate in both modes; the call itself goes in [prediction],
+        // the same place test_RA_evidence() records it for non-user entries. Consensus mode asks
+        // only whether the user's variant is the majority allele. A "polymorphism" verdict here is
+        // what drops a sub-majority user entry in consensus mode -- mutation_predictor keeps only
+        // consensus evidence when not predicting polymorphisms.
         if (!_settings.polymorphism_prediction) {
-          if (from_string<double>(mut[POLYMORPHISM_FREQUENCY]) > 0.5 ) {
-            mut[FREQUENCY] = "1";
-          } else {
-            mut[FREQUENCY] = "0";
-          }
-        } else { // Polymorphism mode
-          mut[FREQUENCY] =  mut[POLYMORPHISM_FREQUENCY];
+          mut[PREDICTION] = (user_variant_frequency > 0.5) ? "consensus" : "polymorphism";
+        } else {
+          mut[PREDICTION] = "polymorphism";
         }
 
         mut[SCORE] = formatted_double(user_polymorphism_score, kMutationScorePrecision).to_string();
@@ -2136,8 +2145,8 @@ void identify_mutations_pileup::write_RA_frequency_bounds(cDiffEntry& mut, const
     }
   }
 
-  mut[POLYMORPHISM_FREQUENCY_LOWER] = formatted_double(lower, _polymorphism_precision_places, true).to_string();
-  mut[POLYMORPHISM_FREQUENCY_UPPER] = formatted_double(upper, _polymorphism_precision_places, true).to_string();
+  mut[FREQUENCY_LOWER] = formatted_double(lower, _polymorphism_precision_places, true).to_string();
+  mut[FREQUENCY_UPPER] = formatted_double(upper, _polymorphism_precision_places, true).to_string();
 }
 
 /*! Fit the allele frequency mixture at one position by EM.

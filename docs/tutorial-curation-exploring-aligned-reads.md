@@ -22,7 +22,7 @@ Let's examine data from this clone: A+6_75000_gen_LTC-0000023.
 
 The `marginal.html` output file only links to the top 20 (by freqency) RA alignment items, but you'll find many more in the GenomeDiff file. For example, there is this one:
 ```
-RA	3530	.	REL606	1701543	0	C	G	bias_e_value=8.48372	bias_p_value=1.83241e-06	consensus_reject=FREQUENCY_CUTOFF	consensus_score=125.3	fisher_strand_p_value=1.07499e-07	frequency=2.143e-01	ks_quality_p_value=1	major_base=C	major_cov=14/41	major_frequency=7.857e-01	minor_base=G	minor_cov=15/0	new_cov=15/0	polymorphism_frequency=2.143e-01	polymorphism_score=12.7	prediction=polymorphism	ref_cov=14/41	total_cov=35/41
+RA	3530	.	REL606	1701543	0	C	G	bias_e_value=8.48372	bias_p_value=1.83241e-06	consensus_reject=FREQUENCY_CUTOFF	consensus_score=125.3	fisher_strand_p_value=1.07499e-07	frequency=2.143e-01	frequency_lower=1.310e-01	frequency_upper=3.220e-01	ks_quality_p_value=1	major_base=C	major_cov=14/41	major_frequency=7.857e-01	minor_base=G	minor_cov=15/0	new_cov=15/0	polymorphism_score=12.7	prediction=polymorphism	ref_cov=14/41	total_cov=35/41
 
 ```
 We can use `bam2aln` to create an alignment of reads overlapping this position (or any other).

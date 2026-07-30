@@ -1569,11 +1569,18 @@ namespace breseq {
       if (have_local_concordant) {
         double k = static_cast<double>(k_distinct < 0 ? 0 : k_distinct);
         f_lcb = binomial_frequency_lower_bound(k, k + c_local, kDPFrequencyAlpha);
-        // Deliberately NOT the shared FREQUENCY key: like JC's new_junction_frequency, DP carries its own
-        // so evidence-level frequency can never be mistaken for a mutation's allele frequency.
-        dp["discordant_pair_frequency"] = to_string((k + c_local > 0.0) ? (k / (k + c_local)) : 0.0, 4, false);
+        // The shared FREQUENCY key, as every evidence type now uses. This used to carry its own
+        // name so an evidence-level frequency could never be mistaken for a mutation's allele
+        // frequency; that separation now lives where it belongs -- mutation_predictor attaches DP
+        // items purely as supporting evidence matched by breakpoint and never reads a frequency
+        // off one, so nothing can propagate this number to a mutation in the first place.
+        dp[FREQUENCY] = to_string((k + c_local > 0.0) ? (k / (k + c_local)) : 0.0, 4, false);
         dp["concordant_count"] = to_string(c_local, 1, false);
-        dp["discordant_pair_frequency_lower_bound"] = to_string(f_lcb, 4, false);
+        dp[FREQUENCY_LOWER] = to_string(f_lcb, 4, false);
+        // Display only -- the gate below still tests the LOWER bound alone, since a high discordant
+        // fraction is the signal rather than a problem. The upper bound exists so the report can
+        // show an interval instead of a naked point estimate.
+        dp[FREQUENCY_UPPER] = to_string(binomial_frequency_upper_bound(k, k + c_local, kDPFrequencyAlpha), 4, false);
       }
 
       // Discordance "skew" score: -log10 P(a normal position on side_1's seq_id is spanned by <= k
