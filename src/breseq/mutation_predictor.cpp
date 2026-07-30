@@ -1678,9 +1678,12 @@ namespace breseq {
         ;		
       }
       
-      // If we are in polymorphism mode, propagate the frequency from JC evidence to mutation
-      if (settings.polymorphism_prediction) 
-        mut[FREQUENCY] = j[FREQUENCY];
+      // If we are in polymorphism mode, propagate the frequency from JC evidence to mutation.
+      // mutation_frequency() re-applies the consensus snap: evidence keeps its fitted estimate in
+      // [frequency] and records the call in [prediction], while a mutation reports a consensus
+      // junction as exactly 1.
+      if (settings.polymorphism_prediction)
+        mut[FREQUENCY] = j.mutation_frequency();
       
       // Finally, add it
       gd.add(mut);
@@ -1774,8 +1777,11 @@ namespace breseq {
       }
       string ra_new_base = (item[MAJOR_BASE] == ra_ref_base) ? item[MINOR_BASE] : item[MAJOR_BASE];
       
-      // Frequency is for major allele base... so switch if need be given reference
-      double ra_variant_frequency = from_string<double>(item[FREQUENCY]);
+      // Whether this position was called fixed or mixed. Read from [prediction] rather than by
+      // testing [frequency] against 1: evidence stores its fitted estimate there, so a fixed call
+      // reads back as 0.982 rather than 1 and a frequency test would see every consensus SNP as a
+      // polymorphism. The mutation built below re-snaps via mutation_frequency().
+      bool ra_is_consensus = (item[PREDICTION] == "consensus");
       
       // Sometimes a SNP might be called in a deleted area because the end was wrong,
 			// but it was corrected using a junction. (This catches this case.)
@@ -1784,7 +1790,7 @@ namespace breseq {
       
       // If we are predicting mixed bases and not polymorphisms, then don't create
       // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
-      if (!settings.polymorphism_prediction && (ra_variant_frequency != 1.0)) {
+      if (!settings.polymorphism_prediction && !ra_is_consensus) {
         continue;
       }
       
@@ -1799,7 +1805,7 @@ namespace breseq {
         
         // This code is only safe if every mutation has a frequency
         if (settings.polymorphism_prediction) {
-          if ( (ra_variant_frequency != 1.0) || (mut[FREQUENCY] != "1") //don't join polymorphisms
+          if ( !ra_is_consensus || (mut[FREQUENCY] != "1") //don't join polymorphisms
               || (mut[SEQ_ID] != item[SEQ_ID]) )
             same = false;
         }
@@ -1823,7 +1829,7 @@ namespace breseq {
 				;
         
         if (settings.polymorphism_prediction) {
-          new_mut[FREQUENCY] = item.entry_exists(FREQUENCY) ? item[FREQUENCY] : "1";
+          new_mut[FREQUENCY] = item.entry_exists(FREQUENCY) ? item.mutation_frequency() : "1";
         }
 				mut = new_mut;
 			}

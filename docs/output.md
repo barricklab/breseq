@@ -287,6 +287,19 @@ The total number of reads that map to this junction.
 The position-hash score for the junction in **\<bold angle brackets>**
 and the minimum-overlap score on the next line.
 
+`freq`\
+Frequency of the new junction: reads supporting the junction divided by
+those supporting the junction plus those spanning the original reference
+sequence at the same breakpoint. `NA` when neither side falls in unique
+sequence, so no denominator can be formed.
+
+`range`\
+Confidence limits on `freq` — exact (Clopper-Pearson) bounds, taken at
+the effective depth implied by how well each read distinguishes the
+junction from the reference rather than at the raw read count. As in the
+read alignment table, this is the interval the frequency cutoffs test,
+so a junction can be rejected at a frequency above its cutoff.
+
 `annotation, gene, product`\
 Description of the effects of this change on each side of the junction.
 The format of these columns is the same as in `mutation-display`.
@@ -355,8 +368,24 @@ position.).
 The base change, deletion, or insertion.
 
 `freq`\
-Frequency of this base change in the sample. _breseq_ currently only
-predicts mutations of 0% or 100% frequency.
+Frequency of this base change in the sample. In consensus mode this is
+still the fitted estimate rather than a snapped 0% or 100%; whether the
+position was called fixed or mixed is recorded separately, and only the
+predicted mutation reports a rounded 100%.
+
+`range`\
+Confidence limits on `freq`, shown as a percentage range. Each endpoint
+is a one-sided 95% bound, so the interval is 90% two-sided. For read
+alignment evidence the limits come from the profile likelihood of the
+fitted allele model, so they widen for low coverage or poor base quality
+rather than tracking read count alone.
+
+This is the interval the frequency cutoffs are applied to — not the
+point estimate in `freq`. An item can therefore be rejected at a
+frequency that reads as comfortably above its cutoff, because it is the
+bound that falls below. The same column appears on new junction (`JC`),
+soft clipping (`SC`), and discordant pair (`DP`) evidence, where the
+limits are exact (Clopper-Pearson) bounds on the underlying read counts.
 
 `score`\
 The base-10 logarithm ratio of the posterior probability that this

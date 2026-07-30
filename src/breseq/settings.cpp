@@ -794,9 +794,12 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
-      // Soft-clipping and discordant pairs keep their own floors; they are not part of the
-      // Clopper-Pearson recalibration above and their cutoffs were tuned against point estimates
-      // (SC) or an already-Clopper-Pearson test at a different scale (DP).
+      // Soft-clipping and discordant pairs keep their own floors. Both now test a Clopper-Pearson
+      // LOWER bound rather than a point estimate, but neither value below has been recalibrated
+      // for that: SC's was tuned against a point estimate, and DP's against an already-exact test
+      // at a different scale. Since a lower bound sits below the point estimate, both floors are
+      // therefore effectively stricter than the number suggests -- most so at shallow depth. The
+      // recalibration wants evidence from a dataset with known breakpoints, not a guess here.
       this->soft_clipping_frequency_cutoff = 0.05;
       this->discordant_pair_frequency_cutoff = 0.05;
       this->polymorphism_minimum_variant_coverage = 0;
