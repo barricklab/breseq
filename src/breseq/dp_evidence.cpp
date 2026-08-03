@@ -1655,8 +1655,20 @@ namespace breseq {
         dp["side_2_concordant_count"] = to_string(c2b);
         dp["side_1_unpaired_count"] = to_string(c3a);
         dp["side_2_unpaired_count"] = to_string(c3b);
-        have_local_concordant = true;
-        c_local = 0.5 * (static_cast<double>(c2a) + static_cast<double>(c2b));
+        // Concordant pairs at a REDUNDANT side cross the intact reference junction of SOME copy of
+        // the repeat, not necessarily this one, so they say nothing about whether THIS junction is
+        // present -- averaging them in dilutes a junction whose unique side has no concordant support
+        // at all. JC excludes such a side from its reference count the same way (resolve_alignments.cpp:
+        // a side counts only when side_N_redundant != "1" and its annotate_key is not "repeat", and an
+        // excluded side becomes "NA" and drops out of the mean). Average only the usable sides; when
+        // both are redundant there is no denominator and the frequency is NA (written below).
+        // The raw side_N_concordant_count fields above still report what was seen at each side.
+        double c_sum = 0.0;
+        int n_usable = 0;
+        if (!side1_red) { c_sum += static_cast<double>(c2a); n_usable++; }
+        if (!side2_red) { c_sum += static_cast<double>(c2b); n_usable++; }
+        have_local_concordant = (n_usable > 0);
+        c_local = have_local_concordant ? (c_sum / static_cast<double>(n_usable)) : 0.0;
 
         // Nothing survived verification: the candidate's shared-pair count came from the coarse
         // region-overlap heuristic, but at the placed breakpoint not one read pair actually bridges the
@@ -1680,8 +1692,9 @@ namespace breseq {
         dp["background_e_value"] = to_string(background.e_value(weight), 3, true);
 
       // Local frequency: discordant pairs vs concordant pairs spanning the SAME breakpoint, i.e. the
-      // variant and reference observations of one sampling event. Both sides are averaged because each
-      // measures the same fragment population from one end. See the comment above dp_crossing_mean.
+      // variant and reference observations of one sampling event. The non-redundant sides are averaged
+      // because each measures the same fragment population from one end (see where c_local is built).
+      // See also the comment above dp_crossing_mean.
       double f_lcb = std::numeric_limits<double>::quiet_NaN();
       if (have_local_concordant) {
         double k = static_cast<double>(k_distinct < 0 ? 0 : k_distinct);
@@ -1698,6 +1711,15 @@ namespace breseq {
         // fraction is the signal rather than a problem. The upper bound exists so the report can
         // show an interval instead of a naked point estimate.
         dp[FREQUENCY_UPPER] = to_string(binomial_frequency_upper_bound(k, k + c_local, kDPFrequencyAlpha), 4, false);
+      } else if (scanner) {
+        // Both sides redundant: every concordant pair seen belongs to some copy of a repeat, so there
+        // is no reference observation of THIS breakpoint to divide by -- the frequency is unknown, not
+        // zero and not 100%. Written as "NA" (freq_to_string and freq_range_to_string already render
+        // that literal), and f_lcb stays NaN so the frequency gate below skips the item entirely.
+        dp[FREQUENCY] = "NA";
+        dp["concordant_count"] = "NA";
+        dp[FREQUENCY_LOWER] = "NA";
+        dp[FREQUENCY_UPPER] = "NA";
       }
 
       // Discordance "skew" score: -log10 P(a normal position on side_1's seq_id is spanned by <= k
