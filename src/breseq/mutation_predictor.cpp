@@ -2774,23 +2774,74 @@ namespace breseq {
     return (a < b) ? (a + "#" + b) : (b + "#" + a);
   }
 
-  // Attach a discordant-pair (DP) evidence item as ALSO supporting a mutation when its sides exactly
-  // match (seq_id/position/strand, either order) a JC that already supports that mutation -- e.g. a DP
-  // that snapped onto that junction's split-read breakpoint. This makes the mutation show a "DP"
-  // evidence link and drops the DP from the "unassigned discordant pair evidence" table, both via the
-  // native evidence= machinery (in_evidence_list / filter_used_as_evidence).
+  // How far apart a DP's unique side and a JC's unique side may sit and still be the same breakpoint.
+  // A DP side is placed at the innermost aligned end of its supporting read pairs, so it lands at or
+  // just short of the split-read coordinate rather than exactly on it. Same value the MOB unique-side
+  // match below has always used.
+  static const int32_t kDPJCMatchSlop = 20;
+
+  // Do side `ap` of a and side `bp` of b describe the same breakpoint -- same sequence and strand,
+  // position within slop?
+  static bool same_junction_side(cDiffEntry& a, const string& ap, cDiffEntry& b, const string& bp, int32_t slop)
+  {
+    return (a[ap + "_seq_id"] == b[bp + "_seq_id"])
+        && (n(a[ap + "_strand"]) == n(b[bp + "_strand"]))
+        && (abs(n(a[ap + "_position"]) - n(b[bp + "_position"])) <= slop);
+  }
+
+  // Split a junction-like entry (JC or DP) into its unique side and its repeat (IS) side. False unless
+  // exactly one side is annotated "repeat" -- with neither or both there is no unique side to match on.
+  static bool split_repeat_unique_sides(cDiffEntry& e, string& unique_prefix, string& repeat_prefix)
+  {
+    string ak1 = e.entry_exists("side_1_annotate_key") ? e["side_1_annotate_key"] : "";
+    string ak2 = e.entry_exists("side_2_annotate_key") ? e["side_2_annotate_key"] : "";
+    if      (ak1 == "repeat" && ak2 != "repeat") { repeat_prefix = "side_1"; unique_prefix = "side_2"; }
+    else if (ak2 == "repeat" && ak1 != "repeat") { repeat_prefix = "side_2"; unique_prefix = "side_1"; }
+    else return false;
+    return true;
+  }
+
+  // An IS-mediated junction, matched by its UNIQUE side alone: each entry has exactly one repeat side
+  // and one unique side, and the unique sides agree. The repeat sides are then allowed to sit on
+  // different copies of the element -- a DP's IS side is chosen by the per-locus copy vote in
+  // resolve_alignments, which has no reason to pick the same copy the split reads did, so requiring
+  // both sides would miss every IS-mediated event. This is the same rule combine_DP_with_MOB_by_unique_side
+  // already applies to MOB; here it reaches the DEL/AMP/... that an IS-mediated junction also produces.
+  // The window stays tight: a DP whose unique side is further off than this is fixed at the source, by
+  // the unique-side JC snap in dp_evidence.cpp, not by widening the match here.
+  static bool same_breakpoint_by_unique_side(cDiffEntry& j, cDiffEntry& d)
+  {
+    string ju, jr, du, dr;
+    if (!split_repeat_unique_sides(j, ju, jr)) return false;
+    if (!split_repeat_unique_sides(d, du, dr)) return false;
+    return same_junction_side(j, ju, d, du, kDPJCMatchSlop);
+  }
+
+  // Attach a discordant-pair (DP) evidence item as ALSO supporting a mutation when it describes the
+  // same breakpoint as a JC that already supports that mutation -- e.g. a DP that snapped onto that
+  // junction's split-read coordinates. This makes the mutation show a "DP" evidence link and drops the
+  // DP from the "unassigned discordant pair evidence" table, both via the native evidence= machinery
+  // (in_evidence_list / filter_used_as_evidence).
+  //
+  // Two ways to be the same breakpoint:
+  //  (1) both sides match exactly (seq_id/position/strand, either side order);
+  //  (2) it is IS-mediated -- each entry has exactly one repeat side -- and the UNIQUE sides match.
+  //      An IS-mediated DEL is the common case: the JC and the DP agree on the unique boundary, but
+  //      their IS sides sit on different copies of the element, so (1) alone never fires.
   void MutationPredictor::add_matching_DP_evidence(cGenomeDiff& gd)
   {
-    // Index non-rejected DP evidence by side key (rejected DP live in the marginal table, not the
-    // unassigned one, so they are not promoted).
+    // Non-rejected DP evidence only (rejected DP live in the marginal table, not the unassigned one,
+    // so they are not promoted). Indexed by exact side key for (1); the list is walked for (2).
     map<string, vector<string> > dp_by_key;
+    vector<diff_entry_ptr_t> dps;
     diff_entry_list_t dp_list = gd.get_list(make_vector<gd_entry_type>(DP));
     for (diff_entry_list_t::iterator it = dp_list.begin(); it != dp_list.end(); it++) {
       cDiffEntry& dp = **it;
       if (dp.entry_exists(REJECT)) continue;
       dp_by_key[junction_side_key(dp)].push_back(dp._id);
+      dps.push_back(*it);
     }
-    if (dp_by_key.empty()) return;
+    if (dps.empty()) return;
 
     diff_entry_list_t muts = gd.mutation_list();
     for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
@@ -2800,11 +2851,21 @@ namespace breseq {
       for (vector<string>::iterator ev = evidence_now.begin(); ev != evidence_now.end(); ev++) {
         diff_entry_ptr_t e = gd.find_by_id(*ev);
         if (e.get() == NULL || e->_type != JC) continue;
+
+        // (1) exact both-sides match
         map<string, vector<string> >::const_iterator m = dp_by_key.find(junction_side_key(*e));
-        if (m == dp_by_key.end()) continue;
-        for (vector<string>::const_iterator dpid = m->second.begin(); dpid != m->second.end(); dpid++) {
-          if (find(mut._evidence.begin(), mut._evidence.end(), *dpid) == mut._evidence.end())
-            mut._evidence.push_back(*dpid);
+        if (m != dp_by_key.end()) {
+          for (vector<string>::const_iterator dpid = m->second.begin(); dpid != m->second.end(); dpid++) {
+            if (find(mut._evidence.begin(), mut._evidence.end(), *dpid) == mut._evidence.end())
+              mut._evidence.push_back(*dpid);
+          }
+        }
+
+        // (2) IS-mediated: unique sides match, IS sides may be different copies
+        for (vector<diff_entry_ptr_t>::iterator d = dps.begin(); d != dps.end(); d++) {
+          if (!same_breakpoint_by_unique_side(*e, **d)) continue;
+          if (find(mut._evidence.begin(), mut._evidence.end(), (*d)->_id) == mut._evidence.end())
+            mut._evidence.push_back((*d)->_id);
         }
       }
     }

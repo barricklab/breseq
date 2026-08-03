@@ -604,8 +604,13 @@ namespace breseq {
     return lp;
   }
 
-  // One passing JC breakpoint side pair, for snapping a nearby DP's coordinates onto it.
-  struct dp_jc_sides { string s1seq; int32_t p1, st1; string s2seq; int32_t p2, st2; };
+  // One passing JC breakpoint side pair, for snapping a nearby DP's coordinates onto it. red1/red2 are
+  // the JC's side_N_redundant flags: an IS-mediated junction has exactly one redundant side, and the
+  // unique-side snap below needs to know which one it is.
+  struct dp_jc_sides {
+    string s1seq; int32_t p1, st1; bool red1;
+    string s2seq; int32_t p2, st2; bool red2;
+  };
 
   // Load the passing (non-rejected) junction (JC) evidence breakpoints from jc_evidence.gd. A DP whose
   // pair-based edges land within the snap window of one of these validated split-read breakpoints is
@@ -621,8 +626,19 @@ namespace breseq {
       dp_jc_sides s;
       s.s1seq = j[SIDE_1_SEQ_ID]; s.p1 = from_string<int32_t>(j[SIDE_1_POSITION]); s.st1 = from_string<int32_t>(j[SIDE_1_STRAND]);
       s.s2seq = j[SIDE_2_SEQ_ID]; s.p2 = from_string<int32_t>(j[SIDE_2_POSITION]); s.st2 = from_string<int32_t>(j[SIDE_2_STRAND]);
+      s.red1 = j.entry_exists(SIDE_1_REDUNDANT) && (j[SIDE_1_REDUNDANT] == "1");
+      s.red2 = j.entry_exists(SIDE_2_REDUNDANT) && (j[SIDE_2_REDUNDANT] == "1");
       out.push_back(s);
     }
+  }
+
+  // Is this DP side sitting on (or within 50 bp of) an annotated repeat boundary? Used to tell an
+  // IS-mediated DP's IS side from its unique side while placing it -- before the repeat-end snap below
+  // has set side_N_repeat, and for a side whose reads were not themselves flagged redundant.
+  static bool dp_side_on_repeat(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t pos, int32_t strand)
+  {
+    int32_t md = 50;
+    return cReferenceSequences::find_closest_repeat_region_boundary(pos, ref_seq_info[seq_id].m_repeats, md, strand, true) != NULL;
   }
 
   // Load the empirical insert PMF for the main paired library + derive the mixture's u and p_out.
@@ -1439,11 +1455,11 @@ namespace breseq {
       }
 
       // Snap the coarse pair-based edges onto a better-supported breakpoint. Three candidate snaps are
-      // tried in turn; each is gated by the SAME Bayesian probability requirement used for the JC snap:
-      // accept a candidate only if the supporting pairs' inferred inserts do NOT favor the current
-      // position over it by more than 3x -- i.e. lp(candidate) - lp(current) >= log(1/3) under the
-      // length-bias-corrected insert model. So a real near-origin junction, or a DP whose pairs
-      // contradict a nearby transposable element, is neither moved nor marked.
+      // tried in turn; each is gated by the SAME Bayesian requirement: accept a candidate only if the
+      // supporting pairs' inferred inserts do NOT favor the current position over it, per pair, by more
+      // than the floor set below -- i.e. lp(candidate) - lp(current) >= floor under the length-bias-
+      // corrected insert model. So a real near-origin junction, or a DP whose pairs contradict a nearby
+      // transposable element, is neither moved nor marked.
       bool circular_dp = false, side1_repeat = false, side2_repeat = false;
       bool side1_jc_snapped = false, side2_jc_snapped = false;
       // Which side's supporting reads mapped redundantly (from the DP candidate regions). A redundant
@@ -1455,7 +1471,18 @@ namespace breseq {
         vector<dp_pair_ends> pr;
         if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, readlen, pr)
             && !pr.empty()) {
-          const double kSnapLBF = log(1.0 / 3.0);   // accept a snap unless pairs favor current by > 3x
+          // Accept a snap unless the supporting pairs favor the current position over the candidate.
+          // The evidence is a SUM over those pairs, so a fixed total threshold means something
+          // different at 10 pairs than at 500: at ~150 pairs the old log(1/3) worked out to -0.007
+          // nats per pair -- "the pairs must not disagree at all", about +/-18 bp. Scaling the floor
+          // with the pair count makes the criterion depth-independent and gives it a physical reading.
+          // Moving a breakpoint by d changes the mean per-pair log-likelihood by roughly d^2/(2*sigma^2)
+          // with sigma the insert spread, so a floor of -0.25 nats/pair accepts a move of up to about
+          // 0.7*sigma and rejects anything beyond -- on an LTEE clone (sigma ~150) that is a ~100 bp
+          // move accepted at -0.22/pair and a 538 bp move rejected at -4.2/pair, where the old total
+          // threshold could not tell the two apart (both were simply "far outside").
+          const double kSnapPerPairLBF = -0.25;
+          const double snap_lbf_floor = kSnapPerPairLBF * static_cast<double>(pr.size());
           double lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
 
           // (1) JC snap: a passing split-read junction (JC) gives a base-resolution breakpoint. Snap to
@@ -1473,11 +1500,64 @@ namespace breseq {
               }
             }
             if (best && (jp1 != s1_pos || jp2 != s2_pos)
-                && dp_pairs_logL(pr, jp1, s1_strand, jp2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+                && dp_pairs_logL(pr, jp1, s1_strand, jp2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
               s1_pos = max(1, min(scanner->seq_length(s1_tid), jp1));
               s2_pos = max(1, min(scanner->seq_length(s2_tid), jp2));
               lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
               side1_jc_snapped = true; side2_jc_snapped = true;   // both sides pinned to this JC
+            }
+          }
+
+          // (1b) Unique-side JC snap. An IS-mediated DP and the JC describing the same insertion do NOT
+          // agree on their IS side: the DP's is chosen by the per-locus copy vote in resolve_alignments,
+          // which has no reason to pick the copy the split reads landed on, so (1) -- which requires both
+          // sides -- never fires for them. The DP is then left with a unique-side coordinate that can sit
+          // tens of bp off the junction it agrees with, because the pair gathering approximates a mate's
+          // junction-facing end as mate_start + read_length, which overshoots whenever that mate is
+          // soft-clipped at the breakpoint. Match on the unique side alone and pin ONLY that coordinate;
+          // the IS side stays on its voted copy (the reads cannot say which copy it is), and the final
+          // redundant-IS pass below puts it exactly on that copy's element end.
+          if (!side1_jc_snapped && !side2_jc_snapped) {
+            bool s1_is = side1_redundant_reads || dp_side_on_repeat(ref_seq_info, s1_seq_id, s1_pos, s1_strand);
+            bool s2_is = side2_redundant_reads || dp_side_on_repeat(ref_seq_info, s2_seq_id, s2_pos, s2_strand);
+            if (s1_is != s2_is) {                      // exactly one IS side, one unique side
+              bool unique_is_side1 = !s1_is;
+              const string& u_seq = unique_is_side1 ? s1_seq_id : s2_seq_id;
+              int32_t u_pos = unique_is_side1 ? s1_pos : s2_pos;
+              int32_t u_str = unique_is_side1 ? s1_strand : s2_strand;
+
+              int32_t best_pos = 0, best_off = 0; bool found = false;
+              for (vector<dp_jc_sides>::const_iterator j = passing_jcs.begin(); j != passing_jcs.end(); j++) {
+                // The JC must be IS-mediated too. Classify its IS side the same way as the DP's, by the
+                // repeat annotation -- NOT by side_N_redundant alone: a side whose split reads uniquely
+                // matched one variant copy is a repeat side that is nonetheless flagged redundant=0
+                // (the same trap combine_DP_with_MOB_by_unique_side documents).
+                bool j1_is = j->red1 || dp_side_on_repeat(ref_seq_info, j->s1seq, j->p1, j->st1);
+                bool j2_is = j->red2 || dp_side_on_repeat(ref_seq_info, j->s2seq, j->p2, j->st2);
+                if (j1_is == j2_is) continue;
+                const string& ju_seq = j1_is ? j->s2seq : j->s1seq;
+                int32_t ju_pos = j1_is ? j->p2 : j->p1;
+                int32_t ju_str = j1_is ? j->st2 : j->st1;
+                if (ju_seq != u_seq || ju_str != u_str) continue;
+                int32_t off = abs(u_pos - ju_pos);
+                if (off > snap_win) continue;
+                if (!found || off < best_off) { found = true; best_off = off; best_pos = ju_pos; }
+              }
+
+              // Gated exactly like the snaps around it: accept unless the supporting pairs' inferred
+              // inserts favor the current position by more than 3x.
+              if (found && (best_pos != u_pos)) {
+                int32_t c1 = unique_is_side1 ? best_pos : s1_pos;
+                int32_t c2 = unique_is_side1 ? s2_pos : best_pos;
+                if (dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
+                  if (unique_is_side1) {
+                    s1_pos = max(1, min(scanner->seq_length(s1_tid), best_pos)); side1_jc_snapped = true;
+                  } else {
+                    s2_pos = max(1, min(scanner->seq_length(s2_tid), best_pos)); side2_jc_snapped = true;
+                  }
+                  lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+                }
+              }
             }
           }
 
@@ -1491,8 +1571,8 @@ namespace breseq {
             // Mark it circular whenever it reconnects the origin (cand) and the pairs are consistent with
             // (1, L) -- NOT only when the coordinates move. A DP already pinned to the origin (e.g. it
             // snapped onto the circular JC in step 1) is at c1==s1_pos/c2==s2_pos, for which the log-
-            // likelihood difference is 0 (>= kSnapLBF), so it is still flagged/ignored.
-            if (cand && dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+            // likelihood difference is 0 (>= snap_lbf_floor), so it is still flagged/ignored.
+            if (cand && dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
               s1_pos = c1; s2_pos = c2; circular_dp = true;
               lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
             }
@@ -1505,7 +1585,7 @@ namespace breseq {
             cFeatureLocation* is1 = cReferenceSequences::find_closest_repeat_region_boundary(s1_pos, ref_seq_info[s1_seq_id].m_repeats, md1, s1_strand);
             if (is1) {
               int32_t c1 = (s1_strand == -1) ? is1->get_end_1() : is1->get_start_1();
-              if (dp_pairs_logL(pr, c1, s1_strand, s2_pos, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+              if (dp_pairs_logL(pr, c1, s1_strand, s2_pos, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
                 s1_pos = max(1, min(scanner->seq_length(s1_tid), c1)); side1_repeat = true;
                 lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
               }
@@ -1514,7 +1594,7 @@ namespace breseq {
             cFeatureLocation* is2 = cReferenceSequences::find_closest_repeat_region_boundary(s2_pos, ref_seq_info[s2_seq_id].m_repeats, md2, s2_strand);
             if (is2) {
               int32_t c2 = (s2_strand == -1) ? is2->get_end_1() : is2->get_start_1();
-              if (dp_pairs_logL(pr, s1_pos, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+              if (dp_pairs_logL(pr, s1_pos, s1_strand, c2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
                 s2_pos = max(1, min(scanner->seq_length(s2_tid), c2)); side2_repeat = true;
               }
             }
