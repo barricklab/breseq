@@ -412,6 +412,14 @@ namespace breseq {
     vector<dp_draw_read> m_reads;
   };
 
+  // The aligned extent of one region's read of a pair (its reference start/end), as recorded per key
+  // in DP_candidate_regions.csv. A key can be listed more than once in one region (the region-open
+  // step re-lists every read still in the sliding window), so the two are folded to the widest span.
+  struct dp_key_extent {
+    int32_t read_start, read_end;
+    bool    have;      // false for a pre-extent CSV: fall back to the region span
+  };
+
   // One candidate region parsed from DP_candidate_regions.csv.
   struct dp_region_row {
     string      seq_id;
@@ -419,7 +427,8 @@ namespace breseq {
     uint32_t    end;     // higher coordinate
     char        strand;  // focal-read strand: 'F' or 'R'
     bool        redundant; // majority of this region's discordant reads mapped redundantly (multicopy side)
-    set<string> keys;    // distinct <read1>__<read2>__<insert_size> pair keys in this region
+    // Distinct <read1>__<read2>__<insert_size> pair keys in this region -> that read's aligned extent.
+    map<string, dp_key_extent> keys;
   };
 
   // Convert one region into a JC-style junction side (position, strand), given whether the library's
@@ -437,6 +446,34 @@ namespace breseq {
       position = static_cast<int32_t>(r.start);
       strand = +1;
     }
+  }
+
+  // Starting coordinate for one side of a candidate junction, taken from the aligned extents of the
+  // read pairs that SEED that candidate (the keys the two regions share) instead of the region's span.
+  //
+  // The region span is a product of the sliding-window detector, not of the reads: a region closes
+  // when a read ages out, so its far bound is a read's start plus the window width -- a coordinate no
+  // read occupies, which can sit past the true breakpoint. It is also shared by every partner of a hub
+  // region. The seeding reads' junction-facing ALIGNED ends cannot pass the breakpoint, so the extreme
+  // one is a conservative start that is specific to this candidate:
+  //   strand -1 (kept flank <= p, junction to the right) -> max(read_end)
+  //   strand +1 (kept flank >= p, junction to the left)  -> min(read_start)
+  // Returns false if no seeding key carried an extent (a pre-extent CSV) -- the caller then keeps the
+  // region-derived position.
+  static bool dp_seed_side_position(const dp_region_row& r, const vector<string>& seed_keys,
+                                    int32_t strand, int32_t& position)
+  {
+    bool found = false;
+    int32_t best = 0;
+    for (size_t i = 0; i < seed_keys.size(); i++) {
+      map<string, dp_key_extent>::const_iterator it = r.keys.find(seed_keys[i]);
+      if (it == r.keys.end() || !it->second.have) continue;
+      int32_t inner = (strand == -1) ? it->second.read_end : it->second.read_start;
+      if (!found) { best = inner; found = true; }
+      else        best = (strand == -1) ? max(best, inner) : min(best, inner);
+    }
+    if (found) position = best;
+    return found;
   }
 
   // Determine the library's concordant orientation (which fixes which read end faces the junction ->
@@ -1122,11 +1159,33 @@ namespace breseq {
         // 'redundant' is column index 7 (1 = tie-broken multicopy side). Absent in older CSVs.
         r.redundant = (f.size() >= 8 && f[7] == "1");
 
-        // The keys field is column index 8 (empty if the region had no descriptors).
+        // The keys field is column index 8 (empty if the region had no descriptors). Each entry is
+        // <read1>__<read2>__<insert_size>__<read_start>__<read_end> (identify_mutations.cpp's
+        // dp_descriptor): the identity key is the first three fields, the last two are this region's
+        // read's aligned extent. A CSV written before the extents existed has only the three.
         string key_field = (f.size() >= 9) ? f[8] : "";
         vector<string> keys = split(key_field, ";");
         for (size_t i = 0; i < keys.size(); i++) {
-          if (!keys[i].empty()) r.keys.insert(keys[i]);
+          if (keys[i].empty()) continue;
+          vector<string> kf = split(keys[i], "__");
+          dp_key_extent x; x.read_start = 0; x.read_end = 0; x.have = false;
+          string key = keys[i];
+          if (kf.size() >= 5) {
+            key = kf[0] + "__" + kf[1] + "__" + kf[2];
+            x.read_start = from_string<int32_t>(kf[3]);
+            x.read_end   = from_string<int32_t>(kf[4]);
+            x.have = true;
+          }
+          // Fold a repeated key (re-listed by a later region-open snapshot) to the widest extent.
+          map<string, dp_key_extent>::iterator prev = r.keys.find(key);
+          if (prev == r.keys.end()) r.keys[key] = x;
+          else if (x.have) {
+            if (!prev->second.have) prev->second = x;
+            else {
+              prev->second.read_start = min(prev->second.read_start, x.read_start);
+              prev->second.read_end   = max(prev->second.read_end,   x.read_end);
+            }
+          }
         }
         regions.push_back(r);
       }
@@ -1138,17 +1197,23 @@ namespace breseq {
     //
     map<string, set<int> > key_to_regions;
     for (size_t ri = 0; ri < regions.size(); ri++) {
-      for (set<string>::const_iterator k = regions[ri].keys.begin(); k != regions[ri].keys.end(); k++) {
-        key_to_regions[*k].insert(static_cast<int>(ri));
+      for (map<string, dp_key_extent>::const_iterator k = regions[ri].keys.begin(); k != regions[ri].keys.end(); k++) {
+        key_to_regions[k->first].insert(static_cast<int>(ri));
       }
     }
+    // The keys behind each edge's weight are kept alongside it: they are the pairs that SEED that
+    // candidate junction, and each side's starting coordinate is taken from their aligned extents
+    // (dp_seed_side_position) rather than from the region span.
     map<pair<int, int>, int> edge_weight;
+    map<pair<int, int>, vector<string> > edge_keys;
     for (map<string, set<int> >::const_iterator it = key_to_regions.begin(); it != key_to_regions.end(); it++) {
       if (it->second.size() == 2) {
         set<int>::const_iterator si = it->second.begin();
         int a = *si; ++si;
         int b = *si;
-        edge_weight[make_pair(min(a, b), max(a, b))]++;
+        pair<int, int> ab = make_pair(min(a, b), max(a, b));
+        edge_weight[ab]++;
+        edge_keys[ab].push_back(it->first);
       }
     }
 
@@ -1259,9 +1324,17 @@ namespace breseq {
       int a = edges[e].second.first;
       int b = edges[e].second.second;
 
+      // Each side's strand comes from its region; its starting coordinate comes from the aligned
+      // extents of the pairs that seed THIS edge, falling back to the region span when the CSV
+      // carries no extents.
       int32_t pos_a, strand_a, pos_b, strand_b;
       dp_region_to_side(regions[a], inner3p, pos_a, strand_a);
       dp_region_to_side(regions[b], inner3p, pos_b, strand_b);
+      {
+        const vector<string>& seed_keys = edge_keys[edges[e].second];
+        dp_seed_side_position(regions[a], seed_keys, strand_a, pos_a);
+        dp_seed_side_position(regions[b], seed_keys, strand_b, pos_b);
+      }
 
       // side_1 = the side with the lower (seq_id, position).
       bool a_is_side_1;

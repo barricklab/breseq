@@ -249,7 +249,8 @@ namespace breseq {
     static const int kDPnBins = 6;
     //! One discordant read currently inside a bin's sliding window.
     struct dp_read {
-      uint32_t start_pos;  //!< reference start (1-based) of this read
+      uint32_t start_pos;  //!< reference start (1-based) of this read (also its window position)
+      uint32_t end_pos;    //!< reference end (1-based) of this read's ALIGNED extent
       string   key;        //!< condensed descriptor: <read1_name>__<read2_name>__<r1_insert_size>
       bool     redundant;  //!< this discordant read maps redundantly (X1>1: a tie-broken multicopy side)
     };
@@ -270,7 +271,7 @@ namespace breseq {
       string   orientation;       //!< pair orientation for this region: FR / RF / FF
       uint32_t max_count;         //!< peak in-window discordant count over the region
       bool     redundant;         //!< majority of this region's discordant reads mapped redundantly (multicopy side)
-      string   discordant_pairs;  //!< ';'-joined <read1>__<read2>__<insert_size> keys
+      string   discordant_pairs;  //!< ';'-joined <read1>__<read2>__<insert_size>__<read_start>__<read_end>
     };
 
 		
