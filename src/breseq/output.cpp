@@ -2674,8 +2674,11 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
   if (d.items_dropped_unsupported)
     tally += ", " + to_string(d.items_dropped_unsupported)
            + " dropped with no read pair bridging the placed breakpoints";
+  if (d.items_merged_duplicate)
+    tally += ", " + to_string(d.items_merged_duplicate)
+           + " folded into another candidate placed at the same breakpoint";
   ss << tr(td("outcome")
-           + td(to_string(d.items_tested + d.items_dropped_unsupported) + " examined")
+           + td(to_string(d.items_tested + d.items_dropped_unsupported + d.items_merged_duplicate) + " examined")
            + td(tally)) << endl;
 
   ss << "</table>" << endl;

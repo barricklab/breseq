@@ -1248,6 +1248,11 @@ namespace breseq {
       scanner = new dp_side_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name);
     }
 
+    // Items already emitted, keyed by the six side fields they were placed at. A DP item is identified
+    // in a .gd by exactly those fields, so a second item at the same breakpoint is not a near-duplicate
+    // to be tolerated -- it is a fatal duplicate on write. See the fold-in block inside the loop.
+    map<string, diff_entry_ptr_t> emitted_by_breakpoint;
+
     for (size_t e = 0; e < edges.size(); e++) {
       int weight = edges[e].first;
       if (weight < min_pairs) break; // edges are sorted descending; nothing left qualifies
@@ -1469,6 +1474,45 @@ namespace breseq {
         }
       }
 
+      // More than one graph edge can end up at ONE breakpoint. A single breakpoint shoulder is split
+      // into several candidate regions whenever its (strand x orientation) bin's in-window count dips
+      // below --discordant-pair-seed, and each fragment forms its own edge with the same partner; the
+      // placement and snapping passes above then pull those edges onto the same coordinates. Every
+      // field below this point is recomputed from the BAM at the placed positions, so the resulting
+      // items differ only in candidate_discordant_count -- and writing both aborts the run.
+      //
+      // Fold this edge into the item already emitted here rather than emitting a second one. Done
+      // BEFORE the BAM rescan below, so a folded edge costs no scan and does not enter the run tallies
+      // as a separately tested item.
+      const string breakpoint_key = s1_seq_id + ":" + to_string(s1_pos) + ":" + to_string(s1_strand)
+                                  + "|" + s2_seq_id + ":" + to_string(s2_pos) + ":" + to_string(s2_strand);
+      {
+        map<string, diff_entry_ptr_t>::iterator prev = emitted_by_breakpoint.find(breakpoint_key);
+        if (prev != emitted_by_breakpoint.end()) {
+          cDiffEntry& kept = *(prev->second);
+          // Summing is exact rather than approximate: a pair key is counted toward an edge only when it
+          // lands in exactly two regions (see the size() == 2 guard in Step 2), so the edges partition
+          // the keys between them and no key is counted twice here.
+          const int32_t merged_weight = from_string<int32_t>(kept["candidate_discordant_count"]) + weight;
+          kept["candidate_discordant_count"] = to_string(merged_weight);
+          // Keep the reported expectation describing the count now shown beside it.
+          if (background.ok)
+            kept["background_e_value"] = to_string(background.e_value(merged_weight), 3, true);
+          // Redundancy is the only other thing that can differ: it comes from the regions, and this
+          // edge's regions are not the kept item's. A side seen as redundant by either stays redundant.
+          if (side1_repeat || side1_redundant_reads) {
+            kept["side_1_annotate_key"] = "repeat";
+            kept[SIDE_1_REDUNDANT] = "1";
+          }
+          if (side2_repeat || side2_redundant_reads) {
+            kept["side_2_annotate_key"] = "repeat";
+            kept[SIDE_2_REDUNDANT] = "1";
+          }
+          summary.discordant_pair.items_merged_duplicate++;
+          continue;
+        }
+      }
+
       cDiffEntry dp(DP);
       dp[SIDE_1_SEQ_ID]  = s1_seq_id;
       dp[SIDE_1_POSITION] = to_string(s1_pos);
@@ -1637,7 +1681,7 @@ namespace breseq {
         if (!by_freq && !by_skew && !circular_dp) dps.items_accepted++;
       }
 
-      dp_gd.add(dp);
+      emitted_by_breakpoint[breakpoint_key] = dp_gd.add(dp);
     }
 
     if (scanner) delete scanner;
