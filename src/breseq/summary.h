@@ -402,6 +402,7 @@ namespace breseq{
     // Outcome.
     uint64_t items_tested;                      // DP items emitted (weight >= minimum_pairs_used)
     uint64_t items_dropped_unsupported;         // cleared the floor, but no pair bridged the placed sides
+    uint64_t items_merged_duplicate;            // folded into an item already placed at the same breakpoint
     uint64_t items_accepted;
     uint64_t items_rejected_frequency;
     uint64_t items_rejected_skew;
@@ -428,6 +429,7 @@ namespace breseq{
     , background_size(0.0)
     , items_tested(0)
     , items_dropped_unsupported(0)
+    , items_merged_duplicate(0)
     , items_accepted(0)
     , items_rejected_frequency(0)
     , items_rejected_skew(0)

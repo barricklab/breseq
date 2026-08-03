@@ -422,6 +422,7 @@ void to_json(json& j, const DiscordantPairSummary& s)
     {"background_size", s.background_size},
     {"items_tested", s.items_tested},
     {"items_dropped_unsupported", s.items_dropped_unsupported},
+    {"items_merged_duplicate", s.items_merged_duplicate},
     {"items_accepted", s.items_accepted},
     {"items_rejected_frequency", s.items_rejected_frequency},
     {"items_rejected_skew", s.items_rejected_skew},
@@ -454,6 +455,7 @@ void from_json(const json& j, DiscordantPairSummary& s)
   s.background_size = get_double_or_default(j, "background_size");
   s.items_tested = get_uint64_or_default(j, "items_tested");
   s.items_dropped_unsupported = get_uint64_or_default(j, "items_dropped_unsupported");
+  s.items_merged_duplicate = get_uint64_or_default(j, "items_merged_duplicate");
   s.items_accepted = get_uint64_or_default(j, "items_accepted");
   s.items_rejected_frequency = get_uint64_or_default(j, "items_rejected_frequency");
   s.items_rejected_skew = get_uint64_or_default(j, "items_rejected_skew");
