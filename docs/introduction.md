@@ -26,6 +26,12 @@ structural variation in a genome! We recommend that you perform _de novo_
 assembly and whole-genome comparisons with other software programs to
 analyze long-read data for structural variation.
 
+If your Nanopore reads were processed using fast basecalling, we recommend adding
+the `--nanopore-fast` option. It rules out false-positive mutation predictions
+caused by the high homopolymer indel error rates of this mode: no indel mutations
+will be called in homopolymer repeats of 4 or more bases. This option is not
+necessary for data processed in high-accuracy basecalling mode.
+
 _breseq_ was initially developed to analyze data from the Lenski
 long-term evolution experiment with *E. coli* [(Link to LTEE
 Website)](https://the-ltee.org).

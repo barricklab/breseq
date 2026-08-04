@@ -299,6 +299,7 @@ namespace breseq
     options.addUsage("Read File Options", NORMAL_OPTION);
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", NORMAL_OPTION)
+    ("nanopore-fast,x", "Set recommended options for nanopore data processed in fast basecalling mode to rule out false-positive mutations caused by high homopolymer indel error rates. Equivalent to --consensus-reject-indel-homopolymer-length 4 --polymorphism-reject-indel-homopolymer-length 4 --polymorphism-no-indels. If you provide any of these options on their own, they override these preset values. Does not change read mapping settings. NOTE: For data processed in high-accuracy basecalling mode, this option is not necessary. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) Any 'AS:i:n' alignment scores already present in your SAM file are IGNORED and overwritten. breseq rescores every alignment itself from the CIGAR and the reference, scoring +1 per matching base, -3 per mismatching base, -2 per gap opened and -3 per gap extended, with soft- and hard-clipped bases costing nothing. It does this so that alternative placements of the same read are always compared on one consistent scale. Note this scoring highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, NORMAL_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, NORMAL_OPTION)
@@ -882,9 +883,21 @@ namespace breseq
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 1;
     }
-    
+
+    // en masse overrides come before specific overrides
+    //
+    // Must be after the prediction-mode blocks above, which reset these to their OFF values,
+    // and before the specific overrides below, so that passing one of these options on its own
+    // still wins over the preset.
+
+    if (options.count("nanopore-fast")) {
+      this->consensus_reject_indel_homopolymer_length = 4;
+      this->polymorphism_reject_indel_homopolymer_length = 4;
+      this->polymorphism_no_indels = true;
+    }
+
     // override the default settings
-    
+
     if (options.count("minimum-mapping-quality")) {
       this->minimum_mapping_quality = from_string<int32_t>(options["minimum-mapping-quality"]);
     }

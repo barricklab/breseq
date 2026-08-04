@@ -45,12 +45,6 @@ Do not predict new sequence junctions.
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
 
-`-x, --nanopore`
-
-Set read alignment and mutation calling options for Nanopore sequencing
-data. Important: no indel mutations will be called in homopolymer
-repeats of 4 or more bases with this option.
-
 !!! tip
     For a complete list of options (including many advanced options), please show the full command line help by running `breseq -h` or `breseq --help`.
 

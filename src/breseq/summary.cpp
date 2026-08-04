@@ -681,6 +681,8 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   consensus_minimum_variant_coverage = t.consensus_minimum_variant_coverage;
   consensus_minimum_total_coverage = t.consensus_minimum_total_coverage;
   consensus_frequency_cutoff = t.consensus_frequency_cutoff;
+  consensus_reject_indel_homopolymer_length = t.consensus_reject_indel_homopolymer_length;
+  consensus_reject_surrounding_homopolymer_length = t.consensus_reject_surrounding_homopolymer_length;
   polymorphism_log10_e_value_cutoff = t.polymorphism_log10_e_value_cutoff;
   polymorphism_fisher_strand_p_value_cutoff = t.polymorphism_fisher_strand_p_value_cutoff;
   polymorphism_ks_quality_p_value_cutoff = t.polymorphism_ks_quality_p_value_cutoff;
