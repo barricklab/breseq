@@ -1047,6 +1047,20 @@ identify_mutations_pileup::~identify_mutations_pileup()
 {
 }
 
+/*! One entry of a candidate region's discordant_pairs list: the read-pair key followed by the
+    ALIGNED extent of this region's read of that pair, "<key>__<read_start>__<read_end>".
+
+    dp_evidence seeds each candidate junction side's boundary search from these extents (the reads
+    that actually support the edge), rather than from the region's span -- which is a product of the
+    sliding window (its end is a read's start plus the window width) and is shared by every partner
+    of a hub region. The key is itself '__'-separated (<read1>__<read2>__<insert_size>), so the
+    identity key stays recoverable as the first three fields.
+ */
+static string dp_descriptor(const identify_mutations_pileup::dp_read& r)
+{
+  return r.key + "__" + to_string(r.start_pos) + "__" + to_string(r.end_pos);
+}
+
 /*! Called for each reference genome position.
  */
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
@@ -1157,6 +1171,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
             dp_read dr;
             dr.start_pos = position;
+            dr.end_pos = i->reference_end_1();
             dr.key = key;
             // A tie-broken redundant discordant pair keeps X1>1 on its marked alignment (see
             // resolve_alignments.cpp); flag its DP side redundant so it propagates to DP evidence.
@@ -1168,7 +1183,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             // region are instead captured by the open-time snapshot in check_discordant_completion
             // (which runs after this loop), so they are never double-counted.
             if (_dp_region_start[bin] != UNDEFINED_UINT32) {
-              _dp_region_descriptors[bin].push_back(key);
+              _dp_region_descriptors[bin].push_back(dp_descriptor(dr));
               if (dr.redundant) ++_dp_region_redundant_count[bin];
             }
           }
@@ -1837,7 +1852,7 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
         _dp_region_redundant_count[bin] = 0;
         for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
           for (deque<dp_read>::iterator r = g->reads[bin].begin(); r != g->reads[bin].end(); r++) {
-            _dp_region_descriptors[bin].push_back(r->key);
+            _dp_region_descriptors[bin].push_back(dp_descriptor(*r));
             if (r->redundant) ++_dp_region_redundant_count[bin];
           }
         }
@@ -1890,7 +1905,8 @@ void identify_mutations_pileup::write_dp_candidate_regions(const string& filenam
   ASSERT(!out.fail(), "Could not open output file: " + filename);
   // 'redundant' is a new column BEFORE 'discordant_pairs' (which must stay last: it is ';'-joined
   // and parsed as the final field by dp_evidence). 1 = a majority of this region's reads were
-  // redundant (tie-broken multicopy side); 0 otherwise.
+  // redundant (tie-broken multicopy side); 0 otherwise. Each 'discordant_pairs' entry is
+  // <read1>__<read2>__<insert_size>__<read_start>__<read_end> (see dp_descriptor).
   out << "seq_id,start,end,strand,orientation,length,max_discordant_count,redundant,discordant_pairs" << endl;
   for (vector<dp_candidate_region>::const_iterator r = _dp_candidate_regions.begin(); r != _dp_candidate_regions.end(); r++) {
     out << r->seq_id << "," << r->start << "," << r->end << "," << r->strand << "," << r->orientation << ","

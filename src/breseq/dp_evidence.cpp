@@ -62,6 +62,19 @@ namespace breseq {
   // read. During that refinement pass the guard is off (it needs the reads that reach past p).
   // ---------------------------------------------------------------------------------------------
 
+  // A read pair's identifying number, shared by its two mates (the two paired read files write names
+  // "<file-prefix>:<read-number>"; the prefix differs between mates, the number is common). Used to
+  // pair a read at one junction side with its mate at the other side (both count/plot logic rely on it).
+  static string dp_read_num(const string& name) {
+    size_t colon = name.find(':');
+    return (colon == string::npos) ? name : name.substr(colon + 1);
+  }
+
+  // Where one discordant alignment sits, so the OTHER mate can look up its true aligned extent.
+  struct dp_mate_rec { int32_t tid, pos, end; };
+  // pair number -> that pair's discordant alignments (more than two when a mate maps redundantly).
+  typedef map<string, vector<dp_mate_rec> > dp_mate_index;
+
   // Geometry of one junction side being scanned (plus the other side, for the supporting test).
   struct dp_side_ctx {
     int32_t p, s;                 // this side's position (1-based) and strand (+/-1)
@@ -75,11 +88,41 @@ namespace breseq {
                                   // Kept separate from p/other_p -- those are the classification + fetch-
                                   // window position for this pass, which may be a re-anchored, far-from-
                                   // the-reads position that would wrongly drive the overlap test.
+    const dp_mate_index* mates;   // discordant-alignment index for exact mate ends; NULL -> estimate
   };
 
   // One supporting read pair, viewed from both sides: outer (away-from-junction) and inner (junction-facing)
   // reference coordinates on each side. The inferred insert at (P1,P2) is reach1 + reach2 (dp_reach).
   struct dp_pair_ends { int32_t o1, i1, o2, i2; };
+
+
+  // How far this read's MATE reaches along the reference.
+  //
+  // SAM stores a mate's position but not its CIGAR, so this used to be estimated as
+  // mate_start + read_length_avg, which is wrong for every soft-clipped mate -- and those cluster at
+  // breakpoints, exactly where this quantity decides a coordinate. The index resolves it exactly: it
+  // holds every discordant alignment in the run (1.2% of the BAM, ~115k records on an LTEE clone),
+  // built in one pass, so the mate's record is an O(1) lookup with no further I/O.
+  //
+  // Falls back to this read's own query length when the mate is not indexed (no index supplied, or a
+  // mate that is not itself discordant): mates share a query length in 99.8% of pairs, which is far
+  // closer than the run-wide average -- that average is short of the true length for nearly every read
+  // once trimming is in play (0.5% of mate ends exact, versus 93.6% for the read's own length).
+  static int32_t dp_mate_reference_span(const alignment_wrapper& a, const dp_mate_index* mates)
+  {
+    if (mates != NULL) {
+      dp_mate_index::const_iterator it = mates->find(dp_read_num(a.read_name()));
+      if (it != mates->end()) {
+        int32_t mtid = static_cast<int32_t>(a.mate_reference_target_id());
+        int32_t mpos = a.mate_start_1();
+        for (size_t i = 0; i < it->second.size(); i++) {
+          const dp_mate_rec& r = it->second[i];
+          if ((r.tid == mtid) && (r.pos == mpos)) return r.end - r.pos + 1;
+        }
+      }
+    }
+    return static_cast<int32_t>(a.read_length());
+  }
 
   // Classify one fetched read at a junction side. Returns 0 = ignore, 1 = supporting/discordant,
   // 2 = concordant-crossing, 3 = unpaired. `anchor` is set (for kept reads) to the junction-facing
@@ -123,7 +166,7 @@ namespace breseq {
       // inner gaps are measured against the overlap reference (ovl_p/ovl_other_p = the current best
       // breakpoint estimate), NOT the classification/window position p, which may be re-anchored.
       {
-        int32_t matelen = static_cast<int32_t>(a.read_length());
+        int32_t matelen = dp_mate_reference_span(a, c.mates);
         int32_t g_this  = (c.s == -1) ? (c.ovl_p - rend) : (rstart - c.ovl_p);
         int32_t g_other = mate_forward ? (c.ovl_other_p - (mpos + matelen - 1)) : (mpos - c.ovl_other_p);
         if (g_this + g_other < 0) return 0;
@@ -138,12 +181,11 @@ namespace breseq {
     //         the whole mate is > p.
     //   s=+1: kept side = coords > p, other side = coords < p. This read (reverse) must start after p
     //         (rstart > p); its forward mate's rightmost (mate_end) is nearest p, so mate_start+mate_len-1
-    //         < p means the whole mate is < p. The mate CIGAR isn't in this record, so its far extent is
-    //         approximated by this read's aligned length (reads are ~equal length).
+    //         < p means the whole mate is < p. The mate's far extent comes from dp_mate_reference_span.
     bool kept_clear = (c.s == -1) ? (rend < c.p) : (rstart > c.p);
     if (!kept_clear) return 0;
     int32_t mpos = a.mate_start_1();
-    int32_t mate_len = static_cast<int32_t>(a.reference_end_1()) - static_cast<int32_t>(a.reference_start_1()) + 1;
+    int32_t mate_len = dp_mate_reference_span(a, c.mates);
     bool completely_other = (c.s == -1) ? (mpos > c.p)
                                         : (mpos + mate_len - 1 < c.p);
     return completely_other ? 2 : 0;
@@ -167,21 +209,49 @@ namespace breseq {
     return lo <= hi;
   }
 
-  // A read pair's identifying number, shared by its two mates (the two paired read files write names
-  // "<file-prefix>:<read-number>"; the prefix differs between mates, the number is common). Used to
-  // pair a read at one junction side with its mate at the other side (both count/plot logic rely on it).
-  static string dp_read_num(const string& name) {
-    size_t colon = name.find(':');
-    return (colon == string::npos) ? name : name.substr(colon + 1);
-  }
+  // Builds the discordant-alignment index in one sequential pass over the BAM. Only paired, primary,
+  // non-proper alignments are kept -- 1.2% of records on an LTEE clone (115k of 9.8M), so the index
+  // costs one scan and a few MB, and every mate end afterwards is exact with no further fetches. The
+  // per-side windows the scanner fetches are far too coarse for this: at a DP side only ~3-4% of the
+  // records in a +/-D window are discordant, so per-call window reads would cost ~30x more I/O.
+  class dp_mate_indexer : public pileup_base {
+  public:
+    dp_mate_indexer(const string& bam, const string& fasta)
+      : pileup_base(bam, fasta), m_out(NULL) { set_print_progress(false); }
+
+    void build(dp_mate_index& out) {
+      m_out = &out;
+      for (uint32_t t = 0; t < num_targets(); t++)
+        do_fetch(string(target_name(t)) + ":1-" + to_string(target_length(t)));
+      m_out = NULL;
+    }
+
+    void fetch_callback(const alignment_wrapper& a) {
+      if (m_out == NULL) return;
+      if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) return;
+      if (a.unmapped() || !a.is_paired() || a.proper_pair()) return;
+      dp_mate_rec r;
+      r.tid = static_cast<int32_t>(a.reference_target_id());
+      r.pos = static_cast<int32_t>(a.reference_start_1());
+      r.end = static_cast<int32_t>(a.reference_end_1());
+      (*m_out)[dp_read_num(a.read_name())].push_back(r);
+    }
+
+  private:
+    dp_mate_index* m_out;
+  };
 
   // Counts the three read categories at a junction side (used to fill the DP evidence fields), and
   // provides a preliminary refinement pass over the discordant reads at a side.
   class dp_side_scanner : public pileup_base {
   public:
     dp_side_scanner(const string& bam, const string& fasta)
-      : pileup_base(bam, fasta), m_collect_outside(false), m_collect_pairs(false),
-        m_gother_s(0), m_gread_len(0) { set_print_progress(false); }
+      : pileup_base(bam, fasta), m_mates(NULL), m_collect_outside(false), m_collect_pairs(false),
+        m_gother_s(0) { set_print_progress(false); }
+
+    // Exact mate ends for every classification and gathering pass from here on (see
+    // dp_mate_reference_span). Not owned; must outlive the scanner.
+    void set_mate_index(const dp_mate_index* mates) { m_mates = mates; }
 
     int32_t tid_for_seq_id(const string& seq_id) const { return dp_tid_for_seq_id(*this, seq_id); }
     int32_t seq_length(int32_t tid) const { return static_cast<int32_t>(target_length(tid)); }
@@ -247,14 +317,14 @@ namespace breseq {
 
     // Gather the supporting read pairs at this side over a SYMMETRIC +/-D window (so reads on either side
     // of the region position are seen -- outliers included, to be judged by the Bayes test). Each pair
-    // records both mates' outer and inner (junction-facing) reference coordinates. The mate's ends are
-    // approximated from its start + read_len (its CIGAR isn't in this record).
+    // records both mates' outer and inner (junction-facing) reference coordinates. The mate's ends come
+    // from its start plus dp_mate_reference_span (the XE tag, or this read's length as a fallback).
     bool gather_pairs(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
                       int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D,
                       int32_t ovl_p, int32_t ovl_other_p,
-                      int32_t other_s, int32_t read_len, vector<dp_pair_ends>& out) {
+                      int32_t other_s, vector<dp_pair_ends>& out) {
       set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, ovl_p, ovl_other_p);
-      m_pairs.clear(); m_gother_s = other_s; m_gread_len = read_len; m_collect_pairs = true;
+      m_pairs.clear(); m_gother_s = other_s; m_collect_pairs = true;
       int32_t tid = tid_for_seq_id(seq_id);
       if (tid >= 0) {
         int32_t lo = max(1, static_cast<int32_t>(p - D)), hi = min(seq_length(tid), static_cast<int32_t>(p + D));
@@ -278,18 +348,18 @@ namespace breseq {
         bool mate_forward = (a.flag() & BAM_FMREVERSE) == 0;
         if (mate_forward != m_ctx.other_cross_fwd) return;
         int32_t rs = static_cast<int32_t>(a.reference_start_1()), re = static_cast<int32_t>(a.reference_end_1());
+        int32_t matelen = dp_mate_reference_span(a, m_ctx.mates);
         // Overlapping-mate exclusion, referenced to the current best breakpoint estimate (ovl_p/
         // ovl_other_p), mirroring dp_classify_side_read: drop a pair whose two reads would overlap.
         {
-          int32_t matelen = static_cast<int32_t>(a.read_length());
           int32_t g_this  = (m_ctx.s == -1) ? (m_ctx.ovl_p - re) : (rs - m_ctx.ovl_p);
           int32_t g_other = mate_forward ? (m_ctx.ovl_other_p - (mpos + matelen - 1)) : (mpos - m_ctx.ovl_other_p);
           if (g_this + g_other < 0) return;
         }
         dp_pair_ends e;
         e.o1 = (m_ctx.s == -1) ? rs : re;                    e.i1 = (m_ctx.s == -1) ? re : rs;
-        e.o2 = (m_gother_s == -1) ? mpos : (mpos + m_gread_len - 1);
-        e.i2 = (m_gother_s == -1) ? (mpos + m_gread_len - 1) : mpos;
+        e.o2 = (m_gother_s == -1) ? mpos : (mpos + matelen - 1);
+        e.i2 = (m_gother_s == -1) ? (mpos + matelen - 1) : mpos;
         m_pairs.push_back(e);
         return;
       }
@@ -340,8 +410,10 @@ namespace breseq {
       m_ctx.p = p; m_ctx.s = s; m_ctx.cross_fwd = crossing_is_forward;
       m_ctx.other_tid = other_tid; m_ctx.other_p = other_p; m_ctx.other_cross_fwd = other_crossing_is_forward;
       m_ctx.D = D; m_ctx.ovl_p = ovl_p; m_ctx.ovl_other_p = ovl_other_p;
+      m_ctx.mates = m_mates;
     }
     dp_side_ctx m_ctx;
+    const dp_mate_index* m_mates;
     int     m_supporting, m_concordant, m_unpaired;
     map<string, int32_t> m_supporting_nums;   // pair number -> that side's outside coordinate
     bool    m_collect_outside;
@@ -349,8 +421,8 @@ namespace breseq {
     // plus the furthest junction-facing edge (soft-clip included) seen among them.
     vector<int32_t> m_outside;
     bool    m_have_inner; int32_t m_inner_edge;
-    // Pair-gathering pass (gather_pairs): both mates' ends, plus the other side's strand + read length.
-    bool    m_collect_pairs; vector<dp_pair_ends> m_pairs; int32_t m_gother_s, m_gread_len;
+    // Pair-gathering pass (gather_pairs): both mates' ends, plus the other side's strand.
+    bool    m_collect_pairs; vector<dp_pair_ends> m_pairs; int32_t m_gother_s;
   };
 
   // One read to draw on a per-side plot (its pair anchored at this side).
@@ -382,6 +454,7 @@ namespace breseq {
       // Same classification as the count, so the plot matches. The plot gathers at the final placed
       // positions (read from the .gd), so the overlap guard references those same positions.
       m_ctx.ovl_p = p; m_ctx.ovl_other_p = other_p;
+      m_ctx.mates = NULL;   // plotting only needs the same classification, not exact mate ends
       m_reads.clear();
 
       int32_t lo, hi;
@@ -412,6 +485,14 @@ namespace breseq {
     vector<dp_draw_read> m_reads;
   };
 
+  // The aligned extent of one region's read of a pair (its reference start/end), as recorded per key
+  // in DP_candidate_regions.csv. A key can be listed more than once in one region (the region-open
+  // step re-lists every read still in the sliding window), so the two are folded to the widest span.
+  struct dp_key_extent {
+    int32_t read_start, read_end;
+    bool    have;      // false for a pre-extent CSV: fall back to the region span
+  };
+
   // One candidate region parsed from DP_candidate_regions.csv.
   struct dp_region_row {
     string      seq_id;
@@ -419,7 +500,8 @@ namespace breseq {
     uint32_t    end;     // higher coordinate
     char        strand;  // focal-read strand: 'F' or 'R'
     bool        redundant; // majority of this region's discordant reads mapped redundantly (multicopy side)
-    set<string> keys;    // distinct <read1>__<read2>__<insert_size> pair keys in this region
+    // Distinct <read1>__<read2>__<insert_size> pair keys in this region -> that read's aligned extent.
+    map<string, dp_key_extent> keys;
   };
 
   // Convert one region into a JC-style junction side (position, strand), given whether the library's
@@ -437,6 +519,34 @@ namespace breseq {
       position = static_cast<int32_t>(r.start);
       strand = +1;
     }
+  }
+
+  // Starting coordinate for one side of a candidate junction, taken from the aligned extents of the
+  // read pairs that SEED that candidate (the keys the two regions share) instead of the region's span.
+  //
+  // The region span is a product of the sliding-window detector, not of the reads: a region closes
+  // when a read ages out, so its far bound is a read's start plus the window width -- a coordinate no
+  // read occupies, which can sit past the true breakpoint. It is also shared by every partner of a hub
+  // region. The seeding reads' junction-facing ALIGNED ends cannot pass the breakpoint, so the extreme
+  // one is a conservative start that is specific to this candidate:
+  //   strand -1 (kept flank <= p, junction to the right) -> max(read_end)
+  //   strand +1 (kept flank >= p, junction to the left)  -> min(read_start)
+  // Returns false if no seeding key carried an extent (a pre-extent CSV) -- the caller then keeps the
+  // region-derived position.
+  static bool dp_seed_side_position(const dp_region_row& r, const vector<string>& seed_keys,
+                                    int32_t strand, int32_t& position)
+  {
+    bool found = false;
+    int32_t best = 0;
+    for (size_t i = 0; i < seed_keys.size(); i++) {
+      map<string, dp_key_extent>::const_iterator it = r.keys.find(seed_keys[i]);
+      if (it == r.keys.end() || !it->second.have) continue;
+      int32_t inner = (strand == -1) ? it->second.read_end : it->second.read_start;
+      if (!found) { best = inner; found = true; }
+      else        best = (strand == -1) ? max(best, inner) : min(best, inner);
+    }
+    if (found) position = best;
+    return found;
   }
 
   // Determine the library's concordant orientation (which fixes which read end faces the junction ->
@@ -567,8 +677,13 @@ namespace breseq {
     return lp;
   }
 
-  // One passing JC breakpoint side pair, for snapping a nearby DP's coordinates onto it.
-  struct dp_jc_sides { string s1seq; int32_t p1, st1; string s2seq; int32_t p2, st2; };
+  // One passing JC breakpoint side pair, for snapping a nearby DP's coordinates onto it. red1/red2 are
+  // the JC's side_N_redundant flags: an IS-mediated junction has exactly one redundant side, and the
+  // unique-side snap below needs to know which one it is.
+  struct dp_jc_sides {
+    string s1seq; int32_t p1, st1; bool red1;
+    string s2seq; int32_t p2, st2; bool red2;
+  };
 
   // Load the passing (non-rejected) junction (JC) evidence breakpoints from jc_evidence.gd. A DP whose
   // pair-based edges land within the snap window of one of these validated split-read breakpoints is
@@ -584,8 +699,19 @@ namespace breseq {
       dp_jc_sides s;
       s.s1seq = j[SIDE_1_SEQ_ID]; s.p1 = from_string<int32_t>(j[SIDE_1_POSITION]); s.st1 = from_string<int32_t>(j[SIDE_1_STRAND]);
       s.s2seq = j[SIDE_2_SEQ_ID]; s.p2 = from_string<int32_t>(j[SIDE_2_POSITION]); s.st2 = from_string<int32_t>(j[SIDE_2_STRAND]);
+      s.red1 = j.entry_exists(SIDE_1_REDUNDANT) && (j[SIDE_1_REDUNDANT] == "1");
+      s.red2 = j.entry_exists(SIDE_2_REDUNDANT) && (j[SIDE_2_REDUNDANT] == "1");
       out.push_back(s);
     }
+  }
+
+  // Is this DP side sitting on (or within 50 bp of) an annotated repeat boundary? Used to tell an
+  // IS-mediated DP's IS side from its unique side while placing it -- before the repeat-end snap below
+  // has set side_N_repeat, and for a side whose reads were not themselves flagged redundant.
+  static bool dp_side_on_repeat(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t pos, int32_t strand)
+  {
+    int32_t md = 50;
+    return cReferenceSequences::find_closest_repeat_region_boundary(pos, ref_seq_info[seq_id].m_repeats, md, strand, true) != NULL;
   }
 
   // Load the empirical insert PMF for the main paired library + derive the mixture's u and p_out.
@@ -1122,11 +1248,33 @@ namespace breseq {
         // 'redundant' is column index 7 (1 = tie-broken multicopy side). Absent in older CSVs.
         r.redundant = (f.size() >= 8 && f[7] == "1");
 
-        // The keys field is column index 8 (empty if the region had no descriptors).
+        // The keys field is column index 8 (empty if the region had no descriptors). Each entry is
+        // <read1>__<read2>__<insert_size>__<read_start>__<read_end> (identify_mutations.cpp's
+        // dp_descriptor): the identity key is the first three fields, the last two are this region's
+        // read's aligned extent. A CSV written before the extents existed has only the three.
         string key_field = (f.size() >= 9) ? f[8] : "";
         vector<string> keys = split(key_field, ";");
         for (size_t i = 0; i < keys.size(); i++) {
-          if (!keys[i].empty()) r.keys.insert(keys[i]);
+          if (keys[i].empty()) continue;
+          vector<string> kf = split(keys[i], "__");
+          dp_key_extent x; x.read_start = 0; x.read_end = 0; x.have = false;
+          string key = keys[i];
+          if (kf.size() >= 5) {
+            key = kf[0] + "__" + kf[1] + "__" + kf[2];
+            x.read_start = from_string<int32_t>(kf[3]);
+            x.read_end   = from_string<int32_t>(kf[4]);
+            x.have = true;
+          }
+          // Fold a repeated key (re-listed by a later region-open snapshot) to the widest extent.
+          map<string, dp_key_extent>::iterator prev = r.keys.find(key);
+          if (prev == r.keys.end()) r.keys[key] = x;
+          else if (x.have) {
+            if (!prev->second.have) prev->second = x;
+            else {
+              prev->second.read_start = min(prev->second.read_start, x.read_start);
+              prev->second.read_end   = max(prev->second.read_end,   x.read_end);
+            }
+          }
         }
         regions.push_back(r);
       }
@@ -1138,17 +1286,23 @@ namespace breseq {
     //
     map<string, set<int> > key_to_regions;
     for (size_t ri = 0; ri < regions.size(); ri++) {
-      for (set<string>::const_iterator k = regions[ri].keys.begin(); k != regions[ri].keys.end(); k++) {
-        key_to_regions[*k].insert(static_cast<int>(ri));
+      for (map<string, dp_key_extent>::const_iterator k = regions[ri].keys.begin(); k != regions[ri].keys.end(); k++) {
+        key_to_regions[k->first].insert(static_cast<int>(ri));
       }
     }
+    // The keys behind each edge's weight are kept alongside it: they are the pairs that SEED that
+    // candidate junction, and each side's starting coordinate is taken from their aligned extents
+    // (dp_seed_side_position) rather than from the region span.
     map<pair<int, int>, int> edge_weight;
+    map<pair<int, int>, vector<string> > edge_keys;
     for (map<string, set<int> >::const_iterator it = key_to_regions.begin(); it != key_to_regions.end(); it++) {
       if (it->second.size() == 2) {
         set<int>::const_iterator si = it->second.begin();
         int a = *si; ++si;
         int b = *si;
-        edge_weight[make_pair(min(a, b), max(a, b))]++;
+        pair<int, int> ab = make_pair(min(a, b), max(a, b));
+        edge_weight[ab]++;
+        edge_keys[ab].push_back(it->first);
       }
     }
 
@@ -1248,6 +1402,18 @@ namespace breseq {
       scanner = new dp_side_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name);
     }
 
+    // One pass over the BAM to index every discordant alignment, so each mate's aligned extent is
+    // exact rather than estimated from a read length (see dp_mate_reference_span). Must outlive the
+    // scanner, which only borrows it.
+    dp_mate_index mate_index;
+    if (scanner) {
+      dp_mate_indexer indexer(settings.reference_bam_file_name, settings.reference_fasta_file_name);
+      indexer.build(mate_index);
+      scanner->set_mate_index(&mate_index);
+      cerr << "  Discordant pair (DP): indexed " << mate_index.size()
+           << " read pairs with a discordant alignment (exact mate ends)." << endl;
+    }
+
     // Items already emitted, keyed by the six side fields they were placed at. A DP item is identified
     // in a .gd by exactly those fields, so a second item at the same breakpoint is not a near-duplicate
     // to be tolerated -- it is a fatal duplicate on write. See the fold-in block inside the loop.
@@ -1259,9 +1425,17 @@ namespace breseq {
       int a = edges[e].second.first;
       int b = edges[e].second.second;
 
+      // Each side's strand comes from its region; its starting coordinate comes from the aligned
+      // extents of the pairs that seed THIS edge, falling back to the region span when the CSV
+      // carries no extents.
       int32_t pos_a, strand_a, pos_b, strand_b;
       dp_region_to_side(regions[a], inner3p, pos_a, strand_a);
       dp_region_to_side(regions[b], inner3p, pos_b, strand_b);
+      {
+        const vector<string>& seed_keys = edge_keys[edges[e].second];
+        dp_seed_side_position(regions[a], seed_keys, strand_a, pos_a);
+        dp_seed_side_position(regions[b], seed_keys, strand_b, pos_b);
+      }
 
       // side_1 = the side with the lower (seq_id, position).
       bool a_is_side_1;
@@ -1354,9 +1528,8 @@ namespace breseq {
       // coordinate to the innermost read edge that is NOT a one-off insert-size outlier -- a lone read
       // whose own inferred insert is anomalous (BF < 1/3) can't drag side_x_position off the cluster.
       if (have_insert && scanner) {
-        int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
         vector<dp_pair_ends> pr;
-        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, readlen, pr)
+        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, pr)
             && pr.size() >= 2) {
           int32_t r1 = dp_robust_edge(pr, /*this_is_side1=*/true,  s1_strand, s2_pos, s2_strand, insert_model);
           int32_t r2 = dp_robust_edge(pr, /*this_is_side1=*/false, s2_strand, r1,     s1_strand, insert_model);
@@ -1366,11 +1539,11 @@ namespace breseq {
       }
 
       // Snap the coarse pair-based edges onto a better-supported breakpoint. Three candidate snaps are
-      // tried in turn; each is gated by the SAME Bayesian probability requirement used for the JC snap:
-      // accept a candidate only if the supporting pairs' inferred inserts do NOT favor the current
-      // position over it by more than 3x -- i.e. lp(candidate) - lp(current) >= log(1/3) under the
-      // length-bias-corrected insert model. So a real near-origin junction, or a DP whose pairs
-      // contradict a nearby transposable element, is neither moved nor marked.
+      // tried in turn; each is gated by the SAME Bayesian requirement: accept a candidate only if the
+      // supporting pairs' inferred inserts do NOT favor the current position over it, per pair, by more
+      // than the floor set below -- i.e. lp(candidate) - lp(current) >= floor under the length-bias-
+      // corrected insert model. So a real near-origin junction, or a DP whose pairs contradict a nearby
+      // transposable element, is neither moved nor marked.
       bool circular_dp = false, side1_repeat = false, side2_repeat = false;
       bool side1_jc_snapped = false, side2_jc_snapped = false;
       // Which side's supporting reads mapped redundantly (from the DP candidate regions). A redundant
@@ -1378,11 +1551,21 @@ namespace breseq {
       bool side1_redundant_reads = a_is_side_1 ? regions[a].redundant : regions[b].redundant;
       bool side2_redundant_reads = a_is_side_1 ? regions[b].redundant : regions[a].redundant;
       if (have_insert && scanner) {
-        int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
         vector<dp_pair_ends> pr;
-        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, readlen, pr)
+        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, pr)
             && !pr.empty()) {
-          const double kSnapLBF = log(1.0 / 3.0);   // accept a snap unless pairs favor current by > 3x
+          // Accept a snap unless the supporting pairs favor the current position over the candidate.
+          // The evidence is a SUM over those pairs, so a fixed total threshold means something
+          // different at 10 pairs than at 500: at ~150 pairs the old log(1/3) worked out to -0.007
+          // nats per pair -- "the pairs must not disagree at all", about +/-18 bp. Scaling the floor
+          // with the pair count makes the criterion depth-independent and gives it a physical reading.
+          // Moving a breakpoint by d changes the mean per-pair log-likelihood by roughly d^2/(2*sigma^2)
+          // with sigma the insert spread, so a floor of -0.25 nats/pair accepts a move of up to about
+          // 0.7*sigma and rejects anything beyond -- on an LTEE clone (sigma ~150) that is a ~100 bp
+          // move accepted at -0.22/pair and a 538 bp move rejected at -4.2/pair, where the old total
+          // threshold could not tell the two apart (both were simply "far outside").
+          const double kSnapPerPairLBF = -0.25;
+          const double snap_lbf_floor = kSnapPerPairLBF * static_cast<double>(pr.size());
           double lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
 
           // (1) JC snap: a passing split-read junction (JC) gives a base-resolution breakpoint. Snap to
@@ -1400,11 +1583,64 @@ namespace breseq {
               }
             }
             if (best && (jp1 != s1_pos || jp2 != s2_pos)
-                && dp_pairs_logL(pr, jp1, s1_strand, jp2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+                && dp_pairs_logL(pr, jp1, s1_strand, jp2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
               s1_pos = max(1, min(scanner->seq_length(s1_tid), jp1));
               s2_pos = max(1, min(scanner->seq_length(s2_tid), jp2));
               lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
               side1_jc_snapped = true; side2_jc_snapped = true;   // both sides pinned to this JC
+            }
+          }
+
+          // (1b) Unique-side JC snap. An IS-mediated DP and the JC describing the same insertion do NOT
+          // agree on their IS side: the DP's is chosen by the per-locus copy vote in resolve_alignments,
+          // which has no reason to pick the copy the split reads landed on, so (1) -- which requires both
+          // sides -- never fires for them. The DP is then left with a unique-side coordinate that can sit
+          // tens of bp off the junction it agrees with, because the pair gathering approximates a mate's
+          // junction-facing end as mate_start + read_length, which overshoots whenever that mate is
+          // soft-clipped at the breakpoint. Match on the unique side alone and pin ONLY that coordinate;
+          // the IS side stays on its voted copy (the reads cannot say which copy it is), and the final
+          // redundant-IS pass below puts it exactly on that copy's element end.
+          if (!side1_jc_snapped && !side2_jc_snapped) {
+            bool s1_is = side1_redundant_reads || dp_side_on_repeat(ref_seq_info, s1_seq_id, s1_pos, s1_strand);
+            bool s2_is = side2_redundant_reads || dp_side_on_repeat(ref_seq_info, s2_seq_id, s2_pos, s2_strand);
+            if (s1_is != s2_is) {                      // exactly one IS side, one unique side
+              bool unique_is_side1 = !s1_is;
+              const string& u_seq = unique_is_side1 ? s1_seq_id : s2_seq_id;
+              int32_t u_pos = unique_is_side1 ? s1_pos : s2_pos;
+              int32_t u_str = unique_is_side1 ? s1_strand : s2_strand;
+
+              int32_t best_pos = 0, best_off = 0; bool found = false;
+              for (vector<dp_jc_sides>::const_iterator j = passing_jcs.begin(); j != passing_jcs.end(); j++) {
+                // The JC must be IS-mediated too. Classify its IS side the same way as the DP's, by the
+                // repeat annotation -- NOT by side_N_redundant alone: a side whose split reads uniquely
+                // matched one variant copy is a repeat side that is nonetheless flagged redundant=0
+                // (the same trap combine_DP_with_MOB_by_unique_side documents).
+                bool j1_is = j->red1 || dp_side_on_repeat(ref_seq_info, j->s1seq, j->p1, j->st1);
+                bool j2_is = j->red2 || dp_side_on_repeat(ref_seq_info, j->s2seq, j->p2, j->st2);
+                if (j1_is == j2_is) continue;
+                const string& ju_seq = j1_is ? j->s2seq : j->s1seq;
+                int32_t ju_pos = j1_is ? j->p2 : j->p1;
+                int32_t ju_str = j1_is ? j->st2 : j->st1;
+                if (ju_seq != u_seq || ju_str != u_str) continue;
+                int32_t off = abs(u_pos - ju_pos);
+                if (off > snap_win) continue;
+                if (!found || off < best_off) { found = true; best_off = off; best_pos = ju_pos; }
+              }
+
+              // Gated exactly like the snaps around it: accept unless the supporting pairs' inferred
+              // inserts favor the current position by more than 3x.
+              if (found && (best_pos != u_pos)) {
+                int32_t c1 = unique_is_side1 ? best_pos : s1_pos;
+                int32_t c2 = unique_is_side1 ? s2_pos : best_pos;
+                if (dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
+                  if (unique_is_side1) {
+                    s1_pos = max(1, min(scanner->seq_length(s1_tid), best_pos)); side1_jc_snapped = true;
+                  } else {
+                    s2_pos = max(1, min(scanner->seq_length(s2_tid), best_pos)); side2_jc_snapped = true;
+                  }
+                  lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+                }
+              }
             }
           }
 
@@ -1418,8 +1654,8 @@ namespace breseq {
             // Mark it circular whenever it reconnects the origin (cand) and the pairs are consistent with
             // (1, L) -- NOT only when the coordinates move. A DP already pinned to the origin (e.g. it
             // snapped onto the circular JC in step 1) is at c1==s1_pos/c2==s2_pos, for which the log-
-            // likelihood difference is 0 (>= kSnapLBF), so it is still flagged/ignored.
-            if (cand && dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+            // likelihood difference is 0 (>= snap_lbf_floor), so it is still flagged/ignored.
+            if (cand && dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
               s1_pos = c1; s2_pos = c2; circular_dp = true;
               lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
             }
@@ -1432,7 +1668,7 @@ namespace breseq {
             cFeatureLocation* is1 = cReferenceSequences::find_closest_repeat_region_boundary(s1_pos, ref_seq_info[s1_seq_id].m_repeats, md1, s1_strand);
             if (is1) {
               int32_t c1 = (s1_strand == -1) ? is1->get_end_1() : is1->get_start_1();
-              if (dp_pairs_logL(pr, c1, s1_strand, s2_pos, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+              if (dp_pairs_logL(pr, c1, s1_strand, s2_pos, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
                 s1_pos = max(1, min(scanner->seq_length(s1_tid), c1)); side1_repeat = true;
                 lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
               }
@@ -1441,7 +1677,7 @@ namespace breseq {
             cFeatureLocation* is2 = cReferenceSequences::find_closest_repeat_region_boundary(s2_pos, ref_seq_info[s2_seq_id].m_repeats, md2, s2_strand);
             if (is2) {
               int32_t c2 = (s2_strand == -1) ? is2->get_end_1() : is2->get_start_1();
-              if (dp_pairs_logL(pr, s1_pos, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+              if (dp_pairs_logL(pr, s1_pos, s1_strand, c2, s2_strand, insert_model) - lp_cur >= snap_lbf_floor) {
                 s2_pos = max(1, min(scanner->seq_length(s2_tid), c2)); side2_repeat = true;
               }
             }
@@ -1582,8 +1818,20 @@ namespace breseq {
         dp["side_2_concordant_count"] = to_string(c2b);
         dp["side_1_unpaired_count"] = to_string(c3a);
         dp["side_2_unpaired_count"] = to_string(c3b);
-        have_local_concordant = true;
-        c_local = 0.5 * (static_cast<double>(c2a) + static_cast<double>(c2b));
+        // Concordant pairs at a REDUNDANT side cross the intact reference junction of SOME copy of
+        // the repeat, not necessarily this one, so they say nothing about whether THIS junction is
+        // present -- averaging them in dilutes a junction whose unique side has no concordant support
+        // at all. JC excludes such a side from its reference count the same way (resolve_alignments.cpp:
+        // a side counts only when side_N_redundant != "1" and its annotate_key is not "repeat", and an
+        // excluded side becomes "NA" and drops out of the mean). Average only the usable sides; when
+        // both are redundant there is no denominator and the frequency is NA (written below).
+        // The raw side_N_concordant_count fields above still report what was seen at each side.
+        double c_sum = 0.0;
+        int n_usable = 0;
+        if (!side1_red) { c_sum += static_cast<double>(c2a); n_usable++; }
+        if (!side2_red) { c_sum += static_cast<double>(c2b); n_usable++; }
+        have_local_concordant = (n_usable > 0);
+        c_local = have_local_concordant ? (c_sum / static_cast<double>(n_usable)) : 0.0;
 
         // Nothing survived verification: the candidate's shared-pair count came from the coarse
         // region-overlap heuristic, but at the placed breakpoint not one read pair actually bridges the
@@ -1607,8 +1855,9 @@ namespace breseq {
         dp["background_e_value"] = to_string(background.e_value(weight), 3, true);
 
       // Local frequency: discordant pairs vs concordant pairs spanning the SAME breakpoint, i.e. the
-      // variant and reference observations of one sampling event. Both sides are averaged because each
-      // measures the same fragment population from one end. See the comment above dp_crossing_mean.
+      // variant and reference observations of one sampling event. The non-redundant sides are averaged
+      // because each measures the same fragment population from one end (see where c_local is built).
+      // See also the comment above dp_crossing_mean.
       double f_lcb = std::numeric_limits<double>::quiet_NaN();
       if (have_local_concordant) {
         double k = static_cast<double>(k_distinct < 0 ? 0 : k_distinct);
@@ -1625,6 +1874,15 @@ namespace breseq {
         // fraction is the signal rather than a problem. The upper bound exists so the report can
         // show an interval instead of a naked point estimate.
         dp[FREQUENCY_UPPER] = to_string(binomial_frequency_upper_bound(k, k + c_local, kDPFrequencyAlpha), 4, false);
+      } else if (scanner) {
+        // Both sides redundant: every concordant pair seen belongs to some copy of a repeat, so there
+        // is no reference observation of THIS breakpoint to divide by -- the frequency is unknown, not
+        // zero and not 100%. Written as "NA" (freq_to_string and freq_range_to_string already render
+        // that literal), and f_lcb stays NaN so the frequency gate below skips the item entirely.
+        dp[FREQUENCY] = "NA";
+        dp["concordant_count"] = "NA";
+        dp[FREQUENCY_LOWER] = "NA";
+        dp[FREQUENCY_UPPER] = "NA";
       }
 
       // Discordance "skew" score: -log10 P(a normal position on side_1's seq_id is spanned by <= k
