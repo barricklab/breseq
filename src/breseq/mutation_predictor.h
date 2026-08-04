@@ -47,6 +47,9 @@ namespace breseq {
 
     // Functions that handle specific predictions
     void predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
+    //! Deletions whose ends fall in homologous sequence, where no split-read junction can exist and
+    //! the discordant read pairs are the only evidence that spans the breakpoint.
+    void predictMCplusDPtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& dp, diff_entry_list_t& mc, diff_entry_list_t& ra);
     void predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
     void predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc, bool use_redundant_sides = false);
     void predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& ra, diff_entry_list_t& mc );

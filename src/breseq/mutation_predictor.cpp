@@ -1464,6 +1464,190 @@ namespace breseq {
     
   }
   
+  // Deletions between two homologous copies of a sequence -- paralogous genes, an rRNA operon, any
+  // repeat that is not an annotated repeat_region -- leave NO split-read junction: a read crossing the
+  // breakpoint aligns just as well to either copy, so there is nothing for candidate-junction
+  // identification to find. predictMCplusJCtoDEL therefore drops them (its case (2) requires annotated
+  // repeats and everything else requires a JC), and the mutation is lost even though the coverage
+  // evidence is unambiguous.
+  //
+  // Discordant pairs ARE able to span such a breakpoint, because they link mates across the whole
+  // deleted interval instead of reading through it. This pairs an unexplained MC with a DP whose two
+  // sides have deletion geometry, then works out where inside the homology the crossover actually sits.
+  void MutationPredictor::predictMCplusDPtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                               diff_entry_list_t& dp, diff_entry_list_t& mc, diff_entry_list_t& ra)
+  {
+    // Everything here is scaled by the read length, because every discrepancy this has to absorb is a
+    // read-length artifact: a DP side is placed at the innermost aligned end of its supporting pairs and
+    // an MC boundary is where coverage falls off, so against a homologous boundary they disagree by up
+    // to about one read (53, 70, 58 and 46 bp on the REL606 colanic-acid deletion, read lengths ~130-143).
+    int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
+    if (read_length <= 0) return;
+    const int32_t kMCtoDPSlop    = read_length;         // MC boundary <-> DP side
+    const int32_t kOffsetSearch  = 2 * read_length;     // both sides can be off, so the offset by twice
+    const int32_t kHomologyWindow = 3 * read_length;    // how far out to look for informative RA calls
+    // Window for judging whether a candidate register really is a homologous alignment. Kept close to
+    // the boundary on purpose: widen it and the measurement runs off the end of the homologous block
+    // into unrelated sequence (+/-600 bp drops this locus from 0.96 to 0.85) and rejects real cases.
+    const int32_t kIdentityWindow = read_length;
+
+    if (dp.empty() || mc.empty()) return;
+
+    // Observed base per position, for every RA that called something different from the reference. At a
+    // deletion between near-identical copies these are not mutations at all: they are the surviving
+    // hybrid showing the OTHER copy's base where reads mapped to this one, which is exactly the signal
+    // that locates the crossover.
+    map<string, map<int32_t, string> > ra_base;
+    for (diff_entry_list_t::iterator it = ra.begin(); it != ra.end(); it++) {
+      cDiffEntry& r = **it;
+      if (!r.entry_exists(NEW_BASE) || !r.entry_exists(SEQ_ID) || !r.entry_exists(POSITION)) continue;
+      if (r[NEW_BASE].size() != 1) continue;          // only substitutions are informative here
+      if (r.entry_exists(INSERT_POSITION) && (n(r[INSERT_POSITION]) != 0)) continue;
+      // Only FIXED differences say anything about which copy the hybrid inherited. In polymorphism mode
+      // the same list also carries variants at any frequency down to polymorphism_frequency_cutoff, and
+      // a minority allele that happens to match the other copy would place the crossover wherever it
+      // sits. Require consensus support, the same bar used to call a base at all.
+      if (r.entry_exists(FREQUENCY)
+          && (from_string<double>(r[FREQUENCY]) < settings.consensus_frequency_cutoff)) continue;
+      ra_base[r[SEQ_ID]][n(r[POSITION])] = r[NEW_BASE];
+    }
+
+    for (diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) {
+      cDiffEntry& mc_item = **mc_it;
+      const string& seq_id = mc_item[SEQ_ID];
+      int32_t mc_start = n(mc_item["start"]), mc_end = n(mc_item["end"]);
+
+      // --- find a DP with deletion geometry at these boundaries -------------------------------------
+      // side_1 strand -1 keeps the flank at coords <= p (the left flank survives); side_2 strand +1
+      // keeps coords >= p (the right flank survives). That is a deletion of what lies between them.
+      cDiffEntry* dp_item = NULL;
+      for (diff_entry_list_t::iterator dp_it = dp.begin(); dp_it != dp.end(); dp_it++) {
+        cDiffEntry& d = **dp_it;
+        if (d.entry_exists(REJECT)) continue;
+        if (d[SIDE_1_SEQ_ID] != seq_id || d[SIDE_2_SEQ_ID] != seq_id) continue;
+        if (n(d[SIDE_1_STRAND]) != -1 || n(d[SIDE_2_STRAND]) != +1) continue;
+        if (abs(n(d[SIDE_1_POSITION]) - mc_start) > kMCtoDPSlop) continue;
+        if (abs(n(d[SIDE_2_POSITION]) - mc_end) > kMCtoDPSlop) continue;
+        dp_item = &d;
+        break;
+      }
+      if (dp_item == NULL) continue;
+
+      cAnnotatedSequence& seq = ref_seq_info[seq_id];
+      int32_t seq_len = static_cast<int32_t>(seq.m_length);
+      map<string, map<int32_t, string> >::const_iterator rb = ra_base.find(seq_id);
+      if (rb == ra_base.end()) continue;
+      const map<int32_t, string>& obs = rb->second;
+
+      // --- find the homologous register from the read alignments --------------------------------------
+      // The deletion joins x to x + d, so the two flanks are the same sequence offset by d. Neither the
+      // MC boundaries nor the longest run of identical bases gives d reliably -- coverage falls off
+      // gradually through homology, and between two 94%-identical paralogs long identity runs are
+      // everywhere, most of them nowhere near the crossover.
+      //
+      // The reads pin it. Where reads mapped to one copy actually came from the other, breseq calls an
+      // RA whose new base is the OTHER copy's base at the homologous position. Only the true register
+      // explains those calls, so score each candidate d by how many it accounts for.
+      // Two criteria, because neither alone is enough: only a handful of RA calls sit near the
+      // boundary, so several registers explain the same number by chance (on this locus a wrong offset
+      // 312 bp away tied at 2), and the longest run of identical bases is meaningless between paralogs
+      // that are identical in long stretches everywhere. Take the register that explains the most read
+      // evidence, breaking ties by how well the two flanks actually align, and require that alignment
+      // to be real before believing any of it.
+      //
+      // "Real" is the same bar the run already uses for calling one sequence the consensus: the flanks
+      // must agree at least as often as a base has to, to be called. manB/cpsG sit at 0.96-0.98 against
+      // the 0.95 default, while a wrong register is near the 0.25 of random sequence. A cutoff of 0
+      // (the OFF setting) leaves identity as the tie-break only, which is still what picks the register.
+      const double kMinFlankIdentity = settings.consensus_frequency_cutoff;
+      int32_t d0 = n((*dp_item)[SIDE_2_POSITION]) - n((*dp_item)[SIDE_1_POSITION]);
+      int32_t best_d = 0, best_score = 0;
+      double best_ident = 0.0;
+      for (int32_t d = d0 - kOffsetSearch; d <= d0 + kOffsetSearch; d++) {
+        if (d <= 0) continue;
+        int32_t score = 0;
+        for (map<int32_t, string>::const_iterator o = obs.begin(); o != obs.end(); o++) {
+          int32_t x = o->first;
+          bool near_left  = (abs(x - mc_start) <= kHomologyWindow);
+          bool near_right = (abs(x - mc_end)   <= kHomologyWindow);
+          if (!near_left && !near_right) continue;
+          if (o->second.size() != 1) continue;
+          // left copy showing the right copy's base, or right copy showing the left copy's base
+          if (near_left && (x + d <= seq_len)
+              && (seq.get_sequence_1(x) != seq.get_sequence_1(x + d))
+              && (o->second[0] == seq.get_sequence_1(x + d))) score++;
+          if (near_right && (x - d >= 1)
+              && (seq.get_sequence_1(x) != seq.get_sequence_1(x - d))
+              && (o->second[0] == seq.get_sequence_1(x - d))) score++;
+        }
+        if (score == 0) continue;
+        // How well the two flanks align at this register, over a window around the boundary.
+        int32_t ilo = max(1, mc_start - kIdentityWindow);
+        int32_t ihi = min(seq_len - d, mc_start + kIdentityWindow);
+        if (ihi <= ilo) continue;
+        int32_t same = 0;
+        for (int32_t x = ilo; x <= ihi; x++)
+          if (seq.get_sequence_1(x) == seq.get_sequence_1(x + d)) same++;
+        double ident = static_cast<double>(same) / static_cast<double>(ihi - ilo + 1);
+        if ((score > best_score) || ((score == best_score) && (ident > best_ident))) {
+          best_score = score; best_d = d; best_ident = ident;
+        }
+      }
+      // No register explains the read evidence, or the "homology" is not homology -- do not guess.
+      if ((best_d == 0) || (best_ident < kMinFlankIdentity)) continue;
+
+      // --- bracket the crossover ----------------------------------------------------------------------
+      // Reads carrying the right copy's base while mapped to the LEFT copy sit at or past the crossover;
+      // reads carrying the left copy's base while mapped to the RIGHT copy sit before it. Those two
+      // bound it from either side, in left-copy coordinates.
+      int32_t last_left = 0, first_right = 0;
+      for (map<int32_t, string>::const_iterator o = obs.begin(); o != obs.end(); o++) {
+        int32_t x = o->first;
+        if (o->second.size() != 1) continue;
+        if ((abs(x - mc_start) <= kHomologyWindow) && (x + best_d <= seq_len)
+            && (seq.get_sequence_1(x) != seq.get_sequence_1(x + best_d))
+            && (o->second[0] == seq.get_sequence_1(x + best_d))) {
+          if ((first_right == 0) || (x < first_right)) first_right = x;
+        }
+        if ((abs(x - mc_end) <= kHomologyWindow) && (x - best_d >= 1)
+            && (seq.get_sequence_1(x) != seq.get_sequence_1(x - best_d))
+            && (o->second[0] == seq.get_sequence_1(x - best_d))) {
+          if (x - best_d > last_left) last_left = x - best_d;
+        }
+      }
+      if ((first_right == 0) || (last_left == 0) || (last_left >= first_right)) continue;
+
+      // The crossover lies in (last_left, first_right]; every position in there yields identical
+      // sequence, so the START is ambiguous by that much while the SIZE is exact -- both endpoints
+      // slide together. Emit the rightmost consistent start, matching the right-shift convention
+      // normalize_to_sequence() applies to DEL, which is also the one choice in that interval that
+      // does not need to be qualified.
+      int32_t position = first_right;
+      if ((position < 1) || (position + best_d - 1 > seq_len)) continue;
+
+      cDiffEntry mut(DEL);
+      mut[SEQ_ID] = seq_id;
+      mut[POSITION] = s(position);
+      mut[SIZE] = s(best_d);
+      mut._evidence = make_vector<string>(mc_item._id)(dp_item->_id);
+      if (settings.polymorphism_prediction) mut[FREQUENCY] = "1";
+
+      // Name the two homologous features the deletion sits between, following the 'between' convention
+      // used for a deletion between two copies of a repeat family. annotate_repeat_hotspots() preserves
+      // a value set here unless it finds annotated repeat_regions at the boundaries.
+      cFeatureLocation* f1 = cReferenceSequences::get_overlapping_feature(seq.m_gene_locations, position);
+      cFeatureLocation* f2 = cReferenceSequences::get_overlapping_feature(seq.m_gene_locations, position + best_d - 1);
+      if ((f1 != NULL) && (f2 != NULL)) {
+        string n1 = (*f1->get_feature())["name"], n2 = (*f2->get_feature())["name"];
+        if (!n1.empty() && !n2.empty()) mut["between"] = (n1 == n2) ? n1 : (n1 + "," + n2);
+      }
+
+      gd.add(mut);
+      mc_it = mc.erase(mc_it);
+      mc_it--;
+    }
+  }
+
   void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc, bool use_redundant_sides)
   {
     (void)summary;
@@ -2625,6 +2809,17 @@ namespace breseq {
 		///
     cerr << "  Predicting large deletions..." << endl;
     predictMCplusJCtoDEL(settings, summary, gd, jc, mc);
+
+    ///
+    // evidence MC + DP => DEL mutation (deletion between homologous copies, where no JC can exist)
+    ///
+    // Runs after the JC cases so split-read evidence, which locates a breakpoint to the base, always
+    // wins; this only sees the MC items those cases left unexplained.
+    {
+      diff_entry_list_t dp = gd.get_list(make_vector<gd_entry_type>(DP));
+      diff_entry_list_t ra_for_crossover = gd.get_list(make_vector<gd_entry_type>(RA));
+      predictMCplusDPtoDEL(settings, summary, gd, dp, mc, ra_for_crossover);
+    }
 
 		///
 		// evidence JC => INS, SUB, DEL mutations
