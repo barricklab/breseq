@@ -519,6 +519,13 @@ namespace breseq {
               ("indeterminate_duplication_size", "1")
               ("position",                       s(n(mut["position"]) - 1));
 
+            // In polymorphism mode every mutation must carry a frequency (checked at the end of
+            // predict()). It is 1 here, like the deletion this case predicts alongside: the case only
+            // fires because there is missing coverage, and MC is not predicted unless the region is
+            // fully absent -- so the insertion that replaced it is fixed, whatever the junction's own
+            // fitted frequency says.
+            if (settings.polymorphism_prediction) mut_mob[FREQUENCY] = "1";
+
             // DEL: evidence = MC (already in mut._evidence) + JC_right
             mut["mediated"] = is_name;
             mut._evidence.push_back(jc_right->_id);
