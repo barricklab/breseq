@@ -454,24 +454,27 @@ namespace breseq
     uint32_t consensus_reject_indel_homopolymer_length;        // Default = 0 (OFF)
     uint32_t consensus_reject_surrounding_homopolymer_length;  // Default = 0 (OFF)
 
-    double consensus_frequency_cutoff;                            // Default = 0.8
+		// Tested against the LOWER 95% frequency bound in consensus mode ("confidently the majority")
+		// and against the UPPER bound in polymorphism mode ("cannot rule out fixed"), so the two
+		// defaults are not on the same scale. 0 = OFF.
+    double consensus_frequency_cutoff;                            // Default = 0.50 (consensus mode), 0.95 (polymorphism mode)
     
     double polymorphism_log10_e_value_cutoff;                     // Default = mutation_log10_e_value_cutoff = 10
 		// Two independent bias tests, previously a single combined cutoff. Strand bias is the one
 		// that discriminates chemistry artifacts (a variant seen on only one strand); quality bias
 		// also rejects strand-balanced, well-supported calls, so it is OFF by default.
-		double polymorphism_fisher_strand_p_value_cutoff;             // Default = 0.05 for mixed base | 0 (OFF) for polymorphism
+		double polymorphism_fisher_strand_p_value_cutoff;             // Default = 0.05
 		double polymorphism_ks_quality_p_value_cutoff;                // Default = 0 (OFF)
-		double polymorphism_frequency_cutoff;                         // Default = 0.1 for mixed base | 0.0 for polymorphism
+		double polymorphism_frequency_cutoff;                         // Default = 0.1 for mixed base | 0.05 for polymorphism
     uint32_t polymorphism_minimum_variant_coverage;               // Default = 0
     uint32_t polymorphism_minimum_total_coverage;                 // Default = 0
-    uint32_t polymorphism_minimum_variant_coverage_each_strand;   // Default = 0
-		uint32_t polymorphism_minimum_total_coverage_each_strand;     // Default = 0 for mixed base | 2 for polymorphism
+    uint32_t polymorphism_minimum_variant_coverage_each_strand;   // Default = 2
+		uint32_t polymorphism_minimum_total_coverage_each_strand;     // Default = 0
 		uint32_t polymorphism_reject_indel_homopolymer_length;        // Default = 0 (OFF)
     uint32_t polymorphism_reject_surrounding_homopolymer_length;  // Default = 0 (OFF)
 		bool polymorphism_no_indels;                                  // Default = false
-    double polymorphism_precision_decimal;                        // Default = not used for mixed base | 0.0000000001 for polymorphism
-    uint32_t polymorphism_precision_places;                       // Default = 3 for mixed base | 10 for polymorphism
+    double polymorphism_precision_decimal;                        // Default = 0.000001
+    uint32_t polymorphism_precision_places;                       // Default = 3 for mixed base | 8 for polymorphism
 
 		
 		//! Settings: Copy Number Variation
