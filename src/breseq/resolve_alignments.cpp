@@ -1270,6 +1270,36 @@ static void mark_pair_info(bam_alignment* a1, bam_alignment* a2, bool same_tid,
   }
 }
 
+// Marks the MAPPED mate of a SINGLETON pair -- one mate reference-best, the other with no alignment
+// anywhere (neither to the reference nor to any candidate junction). Without this a singleton is
+// indistinguishable in the BAM from several unrelated cases, because mark_pair_info above is the only
+// thing that ever sets BAM_FPAIRED and it runs only when BOTH mates resolved to the reference.
+//
+// Standard BAM semantics: BAM_FPAIRED | BAM_FMUNMAP, with RNEXT/PNEXT set to the read's own position
+// (the samtools convention for a mate-unmapped record) and TLEN 0. Setting mtid is NOT optional:
+// bam_file::write_alignments branches on (mtid == tid) and an untouched mtid of -1 reads back as
+// 4294967295, indexing target_name[] out of bounds. BAM_FMREVERSE is deliberately left unset (it is
+// undefined when 0x8 is set), and there is no XP tag -- with no second alignment there is no pair
+// orientation to record.
+//
+// Every alignment in the list is marked, not just the first: write_alignments emits all of them, and
+// mate-unmapped is a property of the READ, not of which copy it was placed at.
+//
+// This is what Missing Pair (MP) evidence keys on: a mate that maps only across a candidate junction
+// still has mapped_anywhere == true, so a marked singleton means the mate's sequence is absent from
+// the reference AND from every candidate junction -- i.e. genuinely novel.
+static void mark_mate_unmapped(alignment_list& alignments)
+{
+  for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
+  {
+    bam_alignment* a = it->get();
+    a->core.flag |= BAM_FPAIRED | BAM_FMUNMAP;
+    a->core.mtid  = a->core.tid;
+    a->core.mpos  = a->core.pos;
+    a->core.isize = 0;
+  }
+}
+
 static ConcordancePairing classify_pair(
                                         alignment_list& mate1_alignments,
                                         alignment_list& mate2_alignments,
@@ -1932,12 +1962,13 @@ void load_junction_alignments(
       {
         // Either mate is junction-best, or one/both mates are fully unmapped -- these fall
         // through to the existing, unmodified per-mate handling. A singleton mapping (one mate
-        // reference-best, the other fully unmapped) is still logged as discordant for
-        // visibility, but the mapped mate's alignment is still written normally.
-#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
+        // reference-best, the other fully unmapped) has its mapped mate's alignments flagged
+        // BAM_FPAIRED|BAM_FMUNMAP below (see mark_mate_unmapped), and is still logged as
+        // discordant for visibility; either way the alignment itself is written normally.
         bool m1_singleton_reference = m1_is_reference_match && !m2.mapped_anywhere;
         bool m2_singleton_reference = m2_is_reference_match && !m1.mapped_anywhere;
 
+#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
         if (m1_singleton_reference || m2_singleton_reference)
         {
           bam_alignment* mapped_alignment = m1_singleton_reference
@@ -1952,6 +1983,13 @@ void load_junction_alignments(
                                      "", "", -1);
         }
 #endif
+
+        // Mark before dispatching: dispatch_mate_result routes a reference-best mate to
+        // _write_reference_matches -> bam_file::write_alignments, which preserves these flags
+        // (fix_flags strips only 0x80/0x100). A junction-best mate is never marked here, so the
+        // flags can never reach write_moved_alignment's RNEXT/PNEXT handling.
+        if (m1_singleton_reference) mark_mate_unmapped(m1.this_reference_alignments);
+        if (m2_singleton_reference) mark_mate_unmapped(m2.this_reference_alignments);
 
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_1, fastq_file_index_1, seq1.m_name, m1, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, fastq_file_index_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);

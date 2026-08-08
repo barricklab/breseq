@@ -65,6 +65,9 @@ void identify_mutations(
   if (settings.predict_soft_clipping) imp.add_sc_evidence(summary, ref_seq_info);
   // Write discordant-pair candidate regions accumulated during the pileup (single operation).
   imp.write_dp_candidate_regions(settings.dp_candidate_regions_file_name);
+  // Likewise for missing-pair regions -- but only when they were actually collected, so a run
+  // without --predict-missing-pairs leaves no empty CSV behind.
+  if (settings.predict_missing_pairs) imp.write_mp_candidate_regions(settings.mp_candidate_regions_file_name);
   imp.write_gd(gd_file);
 }
 
@@ -713,6 +716,9 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _last_position_coverage_printed(0)
 , _print_per_position_file(print_per_position_file)
 , _dp_seed(settings.discordant_pair_seed)
+, _mp_enabled(false)
+, _mp_seed(settings.missing_pair_seed)
+, _mp_seed_fraction(settings.missing_pair_seed_fraction)
 {
 
   // remove once used
@@ -724,6 +730,16 @@ identify_mutations_pileup::identify_mutations_pileup(
     _dp_region_start[bin] = UNDEFINED_UINT32;
     _dp_region_max_count[bin] = 0;
     _dp_region_redundant_count[bin] = 0;
+  }
+
+  // Initialize per-bin missing-pair region state (bin = focal strand; see kMPnBins).
+  for (int bin = 0; bin < kMPnBins; bin++) {
+    _mp_metric[bin] = 0;
+    _mp_total_metric[bin] = 0;
+    _mp_region_start[bin] = UNDEFINED_UINT32;
+    _mp_region_max_count[bin] = 0;
+    _mp_region_max_total[bin] = 0;
+    _mp_region_redundant_count[bin] = 0;
   }
 
   set_print_progress(true);
@@ -784,6 +800,11 @@ identify_mutations_pileup::identify_mutations_pileup(
       _fastq_index_to_dp_group[rf->m_id] = group_index;
     }
   }
+
+  // Missing-pair (MP) detection rides on the same groups, so it can only run once they exist. Unlike
+  // DP -- whose seeding is always on -- MP seeding is gated by its option, so a run without
+  // --predict-missing-pairs pays exactly one predictable branch per read in the pileup loop.
+  _mp_enabled = _settings.predict_missing_pairs && !_dp_groups.empty();
 
 }
 
@@ -1061,6 +1082,19 @@ static string dp_descriptor(const identify_mutations_pileup::dp_read& r)
   return r.key + "__" + to_string(r.start_pos) + "__" + to_string(r.end_pos);
 }
 
+/*! One entry of an MP candidate region's unpaired_reads list: the ALIGNED extent of one
+    mate-unmapped read, "<read_start>__<read_end>".
+
+    mp_evidence seeds each region's boundary search from these extents, for the same reason DP does
+    (the region span's far bound is an artifact of the sliding window). There is no identity key
+    here: with the mate unmapped there is no second region to join this read to, so nothing needs to
+    be matched up across regions -- the extents alone are what the refinement consumes.
+ */
+static string mp_descriptor(const identify_mutations_pileup::mp_read& r)
+{
+  return to_string(r.start_pos) + "__" + to_string(r.end_pos);
+}
+
 /*! Called for each reference genome position.
  */
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
@@ -1185,6 +1219,43 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             if (_dp_region_start[bin] != UNDEFINED_UINT32) {
               _dp_region_descriptors[bin].push_back(dp_descriptor(dr));
               if (dr.redundant) ++_dp_region_redundant_count[bin];
+            }
+          }
+        }
+      }
+
+      //## Missing-pair (MP) region detection: incremental "enter" step.
+      //## Same once-per-read-at-its-start-column bookkeeping as DP above, but the qualifying read is
+      //## a SINGLETON: mapped and flagged paired with its mate unmapped anywhere (see
+      //## mark_mate_unmapped in resolve_alignments.cpp). Such a read has no XP tag and no meaningful
+      //## insert size, so the only bin dimension is the focal read's strand. A pile of these facing
+      //## one point is the signature of a novel sequence inserted there: the mates landed in
+      //## sequence that is in neither the reference nor any candidate junction.
+      if (_mp_enabled && (insert_count == 0) && (i->reference_start_1() == position)) {
+        if (!i->unmapped() && !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY))) {
+          map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(i->fastq_file_index());
+          if (gi != _fastq_index_to_dp_group.end()) {
+            int bin = i->reversed() ? 1 : 0;
+
+            // Every primary mapped read of this strand enters the denominator window, whether or not
+            // its mate is missing. The seed test below is an ENRICHMENT test, and it needs both terms.
+            _dp_groups[gi->second].mp_all_reads[bin].push_back(position);
+            ++_mp_total_metric[bin];
+
+            if (i->is_paired() && (i->flag() & BAM_FMUNMAP)) {
+              mp_read mr;
+              mr.start_pos = position;
+              mr.end_pos = i->reference_end_1();
+              mr.redundant = (i->redundancy() > 1);
+              _dp_groups[gi->second].mp_reads[bin].push_back(mr);
+              ++_mp_metric[bin];
+              // As for DP: reads entering on the column that OPENS a region are captured by the
+              // open-time snapshot in check_missing_pair_completion (which runs after this loop),
+              // so appending here only for an already-open region cannot double-count.
+              if (_mp_region_start[bin] != UNDEFINED_UINT32) {
+                _mp_region_descriptors[bin].push_back(mp_descriptor(mr));
+                if (mr.redundant) ++_mp_region_redundant_count[bin];
+              }
             }
           }
         }
@@ -1374,6 +1445,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     // regions close correctly even where there is no coverage.
     if(!_dp_groups.empty() && (insert_count == 0))
       check_discordant_completion(p.target(), position);
+
+		//###
+		//## MISSING PAIR MISSING PAIR MISSING PAIR
+		//###
+
+    // Same per-column cadence as DP, for the same reason.
+    if(_mp_enabled && (insert_count == 0))
+      check_missing_pair_completion(p.target(), position);
 
 		//###
 		//## POLYMORPHISM POLYMORPHISM POLYMORPHISM
@@ -1659,8 +1738,23 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     _dp_region_descriptors[bin].clear();
   }
 
+  // Reset the Missing Pair (MP) evidence variables (regions do not span reference boundaries)
+  for (int bin = 0; bin < kMPnBins; bin++) {
+    for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
+      g->mp_reads[bin].clear();
+      g->mp_all_reads[bin].clear();
+    }
+    _mp_metric[bin] = 0;
+    _mp_total_metric[bin] = 0;
+    _mp_region_start[bin] = UNDEFINED_UINT32;
+    _mp_region_max_count[bin] = 0;
+    _mp_region_max_total[bin] = 0;
+    _mp_region_descriptors[bin].clear();
+    _mp_region_redundant_count[bin] = 0;
+  }
+
 }
-  
+
 /*! Called at the end of a reference sequence fragment
     Close per-reference files
  */
@@ -1675,6 +1769,11 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   // Flush any open discordant-pair (DP) region at the end of this reference sequence.
   if (!_dp_groups.empty()) {
     check_discordant_completion(tid, target_length(tid)+1);
+  }
+
+  // Flush any open missing-pair (MP) region at the end of this reference sequence.
+  if (_mp_enabled) {
+    check_missing_pair_completion(tid, target_length(tid)+1);
   }
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
@@ -1886,6 +1985,130 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
       _dp_region_redundant_count[bin] = 0;
     }
   }
+}
+
+
+/*! Helper method to track missing-pair (MP) candidate regions.
+
+ Called once per reference column (including empty columns), and once past the end of each reference
+ sequence (position = target_length+1) to flush an open region. Maintains, per paired read group, a
+ sliding window of width (median + 2.42*MAD) over the reference start positions of reads whose mate
+ did not map anywhere. Reads are added once at their start column ("enter", in pileup_callback) and
+ removed once here when they fall out of the window ("exit"). A candidate region is a maximal run of
+ columns where the total in-window count reaches --missing-pair-seed.
+
+ The only difference from check_discordant_completion is the bin space: MP has no pair-orientation
+ dimension, so there are two bins (focal strand) rather than six.
+
+ @JEB expects 1-indexed positions.
+ */
+void identify_mutations_pileup::check_missing_pair_completion(uint32_t seq_id, uint32_t position)
+{
+  if (!_mp_enabled) return;
+
+  // Run an independent detector for each focal strand, so a breakpoint's forward shoulder (mates
+  // reaching right into the insert) and its reverse shoulder become separate regions.
+  for (int bin = 0; bin < kMPnBins; bin++) {
+
+    // "Exit" step: drop reads that have fallen out of each group's bin window -- both the
+    // mate-unmapped reads and the same-strand denominator.
+    for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
+      while (!g->mp_reads[bin].empty() &&
+             (static_cast<double>(position) - static_cast<double>(g->mp_reads[bin].front().start_pos) >= g->window_width)) {
+        g->mp_reads[bin].pop_front();
+        --_mp_metric[bin];
+      }
+      while (!g->mp_all_reads[bin].empty() &&
+             (static_cast<double>(position) - static_cast<double>(g->mp_all_reads[bin].front()) >= g->window_width)) {
+        g->mp_all_reads[bin].pop_front();
+        --_mp_total_metric[bin];
+      }
+    }
+
+    // A region opens only where mate-unmapped reads are ENRICHED, not merely present. The fraction of
+    // reads whose mate failed to align is roughly constant along a genome (it is a property of the
+    // library and the aligner, not of the locus), so an absolute count alone clears any fixed
+    // threshold at every position once coverage is decent, and the entire covered region becomes a
+    // single candidate. Requiring the local fraction to exceed --missing-pair-seed-fraction is what
+    // makes a real insertion -- where most fragments crossing the point lose their mate -- stand out
+    // from that background. The absolute floor is kept as well, so a handful of reads at very low
+    // coverage cannot clear the ratio by chance.
+    //
+    // Never "above" once past the end of the sequence: closes an open region at the flush sentinel
+    // and prevents opening a spurious region that would never close.
+    bool enriched = (_mp_total_metric[bin] > 0) &&
+                    (static_cast<double>(_mp_metric[bin]) >= _mp_seed_fraction * static_cast<double>(_mp_total_metric[bin]));
+    bool above = (_mp_metric[bin] >= _mp_seed) && enriched && (position <= target_length(seq_id));
+
+    if (above) {
+      if (_mp_region_start[bin] == UNDEFINED_UINT32) {
+        // Open a new region; snapshot the bin's reads currently in-window as its initial extents.
+        _mp_region_start[bin] = position;
+        _mp_region_max_count[bin] = static_cast<uint32_t>(_mp_metric[bin]);
+        _mp_region_max_total[bin] = static_cast<uint32_t>(_mp_total_metric[bin]);
+        _mp_region_descriptors[bin].clear();
+        _mp_region_redundant_count[bin] = 0;
+        for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
+          for (deque<mp_read>::iterator r = g->mp_reads[bin].begin(); r != g->mp_reads[bin].end(); r++) {
+            _mp_region_descriptors[bin].push_back(mp_descriptor(*r));
+            if (r->redundant) ++_mp_region_redundant_count[bin];
+          }
+        }
+      } else if (static_cast<uint32_t>(_mp_metric[bin]) > _mp_region_max_count[bin]) {
+        _mp_region_max_count[bin] = static_cast<uint32_t>(_mp_metric[bin]);
+        _mp_region_max_total[bin] = static_cast<uint32_t>(_mp_total_metric[bin]);
+      }
+    } else if (_mp_region_start[bin] != UNDEFINED_UINT32) {
+      // Close the open region (its last in-region column was position-1).
+      mp_candidate_region region;
+      region.seq_id = target_name(seq_id);
+      region.start = _mp_region_start[bin];
+      region.end = position - 1;
+      region.strand = (bin == 0) ? 'F' : 'R';
+      region.max_count = _mp_region_max_count[bin];
+      region.max_total = _mp_region_max_total[bin];
+      region.redundant = (2 * _mp_region_redundant_count[bin] > _mp_region_descriptors[bin].size());
+      string joined;
+      for (size_t k = 0; k < _mp_region_descriptors[bin].size(); k++) {
+        if (k) joined += ";";
+        joined += _mp_region_descriptors[bin][k];
+      }
+      region.unpaired_reads = joined;
+      _mp_candidate_regions.push_back(region);
+
+      _mp_region_start[bin] = UNDEFINED_UINT32;
+      _mp_region_max_count[bin] = 0;
+      _mp_region_max_total[bin] = 0;
+      _mp_region_descriptors[bin].clear();
+      _mp_region_redundant_count[bin] = 0;
+    }
+  }
+}
+
+
+/*! Write all accumulated MP candidate regions to a CSV in one pass (after the pileup completes). */
+void identify_mutations_pileup::write_mp_candidate_regions(const string& filename)
+{
+  // Sort by (seq_id, start, strand) so the two shoulders of one breakpoint appear adjacent.
+  sort(_mp_candidate_regions.begin(), _mp_candidate_regions.end(),
+       [](const mp_candidate_region& a, const mp_candidate_region& b) {
+         if (a.seq_id != b.seq_id) return a.seq_id < b.seq_id;
+         if (a.start != b.start) return a.start < b.start;
+         return a.strand < b.strand;
+       });
+
+  ofstream out(filename.c_str());
+  ASSERT(!out.fail(), "Could not open output file: " + filename);
+  // 'unpaired_reads' must stay last: it is ';'-joined and parsed as the final field by mp_evidence.
+  // Each entry is <read_start>__<read_end> (see mp_descriptor). 'redundant' is 1 when a majority of
+  // this region's reads mapped redundantly.
+  out << "seq_id,start,end,strand,length,max_unpaired_count,max_window_total_count,redundant,unpaired_reads" << endl;
+  for (vector<mp_candidate_region>::const_iterator r = _mp_candidate_regions.begin(); r != _mp_candidate_regions.end(); r++) {
+    out << r->seq_id << "," << r->start << "," << r->end << "," << r->strand << ","
+        << (r->end - r->start + 1) << "," << r->max_count << "," << r->max_total << ","
+        << (r->redundant ? 1 : 0) << "," << r->unpaired_reads << endl;
+  }
+  out.close();
 }
 
 

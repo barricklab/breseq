@@ -58,6 +58,7 @@ namespace breseq
         , read_name_style("NC")
         , pair_is_paired(false)
         , pair_is_proper(false)
+        , pair_mate_unmapped(false)
         , pair_orientation("")
         , pair_distance(0)
         {}
@@ -76,6 +77,7 @@ namespace breseq
       string read_name_style;
       bool pair_is_paired;
       bool pair_is_proper;
+      bool pair_mate_unmapped;   //!< singleton: this read mapped, its mate did not map anywhere
       string pair_orientation;
       int64_t pair_distance;
 

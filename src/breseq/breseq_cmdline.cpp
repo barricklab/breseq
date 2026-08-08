@@ -36,6 +36,7 @@
 #include "genome_diff.h"
 #include "identify_mutations.h"
 #include "dp_evidence.h"
+#include "mp_evidence.h"
 #include "resolve_alignments.h"
 #include "samtools_commands.h"
 #include "soft_clipping.h"
@@ -2401,6 +2402,24 @@ int breseq_default_action(int argc, char* argv[])
     summary.discordant_pair.retrieve(settings.discordant_pair_summary_file_name);
   }
 
+    //
+    // Missing Pair (MP) evidence
+    // Turn clusters of reads whose mates did not map anywhere (from the identify_mutations CSV) into
+    // one-sided MP evidence: the signature of a novel sequence inserted at that point.
+    //
+  if (settings.paired_mapping && settings.predict_missing_pairs) {
+    if (settings.do_step(settings.missing_pair_done_file_name, "Examining missing pair evidence")) {
+
+      predict_missing_pairs(settings, summary, ref_seq_info);
+      // The candidate-region CSV is written in stage 08 but consumed only here, so it is keyed to
+      // THIS step's done-file -- cleanup happens when its last consumer finishes.
+      settings.track_intermediate_file(settings.missing_pair_done_file_name,
+                                       settings.mp_candidate_regions_file_name);
+
+      settings.done_step(settings.missing_pair_done_file_name);
+    }
+  }
+
     /*
      * 09 Copy number variation
      * --------------------------------
@@ -2462,6 +2481,12 @@ int breseq_default_action(int argc, char* argv[])
       if (settings.paired_mapping && file_exists(settings.dp_genome_diff_file_name.c_str())) {
         cGenomeDiff dp_gd(settings.dp_genome_diff_file_name);
         evidence_gd.merge_preserving_duplicates(dp_gd);
+      }
+
+      // Missing pair (MP) evidence (likewise).
+      if (settings.paired_mapping && file_exists(settings.mp_genome_diff_file_name.c_str())) {
+        cGenomeDiff mp_gd(settings.mp_genome_diff_file_name);
+        evidence_gd.merge_preserving_duplicates(mp_gd);
       }
 
 
@@ -2606,6 +2631,9 @@ int breseq_default_action(int argc, char* argv[])
     // cOutputEvidenceFiles can surface them as per-side '?' pages). Must run before that step.
     if (!settings.no_evidence_html && settings.paired_mapping)
       breseq::draw_discordant_pair_evidence_plots(settings, summary, ref_seq_info, gd);
+      // Must also run before cOutputEvidenceFiles: it stamps _mp_plot_file_name onto each MP entry.
+      if (settings.predict_missing_pairs)
+        breseq::draw_missing_pair_evidence_plots(settings, summary, ref_seq_info, gd);
 
     // !!! Currently, we need to wait for the creation of coverage plots to finish
     // b/c we check whether files exist in creating the HTML files next.

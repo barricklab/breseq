@@ -263,6 +263,13 @@ string html_soft_clipping_table_string(
                                        const string& relative_link = ""
                                        );
 
+string html_missing_pair_table_string(
+                                      diff_entry_list_t& list_ref,
+                                      bool show_details,
+                                      const string& title = "Missing pair evidence",
+                                      const string& relative_link = ""
+                                      );
+
 string html_discordant_pair_table_string(diff_entry_list_t& dp,
                                           const Settings& settings,
                                           bool show_details,

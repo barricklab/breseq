@@ -4083,9 +4083,11 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]));
       } break;
 
-      case SC:{
-        // Annotate the single soft-clipping position like a JC side (repeat_override=true)
-        // so that gene/product/annotation fields are populated for the evidence item.
+      case SC:
+      case MP:{
+        // Annotate the single soft-clipping / missing-pair position like a JC side
+        // (repeat_override=true) so that gene/product/annotation fields are populated for the
+        // evidence item.
         annotate_1_mutation(mut, from_string<int32_t>(mut[POSITION]), from_string<int32_t>(mut[POSITION]), true);
       } break;
 

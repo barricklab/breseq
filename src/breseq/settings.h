@@ -268,6 +268,7 @@ namespace breseq
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
     bool paired_mapping;                                     // Default = true COMMAND-LINE OPTION (disable with --no-paired-mapping)
     bool predict_discordant_pairs;                           // Default = false COMMAND-LINE OPTION (--predict-discordant-pairs; requires paired-mapping)
+    bool predict_missing_pairs;                              // Default = false COMMAND-LINE OPTION (--predict-missing-pairs; requires paired-mapping)
 
     // Reference sequences
     vector<string> all_reference_file_names;    // REQUIRED COMMAND-LINE OPTION (filled by below)
@@ -414,6 +415,13 @@ namespace breseq
     double discordant_pair_minimum_crossing;              // Default = 10.0;      COMMAND-LINE OPTION
     double discordant_pair_background_e_value_cutoff;     // Default = 0.05;      COMMAND-LINE OPTION
 
+    //! Settings: Missing Pair (MP) Evidence
+    int32_t missing_pair_seed;                            // Default = 3;         COMMAND-LINE OPTION
+    double missing_pair_seed_fraction;                    // Default = 0.25;      COMMAND-LINE OPTION
+    int32_t missing_pair_minimum_reads;                   // Default = 3;         COMMAND-LINE OPTION
+    int32_t missing_pair_minimum_distinct;                // Default = 2;         COMMAND-LINE OPTION
+    double missing_pair_frequency_cutoff;                 // Default = 0.2/0.05;  COMMAND-LINE OPTION
+
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
     uint32_t soft_clipping_minimum_bases;                 // Default = 12        COMMAND-LINE OPTION
@@ -511,6 +519,7 @@ namespace breseq
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
     uint32_t max_rejected_soft_clipping_evidence_to_show;  // Default = 20
     uint32_t max_rejected_discordant_pair_evidence_to_show; // Default = 20
+    uint32_t max_rejected_missing_pair_evidence_to_show;    // Default = 20
 		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!
 		bool lenski_format;                                     // Default = false (not a public option!)
@@ -648,6 +657,9 @@ namespace breseq
     // DP gates/model/tally, persisted because the DP step is skipped on a restart but the Output step
     // still needs these numbers for summary.html and summary.json.
     string discordant_pair_summary_file_name;
+    string mp_candidate_regions_file_name;
+    string missing_pair_done_file_name;
+    string mp_genome_diff_file_name;
 
 
 		//! Paths: Copy Number Variation
