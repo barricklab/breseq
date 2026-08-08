@@ -376,7 +376,7 @@ namespace breseq
     ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("discordant-pair-skew-cutoff", "Reference cutoff for the discordant-pair (DP) skew score. The DP skew marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has at least 10^(cutoff+1) non-deletion positions; smaller references fall back to a negative-binomial fit (whose parametric tail is not capped near log10(N), but is conservative). (DEFAULT = 3.0)", 3.0, NORMAL_OPTION)
     ("discordant-pair-minimum-pairs", "Minimum number of read pairs shared by two DP candidate regions for the junction between them to be examined at all. (DEFAULT = 2)", 2, NORMAL_OPTION)
-    ("discordant-pair-frequency-cutoff", "Only accept DP evidence when the lower confidence bound on its local variant frequency -- discordant pairs divided by discordant plus concordant pairs spanning the breakpoint -- is above this value. 0 = OFF. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("discordant-pair-frequency-cutoff", "Only accept DP evidence when the lower confidence bound on its local variant frequency -- discordant pairs divided by discordant plus concordant pairs spanning the breakpoint -- is above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ("discordant-pair-minimum-crossing", "Only apply the DP skew test when at least this many concordant pairs are expected to span a normal position at the breakpoint's local coverage. Below this the skew test has no power (short paired-mapping distance distributions leave almost no concordant pair spanning any position) and is not used to reject. 0 = always apply. (DEFAULT = 10.0)", 10.0, NORMAL_OPTION)
     // NOTE: pass sub-0.1 defaults as STRINGS. AnyOption stringifies a numeric default with
     // to_string(double), whose default precision is 1 decimal place, so a 0.05 passed as a double
@@ -394,7 +394,7 @@ namespace breseq
     ("missing-pair-minimum-distinct", "Only accept MP evidence whose supporting reads start at at least this many distinct positions, so that PCR duplicates of one molecule cannot carry a prediction. (DEFAULT = 2)", 2, NORMAL_OPTION)
     // NOTE: pass sub-0.1 defaults as STRINGS -- see the note in the DP block above. Here the default is
     // mode-dependent, so it is registered empty and only read back when the user actually supplied it.
-    ("missing-pair-frequency-cutoff", "Only accept MP evidence when the lower 95% confidence bound on its local variant frequency -- reads with unmapped mates divided by those plus the read pairs spanning the same position -- is at or above this value. 0 = OFF. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("missing-pair-frequency-cutoff", "Only accept MP evidence when the lower 95% confidence bound on its local variant frequency -- reads with unmapped mates divided by those plus the read pairs spanning the same position -- is at or above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff, which tests the same kind of bound on the same kind of frequency, and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ;
 
     options.addUsage("", NORMAL_OPTION);
@@ -445,7 +445,7 @@ namespace breseq
     ("soft-clipping-maximum-dispersion", "Upper bound on the estimated dispersion (intra-class correlation) of the clipping rate. Caps how conservative the null can become on references too small to estimate it reliably (DEFAULT = 0.005). 0 = OFF, use a plain binomial null.", "", NORMAL_OPTION)
     ("soft-clipping-minimum-rate", "Lower bound on the estimated background clipping rate, preventing an unusually clean library from making every clipped position significant (DEFAULT = 1e-5). 0 = OFF.", "", NORMAL_OPTION)
     ("soft-clipping-minimum-read-count", "Minimum number of consensus-supporting clipped reads required for a position to be reported at all (DEFAULT = 3). 0 = OFF.", 3, NORMAL_OPTION)
-    ("soft-clipping-frequency-cutoff", "Minimum fraction of reads that must be clipped at a position for the evidence to be accepted rather than rejected. Defaults to the same frequency used for predicting mutations (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-frequency-cutoff", "Minimum fraction of reads that must be clipped at a position for the evidence to be accepted rather than rejected. Defaults to --polymorphism-frequency-cutoff, the same frequency used for predicting mutations, and follows it if you change it (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05). 0 = OFF.", "", NORMAL_OPTION)
     ("soft-clipping-consensus-fraction-cutoff", "Minimum fraction of the clipped reads at a position that must agree on the consensus clipped sequence for the evidence to be accepted rather than rejected (DEFAULT = 0.5). 0 = OFF.", "", NORMAL_OPTION)
     ;
     
@@ -828,15 +828,6 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
-      // Soft-clipping, discordant pairs and missing pairs keep their own floors. All test a
-      // Clopper-Pearson LOWER bound rather than a point estimate, but none of the values below has
-      // been recalibrated for that: SC's was tuned against a point estimate, and DP's against an
-      // already-exact test at a different scale. Since a lower bound sits below the point estimate,
-      // these floors are therefore effectively stricter than the number suggests -- most so at
-      // shallow depth. The recalibration wants evidence from a dataset with known breakpoints.
-      this->soft_clipping_frequency_cutoff = 0.05;
-      this->discordant_pair_frequency_cutoff = 0.05;
-      this->missing_pair_frequency_cutoff = 0.05;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       // Polymorphism mode keeps its artifact guards on: it is explicitly hunting low-frequency
@@ -890,10 +881,6 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.10;
-      // Soft-clipping, discordant pairs and missing pairs keep their own floors (see the note above).
-      this->soft_clipping_frequency_cutoff = 0.2;
-      this->discordant_pair_frequency_cutoff = 0.2;
-      this->missing_pair_frequency_cutoff = 0.2;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       // These guard the POLYMORPHISM prediction only. Consensus mode asks one question first --
@@ -967,6 +954,23 @@ namespace breseq
     if (options.count("polymorphism-frequency-cutoff"))
       this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
 
+    // Every structural-evidence frequency gate FOLLOWS the polymorphism cutoff rather than carrying a
+    // floor of its own, because they all measure the same quantity it governs: the variant allele
+    // frequency at one locus -- the fraction of the molecules sampled there that carry the variant
+    // (soft-clipped reads for SC, discordant pairs for DP, reads that lost their mate to novel
+    // sequence for MP). All four are lower-bound tests on that frequency, so a user who says "I care
+    // about variants down to X" gets structural evidence down to X as well, and one number governs
+    // where the whole run's sensitivity sits.
+    //
+    // SC's and DP's floors used to be a separate 0.2 in consensus mode. That was a holdover: both were
+    // tuned before either tested a Clopper-Pearson bound (SC against a point estimate, DP against an
+    // exact test at a different scale), so neither number was calibrated for the test it now feeds.
+    //
+    // This must sit AFTER the option read just above, so an explicit --polymorphism-frequency-cutoff
+    // is what gets tracked, and BEFORE the per-type option reads below, which still override it.
+    this->soft_clipping_frequency_cutoff   = this->polymorphism_frequency_cutoff;
+    this->discordant_pair_frequency_cutoff = this->polymorphism_frequency_cutoff;
+    this->missing_pair_frequency_cutoff    = this->polymorphism_frequency_cutoff;
 
     // Must come after the prediction-mode defaults above, which set this to track
     // polymorphism_frequency_cutoff and would otherwise clobber an explicit value.
@@ -1280,9 +1284,8 @@ namespace breseq
     this->discordant_pair_seed = 3;
     this->discordant_pair_skew_cutoff = 3.0;
     this->discordant_pair_minimum_pairs = 2;
-    // Overwritten per prediction mode above (in the cmdline constructor) to track
-    // polymorphism_frequency_cutoff.
-    this->discordant_pair_frequency_cutoff = 0.2;
+    // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
+    this->discordant_pair_frequency_cutoff = 0.1;
     // For a Poisson null with mean lambda, even k=0 only reaches -log10 P = lambda/ln(10), so the skew
     // test cannot clear a cutoff of 3 on merit below lambda ~ 6.9, and cannot reject k=1 below ~9.6.
     this->discordant_pair_minimum_crossing = 10.0;
@@ -1292,7 +1295,8 @@ namespace breseq
     this->missing_pair_seed_fraction = 0.25;
     this->missing_pair_minimum_reads = 3;
     this->missing_pair_minimum_distinct = 2;
-    this->missing_pair_frequency_cutoff = 0.2;
+    // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
+    this->missing_pair_frequency_cutoff = 0.1;
     this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 12;
     this->soft_clipping_log10_e_value_cutoff = 3.0;
@@ -1301,8 +1305,8 @@ namespace breseq
     this->soft_clipping_maximum_dispersion = 0.005;
     this->soft_clipping_minimum_rate = 1e-5;
     this->soft_clipping_minimum_read_count = 3;
-    // Overwritten per prediction mode below to track polymorphism_frequency_cutoff.
-    this->soft_clipping_frequency_cutoff = 0.2;
+    // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
+    this->soft_clipping_frequency_cutoff = 0.1;
     this->soft_clipping_consensus_fraction_cutoff = 0.5;
 
     this->polymorphism_prediction = false;

@@ -411,7 +411,7 @@ namespace breseq
     int32_t discordant_pair_seed;                         // Default = 3;         COMMAND-LINE OPTION
     double discordant_pair_skew_cutoff;                   // Default = 3.0;       COMMAND-LINE OPTION
     int32_t discordant_pair_minimum_pairs;                // Default = 2;         COMMAND-LINE OPTION
-    double discordant_pair_frequency_cutoff;              // Default = 0.2/0.05;  COMMAND-LINE OPTION
+    double discordant_pair_frequency_cutoff;              // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
     double discordant_pair_minimum_crossing;              // Default = 10.0;      COMMAND-LINE OPTION
     double discordant_pair_background_e_value_cutoff;     // Default = 0.05;      COMMAND-LINE OPTION
 
@@ -420,7 +420,7 @@ namespace breseq
     double missing_pair_seed_fraction;                    // Default = 0.25;      COMMAND-LINE OPTION
     int32_t missing_pair_minimum_reads;                   // Default = 3;         COMMAND-LINE OPTION
     int32_t missing_pair_minimum_distinct;                // Default = 2;         COMMAND-LINE OPTION
-    double missing_pair_frequency_cutoff;                 // Default = 0.2/0.05;  COMMAND-LINE OPTION
+    double missing_pair_frequency_cutoff;                 // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
 
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
@@ -439,7 +439,7 @@ namespace breseq
     //! tested (mutation-identification step), so they can be re-tuned by deleting
     //! only 08_mutation_identification/mutation_identification.done.
     uint32_t soft_clipping_minimum_read_count;            // Default = 3         COMMAND-LINE OPTION  0 = OFF
-    double   soft_clipping_frequency_cutoff;              // Default = 0.05      COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_frequency_cutoff;              // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION  0 = OFF
     double   soft_clipping_consensus_fraction_cutoff;     // Default = 0.5       COMMAND-LINE OPTION  0 = OFF
 
 
