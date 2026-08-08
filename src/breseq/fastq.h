@@ -24,6 +24,7 @@
 #include "common.h"
 #include "settings.h"
 #include "summary.h"
+#include "portable_random.h"
 
 namespace breseq {
 
@@ -106,71 +107,113 @@ class cAnnotatedSequence;
   void fastq_sequence_trim_end_on_base_quality(cFastqSequence& seq, const uint32_t base_quality);
 
 
+  //! Per-cycle base quality model for simulated reads.
+  //
+  //  Deliberately parametric rather than an empirical table: no data files, no new dependencies, and
+  //  integer-only so the output is byte-identical on every platform (see portable_random.h).
+  //
+  //  The mean quality declines QUADRATICALLY with the cycle number, which is the shape real Illumina
+  //  data has -- essentially flat over the first half of the read, falling off fastest over the last
+  //  few cycles. This replaces a hard-coded cumulative table taken from 2008 GAII runs that had two
+  //  problems: it was position-independent (the same distribution at cycle 1 and cycle 100, which is
+  //  the least realistic thing a quality model can be), and its marginal implied a ~3.3% per-base
+  //  substitution rate, about 3 mismatches in every 100 bp read.
+  //
+  //  Constant quality needs no special case: set phred_start == phred_end and phred_stdev = 0.
+  struct cSimQualityModel {
+    uint32_t phred_start;   //!< mean Phred at the first cycle
+    uint32_t phred_end;     //!< mean Phred at the last cycle
+    uint32_t phred_stdev;   //!< per-base scatter around the cycle mean
+    uint32_t phred_min;     //!< floor
+    uint32_t phred_max;     //!< ceiling
+
+    cSimQualityModel()
+      : phred_start(38), phred_end(28), phred_stdev(4), phred_min(2), phred_max(41) {}
+
+    //! Draw one quality score as a Sanger-encoded (offset 33) character. cycle is 0-based.
+    char draw(cPortableRandom& rng, uint32_t cycle, uint32_t read_size) const;
+  };
+
+  //! Indel error rates for simulated reads, per million bases. The substitution rate is NOT here:
+  //  it derives from each base's own drawn quality (see cSimFastqSequence::is_error_base), which is
+  //  what makes the quality string meaningful to breseq's per-quality-bin error calibration.
+  struct cSimErrorModel {
+    uint32_t insertion_rate_per_million;
+    uint32_t deletion_rate_per_million;
+
+    cSimErrorModel() : insertion_rate_per_million(10), deletion_rate_per_million(10) {}  // 1e-5 each
+  };
+
   class cSimFastqSequence {
     public:
       static int32_t SEED_VALUE;
 
-      class GaussianRNG {
-        static void box_muller_transform(float* z0, float* z1);  
-        static const double PI;
-
-        public:
-          GaussianRNG(int mean, int stdev);
-          int32_t sample();
-          vector<int32_t> samples(int size);
-
-        private:
-          float m_mean;
-          float m_stdev;
-
-          float m_z0;
-          float m_z1;
-          float m_store;
-
-      };
-
-      static map<uint32_t, uint32_t> qscore_cumulative_probability_table;
       static map<char, string> random_snp_base_options;
 
       static char random_insertion_base_options[];
 
-      static char get_random_quality_score(void);
-      static char get_random_error_base(const char not_this_base);
-      static char get_random_insertion_base(void);
+      static char get_random_error_base(cPortableRandom& rng, const char not_this_base);
+      static char get_random_insertion_base(cPortableRandom& rng);
 
-      static bool is_random_error_base(char ascii_qscore);
-      static bool is_random_deletion_base(void);
-      static bool is_random_insertion_base(void);
+      //! P(substitution) = 10^(-phred/10), evaluated from an integer table rather than pow().
+      static bool is_error_base(cPortableRandom& rng, uint32_t phred);
 
-      static cFastqSequence simulate(const cAnnotatedSequence& ref_sequence,
-                                     uint32_t start_1,
-                                     uint32_t read_size,
-                                     int8_t strand,
-                                     uint32_t id = 0,
-                                     uint32_t n_reads = 0,
-                                     bool verbose = false);
+      //! Build one read whose footprint in the reference is [left_1, left_1 + read_size - 1].
+      //
+      //  strand == +1 returns that sequence; strand == -1 returns its reverse complement, so the
+      //  read's 5' end sits at left_1 + read_size - 1. Stating the footprint directly (rather than a
+      //  strand-dependent buffer origin, as the previous interface did) removes a genuinely
+      //  confusing asymmetry: with the old contract a minus-strand read's footprint was actually
+      //  [start_1 + read_size, start_1 + 2*read_size - 1], not [start_1, start_1 + read_size - 1].
+      //
+      //  Simulated deletions consume extra reference bases, so a tail beyond the footprint is
+      //  fetched; near the end of a LINEAR sequence that tail is short, and the builder stops
+      //  generating deletions rather than reading past it.
+      static cFastqSequence simulate_read(const cAnnotatedSequence& ref_sequence,
+                                          int32_t left_1,
+                                          uint32_t read_size,
+                                          int8_t strand,
+                                          const cSimQualityModel& quality_model,
+                                          const cSimErrorModel& error_model,
+                                          cPortableRandom& rng,
+                                          const string& read_name,
+                                          char& min_quality_char,
+                                          bool verbose = false);
 
       static void simulate_single_ends(const cAnnotatedSequence& sequence,
                                        uint32_t n_reads,
-                                       uint32_t read_size, 
+                                       uint32_t read_size,
+                                       uint32_t seed,
+                                       const cSimQualityModel& quality_model,
+                                       const cSimErrorModel& error_model,
                                        string file_name,
                                        bool verbose = false);
 
       static void simulate_paired_ends(const cAnnotatedSequence& sequence,
-                                       uint32_t n_reads,
-                                       uint32_t read_size, 
-                                       uint32_t mean,
-                                       uint32_t stdev,
+                                       uint32_t n_pairs,
+                                       uint32_t read_size,
+                                       uint32_t fragment_mean,
+                                       uint32_t fragment_stdev,
+                                       uint32_t seed,
+                                       const cSimQualityModel& quality_model,
+                                       const cSimErrorModel& error_model,
                                        string pair_1_file_name,
                                        string pair_2_file_name,
                                        bool verbose = false);
-    
+
       static void simulate_tiled(const cAnnotatedSequence& sequence,
                                  uint32_t read_size,
                                  uint32_t coverage,
+                                 const cSimQualityModel& quality_model,
                                  string file_name,
                                  bool verbose);
 
+      //! breseq infers a FASTQ's quality encoding from the LOWEST quality character in the whole
+      //  file (see normalize_fastq): a minimum of 59 or more is read as SOLEXA and every score is
+      //  then shifted by 31. A simulated library with no low-quality tail therefore gets silently
+      //  reinterpreted. Callers pass the minimum character they actually wrote; this warns if it is
+      //  high enough to be misread.
+      static void warn_if_quality_format_ambiguous(char min_quality_char);
   };
 
   

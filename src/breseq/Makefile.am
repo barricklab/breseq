@@ -50,6 +50,7 @@ libbreseq_la_SOURCES = \
 	identify_mutations.cpp \
 	mp_evidence.cpp \
 	mutation_predictor.cpp \
+	portable_random.cpp \
 	output.cpp \
 	pgzstream.cpp \
 	pileup.cpp \
@@ -88,6 +89,7 @@ libbreseq_la_SOURCES = \
 	output.h \
 	pgzstream.h \
 	pileup.h \
+	portable_random.h \
 	pileup_base.h \
 	reference_sequence.h \
 	resolve_alignments.h \
