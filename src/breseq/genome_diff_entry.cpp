@@ -148,6 +148,19 @@ namespace breseq {
   const char* MP_TOTAL_COUNT = "total_read_count";
   const char* MP_CANDIDATE_COUNT = "candidate_unpaired_count";
 
+  //For PD
+  const char* PD_SIZE_SHIFT = "size_shift";
+  const char* PD_SIZE_SHIFT_LOWER = "size_shift_lower";
+  const char* PD_SIZE_SHIFT_UPPER = "size_shift_upper";
+  const char* PD_POSITION_RANGE = "position_range";
+  const char* PD_SUPPORTING_COUNT = "shifted_pair_count";
+  const char* PD_AGAINST_COUNT = "normal_pair_count";
+  const char* PD_AMBIGUOUS_COUNT = "ambiguous_pair_count";
+  const char* PD_DISTINCT_COUNT = "distinct_pair_count";
+  const char* PD_TOTAL_COUNT = "total_pair_count";
+  const char* PD_CANDIDATE_COUNT = "candidate_covering_count";
+  const char* PD_SEED_Z = "seed_z_score";
+
   //For SC
   const char* SC_READ_COUNT = "read_count";
   const char* SC_TOTAL_COUNT = "total_count";
@@ -186,6 +199,13 @@ namespace breseq {
   (SC,make_vector<string> (SEQ_ID)(POSITION)(STRAND))
   (DP,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND))
   (MP,make_vector<string> (SEQ_ID)(POSITION)(STRAND))
+  // PD shares DP's two-sided junction shape. side_1 is the last retained base of the left flank
+  // (strand -1) and side_2 the first retained base of the right flank (strand +1), so
+  // side_2 - side_1 - 1 is the number of deleted reference bases -- 0 for a pure insertion, whose
+  // length is carried by the signed size_shift key instead. This is the JC convention
+  // predictJCtoINSorSUBorDEL reads, which is why one shape covers both of PD's directions (a
+  // deletion lengthens the apparent pair distance, an insertion shortens it).
+  (PD,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND))
 
   //## validation
   (CURA,make_vector<string> ("expert"))
@@ -246,7 +266,7 @@ namespace breseq {
   ;
   
   const vector<string>gd_entry_type_lookup_table =
-  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("SC")("DP")("MP")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
+  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("SC")("DP")("MP")("PD")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
   
   // Used when determining what fields need to be updated if ids are renumbered
   // accounts for key=mutation_id:copy_index notation.
@@ -275,6 +295,7 @@ namespace breseq {
   (SC,   cDiffEntry::sort_fields_item(8, SEQ_ID, POSITION))
   (DP,   cDiffEntry::sort_fields_item(8, SIDE_1_SEQ_ID, SIDE_1_POSITION))
   (MP,   cDiffEntry::sort_fields_item(8, SEQ_ID, POSITION))
+  (PD,   cDiffEntry::sort_fields_item(8, SIDE_1_SEQ_ID, SIDE_1_POSITION))
   (CURA, cDiffEntry::sort_fields_item(9, "expert", "expert"))
   (FPOS, cDiffEntry::sort_fields_item(9, "expert", "expert"))
   (PHYL, cDiffEntry::sort_fields_item(9, "gd", "gd"))
@@ -303,15 +324,19 @@ namespace breseq {
   (SC,  15)
   (DP,  16)
   (MP,  17)
-  (CURA, 17)
-  (FPOS, 18)
-  (PHYL, 19)
-  (TSEQ, 20)
-  (PFLP, 21)
-  (RFLP, 22)
-  (PFGE, 23)
-  (NOTE, 23)
-  (MASK, 23)
+  (PD,  18)
+  // The validation types below were shifted up by one to make room for PD. CURA previously tied
+  // with MP at 17; giving PD its own value keeps the evidence types strictly ordered. A uniform
+  // shift changes no type's order RELATIVE to any other, so no existing .gd output reorders.
+  (CURA, 19)
+  (FPOS, 20)
+  (PHYL, 21)
+  (TSEQ, 22)
+  (PFLP, 23)
+  (RFLP, 24)
+  (PFGE, 25)
+  (NOTE, 25)
+  (MASK, 25)
   ;
   ////
   // End sorting variables

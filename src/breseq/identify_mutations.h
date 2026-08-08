@@ -282,6 +282,13 @@ namespace breseq {
       //! roughly constant along the genome, so at any decent coverage every window clears a fixed
       //! threshold and the whole covered region becomes one candidate.
       deque<uint32_t> mp_all_reads[kMPnBins];
+      //! PD's null: the mid-CDF of this group's LENGTH-BIAS-CORRECTED pair distance distribution,
+      //! in kPDuScale fixed point, indexed by distance. Empty if this group has no usable histogram,
+      //! which disables PD for its reads. Length-bias-corrected because the pairs whose gap covers a
+      //! fixed point are sampled with weight proportional to that gap's length; the mid-CDF (rather
+      //! than the CDF) because the distance is discrete, and E[CDF] of a discrete variable exceeds
+      //! 1/2, which would bias every column toward the LONG bin.
+      vector<int64_t> pd_cdf;
     };
     //! A completed candidate region: discordant read pairs of a single focal strand and orientation.
     struct dp_candidate_region {
@@ -294,6 +301,35 @@ namespace breseq {
       bool     redundant;         //!< majority of this region's discordant reads mapped redundantly (multicopy side)
       string   discordant_pairs;  //!< ';'-joined <read1>__<read2>__<insert_size>__<read_start>__<read_end>
     };
+    //! Pair Distance (PD) candidate-region detection ----
+    //! Candidates are binned by the DIRECTION of the shift only: 0 = LONG (pairs mapping farther
+    //! apart than expected, the signature of a deletion), 1 = SHORT (closer than expected, the
+    //! signature of an insertion). Two bins rather than one so an adjacent deletion and insertion,
+    //! whose informative pairs overlap, still open and close independently.
+    //!
+    //! Unlike DP and MP, PD's qualifying pairs are not individually anomalous -- each one is an
+    //! ordinary concordant pair -- so there is nothing to accumulate in a per-read deque. What is
+    //! tested at a position is the COLLECTIVE distance distribution of the pairs whose unsequenced
+    //! middle gap covers it, which is an interval-stabbing count. See the ring difference array in
+    //! identify_mutations.cpp for how that is done in O(1) per pair.
+    static const int kPDnBins = 2;
+    static const int kPDbinLong = 0;
+    static const int kPDbinShort = 1;
+    //! Fixed-point scale for the accumulated distance quantiles. Integer accumulation keeps the
+    //! running sum exactly reproducible across platforms, which the test suite depends on.
+    static const int64_t kPDuScale = 1048576;  // 1 << 20
+    //! A completed PD candidate region: one run of columns seeding in a single shift direction.
+    struct pd_candidate_region {
+      string   seq_id;
+      uint32_t start;
+      uint32_t end;
+      char     direction;       //!< 'L' = LONG (deletion-like), 'S' = SHORT (insertion-like)
+      uint32_t peak_position;   //!< column of strongest evidence (largest |z|) in the region
+      int32_t  peak_covering;   //!< pairs whose gap covered peak_position
+      int32_t  peak_tail;       //!< how many of those were in the matching distribution tail
+      double   peak_z;          //!< signed rank-sum z at peak_position
+    };
+
     //! A completed MP candidate region: mate-unmapped reads of a single focal strand.
     struct mp_candidate_region {
       string   seq_id;
@@ -348,6 +384,9 @@ namespace breseq {
     //! Write the accumulated MP candidate regions to a CSV (one operation, after the pileup).
     void write_mp_candidate_regions(const string& filename);
 
+    //! Write the accumulated PD candidate regions to a CSV (one operation, after the pileup).
+    void write_pd_candidate_regions(const string& filename);
+
 
 	protected:
 		//! Helper method to track deletions.
@@ -358,6 +397,12 @@ namespace breseq {
 
 		//! Helper method to track missing-pair candidate regions (called once per column).
 		void check_missing_pair_completion(uint32_t seq_id, uint32_t position);
+
+		//! Helper method to track pair-distance candidate regions (called once per column).
+		void check_pair_distance_completion(uint32_t seq_id, uint32_t position);
+
+		//! Add one read pair's gap interval [lo,hi] (in between-base coordinates) to the PD ring.
+		void pd_add_interval(int32_t lo, int32_t hi, int bin, int64_t u_scaled);
 
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
@@ -460,6 +505,38 @@ namespace breseq {
 		vector<string> _mp_region_descriptors[kMPnBins];    //!< read extents for the open region, per bin
 		uint32_t _mp_region_redundant_count[kMPnBins];      //!< how many of the open region's reads mapped redundantly
 		vector<mp_candidate_region> _mp_candidate_regions;  //!< all completed regions (written once after the pileup)
+
+		// these are state variables used by the pair-distance (PD) region method.
+		// The read groups are shared with DP/MP above; only the null distribution (dp_group::pd_cdf)
+		// is per-group, because every pair's quantile is on the same [0,1] scale once computed.
+		//
+		// The four rings are DIFFERENCE arrays over between-base coordinates, in one shared circular
+		// buffer of _pd_ring_w slots. Adding a pair's gap [lo,hi] is ring[lo]+=v, ring[hi+1]-=v; the
+		// per-column drain accumulates ring[b] into the running total and CLEARS the slot, so it is
+		// free for the next wrap. Correctness rests on one invariant, asserted at every write:
+		// lo >= position and hi+1 <= position + _pd_max_span, i.e. a pair only ever writes into slots
+		// the drain has not yet reached. That is what --pair-distance-maximum-span is for; a pair
+		// longer than the ring would alias a live slot.
+		bool _pd_enabled;                                   //!< --predict-pair-distance AND >=1 group with a null
+		int32_t _pd_seed;                                   //!< --pair-distance-seed tail-count threshold
+		double _pd_z_seed;                                  //!< |z| threshold, already resolved if derived
+		int32_t _pd_max_span;                               //!< longest pair distance considered, already resolved
+		int32_t _pd_ring_w;                                 //!< _pd_max_span + 2
+		vector<int32_t> _pd_ring_n;                         //!< difference array: pairs whose gap covers b
+		vector<int32_t> _pd_ring_long;                      //!< difference array: those in the upper tail
+		vector<int32_t> _pd_ring_short;                      //!< difference array: those in the lower tail
+		vector<int64_t> _pd_ring_u;                         //!< difference array: sum of quantiles, kPDuScale fixed point
+		int32_t _pd_n;                                      //!< running total of _pd_ring_n at the current column
+		int32_t _pd_long;                                   //!< running total of _pd_ring_long
+		int32_t _pd_short;                                  //!< running total of _pd_ring_short
+		int64_t _pd_u;                                      //!< running total of _pd_ring_u
+		uint32_t _pd_last_b;                                //!< last column drained (0 = nothing drained yet)
+		uint32_t _pd_region_start[kPDnBins];                //!< UNDEFINED_UINT32 = not currently in a region, per bin
+		uint32_t _pd_region_peak_position[kPDnBins];        //!< column of largest |z| while the region is open
+		int32_t _pd_region_peak_covering[kPDnBins];         //!< covering pairs at that column
+		int32_t _pd_region_peak_tail[kPDnBins];             //!< tail pairs at that column
+		double _pd_region_peak_z[kPDnBins];                 //!< signed z at that column
+		vector<pd_candidate_region> _pd_candidate_regions;  //!< all completed regions (written once after the pileup)
 	};
 
   

@@ -398,6 +398,22 @@ namespace breseq
     ;
 
     options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Pair Distance (PD) Evidence Options", NORMAL_OPTION);
+    options
+    ("predict-pair-distance", "Predict pair distance (PD) evidence: places where the read pairs whose unsequenced middle gap spans one point are collectively shifted to longer (a deletion) or shorter (an insertion) mapping distances. DP only sees pairs that are outliers INDIVIDUALLY -- wrong orientation, or a distance above the discordant cutoff -- and has no lower cutoff at all, so events of a few hundred bases are invisible to it in both directions. PD tests the collective shift instead. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("pair-distance-seed", "Minimum number of read pairs in the matching distribution tail whose gap covers a position, required to seed a PD candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
+    ("pair-distance-seed-z", "Minimum |z| of the rank-sum statistic over all read pairs whose gap covers a position, required to seed a PD candidate region. This is the 'average quantile per pair' test: under the null each covering pair's distance quantile is uniform, so the mean quantile is a sensitive detector of a shift too small to make any single pair an outlier. 0 = derive from the reference length, so that the genome-wide false-seed rate stays near 1%. (DEFAULT = 0, derived)", 0.0, NORMAL_OPTION)
+    ("pair-distance-maximum-span", "Ignore read pairs mapping farther apart than this when seeding PD. Pairs this long are DP's business, and an unbounded distance would make the seeding window unbounded. 0 = derive (twice the paired-mapping distance cutoff). (DEFAULT = 0, derived)", 0, NORMAL_OPTION)
+    ("pair-distance-minimum-pairs", "Only accept PD evidence supported by at least this many shifted read pairs. (DEFAULT = 3)", 3, NORMAL_OPTION)
+    ("pair-distance-minimum-distinct", "Only accept PD evidence whose supporting pairs start at at least this many distinct positions, so that PCR duplicates of one molecule cannot carry a prediction. (DEFAULT = 2)", 2, NORMAL_OPTION)
+    ("pair-distance-minimum-shift", "Only accept PD evidence whose estimated size shift is at least this many bases. 0 = derive from the width of the paired-mapping distance distribution. (DEFAULT = 0, derived)", 0, NORMAL_OPTION)
+    // NOTE: pass sub-0.1 defaults as STRINGS -- see the note in the DP block above. Here the default is
+    // mode-dependent, so it is registered empty and only read back when the user actually supplied it.
+    ("pair-distance-tail-quantile", "Quantile of the paired-mapping distance distribution defining its tails, for the PD seed's counting test. (DEFAULT = 0.05)", "0.05", NORMAL_OPTION)
+    ("pair-distance-frequency-cutoff", "Only accept PD evidence when the lower 95% confidence bound on its local variant frequency -- shifted read pairs divided by those plus the normal-distance pairs covering the same point -- is at or above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff, which tests the same kind of bound on the same kind of frequency, and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ;
+
+    options.addUsage("", NORMAL_OPTION);
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", NORMAL_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", NORMAL_OPTION)
@@ -579,6 +595,16 @@ namespace breseq
       this->predict_missing_pairs = false;
     }
 
+    // Pair-distance (PD) evidence prediction is experimental and opt-in. Like DP and MP it needs the
+    // paired-mapping insert distribution -- which IS its null model -- so it cannot run without it.
+    this->predict_pair_distance = options.count("predict-pair-distance");
+    if (this->predict_pair_distance && !this->paired_mapping) {
+      cerr << "WARNING: --predict-pair-distance requires paired-mapping, but --no-paired-mapping was" << endl;
+      cerr << "         given. No pair-distance (PD) evidence will be predicted." << endl;
+      cerr << output_divider << endl;
+      this->predict_pair_distance = false;
+    }
+
     // Backward compatibility: --paired-mapping is now the default. Accept it, but warn.
     if (options.count("paired-mapping")) {
       cerr << "WARNING: The --paired-mapping option is DEPRECATED. Paired-mapping detection is now" << endl;
@@ -708,6 +734,22 @@ namespace breseq
     ASSERT(this->missing_pair_minimum_reads >= 0, "Argument --missing-pair-minimum-reads must be >= 0")
     this->missing_pair_minimum_distinct = from_string<int32_t>(options["missing-pair-minimum-distinct"]);
     ASSERT(this->missing_pair_minimum_distinct >= 0, "Argument --missing-pair-minimum-distinct must be >= 0")
+
+    this->pair_distance_seed = from_string<int32_t>(options["pair-distance-seed"]);
+    ASSERT(this->pair_distance_seed >= 0, "Argument --pair-distance-seed must be >= 0")
+    this->pair_distance_tail_quantile = from_string<double>(options["pair-distance-tail-quantile"]);
+    ASSERT((this->pair_distance_tail_quantile > 0) && (this->pair_distance_tail_quantile < 0.5),
+           "Argument --pair-distance-tail-quantile must be in the range (0,0.5)")
+    this->pair_distance_seed_z = from_string<double>(options["pair-distance-seed-z"]);
+    ASSERT(this->pair_distance_seed_z >= 0, "Argument --pair-distance-seed-z must be >= 0")
+    this->pair_distance_maximum_span = from_string<int32_t>(options["pair-distance-maximum-span"]);
+    ASSERT(this->pair_distance_maximum_span >= 0, "Argument --pair-distance-maximum-span must be >= 0")
+    this->pair_distance_minimum_pairs = from_string<int32_t>(options["pair-distance-minimum-pairs"]);
+    ASSERT(this->pair_distance_minimum_pairs >= 0, "Argument --pair-distance-minimum-pairs must be >= 0")
+    this->pair_distance_minimum_distinct = from_string<int32_t>(options["pair-distance-minimum-distinct"]);
+    ASSERT(this->pair_distance_minimum_distinct >= 0, "Argument --pair-distance-minimum-distinct must be >= 0")
+    this->pair_distance_minimum_shift = from_string<int32_t>(options["pair-distance-minimum-shift"]);
+    ASSERT(this->pair_distance_minimum_shift >= 0, "Argument --pair-distance-minimum-shift must be >= 0")
 
     this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
@@ -958,9 +1000,9 @@ namespace breseq
     // floor of its own, because they all measure the same quantity it governs: the variant allele
     // frequency at one locus -- the fraction of the molecules sampled there that carry the variant
     // (soft-clipped reads for SC, discordant pairs for DP, reads that lost their mate to novel
-    // sequence for MP). All four are lower-bound tests on that frequency, so a user who says "I care
-    // about variants down to X" gets structural evidence down to X as well, and one number governs
-    // where the whole run's sensitivity sits.
+    // sequence for MP, distance-shifted pairs for PD). All are lower-bound tests on that frequency,
+    // so a user who says "I care about variants down to X" gets structural evidence down to X as
+    // well, and one number governs where the whole run's sensitivity sits.
     //
     // SC's and DP's floors used to be a separate 0.2 in consensus mode. That was a holdover: both were
     // tuned before either tested a Clopper-Pearson bound (SC against a point estimate, DP against an
@@ -971,6 +1013,7 @@ namespace breseq
     this->soft_clipping_frequency_cutoff   = this->polymorphism_frequency_cutoff;
     this->discordant_pair_frequency_cutoff = this->polymorphism_frequency_cutoff;
     this->missing_pair_frequency_cutoff    = this->polymorphism_frequency_cutoff;
+    this->pair_distance_frequency_cutoff   = this->polymorphism_frequency_cutoff;
 
     // Must come after the prediction-mode defaults above, which set this to track
     // polymorphism_frequency_cutoff and would otherwise clobber an explicit value.
@@ -990,6 +1033,12 @@ namespace breseq
       this->missing_pair_frequency_cutoff = from_string<double>(options["missing-pair-frequency-cutoff"]);
     ASSERT((this->missing_pair_frequency_cutoff >= 0) && (this->missing_pair_frequency_cutoff <= 1),
            "Argument --missing-pair-frequency-cutoff must be in the range [0,1]")
+
+    // Same ordering requirement again: after the prediction-mode defaults.
+    if (options.count("pair-distance-frequency-cutoff"))
+      this->pair_distance_frequency_cutoff = from_string<double>(options["pair-distance-frequency-cutoff"]);
+    ASSERT((this->pair_distance_frequency_cutoff >= 0) && (this->pair_distance_frequency_cutoff <= 1),
+           "Argument --pair-distance-frequency-cutoff must be in the range [0,1]")
 
 
     if (options.count("polymorphism-minimum-variant-coverage"))
@@ -1193,6 +1242,7 @@ namespace breseq
     this->paired_mapping = true;
     this->predict_discordant_pairs = false;
     this->predict_missing_pairs = false;
+    this->predict_pair_distance = false;
 
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;
@@ -1297,6 +1347,17 @@ namespace breseq
     this->missing_pair_minimum_distinct = 2;
     // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
     this->missing_pair_frequency_cutoff = 0.1;
+
+    this->pair_distance_seed = 3;
+    this->pair_distance_tail_quantile = 0.05;
+    this->pair_distance_seed_z = 0.0;        // 0 = derive from the reference length
+    this->pair_distance_maximum_span = 0;    // 0 = derive (2 * paired-mapping distance cutoff)
+    this->pair_distance_minimum_pairs = 3;
+    this->pair_distance_minimum_distinct = 2;
+    this->pair_distance_minimum_shift = 0;   // 0 = derive from the distribution width
+    // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
+    this->pair_distance_frequency_cutoff = 0.1;
+
     this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 12;
     this->soft_clipping_log10_e_value_cutoff = 3.0;
@@ -1346,6 +1407,7 @@ namespace breseq
     this->max_rejected_soft_clipping_evidence_to_show = 20;
     this->max_rejected_discordant_pair_evidence_to_show = 20;
     this->max_rejected_missing_pair_evidence_to_show = 20;
+    this->max_rejected_pair_distance_evidence_to_show = 20;
 		this->hide_circular_genome_junctions = true;
     
 		this->lenski_format = false;
@@ -1507,6 +1569,10 @@ namespace breseq
 		this->mp_candidate_regions_file_name = this->mutation_identification_path + "/MP_candidate_regions.csv";
 		this->missing_pair_done_file_name = this->mutation_identification_path + "/missing_pair.done";
 		this->mp_genome_diff_file_name = this->mutation_identification_path + "/mp_evidence.gd";
+		this->pd_candidate_regions_file_name = this->mutation_identification_path + "/PD_candidate_regions.csv";
+		this->pair_distance_done_file_name = this->mutation_identification_path + "/pair_distance.done";
+		this->pd_genome_diff_file_name = this->mutation_identification_path + "/pd_evidence.gd";
+		this->pair_distance_summary_file_name = this->mutation_identification_path + "/pair_distance_summary.json";
 
 
     //! Paths: Copy Number Variation
