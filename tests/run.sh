@@ -21,6 +21,10 @@ if [[ "${TESTNAME}" == "all" ]]; then
 		NAME=`basename ${TESTDIR}`
 		[[ "${NAME}" == _* ]] && continue
 		[[ "${NAME}" == *_disabled ]] && continue
+		# Skip 'long'-named tests, matching tests/test.sh and tests/Snakefile.
+		# They download gigabytes of real data and take hours; run one
+		# explicitly by name when that is what you actually want.
+		[[ "${NAME}" == *long* ]] && continue
 		echo "=== run: ${NAME} ==="
 		${SELF}/run_logged_test.sh ${TESTDIR} ${TESTDIR}/test.log ${TESTDIR}/test.result
 	done

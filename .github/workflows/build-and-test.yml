@@ -34,5 +34,19 @@ jobs:
           ./configure
           make -j$(getconf _NPROCESSORS_ONLN)
 
+      # Offline and instant: parses tests/test_data_manifest.tsv, checks the
+      # column format / md5 shape / URL scheme, and verifies that every dataset
+      # named by a TEST_DATA= line in a testcmd.sh actually exists in it. This
+      # catches a typo'd or missing manifest entry on the pull request that
+      # introduces it, rather than hours into the weekly long-test run.
+      - name: Lint test-data manifest
+        run: tests/fetch_test_data.sh --lint
+
       - name: Run tests
         run: make test          # exits non-zero if any of the 66 tests fail
+
+      # NOTE: 'make test-long' is deliberately NOT run here. It downloads
+      # gigabytes from ENA/NCBI and takes hours on a full bacterial genome, which
+      # would blow this job's 60-minute timeout and make every pull request
+      # depend on third-party FTP availability. It runs weekly / on demand
+      # instead -- see .github/workflows/long-tests.yml.

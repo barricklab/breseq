@@ -30,6 +30,21 @@ use the exact versions of these tools specified in the dev-environment.yml Conda
 Run all tests (using Snakemake wrapper)
 $ make test
 
+Run the long tests as well. These run breseq on full-size real sequencing data downloaded from
+ENA and NCBI, so the first run needs network access and downloads several hundred megabytes.
+Everything is md5-verified against tests/test_data_manifest.tsv, so the data cannot silently
+change underneath a committed expected.gd. 'make test' by itself never touches the network.
+$ make test-long
+
+Download the test data ahead of time (e.g. before going offline). Re-running is a no-op:
+$ make test-data
+
+Downloads are cached in tests/data/downloads and are NOT removed by 'make clean-tests' or
+'make clean'. Set BRESEQ_TEST_DATA_DIR to share one cache between several worktrees or
+checkouts. To re-hash the cache looking for local corruption, or to delete it:
+$ make verify-test-data
+$ make clean-test-data
+
 For working with single tests when updating them, these commands can be run from the main source directory.
 
 Command for running one test:

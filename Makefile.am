@@ -55,6 +55,13 @@ EXTRA_DIST = \
 ## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
 TEST_CORES ?= $(or $(shell ps -p $$PPID -o args= 2>/dev/null | grep -oE -- '-j *[0-9]+|--jobs=[0-9]+' | grep -oE '[0-9]+' | head -1),all)
 
+## How many test-data downloads 'make test-long' may run at once. Kept small on
+## purpose: ENA throttles aggressive parallel clients, and the network link -- not
+## the number of jobs -- is the bottleneck. This must be passed to snakemake via
+## --resources, because a 'resources:' declaration in the Snakefile is only
+## enforced when a limit for it is supplied on the command line.
+TEST_DOWNLOAD_JOBS ?= 2
+
 ## Writes the TESTBINPREFIX/BRESEQ_DATA_PATH exports that tests/common.sh
 ## sources, at the destination path passed as $(1). Shared by all-local,
 ## test, test-long, and dist-hook so there's a single place to edit.
@@ -164,7 +171,8 @@ test-long:
 	## NOTE: see comment in the 'test' target above about why these paths are relative.
 	$(call write_test_config,$(top_srcdir)/tests/test.config)
 	START=$$(date '+%s'); \
-	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going --config long=1; \
+	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going \
+	    --resources download_slots=$(TEST_DOWNLOAD_JOBS) --config long=1; \
 	SNAKEMAKE_STATUS=$$?; \
 	END=$$(date '+%s'); \
 	$(top_srcdir)/tests/print_test_summary.sh $(top_srcdir)/tests $$((END - START)); \
@@ -179,4 +187,32 @@ clean-tests:
 	## target that RUNS disabled tests.
 	$(top_srcdir)/tests/test.sh clean tests all
 	rm -rf $(top_srcdir)/tests/.snakemake
+	## Per-worktree "already fetched" markers only -- NOT the downloaded data
+	## itself, which is expensive to re-acquire and is cleaned by the separate
+	## 'clean-test-data' target. Re-verifying an intact cache is stat-cheap.
+	rm -rf $(top_srcdir)/tests/.test_data_stamps
+
+
+.PHONY: test-data verify-test-data clean-test-data
+
+## Pre-fetch every data set in tests/test_data_manifest.tsv into the cache
+## (tests/data/downloads by default; override with BRESEQ_TEST_DATA_DIR). Useful
+## before going offline, and in CI to separate download time and download
+## failures from the tests themselves. Safe to re-run: already-verified files are
+## a no-op.
+test-data:
+	$(top_srcdir)/tests/fetch_test_data.sh --all
+
+## Force a full re-hash of everything in the cache, ignoring the sidecar stamps.
+## Use if you suspect local corruption; a normal fetch trusts the stamps so that
+## it does not re-read gigabytes on every test run.
+verify-test-data:
+	$(top_srcdir)/tests/fetch_test_data.sh --verify --all
+
+## Delete downloaded test data. Deliberately NOT reached by 'clean-tests' or
+## 'clean'. Removes only the per-dataset subdirectories named in the manifest,
+## never the cache directory itself, since BRESEQ_TEST_DATA_DIR may point at a
+## shared or user-owned location.
+clean-test-data:
+	$(top_srcdir)/tests/fetch_test_data.sh --clean --all
 
