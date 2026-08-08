@@ -219,7 +219,17 @@ The central data structure is `cGenomeDiff` (`genome_diff.h`/`genome_diff.cpp`) 
 
 Mutation types (enum `gd_entry_type`): `SNP`, `SUB`, `DEL`, `INS`, `MOB`, `AMP`, `INV`, `CON`, `INT`
 
-Evidence types: `RA` (read alignment), `MC` (missing coverage), `JC` (new junction), `CN` (copy number), `UN` (unknown)
+Evidence types: `RA` (read alignment), `MC` (missing coverage), `JC` (new junction), `CN` (copy
+number), `UN` (unknown), `SC` (soft clipping), `DP` (discordant pair), `MP` (missing pair),
+`PD` (pair distance)
+
+The last four are experimental and opt-in (`--predict-soft-clipping`, `--predict-discordant-pairs`,
+`--predict-missing-pairs`, `--predict-pair-distance`). The three pair-based types divide the space by
+what is anomalous about a read pair: `DP` fires on pairs that are individually discordant (wrong
+orientation, or distance past the cutoff), `MP` on reads whose mate did not map anywhere, and `PD` on
+pairs that are individually unremarkable but collectively shifted in mapping distance — the deletions
+and insertions of a few hundred bases the other two cannot see. Where a PD and a DP describe the same
+breakpoint the DP is removed, since PD uses the whole pair population where DP uses only its tail.
 
 Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PFGE`, `NOTE`, `MASK`
 

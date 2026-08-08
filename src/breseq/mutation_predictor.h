@@ -71,6 +71,15 @@ namespace breseq {
     // (seq_id/position/strand) exactly match a JC that already supports that mutation.
     void add_matching_DP_evidence(cGenomeDiff& gd);
 
+    // Attach a pair-distance (PD) evidence item as evidence for a mutation when its sides exactly
+    // match a JC that already supports that mutation.
+    void add_matching_PD_evidence(cGenomeDiff& gd);
+
+    // Remove any DP item that a PD item already describes. PD sees the whole distribution where DP
+    // sees only its discordant tail, so where both fire on one breakpoint the DP is redundant and
+    // its coordinates are the worse of the two.
+    void remove_DP_superseded_by_PD(Settings& settings, Summary& summary, cGenomeDiff& gd);
+
     // Combine a DP item with a MOB whose supporting JC unique side matches the DP unique side (within
     // a small window + same strand), even when their IS (redundant) sides are on different copies of
     // the element. Attaches the DP as evidence and, when the DP localizes a specific IS copy whose

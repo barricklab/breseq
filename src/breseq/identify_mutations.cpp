@@ -23,6 +23,8 @@
 #include "identify_mutations.h"
 #include "error_count.h"
 #include "reference_sequence.h"
+#include "stats.h"
+#include "pd_evidence.h"
 
 using namespace std;
 
@@ -68,7 +70,44 @@ void identify_mutations(
   // Likewise for missing-pair regions -- but only when they were actually collected, so a run
   // without --predict-missing-pairs leaves no empty CSV behind.
   if (settings.predict_missing_pairs) imp.write_mp_candidate_regions(settings.mp_candidate_regions_file_name);
+  // Likewise for pair-distance regions.
+  if (settings.predict_pair_distance) imp.write_pd_candidate_regions(settings.pd_candidate_regions_file_name);
   imp.write_gd(gd_file);
+}
+
+/*! Build the null distribution the pair-distance (PD) seed tests against, for one read group.
+
+ Turns the shared length-bias-corrected histogram (see pd_load_weighted_histogram, which is where the
+ correction and the deliberate absence of an upper truncation are explained) into a mid-CDF in
+ kPDuScale fixed point, indexed by distance. Sharing the loader with pd_evidence is what makes the
+ null a region was found under and the null it is then judged under the same by construction.
+
+ The MID-CDF (G(d-1) + G(d))/2 rather than the CDF G(d): the distance is discrete, and E[G(D)] for a
+ discrete D is 1/2 + E[P(D=d)]/2, strictly greater than 1/2. Using G directly would give every
+ column a small positive bias and seed the LONG bin genome-wide.
+
+ Returns false (leaving cdf empty, which disables PD for this group's reads) if the histogram is
+ missing or carries no usable weight.
+ */
+static bool pd_build_cdf(const string& hist_file_name, int32_t trunc, vector<int64_t>& cdf)
+{
+  cdf.clear();
+
+  vector<double> weighted;
+  double total = 0.0;
+  if (!pd_load_weighted_histogram(hist_file_name, trunc, weighted, total)) return false;
+
+  cdf.resize(weighted.size(), 0);
+  double below = 0.0;
+  for (size_t d = 0; d < weighted.size(); d++) {
+    double mid = (below + 0.5 * weighted[d]) / total;
+    below += weighted[d];
+    int64_t scaled = static_cast<int64_t>(mid * static_cast<double>(identify_mutations_pileup::kPDuScale) + 0.5);
+    if (scaled < 0) scaled = 0;
+    if (scaled > identify_mutations_pileup::kPDuScale) scaled = identify_mutations_pileup::kPDuScale;
+    cdf[d] = scaled;
+  }
+  return true;
 }
 
 /*! Chooses which RA predictions to reject and for what reasons
@@ -719,6 +758,16 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _mp_enabled(false)
 , _mp_seed(settings.missing_pair_seed)
 , _mp_seed_fraction(settings.missing_pair_seed_fraction)
+, _pd_enabled(false)
+, _pd_seed(settings.pair_distance_seed)
+, _pd_z_seed(0.0)
+, _pd_max_span(0)
+, _pd_ring_w(0)
+, _pd_n(0)
+, _pd_long(0)
+, _pd_short(0)
+, _pd_u(0)
+, _pd_last_b(0)
 {
 
   // remove once used
@@ -730,6 +779,15 @@ identify_mutations_pileup::identify_mutations_pileup(
     _dp_region_start[bin] = UNDEFINED_UINT32;
     _dp_region_max_count[bin] = 0;
     _dp_region_redundant_count[bin] = 0;
+  }
+
+  // Initialize per-bin pair-distance region state (bin = shift direction; see kPDnBins).
+  for (int bin = 0; bin < kPDnBins; bin++) {
+    _pd_region_start[bin] = UNDEFINED_UINT32;
+    _pd_region_peak_position[bin] = 0;
+    _pd_region_peak_covering[bin] = 0;
+    _pd_region_peak_tail[bin] = 0;
+    _pd_region_peak_z[bin] = 0.0;
   }
 
   // Initialize per-bin missing-pair region state (bin = focal strand; see kMPnBins).
@@ -805,6 +863,67 @@ identify_mutations_pileup::identify_mutations_pileup(
   // DP -- whose seeding is always on -- MP seeding is gated by its option, so a run without
   // --predict-missing-pairs pays exactly one predictable branch per read in the pileup loop.
   _mp_enabled = _settings.predict_missing_pairs && !_dp_groups.empty();
+
+  // Set up pair-distance (PD) candidate-region detection. Same read groups again, and the same
+  // option gating as MP: without --predict-pair-distance the pileup pays one predictable branch per
+  // read. That gating matters more here than for DP or MP, because PD's qualifying pairs are the
+  // ORDINARY concordant ones -- it cannot short-circuit on !proper_pair() the way DP does, so when
+  // it is on it runs on essentially every read.
+  if (_settings.predict_pair_distance && !_dp_groups.empty()) {
+
+    int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
+    int32_t trunc = 2 * read_length;
+    double derived_span = 0.0;
+    double median_gap = 0.0;
+
+    int usable_groups = 0;
+    for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
+      if (!rfs->is_paired()) continue;
+      map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(rfs->m_files[0].m_id);
+      if (gi == _fastq_index_to_dp_group.end()) continue;
+      PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs->m_base_name);
+      if (it == pmdd.end()) continue;
+
+      string hist_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", rfs->m_base_name);
+      if (!pd_build_cdf(hist_file_name, trunc, _dp_groups[gi->second].pd_cdf)) continue;
+      usable_groups++;
+
+      derived_span = max(derived_span, 2.0 * it->second.distance_cutoff);
+      median_gap = max(median_gap, it->second.median - static_cast<double>(trunc));
+    }
+
+    _pd_max_span = _settings.pair_distance_maximum_span;
+    if (_pd_max_span <= 0) _pd_max_span = static_cast<int32_t>(derived_span + 0.5);
+
+    // Derive the seed's |z| threshold when the user did not pin it. Adjacent columns share nearly
+    // all of their covering pairs, so the tests are not independent and a fixed z is not a
+    // genome-wide error rate. The effective number of independent tests is about (reference length /
+    // median gap) -- one per gap-width block -- so a two-sided 1% genome-wide rate wants
+    // z = ndtri(1 - 0.005 * median_gap / G).
+    _pd_z_seed = _settings.pair_distance_seed_z;
+    if (_pd_z_seed <= 0.0) {
+      double alpha_half = 0.005;
+      if ((median_gap > 0.0) && (_total_reference_length > 0))
+        alpha_half *= median_gap / static_cast<double>(_total_reference_length);
+      if (alpha_half > 0.5) alpha_half = 0.5;
+      if (alpha_half < 1e-12) alpha_half = 1e-12;
+      _pd_z_seed = ndtri(1.0 - alpha_half);
+      // Never go below the plain 3-sigma sense of "unusual", however short the reference.
+      if (_pd_z_seed < 3.0) _pd_z_seed = 3.0;
+    }
+
+    _pd_enabled = (usable_groups > 0) && (_pd_max_span > 0);
+    if (_pd_enabled) {
+      _pd_ring_w = _pd_max_span + 2;
+      _pd_ring_n.assign(_pd_ring_w, 0);
+      _pd_ring_long.assign(_pd_ring_w, 0);
+      _pd_ring_short.assign(_pd_ring_w, 0);
+      _pd_ring_u.assign(_pd_ring_w, 0);
+    } else {
+      cerr << "WARNING: --predict-pair-distance was given, but no paired read group has a usable" << endl;
+      cerr << "         mapping-distance histogram. No pair-distance (PD) evidence will be predicted." << endl;
+    }
+  }
 
 }
 
@@ -1261,6 +1380,67 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         }
       }
 
+      //## Pair-distance (PD) region detection: incremental "enter" step.
+      //## Unlike DP and MP, the qualifying read here is an ORDINARY one: a normally-oriented pair
+      //## whose two mates both mapped. Nothing about it is individually anomalous, and that is the
+      //## point -- an event of a few hundred bases shifts every spanning pair by the same amount
+      //## without pushing any single one past the discordant cutoff.
+      //##
+      //## A pair constrains a breakpoint only if the breakpoint lies in its unsequenced middle gap:
+      //## anywhere else and one of the mates would have crossed it and been clipped into a junction
+      //## read instead. In between-base coordinates (b = "between reference base b and b+1") that
+      //## gap is [E1, S2-1] for a leftmost mate ending at E1 whose mate starts at S2. Both bounds
+      //## come from this alignment alone, so no mate lookup is needed. Note the gap is EMPTY when
+      //## the mates overlap (S2 <= E1) -- such a pair carries no positional information at all, and
+      //## this is why PD's reach for insertions stops around (median distance - 2 * read length).
+      //##
+      //## The requirement S2 > E1 also self-selects the leftmost mate of the pair (the rightmost
+      //## mate always has mate_start <= its own end), so each pair is counted exactly once without
+      //## an explicit leftmost test -- including the equal-starts tie where mark_pair_info marks
+      //## both mates leftmost.
+      if (_pd_enabled && (insert_count == 0) && (i->reference_start_1() == position)) {
+        // Qualification is deliberately all integer flag tests, with no aux-tag lookup: this block
+        // sees ~100% of reads rather than DP's ~1%, so the string built by aux_get_Z("XP") would be
+        // a per-read cost. Orientation comes from the flags instead -- for the majority-orientation
+        // pair whose leftmost mate we are looking at, FR means this read is forward and its mate
+        // reverse, RF the other way around. Either is accepted; what matters is that both mates
+        // mapped to this reference in a normal arrangement, which the positive insert size and the
+        // matching mate target already establish.
+        if (i->is_paired() && !i->unmapped()
+            && !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP))
+            && (i->mate_reference_target_id() == i->reference_target_id())
+            && (i->insert_size() > 0)
+            && (i->reversed() != ((i->flag() & BAM_FMREVERSE) != 0))
+            // A tie-broken multi-mapping placement has an arbitrary distance, so it would add noise
+            // to the distribution rather than signal. This is the opposite of DP, which USES
+            // redundancy as evidence that a side sits on a multicopy element.
+            && (i->redundancy() <= 1)) {
+
+          map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(i->fastq_file_index());
+          if (gi != _fastq_index_to_dp_group.end()) {
+            const vector<int64_t>& cdf = _dp_groups[gi->second].pd_cdf;
+            int32_t d = i->insert_size();
+
+            int32_t lo = static_cast<int32_t>(i->reference_end_1());
+            int32_t hi = i->mate_start_1() - 1;
+
+            // Empty gap (overlapping mates), no null for this group, or a pair longer than the ring
+            // can hold. The span cap is not an optimization: a pair writes into ring slots up to
+            // position+d, so one longer than the ring would alias a slot the drain has not reached.
+            if ((hi >= lo) && !cdf.empty() && (d <= _pd_max_span)) {
+              int64_t u = (d < static_cast<int32_t>(cdf.size())) ? cdf[d] : kPDuScale;
+
+              int bin = -1;
+              int64_t lower_tail = static_cast<int64_t>(_settings.pair_distance_tail_quantile * static_cast<double>(kPDuScale));
+              if (u >= kPDuScale - lower_tail)   bin = kPDbinLong;
+              else if (u <= lower_tail)          bin = kPDbinShort;
+
+              pd_add_interval(lo, hi, bin, u);
+            }
+          }
+        }
+      }
+
       //## After these substitutions...
       //## Indel is -1 if the ref base is deleted in the read,
       //## Zero if the read base is aligned to a ref base, and
@@ -1453,6 +1633,15 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     // Same per-column cadence as DP, for the same reason.
     if(_mp_enabled && (insert_count == 0))
       check_missing_pair_completion(p.target(), position);
+
+		//###
+		//## PAIR DISTANCE PAIR DISTANCE PAIR DISTANCE
+		//###
+
+    // Same per-column cadence again. For PD this is not merely so regions close correctly: the
+    // running totals are a prefix sum over a difference array, so every column must be drained.
+    if(_pd_enabled && (insert_count == 0))
+      check_pair_distance_completion(p.target(), position);
 
 		//###
 		//## POLYMORPHISM POLYMORPHISM POLYMORPHISM
@@ -1753,6 +1942,29 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     _mp_region_redundant_count[bin] = 0;
   }
 
+  // Reset the Pair Distance (PD) evidence variables (regions do not span reference boundaries).
+  // The rings must be zeroed wholesale, not just drained: pairs near the end of the previous
+  // reference wrote into slots ahead of where its last column drained, and those pending deltas
+  // are meaningless here. The running totals go with them.
+  if (_pd_enabled) {
+    _pd_ring_n.assign(_pd_ring_w, 0);
+    _pd_ring_long.assign(_pd_ring_w, 0);
+    _pd_ring_short.assign(_pd_ring_w, 0);
+    _pd_ring_u.assign(_pd_ring_w, 0);
+    _pd_n = 0;
+    _pd_long = 0;
+    _pd_short = 0;
+    _pd_u = 0;
+    _pd_last_b = 0;
+    for (int bin = 0; bin < kPDnBins; bin++) {
+      _pd_region_start[bin] = UNDEFINED_UINT32;
+      _pd_region_peak_position[bin] = 0;
+      _pd_region_peak_covering[bin] = 0;
+      _pd_region_peak_tail[bin] = 0;
+      _pd_region_peak_z[bin] = 0.0;
+    }
+  }
+
 }
 
 /*! Called at the end of a reference sequence fragment
@@ -1774,6 +1986,11 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   // Flush any open missing-pair (MP) region at the end of this reference sequence.
   if (_mp_enabled) {
     check_missing_pair_completion(tid, target_length(tid)+1);
+  }
+
+  // Flush any open pair-distance (PD) region at the end of this reference sequence.
+  if (_pd_enabled) {
+    check_pair_distance_completion(tid, target_length(tid)+1);
   }
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
@@ -2134,6 +2351,182 @@ void identify_mutations_pileup::write_dp_candidate_regions(const string& filenam
   for (vector<dp_candidate_region>::const_iterator r = _dp_candidate_regions.begin(); r != _dp_candidate_regions.end(); r++) {
     out << r->seq_id << "," << r->start << "," << r->end << "," << r->strand << "," << r->orientation << ","
         << (r->end - r->start + 1) << "," << r->max_count << "," << (r->redundant ? 1 : 0) << "," << r->discordant_pairs << endl;
+  }
+  out.close();
+}
+
+
+/*! Add one read pair's gap interval [lo,hi] (between-base coordinates) to the PD ring.
+
+ Four parallel difference arrays share one circular buffer: the covering count, the two tail counts,
+ and the sum of distance quantiles. `bin` is kPDbinLong / kPDbinShort, or -1 for a pair in neither
+ tail -- which still contributes to the covering count and the quantile sum, because those are the
+ denominator and the statistic the seed test is built from.
+
+ The ASSERT is the load-bearing check on the whole scheme. Writes must land in slots the per-column
+ drain has not yet reached and will reach before the ring wraps: lo is at or after the next column to
+ be drained, and hi+1 is no more than _pd_max_span past it. --pair-distance-maximum-span is what
+ guarantees the upper bound; without it a long-range pair would silently corrupt a live slot.
+ */
+void identify_mutations_pileup::pd_add_interval(int32_t lo, int32_t hi, int bin, int64_t u_scaled)
+{
+  int32_t next_b = static_cast<int32_t>(_pd_last_b) + 1;
+  ASSERT((lo >= next_b) && (hi + 1 <= next_b + _pd_max_span),
+         "Pair-distance ring write out of range: [" + to_string(lo) + "," + to_string(hi) +
+         "] with next column " + to_string(next_b) + " and span " + to_string(_pd_max_span));
+
+  int32_t i_lo = lo % _pd_ring_w;
+  int32_t i_hi = (hi + 1) % _pd_ring_w;
+
+  _pd_ring_n[i_lo] += 1;
+  _pd_ring_n[i_hi] -= 1;
+  _pd_ring_u[i_lo] += u_scaled;
+  _pd_ring_u[i_hi] -= u_scaled;
+
+  if (bin == kPDbinLong) {
+    _pd_ring_long[i_lo] += 1;
+    _pd_ring_long[i_hi] -= 1;
+  } else if (bin == kPDbinShort) {
+    _pd_ring_short[i_lo] += 1;
+    _pd_ring_short[i_hi] -= 1;
+  }
+}
+
+
+/*! Helper method to track pair-distance (PD) candidate regions.
+
+ Called once per reference column (including empty columns), and once past the end of each reference
+ sequence (position = target_length+1) to flush an open region.
+
+ Where DP and MP keep a deque of individually-anomalous reads and threshold its size, PD has to test
+ a DISTRIBUTION: the pairs whose gap covers this column are collectively shifted, or they are not.
+ So the per-column quantities are maintained as a prefix sum over the difference arrays that
+ pd_add_interval writes -- an interval-stabbing count in O(1) per pair, which is what makes it
+ affordable to run this over every read in the pileup.
+
+ A deque could not do this job. DP's works only because its key (a read's start) is monotone in visit
+ order and its expiry is a fixed width; PD's interval bounds are a read's END and its MATE's start,
+ which are neither.
+
+ Two gates must both pass for a column to seed, and they fail in opposite directions:
+
+   - the rank-sum z over ALL covering pairs. Under the null each pair's distance quantile is uniform,
+     so the mean quantile has mean 1/2 and variance 1/(12n); a coherent shift of even a fraction of a
+     standard deviation moves it decisively once n is in the dozens. This is the gate that catches
+     what DP cannot -- the shift that makes no individual pair an outlier. Without it, three pairs
+     that happen to land in a tail would seed anywhere.
+
+   - a raw count of pairs in the matching tail. A mild systematic bias (coverage, GC, mapping) can
+     drag the mean quantile off 1/2 across a whole region without any pair being unusual; requiring
+     real tail mass keeps that from seeding.
+
+ @JEB expects 1-indexed positions.
+ */
+void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, uint32_t position)
+{
+  if (!_pd_enabled) return;
+
+  // Drain every column up to and including this one. This is written as an explicit loop rather
+  // than a single step because a prefix sum is only correct if no column is ever skipped, and
+  // pileup_base::handle_position can in principle skip columns (clipping, downsampling). Clearing
+  // each slot as it is consumed is what lets the buffer wrap safely.
+  for (uint32_t b = _pd_last_b + 1; b <= position; b++) {
+    int32_t i = static_cast<int32_t>(b % _pd_ring_w);
+    _pd_n     += _pd_ring_n[i];      _pd_ring_n[i] = 0;
+    _pd_long  += _pd_ring_long[i];   _pd_ring_long[i] = 0;
+    _pd_short += _pd_ring_short[i];  _pd_ring_short[i] = 0;
+    _pd_u     += _pd_ring_u[i];      _pd_ring_u[i] = 0;
+  }
+  _pd_last_b = position;
+
+  ASSERT((_pd_n >= 0) && (_pd_long >= 0) && (_pd_short >= 0),
+         "Pair-distance running count went negative at position " + to_string(position) +
+         " (n=" + to_string(_pd_n) + ", long=" + to_string(_pd_long) + ", short=" + to_string(_pd_short) + ")");
+
+  // Rank-sum z of the covering pairs' quantiles. The accumulation is integer so it is bit-identical
+  // across platforms; only this comparison is floating point, and its inputs are exact integers.
+  double z = 0.0;
+  if (_pd_n > 0) {
+    double mean_offset = (static_cast<double>(_pd_u) - static_cast<double>(_pd_n) * static_cast<double>(kPDuScale) / 2.0)
+                         / static_cast<double>(kPDuScale);
+    z = mean_offset * sqrt(12.0 / static_cast<double>(_pd_n));
+  }
+
+  for (int bin = 0; bin < kPDnBins; bin++) {
+    int32_t tail = (bin == kPDbinLong) ? _pd_long : _pd_short;
+    bool right_way = (bin == kPDbinLong) ? (z >= _pd_z_seed) : (z <= -_pd_z_seed);
+
+    // Never "above" once past the end of the sequence: closes an open region at the flush sentinel
+    // and prevents opening a spurious region that would never close.
+    bool above = (tail >= _pd_seed) && right_way && (position <= target_length(seq_id));
+
+    if (above) {
+      if (_pd_region_start[bin] == UNDEFINED_UINT32) {
+        _pd_region_start[bin] = position;
+        _pd_region_peak_position[bin] = position;
+        _pd_region_peak_covering[bin] = _pd_n;
+        _pd_region_peak_tail[bin] = tail;
+        _pd_region_peak_z[bin] = z;
+      } else if (fabs(z) > fabs(_pd_region_peak_z[bin])) {
+        // Track the strongest column rather than the widest: prediction starts its BAM rescan from
+        // this one point, and the region's own span is a by-product of where the seed test happens
+        // to lapse, which can sit well away from the breakpoint.
+        _pd_region_peak_position[bin] = position;
+        _pd_region_peak_covering[bin] = _pd_n;
+        _pd_region_peak_tail[bin] = tail;
+        _pd_region_peak_z[bin] = z;
+      }
+    } else if (_pd_region_start[bin] != UNDEFINED_UINT32) {
+      // Close the open region (its last in-region column was position-1).
+      pd_candidate_region region;
+      region.seq_id = target_name(seq_id);
+      region.start = _pd_region_start[bin];
+      region.end = position - 1;
+      region.direction = (bin == kPDbinLong) ? 'L' : 'S';
+      region.peak_position = _pd_region_peak_position[bin];
+      region.peak_covering = _pd_region_peak_covering[bin];
+      region.peak_tail = _pd_region_peak_tail[bin];
+      region.peak_z = _pd_region_peak_z[bin];
+      _pd_candidate_regions.push_back(region);
+
+      _pd_region_start[bin] = UNDEFINED_UINT32;
+      _pd_region_peak_position[bin] = 0;
+      _pd_region_peak_covering[bin] = 0;
+      _pd_region_peak_tail[bin] = 0;
+      _pd_region_peak_z[bin] = 0.0;
+    }
+  }
+}
+
+
+/*! Write all accumulated PD candidate regions to a CSV in one pass (after the pileup completes).
+
+ Unlike the DP and MP CSVs this carries no per-pair descriptor list. Those exist because a DP or MP
+ rescan window can miss reads the seed saw; PD's cannot, since every pair whose gap covers the peak
+ has its leftmost mate within one maximum span of it, so the rescan is guaranteed to re-derive the
+ same set. A difference array has no membership list to write out in any case.
+ */
+void identify_mutations_pileup::write_pd_candidate_regions(const string& filename)
+{
+  // Sort by (seq_id, start, direction) so a nearby deletion and insertion appear adjacent.
+  sort(_pd_candidate_regions.begin(), _pd_candidate_regions.end(),
+       [](const pd_candidate_region& a, const pd_candidate_region& b) {
+         if (a.seq_id != b.seq_id) return a.seq_id < b.seq_id;
+         if (a.start != b.start) return a.start < b.start;
+         return a.direction < b.direction;
+       });
+
+  ofstream out(filename.c_str());
+  ASSERT(!out.fail(), "Could not open output file: " + filename);
+  // 'direction' is L (pairs mapping farther apart than expected -- deletion-like) or S (closer --
+  // insertion-like). The peak_* columns describe the single strongest column in the region, which
+  // is where pd_evidence starts its rescan.
+  out << "seq_id,start,end,direction,length,peak_position,peak_covering_count,peak_tail_count,peak_z" << endl;
+  out << std::fixed << std::setprecision(4);
+  for (vector<pd_candidate_region>::const_iterator r = _pd_candidate_regions.begin(); r != _pd_candidate_regions.end(); r++) {
+    out << r->seq_id << "," << r->start << "," << r->end << "," << r->direction << ","
+        << (r->end - r->start + 1) << "," << r->peak_position << "," << r->peak_covering << ","
+        << r->peak_tail << "," << r->peak_z << endl;
   }
   out.close();
 }

@@ -37,6 +37,7 @@
 #include "identify_mutations.h"
 #include "dp_evidence.h"
 #include "mp_evidence.h"
+#include "pd_evidence.h"
 #include "resolve_alignments.h"
 #include "samtools_commands.h"
 #include "soft_clipping.h"
@@ -2494,6 +2495,25 @@ int breseq_default_action(int argc, char* argv[])
     }
   }
 
+    //
+    // Pair Distance (PD) evidence
+    // Turn the columns where the read pairs covering one point are collectively shifted to longer or
+    // shorter mapping distances (from the identify_mutations CSV) into two-sided PD evidence: the
+    // deletions and insertions of a few hundred bases that no single pair is anomalous enough to
+    // reveal, and that DP therefore cannot see in either direction.
+    //
+  if (settings.paired_mapping && settings.predict_pair_distance) {
+    if (settings.do_step(settings.pair_distance_done_file_name, "Examining pair distance evidence")) {
+
+      predict_pair_distances(settings, summary, ref_seq_info);
+      // As for MP: written in stage 08, consumed only here, so keyed to THIS step's done-file.
+      settings.track_intermediate_file(settings.pair_distance_done_file_name,
+                                       settings.pd_candidate_regions_file_name);
+
+      settings.done_step(settings.pair_distance_done_file_name);
+    }
+  }
+
     /*
      * 09 Copy number variation
      * --------------------------------
@@ -2561,6 +2581,12 @@ int breseq_default_action(int argc, char* argv[])
       if (settings.paired_mapping && file_exists(settings.mp_genome_diff_file_name.c_str())) {
         cGenomeDiff mp_gd(settings.mp_genome_diff_file_name);
         evidence_gd.merge_preserving_duplicates(mp_gd);
+      }
+
+      // Pair distance (PD) evidence (likewise).
+      if (settings.paired_mapping && file_exists(settings.pd_genome_diff_file_name.c_str())) {
+        cGenomeDiff pd_gd(settings.pd_genome_diff_file_name);
+        evidence_gd.merge_preserving_duplicates(pd_gd);
       }
 
 
@@ -2703,11 +2729,17 @@ int breseq_default_action(int argc, char* argv[])
 
     // Per-side read-pair plots for DP evidence (stamps plot filenames onto the DP entries so
     // cOutputEvidenceFiles can surface them as per-side '?' pages). Must run before that step.
-    if (!settings.no_evidence_html && settings.paired_mapping)
+    // The braces matter: the MP call below was indented as though it were inside this condition but
+    // was a separate statement, so MP plots were drawn even under --no-evidence-html.
+    if (!settings.no_evidence_html && settings.paired_mapping) {
       breseq::draw_discordant_pair_evidence_plots(settings, summary, ref_seq_info, gd);
       // Must also run before cOutputEvidenceFiles: it stamps _mp_plot_file_name onto each MP entry.
       if (settings.predict_missing_pairs)
         breseq::draw_missing_pair_evidence_plots(settings, summary, ref_seq_info, gd);
+      // Likewise for _pd_plot_file_name on each PD entry.
+      if (settings.predict_pair_distance)
+        breseq::draw_pair_distance_evidence_plots(settings, summary, ref_seq_info, gd);
+    }
 
     // !!! Currently, we need to wait for the creation of coverage plots to finish
     // b/c we check whether files exist in creating the HTML files next.
