@@ -1436,28 +1436,69 @@ inline cString& cString::escape_shell_chars(void) {
 }
 
 // handles file that may or may not be gzipped
-class flexgzfstream {
+//
+// This IS-A std::iostream (rather than merely owning one), so it is a drop-in
+// replacement for std::fstream/std::ifstream at a call site: operator<< and
+// operator>>, breseq::getline(), eof(), fail(), good() and close() all work on
+// it directly. That matters for reference sequence files, where the same object
+// is used both as a bare stream (e.g. cReferenceSequences::ReadGFF/WriteGFF)
+// and through the helper methods of cFastaFile, which derives from this.
+//
+// On INPUT, compression is detected from the file's magic bytes rather than its
+// name, so a gzipped file is read transparently whatever it is called (NCBI, for
+// example, serves references as '.gbff.gz' / '.fna.gz'). On OUTPUT, it gzips
+// only when the file name ends in '.gz', so plain-text outputs are unchanged.
+class flexgzfstream : public std::iostream {
 protected:
+  // Only one of these is ever attached as the stream buffer; the other stays
+  // closed. They are members (rather than a heap-allocated stream) so that
+  // their destructors run -- pgzstreambuf::~pgzstreambuf() calls close(), which
+  // is what flushes any buffered output and finishes the gzip stream.
+  pgzstreambuf m_gzbuf;
+  std::filebuf m_filebuf;
+
+  // Always points at *this. Kept so that code written against the older
+  // pointer-holding version of this class still reads correctly (see cFastqFile).
   std::iostream* m_stream;
-  
+
 public:
-  flexgzfstream() : m_stream(NULL) {}
+  flexgzfstream() : std::iostream(NULL), m_stream(this) {}
 
   flexgzfstream(const char * file_name, std::ios::openmode mode, unsigned int num_threads = 1)
+    : std::iostream(NULL), m_stream(this)
   {
-    if ( (mode & ios::in) && file_is_gzipped(file_name)) {
-      m_stream = new iopgzstream(file_name, mode, num_threads);
-    } else if ( (mode & ios::out) && (cString(file_name).get_file_extension() == "gz")) {
-      m_stream = new iopgzstream(file_name, mode, num_threads);
-    } else {
-      m_stream = new std::fstream(file_name, mode);
-    }
-    ASSERT(m_stream && !m_stream->fail(), "Could not open file: " +  std::string(file_name));
+    open(file_name, mode, num_threads);
   }
-  
-  std::iostream * get_stream() { return m_stream; }
-  
-  ~flexgzfstream() { if (m_stream) delete m_stream; }
+
+  void open(const char * file_name, std::ios::openmode mode, unsigned int num_threads = 1)
+  {
+    bool use_gzip = false;
+    if ( (mode & ios::in) && file_is_gzipped(file_name)) {
+      use_gzip = true;
+    } else if ( (mode & ios::out) && (cString(file_name).get_file_extension() == "gz")) {
+      use_gzip = true;
+    }
+
+    // Note: basic_ios::rdbuf() calls clear(), so it must come before any
+    // setstate() reporting a failure to open.
+    if (use_gzip) {
+      rdbuf(&m_gzbuf);
+      if (!m_gzbuf.open(file_name, mode, num_threads)) setstate(std::ios::badbit);
+    } else {
+      rdbuf(&m_filebuf);
+      if (!m_filebuf.open(file_name, mode)) setstate(std::ios::badbit);
+    }
+
+    ASSERT(!fail(), "Could not open file: " +  std::string(file_name));
+  }
+
+  void close()
+  {
+    if (m_gzbuf.is_open()) m_gzbuf.close();
+    if (m_filebuf.is_open()) m_filebuf.close();
+  }
+
+  std::iostream * get_stream() { return this; }
 };
 
 //! Used to add types that will print with a specified precision
