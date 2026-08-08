@@ -28,6 +28,37 @@
 
 namespace breseq {
 
+  //! Paired-library geometry shared by every pair-based evidence type (DP, MP).
+  //
+  //  Determines the library's concordant orientation -- which fixes which read end faces a breakpoint
+  //  (inner3p) -- plus the rescan window half-width D (max distance_cutoff over paired read groups)
+  //  and the median paired-mapping distance. FR is fully supported; RF is the mirror; FF/RR is not
+  //  supported. Returns false (leaving the outputs as set so far) if the orientation is unknown or
+  //  unsupported; the caller emits its own warning.
+  bool paired_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median);
+
+  //! Convert one sliding-window candidate region into a JC-style breakpoint side (position, strand).
+  //
+  //  strand=+1 means the retained flank lies at coords >= position, -1 at <= position.
+  //    inner3p:  F -> (end, -1) ; R -> (start, +1)
+  //   !inner3p:  F -> (start, +1) ; R -> (end, -1)   [the RF/"outie" mirror]
+  //
+  //  This same rule is correct for MP as well as DP: under FR the flank-facing mate of a fragment
+  //  reaching into unseen sequence is forward, and under RF it is reverse, so `is_forward == inner3p`
+  //  identifies the left-hand flank in both cases.
+  void paired_region_to_side(char region_strand, uint32_t region_start, uint32_t region_end,
+                             bool inner3p, int32_t& position, int32_t& strand);
+
+  //! Small gnuplot axis-formatting helpers, shared by the pair-based evidence plots (DP, MP).
+  //! plot_commafy: whole number with thousands separators. plot_nice_tick: a round tick step giving
+  //! ~10 ticks over a span. plot_xtics_list: an explicit gnuplot tics list over [lo,hi] at `step`.
+  //! plot_lmargin_for_labels: left margin (in character units) that keeps a label of the given width
+  //! inside the canvas when the tick font differs from the base font.
+  string plot_commafy(int64_t v);
+  int64_t plot_nice_tick(int64_t span);
+  string plot_xtics_list(int64_t lo, int64_t hi, int64_t step);
+  int plot_lmargin_for_labels(size_t max_label_chars, double label_font, double base_font);
+
   //! Predict Discordant Pair (DP) evidence.
   //
   //  Re-reads the DP candidate-region CSV written during identify_mutations

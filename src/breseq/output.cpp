@@ -206,6 +206,7 @@ string header_style_string()
   ss << ".copy_number_header_row {background-color: rgb(153,102,0);}"      << endl;
   ss << ".soft_clipping_header_row {background-color: rgb(128,0,128);}"   << endl;
   ss << ".discordant_pair_header_row {background-color: rgb(200,0,120);}" << endl;
+  ss << ".missing_pair_header_row {background-color: rgb(0,120,160);}"    << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(235,235,235);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
@@ -607,6 +608,12 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     dp.remove_if(cDiffEntry::ignored_but_not_circular());   // keep circular-origin DP, drop other-ignored
   }
 
+  // MP's only IGNORE reason is CONTIG_END, an artifact of a linear reference's shape rather than a
+  // call, so it is always hidden.
+  diff_entry_list_t mp = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MP)));
+  mp.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  mp.remove_if(cDiffEntry::field_exists(IGNORE));
+
   // Open list container before sticky header so the .search input is inside it
   if (!settings.no_javascript) {
     if (!settings.no_list_js) {
@@ -625,7 +632,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << mutation_filter_input_string() << endl;
   }
 
-  if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() > 0) {
+  if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() + mp.size() > 0) {
     HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>";
     HTML << " | Unassigned evidence: ";
     vector<string> jump_link_list;
@@ -639,6 +646,8 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
       jump_link_list.push_back("<a href=\"#soft_clipping_list\">soft clipping</a>");
     if (dp.size() > 0)
       jump_link_list.push_back("<a href=\"#discordant_pair_list\">discordant pair</a>");
+    if (mp.size() > 0)
+      jump_link_list.push_back("<a href=\"#missing_pair_list\">missing pair</a>");
     HTML << join(jump_link_list, ", ");
     HTML << endl;
   }
@@ -697,9 +706,17 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << html_discordant_pair_table_string(dp, settings, false, "Discordant pair unassigned evidence", relative_path);
   }
 
+  /////////////////////////
+  // Unassigned MP evidence
+  /////////////////////////
+
+  if (mp.size() > 0) {
+    HTML << "<p>" << html_missing_pair_table_string(mp, false, "Unassigned missing pair evidence", relative_path);
+  }
+
 
   // This code prints out a message if there was nothing in the previous tables
-  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() + dp.size() == 0) {
+  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() + dp.size() + mp.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
 
@@ -785,6 +802,18 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   dp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
   dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(FREQUENCY)));
   mark_gd_entries_in_list_no_show(dp_list, settings.max_rejected_discordant_pair_evidence_to_show);
+
+  /////
+  // MP evidence
+  //////
+
+  // As for SC and DP: show_list() filters no_show, so this also stops the evidence-file generator
+  // from rendering a read-alignment page for every rejected position. Keep the best-supported ones.
+  vector<gd_entry_type> mp_types = make_vector<gd_entry_type>(MP);
+  diff_entry_list_t mp_list = gd.filter_used_as_evidence(gd.get_list(mp_types));
+  mp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  mp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(MP_READ_COUNT)));
+  mark_gd_entries_in_list_no_show(mp_list, settings.max_rejected_missing_pair_evidence_to_show);
 
 }
 
@@ -904,13 +933,27 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   }
 
   /////////////////////////
+  // Marginal MP evidence
+  /////////////////////////
+
+  diff_entry_list_t mp_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(MP)));
+  mp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  mp_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
+
+  string marginal_mp_title = "Marginal missing pair evidence";
+  if (mp_list.size() > 0) {
+    mp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(MP_READ_COUNT)));
+    marginal_mp_title += " (sorted from high to low supporting read count)";
+  }
+
+  /////////////////////////
   // Sticky header: breseq nav + jump links
   /////////////////////////
 
   HTML << "<div class=\"breseq-page-header breseq-sticky-header\">" << endl;
   HTML << breseq_header_string(settings) << endl;
 
-  if (ra_list.size() > 0 || jc_list.size() > 0 || dp_list.size() > 0 || sc_list.size() > 0) {
+  if (ra_list.size() > 0 || jc_list.size() > 0 || dp_list.size() > 0 || sc_list.size() > 0 || mp_list.size() > 0) {
     bool first_link = true;
     vector<string> jump_link_list;
 
@@ -926,6 +969,9 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     }
     if (sc_list.size() > 0) {
       jump_link_list.push_back("<a href=\"#soft_clipping_list\">soft clipping</a>");
+    }
+    if (mp_list.size() > 0) {
+      jump_link_list.push_back("<a href=\"#missing_pair_list\">missing pair</a>");
     }
     HTML << join(jump_link_list, ", ");
 
@@ -963,8 +1009,14 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     HTML << html_soft_clipping_table_string(sc_list, false, marginal_sc_title, relative_path);
   }
 
+  if (mp_list.size() > 0) {
+    HTML << "<p>" << endl;
+    // show_details = false: as for the marginal RA, JC, DP and SC tables.
+    HTML << html_missing_pair_table_string(mp_list, false, marginal_mp_title, relative_path);
+  }
+
   // This code prints out a message if there was nothing in the previous tables
-  if (ra_list.size() + jc_list.size() + dp_list.size() + sc_list.size() == 0) {
+  if (ra_list.size() + jc_list.size() + dp_list.size() + sc_list.size() + mp_list.size() == 0) {
     HTML << "<p>No marginal predictions." << endl;
   }
 
@@ -1746,6 +1798,10 @@ string html_genome_diff_item_table_string(const Settings& settings, const cGenom
     else if(first_item._type == SC)
     {
       return html_soft_clipping_table_string(list_ref,true, "Soft clipping evidence", relative_link);
+    }
+    else if(first_item._type == MP)
+    {
+      return html_missing_pair_table_string(list_ref,true, "Missing pair evidence", relative_link);
     }
     else if(first_item._type == DP)
     {
@@ -3047,12 +3103,119 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
 }
 
 
+string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
+{
+  if (list_ref.size() == 0) return "";
+
+  stringstream ss;
+  cDiffEntry& test_item = *list_ref.front();
+
+  bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
+
+  ss << "<div id=\"missing_pair_list\">" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  size_t total_cols = link ? 12 : 11;
+
+  ss << "<thead>" << endl;
+  if (title != "") {
+    ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_pair_header_row\"", title)) << endl;
+  }
+
+  ss << "<tr>" << endl;
+  if (link) ss << th("&nbsp;") << endl;
+  ss << th(nonbreaking("seq id")) << endl;
+  ss << th("position") << endl;
+  ss << th("direction") << endl;
+  ss << th("unpaired") << endl;
+  ss << th("distinct") << endl;
+  ss << th("spanning") << endl;
+  ss << th("total") << endl;
+  ss << th("freq") << endl;
+  ss << th("range") << endl;
+  ss << th("gene") << endl;
+  ss << th("width=\"100%\"", "product") << endl;
+  ss << "</tr>" << endl;
+  ss << "</thead>" << endl;
+  ss << endl;
+  ss << "<tbody class=\"list\">" << endl;
+
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr++) {
+    cDiffEntry& c = **itr;
+
+    ss << start_tr("class=\"normal_table_row\"") << endl;
+
+    if (link)
+      ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
+
+    ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[POSITION])) << endl;
+
+    // The direction the supporting reads point: toward the missing sequence. A strand of -1 keeps
+    // the flank to the LEFT of the position, so the insert lies to the right.
+    string dir_str = (c[STRAND] == "-1") ? "&rarr;" : "&larr;";
+    ss << td(ALIGN_CENTER, dir_str) << endl;
+
+    ss << td(ALIGN_RIGHT, nonbreaking(c[MP_READ_COUNT])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[MP_DISTINCT_COUNT])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[MP_CONCORDANT_COUNT])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[MP_TOTAL_COUNT])) << endl;
+    ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
+    // "range" column: the confidence limits the frequency cutoff is actually applied to, which is
+    // why an item here can be rejected at a frequency that reads as above the cutoff.
+    ss << td(ALIGN_RIGHT,
+             Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
+
+    if (c.entry_exists(GENE_NAME))
+      ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c[GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));
+    else
+      ss << td("&nbsp;");
+    if (c.entry_exists(GENE_PRODUCT))
+      ss << td(ALIGN_LEFT, htmlize(substitute(c[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
+    else
+      ss << td("&nbsp;");
+
+    ss << end_tr();
+
+    if (show_details && c.entry_exists(REJECT)) {
+      vector<string> reject_reasons = c.get_reject_reasons();
+      for (vector<string>::iterator it = reject_reasons.begin(); it != reject_reasons.end(); it++) {
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected: " + decode_reject_reason(*it)));
+      }
+    }
+  }
+
+  ss << "</tbody>" << endl;
+  ss << end_table() << endl;
+  ss << "</div>" << endl;
+
+  return ss.str();
+}
+
+
 string decode_reject_reason(const string& reject)
 {
-  
+
   if (reject == "COVERAGE_EVENNESS_SKEW")
   {
     return "Coverage evenness skew score above cutoff.";
+  }
+  else if (reject == "MISSING_PAIR_COUNT")
+  {
+    return "Too few reads with unmapped mates support this position.";
+  }
+  else if (reject == "MISSING_PAIR_DUPLICATES")
+  {
+    return "Supporting reads with unmapped mates start at too few distinct positions.";
+  }
+  else if (reject == "MISSING_PAIR_FREQUENCY")
+  {
+    return "Missing pair local frequency below cutoff.";
+  }
+  else if (reject == "NEARBY_BETTER_MISSING_PAIR")
+  {
+    return "A better-supported missing pair prediction lies within one paired-mapping distance.";
   }
   else if (reject == "CONCORDANT_PAIR_SKEW")
   {
@@ -4864,6 +5027,34 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                  (START, to_string(pos))
                  (END, to_string(pos))
                  ("sc_minimum_clipped_bases", to_string(settings.soft_clipping_minimum_bases)));
+  }
+
+  // Missing pair evidence. A plain read-alignment page at the position: the supporting reads are
+  // ordinary aligned reads, distinguished only by their "{mate unmapped}" pairing tag, so there is
+  // nothing extra to pass through (unlike SC's clipped-base threshold).
+  diff_entry_list_t items_MP = gd.show_list(make_vector<gd_entry_type>(MP));
+
+  for (diff_entry_list_t::iterator itr = items_MP.begin(); itr != items_MP.end(); itr++) {
+    diff_entry_ptr_t item = *itr;
+    uint32_t pos = from_string<uint32_t>((*item)[POSITION]);
+
+    diff_entry_map_t mp_fields = make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (PREFIX, "MP")
+                 (SEQ_ID, (*item)[SEQ_ID])
+                 (START, to_string(pos))
+                 (END, to_string(pos));
+
+    // The read plot -- arrows for every read counted here, mate-mapped in blue and mate-unmapped in
+    // purple. Its filename was stamped onto the entry by draw_missing_pair_evidence_plots (run
+    // earlier in output). Shown above the read alignment on the same evidence page.
+    if (item->entry_exists("_mp_plot_file_name"))
+      mp_fields[PLOT] = (*item)["_mp_plot_file_name"];
+    if (item->entry_exists("_mp_plot_message"))
+      mp_fields[PLOT_MESSAGE] = (*item)["_mp_plot_message"];
+
+    add_evidence(_EVIDENCE_FILE_NAME, item, item, mp_fields);
   }
 
   // now create evidence files

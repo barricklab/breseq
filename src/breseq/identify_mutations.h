@@ -254,13 +254,34 @@ namespace breseq {
       string   key;        //!< condensed descriptor: <read1_name>__<read2_name>__<r1_insert_size>
       bool     redundant;  //!< this discordant read maps redundantly (X1>1: a tie-broken multicopy side)
     };
+    //! Missing Pair (MP) candidate-region detection ----
+    //! Candidates are binned by focal-read strand ONLY: 0 = forward, 1 = reverse. Unlike DP there is
+    //! no pair-orientation dimension -- a singleton carries no XP tag, because there is no second
+    //! alignment to derive an orientation from.
+    static const int kMPnBins = 2;
+    //! One mate-unmapped read currently inside a bin's sliding window.
+    struct mp_read {
+      uint32_t start_pos;  //!< reference start (1-based) of this read (also its window position)
+      uint32_t end_pos;    //!< reference end (1-based) of this read's ALIGNED extent
+      bool     redundant;  //!< this read maps redundantly (X1>1)
+    };
+
     //! Per paired read group: window width (median + 2.42*MAD), R1/R2 file ids (for name/role
-    //! reconstruction), and the reads currently in-window for each of the 6 bins.
+    //! reconstruction), and the reads currently in-window for each bin. The same window width and
+    //! group membership serve both the DP and MP detectors -- it is the scale over which the mates
+    //! of one breakpoint spread, which is what both are looking for.
     struct dp_group {
       double          window_width;
       uint32_t        r1_m_id;      //!< m_files[0].m_id (R1 fastq file index)
       uint32_t        r2_m_id;      //!< m_files[1].m_id (R2 fastq file index)
       deque<dp_read>  reads[kDPnBins];
+      deque<mp_read>  mp_reads[kMPnBins];
+      //! Start positions of ALL primary mapped reads of each focal strand currently in-window --
+      //! the denominator the MP seed's enrichment test needs. Without it the seed is an absolute
+      //! count, which fires continuously: the fraction of reads whose mate failed to align is
+      //! roughly constant along the genome, so at any decent coverage every window clears a fixed
+      //! threshold and the whole covered region becomes one candidate.
+      deque<uint32_t> mp_all_reads[kMPnBins];
     };
     //! A completed candidate region: discordant read pairs of a single focal strand and orientation.
     struct dp_candidate_region {
@@ -272,6 +293,17 @@ namespace breseq {
       uint32_t max_count;         //!< peak in-window discordant count over the region
       bool     redundant;         //!< majority of this region's discordant reads mapped redundantly (multicopy side)
       string   discordant_pairs;  //!< ';'-joined <read1>__<read2>__<insert_size>__<read_start>__<read_end>
+    };
+    //! A completed MP candidate region: mate-unmapped reads of a single focal strand.
+    struct mp_candidate_region {
+      string   seq_id;
+      uint32_t start;
+      uint32_t end;
+      char     strand;          //!< focal-read strand for this region: 'F' or 'R'
+      uint32_t max_count;       //!< peak in-window mate-unmapped count over the region
+      uint32_t max_total;       //!< in-window total same-strand read count when that peak was reached
+      bool     redundant;       //!< majority of this region's reads mapped redundantly
+      string   unpaired_reads;  //!< ';'-joined <read_start>__<read_end>
     };
 
 		
@@ -313,6 +345,9 @@ namespace breseq {
     //! Write the accumulated DP candidate regions to a CSV (one operation, after the pileup).
     void write_dp_candidate_regions(const string& filename);
 
+    //! Write the accumulated MP candidate regions to a CSV (one operation, after the pileup).
+    void write_mp_candidate_regions(const string& filename);
+
 
 	protected:
 		//! Helper method to track deletions.
@@ -320,6 +355,9 @@ namespace breseq {
 
 		//! Helper method to track discordant-pair candidate regions (called once per column).
 		void check_discordant_completion(uint32_t seq_id, uint32_t position);
+
+		//! Helper method to track missing-pair candidate regions (called once per column).
+		void check_missing_pair_completion(uint32_t seq_id, uint32_t position);
 
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
@@ -407,6 +445,21 @@ namespace breseq {
 		vector<string> _dp_region_descriptors[kDPnBins];    //!< read-pair keys for the open region, per bin
 		uint32_t _dp_region_redundant_count[kDPnBins];      //!< how many of the open region's descriptor reads mapped redundantly
 		vector<dp_candidate_region> _dp_candidate_regions;  //!< all completed regions (written once after the pileup)
+
+		// these are state variables used by the missing-pair (MP) region method.
+		// All per-bin state is indexed by bin = focal-read strand (see kMPnBins). The read groups and
+		// their window widths are shared with the DP method above (_dp_groups / _fastq_index_to_dp_group).
+		bool _mp_enabled;                                   //!< --predict-missing-pairs AND at least one paired group
+		int32_t _mp_seed;                                   //!< --missing-pair-seed threshold (applied per bin)
+		double _mp_seed_fraction;                           //!< --missing-pair-seed-fraction enrichment threshold
+		int32_t _mp_metric[kMPnBins];                       //!< running count of in-window mate-unmapped reads, per bin
+		int32_t _mp_total_metric[kMPnBins];                 //!< running count of ALL in-window same-strand reads, per bin
+		uint32_t _mp_region_start[kMPnBins];                //!< UNDEFINED_UINT32 = not currently in a region, per bin
+		uint32_t _mp_region_max_count[kMPnBins];            //!< peak metric while the current region is open, per bin
+		uint32_t _mp_region_max_total[kMPnBins];            //!< in-window total when that peak was reached, per bin
+		vector<string> _mp_region_descriptors[kMPnBins];    //!< read extents for the open region, per bin
+		uint32_t _mp_region_redundant_count[kMPnBins];      //!< how many of the open region's reads mapped redundantly
+		vector<mp_candidate_region> _mp_candidate_regions;  //!< all completed regions (written once after the pileup)
 	};
 
   

@@ -337,9 +337,16 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
 
   aligned_read.pair_is_paired = a.is_paired();
   if (aligned_read.pair_is_paired) {
-    aligned_read.pair_is_proper = a.proper_pair();
-    a.aux_get_Z("XP", aligned_read.pair_orientation);
-    aligned_read.pair_distance = llabs(static_cast<long long>(a.insert_size()));
+    // A singleton is flagged paired with BAM_FMUNMAP (mark_mate_unmapped in resolve_alignments.cpp)
+    // and carries no XP tag and a zero insert size -- there is no second alignment, so there is no
+    // orientation or distance to show. Kept separate from proper/discordant so it is not rendered as
+    // a discordant pair, which it is not.
+    aligned_read.pair_mate_unmapped = (a.flag() & BAM_FMUNMAP) != 0;
+    if (!aligned_read.pair_mate_unmapped) {
+      aligned_read.pair_is_proper = a.proper_pair();
+      a.aux_get_Z("XP", aligned_read.pair_orientation);
+      aligned_read.pair_distance = llabs(static_cast<long long>(a.insert_size()));
+    }
   }
 
   aligned_reads[aligned_read.seq_id] = aligned_read;
@@ -1292,6 +1299,7 @@ string alignment_output::html_header_string()
   header_style_string += ".AP {color: rgb(0,0,0); background-color: rgb(255,229,204)}\n";         // ambiguous overlap (junctions) - but only due to target site duplication
   header_style_string += ".PC {color: rgb(0,0,0); background-color: rgb(224,255,255)}\n";         // paired, concordant (light cyan)
   header_style_string += ".PD {color: rgb(0,0,0); background-color: rgb(255,224,178)}\n";         // paired, discordant (light orange)
+  header_style_string += ".PM {color: rgb(0,0,0); background-color: rgb(230,204,255)}\n";         // paired, mate unmapped (light purple)
   header_style_string += ".SC {color: rgb(0,0,0); background-color: rgb(255,255,204)}\n";         // read counted as soft-clipped (light yellow)
 
   
@@ -1474,8 +1482,12 @@ string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_Re
   }
 
   if (a.pair_is_paired) {
-    string pairing_class = a.pair_is_proper ? "PC" : "PD";
-    output += "&nbsp;<font class=\"" + pairing_class + "\">{" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}</font>";
+    if (a.pair_mate_unmapped) {
+      output += "&nbsp;<font class=\"PM\">{mate unmapped}</font>";
+    } else {
+      string pairing_class = a.pair_is_proper ? "PC" : "PD";
+      output += "&nbsp;<font class=\"" + pairing_class + "\">{" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}</font>";
+    }
   }
 
   output += "</CODE>";
@@ -1631,8 +1643,10 @@ string alignment_output::text_alignment_line(const alignment_output::Alignment_B
   }
 
   if (a.pair_is_paired) {
-    string pairing_class = a.pair_is_proper ? "PC" : "PD";
-    output += " {" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}";
+    if (a.pair_mate_unmapped)
+      output += " {mate unmapped}";
+    else
+      output += " {" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}";
   }
   
   return output;
@@ -1680,8 +1694,12 @@ json alignment_output::json_alignment_line(const alignment_output::Alignment_Bas
   j["mapping_quality"] = to_string<uint32_t>(a.end);
 
   if (a.pair_is_paired) {
-    j["read_pair_orientation"] = a.pair_orientation;
-    j["read_pair_distance"] = to_string<uint32_t>(a.pair_distance);
+    if (a.pair_mate_unmapped) {
+      j["read_pair_mate_unmapped"] = true;
+    } else {
+      j["read_pair_orientation"] = a.pair_orientation;
+      j["read_pair_distance"] = to_string<uint32_t>(a.pair_distance);
+    }
   }
   
   return j;

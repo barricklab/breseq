@@ -229,7 +229,9 @@ namespace breseq {
     void fetch_callback(const alignment_wrapper& a) {
       if (m_out == NULL) return;
       if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) return;
-      if (a.unmapped() || !a.is_paired() || a.proper_pair()) return;
+      // BAM_FMUNMAP: a singleton is flagged paired (mark_mate_unmapped in resolve_alignments.cpp) with
+      // mtid/mpos pointing at ITSELF, so without this guard it would index itself as its own mate.
+      if (a.unmapped() || !a.is_paired() || a.proper_pair() || (a.flag() & BAM_FMUNMAP)) return;
       dp_mate_rec r;
       r.tid = static_cast<int32_t>(a.reference_target_id());
       r.pos = static_cast<int32_t>(a.reference_start_1());
@@ -340,7 +342,13 @@ namespace breseq {
         // Minimal supporting classification (no body-side gate): crossing strand, discordant, mate at the
         // other side in its crossing orientation.
         if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) return;
-        if (a.unmapped() || !a.is_paired() || a.proper_pair()) return;
+        // BAM_FMUNMAP: a singleton is flagged paired with mtid/mpos pointing at ITSELF
+        // (mark_mate_unmapped in resolve_alignments.cpp). Without this guard a singleton on the
+        // crossing strand whose own position happens to fall inside [other_p +/- D] would pass every
+        // test below -- its "mate" is itself, on the same tid, in range, and forward (FMREVERSE is
+        // never set) -- and be counted as a supporting pair. dp_classify_side_read already screens
+        // these out (category 3, unpaired); this branch bypasses it, so it needs its own guard.
+        if (a.unmapped() || !a.is_paired() || a.proper_pair() || (a.flag() & BAM_FMUNMAP)) return;
         if ((!a.reversed()) != m_ctx.cross_fwd) return;
         if (static_cast<int32_t>(a.mate_reference_target_id()) != m_ctx.other_tid) return;
         int32_t mpos = a.mate_start_1();
@@ -504,21 +512,24 @@ namespace breseq {
     map<string, dp_key_extent> keys;
   };
 
-  // Convert one region into a JC-style junction side (position, strand), given whether the library's
-  // reads face the junction with their 3' end (inner3p). See dp_evidence plan / the coordinate
-  // convention: strand=+1 means the retained flank lies at coords >= position, -1 at <= position.
-  //   inner3p:  F -> (end, -1) ; R -> (begin, +1)
-  //  !inner3p:  F -> (begin, +1) ; R -> (end, -1)   [the RF/"outie" mirror]
-  static void dp_region_to_side(const dp_region_row& r, bool inner3p, int32_t& position, int32_t& strand)
+  // Shared with MP; see the declaration in dp_evidence.h for the coordinate convention.
+  void paired_region_to_side(char region_strand, uint32_t region_start, uint32_t region_end,
+                             bool inner3p, int32_t& position, int32_t& strand)
   {
-    bool is_forward = (r.strand == 'F');
+    bool is_forward = (region_strand == 'F');
     if (inner3p == is_forward) {
-      position = static_cast<int32_t>(r.end);
+      position = static_cast<int32_t>(region_end);
       strand = -1;
     } else {
-      position = static_cast<int32_t>(r.start);
+      position = static_cast<int32_t>(region_start);
       strand = +1;
     }
+  }
+
+  // Convert one DP region into a JC-style junction side (position, strand).
+  static void dp_region_to_side(const dp_region_row& r, bool inner3p, int32_t& position, int32_t& strand)
+  {
+    paired_region_to_side(r.strand, r.start, r.end, inner3p, position, strand);
   }
 
   // Starting coordinate for one side of a candidate junction, taken from the aligned extents of the
@@ -549,11 +560,8 @@ namespace breseq {
     return found;
   }
 
-  // Determine the library's concordant orientation (which fixes which read end faces the junction ->
-  // inner3p) and the rescan window half-width D = max distance_cutoff over paired groups. FR is fully
-  // supported; RF is the mirror; FF/RR is not supported yet. Returns false (optionally warning) if the
-  // orientation is unsupported/unknown.
-  static bool dp_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median, bool warn)
+  // Shared with MP; see the declaration in dp_evidence.h.
+  bool paired_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median)
   {
     string majority_orientation;
     D = 0.0;
@@ -573,10 +581,35 @@ namespace breseq {
 
     if (majority_orientation == "FR") { inner3p = true;  return true; }
     if (majority_orientation == "RF") { inner3p = false; return true; }
+    return false;
+  }
+
+  // Return the library orientation for the majority of paired read groups, or the (unsupported)
+  // orientation name for the warning below.
+  static string paired_library_orientation_name(const Summary& summary)
+  {
+    map<string, int> votes;
+    for (PairedMappingDistanceDistributionSummaries::const_iterator it = summary.preliminary_paired_mapping_distance_distribution.begin();
+         it != summary.preliminary_paired_mapping_distance_distribution.end(); it++) {
+      if (!it->second.majority_orientation.empty())
+        votes[it->second.majority_orientation]++;
+    }
+    string best_name;
+    int best = 0;
+    for (map<string, int>::iterator it = votes.begin(); it != votes.end(); it++) {
+      if (it->second > best) { best = it->second; best_name = it->first; }
+    }
+    return best_name.empty() ? string("unknown") : best_name;
+  }
+
+  // DP's wrapper: the shared geometry plus DP's own warning.
+  static bool dp_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median, bool warn)
+  {
+    if (paired_library_params(summary, inner3p, D, pair_median)) return true;
     if (warn) {
       WARN("Discordant pair (DP) evidence prediction currently supports only FR- and RF-concordant "
            "libraries. The library concordant orientation is '" +
-           (majority_orientation.empty() ? string("unknown") : majority_orientation) +
+           paired_library_orientation_name(summary) +
            "'; no DP evidence will be predicted.");
     }
     return false;
@@ -1952,7 +1985,7 @@ namespace breseq {
   // -------------------------------------------------------------------------------------------------
 
   // Format an integer with thousands separators, e.g. 1234560 -> "1,234,560".
-  static string dp_commafy(int64_t v)
+  string plot_commafy(int64_t v)
   {
     bool neg = v < 0; if (neg) v = -v;
     string digits = to_string(v);
@@ -1969,7 +2002,7 @@ namespace breseq {
   }
 
   // A "nice" tick interval (a multiple of 10) giving roughly ~10 labels across a span.
-  static int64_t dp_nice_tick(int64_t span)
+  int64_t plot_nice_tick(int64_t span)
   {
     double raw = span / 10.0;
     static const int64_t nice[] = {10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000};
@@ -1985,7 +2018,7 @@ namespace breseq {
   // than the terminal's base font, so about half of the leftmost label hangs past the plot edge and is
   // cut off by the canvas. Reserve half a label's width, converted from label-font to base-font
   // character units (the average-character-width factor cancels in the ratio), plus a character of slack.
-  static int dp_lmargin_for_labels(size_t max_label_chars, double label_font, double base_font)
+  int plot_lmargin_for_labels(size_t max_label_chars, double label_font, double base_font)
   {
     if (!(base_font > 0.0)) return 8;
     double chars = ceil((static_cast<double>(max_label_chars) * label_font / 2.0) / base_font);
@@ -1994,14 +2027,14 @@ namespace breseq {
 
   // Build a gnuplot explicit-tics list ("label" pos, ...) at multiples of `step` within [lo, hi],
   // with comma-formatted whole-number labels.
-  static string dp_xtics_list(int64_t lo, int64_t hi, int64_t step)
+  string plot_xtics_list(int64_t lo, int64_t hi, int64_t step)
   {
     string out;
     int64_t first = ((lo + step - 1) / step) * step;  // first multiple of step >= lo
     bool comma = false;
     for (int64_t t = first; t <= hi; t += step) {
       if (comma) out += ", ";
-      out += double_quote(dp_commafy(t)) + " " + to_string(t);
+      out += double_quote(plot_commafy(t)) + " " + to_string(t);
       comma = true;
     }
     return out;
@@ -2095,12 +2128,12 @@ namespace breseq {
     s << "set tics out" << endl;
 
     // Comma-formatted, whole-number x ticks pinned to round positions, labeled on BOTH bottom and top.
-    int64_t step = dp_nice_tick(xmax - xmin);
-    string tics = dp_xtics_list(xmin, xmax, step);
+    int64_t step = plot_nice_tick(xmax - xmin);
+    string tics = plot_xtics_list(xmin, xmax, step);
     s << "set xtics (" << tics << ") nomirror font ',16'" << endl;
     s << "set x2tics (" << tics << ") font ',16'" << endl;
     // Keep the widest label (the extremes of the range) inside the canvas.
-    s << "set lmargin " << dp_lmargin_for_labels(max(dp_commafy(xmin).size(), dp_commafy(xmax).size()), 16.0, 11.0) << endl;
+    s << "set lmargin " << plot_lmargin_for_labels(max(plot_commafy(xmin).size(), plot_commafy(xmax).size()), 16.0, 11.0) << endl;
 
     // Read-pair names as lane labels down the right side. For a concordant pair (both mates drawn) the
     // label shows both read names; a discordant lane shows the single in-window read.
@@ -2238,7 +2271,7 @@ namespace breseq {
     // side_2_position below (consecutive genomic positions sharing one tick at this scale). The same
     // two-row labels are placed on both the top and bottom axes.
     {
-      int64_t step = dp_nice_tick(xmax - xmin);
+      int64_t step = plot_nice_tick(xmax - xmin);
       ostringstream tks;
       bool first = true;
       // Longest single ROW of a label -- these labels are two-row (embedded "\n"), and only the wider
@@ -2256,20 +2289,20 @@ namespace breseq {
         }
       };
       // Seam: side_1_position (upper) over side_2_position (lower).
-      emit(0, dp_commafy(p1) + "\\n" + dp_commafy(p2));
+      emit(0, plot_commafy(p1) + "\\n" + plot_commafy(p2));
       // Left half = side_1, upper row (trailing newline leaves the lower row blank).
       for (int64_t x = -step; x >= xmin; x -= step) {
         int64_t g = (s1_str == -1) ? (p1 + x) : (p1 - x);
-        emit(x, dp_commafy(g) + "\\n");
+        emit(x, plot_commafy(g) + "\\n");
       }
       // Right half = side_2, lower row (leading newline leaves the upper row blank).
       for (int64_t x = step; x <= xmax; x += step) {
         int64_t g = (s2_str == -1) ? (p2 - x) : (p2 + x);
-        emit(x, "\\n" + dp_commafy(g));
+        emit(x, "\\n" + plot_commafy(g));
       }
       s << "set xtics ("  << tks.str() << ") nomirror font ',16'" << endl;  // bottom axis
       s << "set x2tics (" << tks.str() << ") font ',16'" << endl;           // top axis (same two rows)
-      s << "set lmargin " << dp_lmargin_for_labels(widest_row, 16.0, 11.0) << endl;
+      s << "set lmargin " << plot_lmargin_for_labels(widest_row, 16.0, 11.0) << endl;
     }
 
     // Read-pair names down the right side (both mates).

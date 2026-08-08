@@ -376,12 +376,25 @@ namespace breseq
     ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("discordant-pair-skew-cutoff", "Reference cutoff for the discordant-pair (DP) skew score. The DP skew marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has at least 10^(cutoff+1) non-deletion positions; smaller references fall back to a negative-binomial fit (whose parametric tail is not capped near log10(N), but is conservative). (DEFAULT = 3.0)", 3.0, NORMAL_OPTION)
     ("discordant-pair-minimum-pairs", "Minimum number of read pairs shared by two DP candidate regions for the junction between them to be examined at all. (DEFAULT = 2)", 2, NORMAL_OPTION)
-    ("discordant-pair-frequency-cutoff", "Only accept DP evidence when the lower confidence bound on its local variant frequency -- discordant pairs divided by discordant plus concordant pairs spanning the breakpoint -- is above this value. 0 = OFF. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("discordant-pair-frequency-cutoff", "Only accept DP evidence when the lower confidence bound on its local variant frequency -- discordant pairs divided by discordant plus concordant pairs spanning the breakpoint -- is above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ("discordant-pair-minimum-crossing", "Only apply the DP skew test when at least this many concordant pairs are expected to span a normal position at the breakpoint's local coverage. Below this the skew test has no power (short paired-mapping distance distributions leave almost no concordant pair spanning any position) and is not used to reject. 0 = always apply. (DEFAULT = 10.0)", 10.0, NORMAL_OPTION)
     // NOTE: pass sub-0.1 defaults as STRINGS. AnyOption stringifies a numeric default with
     // to_string(double), whose default precision is 1 decimal place, so a 0.05 passed as a double
     // silently becomes "0.1".
     ("discordant-pair-background-e-value-cutoff", "Reject DP evidence whose number of supporting read pairs is expected to arise this many times or more across all candidate junctions by chance, given the genome-wide background of spurious discordant pairs. 0 = OFF. (DEFAULT = 0.05)", "0.05", NORMAL_OPTION)
+    ;
+
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Missing Pair (MP) Evidence Options", NORMAL_OPTION);
+    options
+    ("predict-missing-pairs", "Predict missing read-pair (MP) evidence: places where reads pile up whose mates did not map anywhere, the signature of a novel sequence inserted into the genome. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("missing-pair-seed", "Minimum number of reads with unmapped mates within a paired-mapping-distance window required to seed an MP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
+    ("missing-pair-seed-fraction", "Minimum fraction of the reads on one strand within a paired-mapping-distance window whose mates did not map, required to seed an MP candidate region. This is what distinguishes a real insertion from the roughly constant genome-wide background of reads whose mates failed to align -- without it a fixed count seeds continuously at any decent coverage and the whole covered region becomes one candidate. (DEFAULT = 0.25)", 0.25, NORMAL_OPTION)
+    ("missing-pair-minimum-reads", "Only accept MP evidence supported by at least this many reads with unmapped mates. (DEFAULT = 3)", 3, NORMAL_OPTION)
+    ("missing-pair-minimum-distinct", "Only accept MP evidence whose supporting reads start at at least this many distinct positions, so that PCR duplicates of one molecule cannot carry a prediction. (DEFAULT = 2)", 2, NORMAL_OPTION)
+    // NOTE: pass sub-0.1 defaults as STRINGS -- see the note in the DP block above. Here the default is
+    // mode-dependent, so it is registered empty and only read back when the user actually supplied it.
+    ("missing-pair-frequency-cutoff", "Only accept MP evidence when the lower 95% confidence bound on its local variant frequency -- reads with unmapped mates divided by those plus the read pairs spanning the same position -- is at or above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff, which tests the same kind of bound on the same kind of frequency, and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ;
 
     options.addUsage("", NORMAL_OPTION);
@@ -432,7 +445,7 @@ namespace breseq
     ("soft-clipping-maximum-dispersion", "Upper bound on the estimated dispersion (intra-class correlation) of the clipping rate. Caps how conservative the null can become on references too small to estimate it reliably (DEFAULT = 0.005). 0 = OFF, use a plain binomial null.", "", NORMAL_OPTION)
     ("soft-clipping-minimum-rate", "Lower bound on the estimated background clipping rate, preventing an unusually clean library from making every clipped position significant (DEFAULT = 1e-5). 0 = OFF.", "", NORMAL_OPTION)
     ("soft-clipping-minimum-read-count", "Minimum number of consensus-supporting clipped reads required for a position to be reported at all (DEFAULT = 3). 0 = OFF.", 3, NORMAL_OPTION)
-    ("soft-clipping-frequency-cutoff", "Minimum fraction of reads that must be clipped at a position for the evidence to be accepted rather than rejected. Defaults to the same frequency used for predicting mutations (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-frequency-cutoff", "Minimum fraction of reads that must be clipped at a position for the evidence to be accepted rather than rejected. Defaults to --polymorphism-frequency-cutoff, the same frequency used for predicting mutations, and follows it if you change it (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05). 0 = OFF.", "", NORMAL_OPTION)
     ("soft-clipping-consensus-fraction-cutoff", "Minimum fraction of the clipped reads at a position that must agree on the consensus clipped sequence for the evidence to be accepted rather than rejected (DEFAULT = 0.5). 0 = OFF.", "", NORMAL_OPTION)
     ;
     
@@ -556,6 +569,16 @@ namespace breseq
       this->predict_discordant_pairs = false;
     }
 
+    // Missing-pair (MP) evidence prediction is experimental and opt-in. Like DP it needs the
+    // paired-mapping insert distribution, and its qualifying reads only exist in a paired run.
+    this->predict_missing_pairs = options.count("predict-missing-pairs");
+    if (this->predict_missing_pairs && !this->paired_mapping) {
+      cerr << "WARNING: --predict-missing-pairs requires paired-mapping, but --no-paired-mapping was" << endl;
+      cerr << "         given. No missing-pair (MP) evidence will be predicted." << endl;
+      cerr << output_divider << endl;
+      this->predict_missing_pairs = false;
+    }
+
     // Backward compatibility: --paired-mapping is now the default. Accept it, but warn.
     if (options.count("paired-mapping")) {
       cerr << "WARNING: The --paired-mapping option is DEPRECATED. Paired-mapping detection is now" << endl;
@@ -676,6 +699,16 @@ namespace breseq
     this->discordant_pair_background_e_value_cutoff = from_string<double>(options["discordant-pair-background-e-value-cutoff"]);
     ASSERT(this->discordant_pair_background_e_value_cutoff >= 0, "Argument --discordant-pair-background-e-value-cutoff must be >= 0")
 
+    this->missing_pair_seed = from_string<int32_t>(options["missing-pair-seed"]);
+    ASSERT(this->missing_pair_seed >= 0, "Argument --missing-pair-seed must be >= 0")
+    this->missing_pair_seed_fraction = from_string<double>(options["missing-pair-seed-fraction"]);
+    ASSERT((this->missing_pair_seed_fraction >= 0) && (this->missing_pair_seed_fraction <= 1),
+           "Argument --missing-pair-seed-fraction must be in the range [0,1]")
+    this->missing_pair_minimum_reads = from_string<int32_t>(options["missing-pair-minimum-reads"]);
+    ASSERT(this->missing_pair_minimum_reads >= 0, "Argument --missing-pair-minimum-reads must be >= 0")
+    this->missing_pair_minimum_distinct = from_string<int32_t>(options["missing-pair-minimum-distinct"]);
+    ASSERT(this->missing_pair_minimum_distinct >= 0, "Argument --missing-pair-minimum-distinct must be >= 0")
+
     this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
     this->soft_clipping_log10_e_value_cutoff = from_string<double>(options["soft-clipping-score-cutoff"]);
@@ -795,14 +828,6 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
-      // Soft-clipping and discordant pairs keep their own floors. Both now test a Clopper-Pearson
-      // LOWER bound rather than a point estimate, but neither value below has been recalibrated
-      // for that: SC's was tuned against a point estimate, and DP's against an already-exact test
-      // at a different scale. Since a lower bound sits below the point estimate, both floors are
-      // therefore effectively stricter than the number suggests -- most so at shallow depth. The
-      // recalibration wants evidence from a dataset with known breakpoints, not a guess here.
-      this->soft_clipping_frequency_cutoff = 0.05;
-      this->discordant_pair_frequency_cutoff = 0.05;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       // Polymorphism mode keeps its artifact guards on: it is explicitly hunting low-frequency
@@ -856,9 +881,6 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.10;
-      // Soft-clipping and discordant pairs keep their own floors (see the note above).
-      this->soft_clipping_frequency_cutoff = 0.2;
-      this->discordant_pair_frequency_cutoff = 0.2;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       // These guard the POLYMORPHISM prediction only. Consensus mode asks one question first --
@@ -932,6 +954,24 @@ namespace breseq
     if (options.count("polymorphism-frequency-cutoff"))
       this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
 
+    // Every structural-evidence frequency gate FOLLOWS the polymorphism cutoff rather than carrying a
+    // floor of its own, because they all measure the same quantity it governs: the variant allele
+    // frequency at one locus -- the fraction of the molecules sampled there that carry the variant
+    // (soft-clipped reads for SC, discordant pairs for DP, reads that lost their mate to novel
+    // sequence for MP). All four are lower-bound tests on that frequency, so a user who says "I care
+    // about variants down to X" gets structural evidence down to X as well, and one number governs
+    // where the whole run's sensitivity sits.
+    //
+    // SC's and DP's floors used to be a separate 0.2 in consensus mode. That was a holdover: both were
+    // tuned before either tested a Clopper-Pearson bound (SC against a point estimate, DP against an
+    // exact test at a different scale), so neither number was calibrated for the test it now feeds.
+    //
+    // This must sit AFTER the option read just above, so an explicit --polymorphism-frequency-cutoff
+    // is what gets tracked, and BEFORE the per-type option reads below, which still override it.
+    this->soft_clipping_frequency_cutoff   = this->polymorphism_frequency_cutoff;
+    this->discordant_pair_frequency_cutoff = this->polymorphism_frequency_cutoff;
+    this->missing_pair_frequency_cutoff    = this->polymorphism_frequency_cutoff;
+
     // Must come after the prediction-mode defaults above, which set this to track
     // polymorphism_frequency_cutoff and would otherwise clobber an explicit value.
     if (options.count("soft-clipping-frequency-cutoff"))
@@ -944,6 +984,12 @@ namespace breseq
       this->discordant_pair_frequency_cutoff = from_string<double>(options["discordant-pair-frequency-cutoff"]);
     ASSERT((this->discordant_pair_frequency_cutoff >= 0) && (this->discordant_pair_frequency_cutoff <= 1),
            "Argument --discordant-pair-frequency-cutoff must be in the range [0,1]")
+
+    // Same ordering requirement again: after the prediction-mode defaults.
+    if (options.count("missing-pair-frequency-cutoff"))
+      this->missing_pair_frequency_cutoff = from_string<double>(options["missing-pair-frequency-cutoff"]);
+    ASSERT((this->missing_pair_frequency_cutoff >= 0) && (this->missing_pair_frequency_cutoff <= 1),
+           "Argument --missing-pair-frequency-cutoff must be in the range [0,1]")
 
 
     if (options.count("polymorphism-minimum-variant-coverage"))
@@ -1146,6 +1192,7 @@ namespace breseq
     this->read_file_long_read_distribute_remainder = false;
     this->paired_mapping = true;
     this->predict_discordant_pairs = false;
+    this->predict_missing_pairs = false;
 
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;
@@ -1237,13 +1284,19 @@ namespace breseq
     this->discordant_pair_seed = 3;
     this->discordant_pair_skew_cutoff = 3.0;
     this->discordant_pair_minimum_pairs = 2;
-    // Overwritten per prediction mode above (in the cmdline constructor) to track
-    // polymorphism_frequency_cutoff.
-    this->discordant_pair_frequency_cutoff = 0.2;
+    // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
+    this->discordant_pair_frequency_cutoff = 0.1;
     // For a Poisson null with mean lambda, even k=0 only reaches -log10 P = lambda/ln(10), so the skew
     // test cannot clear a cutoff of 3 on merit below lambda ~ 6.9, and cannot reject k=1 below ~9.6.
     this->discordant_pair_minimum_crossing = 10.0;
     this->discordant_pair_background_e_value_cutoff = 0.05;
+
+    this->missing_pair_seed = 3;
+    this->missing_pair_seed_fraction = 0.25;
+    this->missing_pair_minimum_reads = 3;
+    this->missing_pair_minimum_distinct = 2;
+    // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
+    this->missing_pair_frequency_cutoff = 0.1;
     this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 12;
     this->soft_clipping_log10_e_value_cutoff = 3.0;
@@ -1252,8 +1305,8 @@ namespace breseq
     this->soft_clipping_maximum_dispersion = 0.005;
     this->soft_clipping_minimum_rate = 1e-5;
     this->soft_clipping_minimum_read_count = 3;
-    // Overwritten per prediction mode below to track polymorphism_frequency_cutoff.
-    this->soft_clipping_frequency_cutoff = 0.2;
+    // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
+    this->soft_clipping_frequency_cutoff = 0.1;
     this->soft_clipping_consensus_fraction_cutoff = 0.5;
 
     this->polymorphism_prediction = false;
@@ -1292,6 +1345,7 @@ namespace breseq
 		this->max_rejected_junction_evidence_to_show = 10;
     this->max_rejected_soft_clipping_evidence_to_show = 20;
     this->max_rejected_discordant_pair_evidence_to_show = 20;
+    this->max_rejected_missing_pair_evidence_to_show = 20;
 		this->hide_circular_genome_junctions = true;
     
 		this->lenski_format = false;
@@ -1450,6 +1504,9 @@ namespace breseq
 		this->discordant_pair_done_file_name = this->mutation_identification_path + "/discordant_pair.done";
 		this->dp_genome_diff_file_name = this->mutation_identification_path + "/dp_evidence.gd";
 		this->discordant_pair_summary_file_name = this->mutation_identification_path + "/discordant_pair_summary.json";
+		this->mp_candidate_regions_file_name = this->mutation_identification_path + "/MP_candidate_regions.csv";
+		this->missing_pair_done_file_name = this->mutation_identification_path + "/missing_pair.done";
+		this->mp_genome_diff_file_name = this->mutation_identification_path + "/mp_evidence.gd";
 
 
     //! Paths: Copy Number Variation

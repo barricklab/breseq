@@ -48,6 +48,7 @@ libbreseq_la_SOURCES = \
 	genome_diff.cpp \
 	genome_diff_entry.cpp \
 	identify_mutations.cpp \
+	mp_evidence.cpp \
 	mutation_predictor.cpp \
 	output.cpp \
 	pgzstream.cpp \
@@ -81,6 +82,7 @@ libbreseq_la_SOURCES = \
 	genome_diff.h \
 	genome_diff_entry.h \
 	identify_mutations.h \
+	mp_evidence.h \
 	json.hpp \
 	mutation_predictor.h \
 	output.h \
