@@ -2088,6 +2088,13 @@ void cGenomeDiff::random_mutations(string exclusion_file,
   uint32_t n_attempts = max_attempts;
 
   srand(cSimFastqSequence::SEED_VALUE);
+
+  // Base identities come from the portable generator, because the helpers that pick them are shared
+  // with the read simulator, which must be reproducible across platforms. NOTE that the rest of this
+  // function still draws positions and sizes from rand(), so SIMULATE-MUTATIONS as a whole is not
+  // yet platform-independent -- converting it is separable follow-up work.
+  cPortableRandom mutation_rng(static_cast<uint32_t>(cSimFastqSequence::SEED_VALUE), 0);
+
   buffer +=1;
 
   /* TYPICAL WORKFLOW:
@@ -2128,13 +2135,14 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         new_item["position"] = to_string(pos_1);
 
         if (mut_type == "SNP") {
-          new_item["new_seq"] = cSimFastqSequence::get_random_error_base(ref.get_sequence_1(pos_1));        
+          new_item["new_seq"] = cSimFastqSequence::get_random_error_base(mutation_rng, ref.get_sequence_1(pos_1));
         } 
         else 
         if (mut_type == "INS") {
           string* new_seq = &new_item["new_seq"];
           new_seq->resize(size);
-          generate(new_seq->begin(), new_seq->end(), cSimFastqSequence::get_random_insertion_base);
+          generate(new_seq->begin(), new_seq->end(),
+                   [&mutation_rng]() { return cSimFastqSequence::get_random_insertion_base(mutation_rng); });
         }
         else
         if (mut_type == "DEL") {

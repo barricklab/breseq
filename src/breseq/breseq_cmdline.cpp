@@ -1122,17 +1122,24 @@ int do_analyze_soft_clipping( int argc, char* argv[]){
 
 int do_simulate_reads(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq SIMULATE-READS -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
+  AnyOption options("Usage: breseq SIMULATE-READS -r <reference file> -c <average coverage> -o <output file>");
 
   options
   ("mode,m",        "Simulation mode: 'single', 'paired-end' or 'tiled'.", "single")
   ("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
   ("output,o",      "Output file name. Should be of the form *.fastq. Two output files (*_1.fastq and *_2.fastq) will be created for paired-end reads.", "simulated_reads.fastq")
   ("coverage,c",    "Average coverage value to simulate.", static_cast<uint32_t>(80))
+  ("number-of-reads,n", "Number of reads (single/tiled) or read pairs (paired-end) to simulate. Overrides --coverage.")
   ("length,l",      "Read length to simulate.", static_cast<uint32_t>(50))
   ("mean",          "Mean fragment size to use for pair ended reads.", static_cast<uint32_t>(200))
   ("stdev",         "Standard deviation of fragment size to use for pair ended reads.", static_cast<uint32_t>(20))
-  ("seed",          "Seed value to use for random number generation.")
+  ("seed",          "Seed value to use for random number generation. REQUIRED for reproducible output: without it the seed is taken from the clock and every run differs. The seed actually used is always printed.")
+  ("quality-start",  "Mean base quality score (Phred) at the first cycle of a read.", static_cast<uint32_t>(38))
+  ("quality-end",    "Mean base quality score (Phred) at the last cycle of a read. Quality declines from --quality-start to this value across the read.", static_cast<uint32_t>(28))
+  ("quality-stdev",  "Standard deviation of the base quality score around the mean for its cycle.", static_cast<uint32_t>(4))
+  ("quality-min",    "Lowest base quality score (Phred) that may be assigned.", static_cast<uint32_t>(2))
+  ("quality-max",    "Highest base quality score (Phred) that may be assigned.", static_cast<uint32_t>(41))
+  ("indel-error-rate-per-million", "Rate of simulated single-base insertions, and separately of deletions, per million bases.", static_cast<uint32_t>(10))
   ("verbose,v",     "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
 
   ;
@@ -1142,9 +1149,25 @@ int do_simulate_reads(int argc, char *argv[])
   options.addUsage("Simulates reads based on the input reference file.");
   options.addUsage("IMPORTANT: Only the first sequence in the reference file is used!");
   options.addUsage("");
+  options.addUsage("Output is exactly reproducible, on any platform, for a given --seed: the");
+  options.addUsage("generator uses only integer arithmetic and a standard-specified random");
+  options.addUsage("engine. This is what allows test input to be generated at run time rather");
+  options.addUsage("than committed. Without --seed the seed comes from the clock instead.");
+  options.addUsage("");
+  options.addUsage("Base quality scores decline across each read, from --quality-start at the");
+  options.addUsage("first cycle to --quality-end at the last, with --quality-stdev scatter. The");
+  options.addUsage("chance that a base is miscalled is derived from its own quality score, so");
+  options.addUsage("the quality string is meaningful to breseq's error rate calibration. For");
+  options.addUsage("constant quality, set --quality-start and --quality-end equal and");
+  options.addUsage("--quality-stdev to 0.");
+  options.addUsage("");
+  options.addUsage("Fragments are simulated as FR ('innie') pairs and are placed entirely");
+  options.addUsage("within the sequence, unless it is marked circular -- which a GenBank or");
+  options.addUsage("GFF3 reference records but a FASTA one cannot.");
+  options.addUsage("");
   options.addUsage("Mode 'tiled' simulates reads with all possible start positions");
   options.addUsage("and strands, ignoring the coverage option, and assuming the");
-  options.addUsage("reference sequence is circular.");
+  options.addUsage("reference sequence is circular. It uses no randomness at all.");
   
   if(argc == 1)  {
     options.printUsage();
@@ -1163,6 +1186,24 @@ int do_simulate_reads(int argc, char *argv[])
   if (options.count("seed")) {
     cSimFastqSequence::SEED_VALUE = from_string<int32_t>(options["seed"]);
   }
+  // Always report the seed. Without --seed the default is the clock, so printing it is what makes an
+  // unseeded run reproducible after the fact -- otherwise an interesting result could never be
+  // regenerated.
+  cerr << "+++   Random seed: " << cSimFastqSequence::SEED_VALUE << endl;
+  const uint32_t seed = static_cast<uint32_t>(cSimFastqSequence::SEED_VALUE);
+
+  cSimQualityModel quality_model;
+  quality_model.phred_start = from_string<uint32_t>(options["quality-start"]);
+  quality_model.phred_end   = from_string<uint32_t>(options["quality-end"]);
+  quality_model.phred_stdev = from_string<uint32_t>(options["quality-stdev"]);
+  quality_model.phred_min   = from_string<uint32_t>(options["quality-min"]);
+  quality_model.phred_max   = from_string<uint32_t>(options["quality-max"]);
+  ASSERT(quality_model.phred_min <= quality_model.phred_max,
+         "--quality-min must not be greater than --quality-max");
+
+  cSimErrorModel error_model;
+  error_model.insertion_rate_per_million = from_string<uint32_t>(options["indel-error-rate-per-million"]);
+  error_model.deletion_rate_per_million  = error_model.insertion_rate_per_million;
 
   const bool verbose = options.count("verbose");
 
@@ -1177,19 +1218,34 @@ int do_simulate_reads(int argc, char *argv[])
   uint32_t coverage = from_string<uint32_t>(options["coverage"]);
   uint32_t read_size = from_string<uint32_t>(options["length"]);
 
-  uint32_t n_reads = (sequence.get_sequence_length() / read_size) * coverage;
+  // Reads needed for the requested coverage. Paired-end emits PAIRS, i.e. two reads of read_size per
+  // iteration, so its divisor is twice the read length -- previously it used the single-end count
+  // and so delivered double the coverage asked for. Compute in 64-bit and divide once, rather than
+  // the old (length / read_size) * coverage, whose truncation lost up to a whole read length.
+  bool paired_mode = (to_upper(options["mode"]) == "PAIRED") || (to_upper(options["mode"]) == "PAIRED-END");
+  uint64_t total_bases = static_cast<uint64_t>(sequence.get_sequence_length()) * coverage;
+  uint32_t n_reads = static_cast<uint32_t>(total_bases / (read_size * (paired_mode ? 2 : 1)));
+  if (options.count("number-of-reads"))
+    n_reads = from_string<uint32_t>(options["number-of-reads"]);
 
   string mode = to_upper(options["mode"]);
   if ( (mode == "PAIRED") || (mode == "PAIRED-END") ) {
     cerr << "+++   Simulating paired-end reads." << endl;
 
+    // Split "reads.fastq" into "reads_1.fastq" / "reads_2.fastq". get_file_extension() returns the
+    // extension WITHOUT its dot, so the dot has to be dropped from the stem and put back explicitly;
+    // previously it was left on the stem and the extension appended bare, producing the unusable
+    // "reads._1fastq". The two names must differ at exactly one character position, one holding '1'
+    // and the other '2', or breseq will not recognize them as a pair (see cReadFileSets::Init).
     cString output = options["output"];
-
     string extension = output.get_file_extension();
-    output.remove_ending(extension);
 
-    string pair_1_file_name = output + "_1" + extension;
-    string pair_2_file_name = output + "_2" + extension;
+    string stem = output;
+    if (!extension.empty()) stem = stem.substr(0, stem.size() - extension.size() - 1);
+
+    string suffix = extension.empty() ? "" : ("." + extension);
+    string pair_1_file_name = stem + "_1" + suffix;
+    string pair_2_file_name = stem + "_2" + suffix;
 
     uint32_t mean  = from_string<uint32_t>(options["mean"]);
     uint32_t stdev = from_string<uint32_t>(options["stdev"]);
@@ -1199,6 +1255,9 @@ int do_simulate_reads(int argc, char *argv[])
                                             read_size,
                                             mean,
                                             stdev,
+                                            seed,
+                                            quality_model,
+                                            error_model,
                                             pair_1_file_name,
                                             pair_2_file_name,
                                             verbose);
@@ -1209,15 +1268,30 @@ int do_simulate_reads(int argc, char *argv[])
     cSimFastqSequence::simulate_single_ends(sequence,
                                             n_reads,
                                             read_size,
+                                            seed,
+                                            quality_model,
+                                            error_model,
                                             options["output"],
                                             verbose);
   } else if (mode == "TILED") {
     cerr << "+++   Simulating tiled reads." << endl;
 
     sequence.m_is_circular = true;
+    // Tiled mode produces perfect reads -- no simulated errors -- so a declining quality model would
+    // be actively misleading about them. Unless the user asks for a specific model, use a flat high
+    // quality, which is what this mode has always written.
+    if (!options.count("quality-start") && !options.count("quality-end") && !options.count("quality-stdev")) {
+      quality_model.phred_start = 40;
+      quality_model.phred_end   = 40;
+      quality_model.phred_stdev = 0;
+    }
+
+    // Tiled mode is documented as assuming a circular genome and wraps reads around the origin, so
+    // it forces circularity regardless of what the reference says.
     cSimFastqSequence::simulate_tiled(sequence,
                                       read_size,
                                       coverage,
+                                      quality_model,
                                       options["output"],
                                       verbose);
   } else {
