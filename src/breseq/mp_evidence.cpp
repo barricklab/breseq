@@ -623,6 +623,11 @@ namespace breseq {
       }
     }
 
+    // Outside the loop: the gatherer holds a pointer to this, so it must outlive every use. See the
+    // note in predict_missing_pairs -- the same object declared inside the loop there was a
+    // use-after-free.
+    mp_extent_index ext;
+
     for (diff_entry_list_t::iterator it = mp_list.begin(); it != mp_list.end(); it++) {
       cDiffEntry& mp = **it;
 
@@ -634,7 +639,6 @@ namespace breseq {
       // Draw over the same one-fragment-length window the counts were taken in, with the same exact
       // mate extents, so the plot and the table agree on which reads are involved and how each counts.
       double W = max(1.0, pair_median);
-      mp_extent_index ext;
       indexer.build(seq_id, static_cast<int32_t>(pos - 2 * W), static_cast<int32_t>(pos + 2 * W), ext);
       g.set_extent_index(&ext);
       g.gather(seq_id, pos, strand, cross_fwd, W);
@@ -761,6 +765,15 @@ namespace breseq {
     int32_t H = static_cast<int32_t>(pair_median / 2.0 + 0.5);
     vector<mp_call> calls;
 
+    // Declared OUTSIDE the loop, and deliberately so: the scanner holds a POINTER to it for the whole
+    // of each pass. If this lived inside the loop it would be destroyed at the end of an iteration
+    // while the scanner still pointed at it, and the next iteration's placement pass would read freed
+    // memory before rebuilding it -- which is exactly the use-after-free this once was. It surfaced as
+    // an intermittent segfault inside map::find on macOS and as a hang on Linux (walking a corrupted
+    // red-black tree can loop forever), and it survived local testing because freed memory often still
+    // looks valid. Keep the lifetime of this object strictly longer than the scanner's use of it.
+    mp_extent_index ext;
+
     for (size_t ri = 0; ri < regions.size(); ri++) {
       const mp_region_row& r = regions[ri];
 
@@ -786,6 +799,12 @@ namespace breseq {
       // edge so no supporting read straddles the placed coordinate. (DP computes the same quantity
       // but currently reports the aligned edge alone; MP reports the shifted median, which is the
       // better estimate here because there is no second side to cross-check it against.)
+      // The placement pass classifies reads too, so it needs the mate extents just as the counting
+      // pass does. Build them for the placement window BEFORE calling it -- leaving a stale index in
+      // place here is what caused the use-after-free noted above.
+      indexer.build(r.seq_id, static_cast<int32_t>(p - 2 * D), static_cast<int32_t>(p + 2 * D), ext);
+      scanner->set_extent_index(&ext);
+
       int32_t median_outer = 0, inner_edge = 0;
       if (scanner->supporting_outer_median(r.seq_id, p, s, cross_fwd, D, median_outer, inner_edge)) {
         int32_t mh = median_outer + (s == -1 ? +H : -H);
@@ -802,9 +821,9 @@ namespace breseq {
       // about whether the insertion is there -- including it would only dilute the frequency by the
       // arbitrary ratio D/pair_median (here about 3x) and make the gate depend on the rescan width.
       double W = max(1.0, pair_median);
-      // Index exact mate extents a couple of fragment lengths either side, so every counted read's
-      // mate is present (a proper pair's mate is within one fragment length by definition).
-      mp_extent_index ext;
+      // Rebuild around the PLACED position, which the pass above may have moved: index exact mate
+      // extents a couple of fragment lengths either side, so every counted read's mate is present (a
+      // proper pair's mate is within one fragment length by definition).
       indexer.build(r.seq_id, static_cast<int32_t>(p - 2 * W), static_cast<int32_t>(p + 2 * W), ext);
       scanner->set_extent_index(&ext);
       scanner->scan(r.seq_id, p, s, cross_fwd, W);
