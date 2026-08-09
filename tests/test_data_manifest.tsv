@@ -43,13 +43,30 @@
 #
 #   curl -s https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/017/985/GCF_000017985.1_ASM1798v1/md5checksums.txt
 #
+# REFERENCES (GitHub raw). Pin the COMMIT SHA in the path, never a branch name --
+# 'master' moves, a SHA does not. There is no published checksum, so take the md5
+# from the file you actually downloaded and reviewed:
+#
+#   curl -s <url> | md5
+#
 # ---------------------------------------------------------------------------
 #dataset	file	md5	url
 
 # Escherichia coli B str. REL606 -- the ancestral strain of the Long-Term
-# Evolution Experiment, and the reference for the read sets below.
-# 4.6 Mb, ~1.4 MB gzipped.
-ncbi_REL606	GCF_000017985.1_ASM1798v1_genomic.gbff.gz	15b4bbd969d274c99919bcd5d57d4d87	https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/017/985/GCF_000017985.1_ASM1798v1/GCF_000017985.1_ASM1798v1_genomic.gbff.gz
+# Evolution Experiment, and the reference for every read set below. 4.6 Mb.
+#
+# This is the Barrick lab's curated REL606.gbk, pinned to commit 7da91974 of
+# barricklab/LTEE, and NOT the NCBI RefSeq assembly (GCF_000017985.1) -- which
+# matters more than it looks. breseq predicts MOB from annotated mobile elements,
+# and the RefSeq GenBank has exactly two repeat_region features, both CRISPR, and
+# no IS-element annotations at all. Against RefSeq, MOB prediction is structurally
+# impossible: the IS-element activity that dominates LTEE clone genomes comes out
+# as unassigned JC evidence and zero MOB entries, no matter how good the data is.
+# This file has 50 repeat_regions carrying /mobile_element="insertion sequence:
+# ISxxx", so the long tests actually exercise that path. It is also the reference
+# the lab's own analyses and the curated genome diffs in barricklab/LTEE-Ecoli use,
+# which makes those diffs a meaningful cross-check on these tests' expected.gd.
+ltee_REL606	REL606.gbk	7d40ae1a1a8ddb167fad85f68f3a82f3	https://raw.githubusercontent.com/barricklab/LTEE/7da91974eafac0c5a8f903ae57275795d4395af2/reference/REL606.gbk
 
 # LTEE clone REL4540A: population Ara-5, generation 10,000, clone A, non-mutator
 # (Tenaillon et al. 2016, "E. coli genome evolution over 50,000 generations").
@@ -59,3 +76,81 @@ ncbi_REL606	GCF_000017985.1_ASM1798v1_genomic.gbff.gz	15b4bbd969d274c99919bcd5d5
 # is given as 'Ara-5_10000gen_4540A'.
 ena_SRR2589061	SRR2589061_1.fastq.gz	a0fa82604bd3c71e5e660ae5d530bc8b	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/001/SRR2589061/SRR2589061_1.fastq.gz
 ena_SRR2589061	SRR2589061_2.fastq.gz	e66d0ce2238e5bc0fa81d1d11f027506	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/001/SRR2589061/SRR2589061_2.fastq.gz
+
+# ---------------------------------------------------------------------------
+# The read sets below were chosen together, not one at a time, to spread the
+# long tests across the axes that actually change what breseq does: single vs.
+# paired, read length, insert size, sequencing era (and therefore error
+# profile), and the KIND of mutation to be found. Each row's comment says which
+# axis it is there for; if you replace one, replace it with something that
+# covers the same axis. Fold coverage is base_count / 4,629,812 as served,
+# before any filtering.
+#
+# Insert size is only recorded in ENA (nominal_length) for the 2010 and 2011
+# submissions. Everything from 2013 on leaves it blank, and the NCBI SRA XML
+# has no NOMINAL_LENGTH either, so for those the observed pair distance from
+# breseq's own output is the only source -- see the individual testcmd.sh.
+# ---------------------------------------------------------------------------
+
+# LTEE clone REL10938: population Ara-1, generation 40,000, mutT hypermutator
+# (Barrick et al. 2009, "Genome evolution and adaptation in a long-term
+# experiment with Escherichia coli"; experiment SRX012993).
+# Paired-end Illumina Genome Analyzer, 2x36 bp, 4,205,734 read pairs, ~296 MB
+# gzipped total, ~65x. AXIS: the oldest era in the LTEE collection, and the only
+# SHORT-insert paired library whose insert size is actually recorded -- ENA
+# nominal_length 135, so with 2x36 reads the mates never overlap and leave a
+# ~63 bp unsequenced gap in the middle of every pair.
+ena_SRR030258	SRR030258_1.fastq.gz	43853178bf37500e15564e2052ddfa01	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR030/SRR030258/SRR030258_1.fastq.gz
+ena_SRR030258	SRR030258_2.fastq.gz	3ddfd6be6c32ccdccfc1127572a2e59e	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR030/SRR030258/SRR030258_2.fastq.gz
+
+# LTEE clone ZDB107: population Ara-3, generation 38,000, Cit+ hypermutator
+# (Blount et al. 2012, "Genomic analysis of a key innovation in an experimental
+# Escherichia coli population"; study PRJNA188723).
+# Single-end Illumina Genome Analyzer II, 36 bp, 7,046,631 reads, ~240 MB
+# gzipped, ~55x. AXIS: unpaired data, plus the richest copy-number and mobile
+# element content available -- the curated genome diff for this clone has 3 AMP
+# (the rnk-citT amplification), 29 MOB and 33 DEL.
+ena_SRR098038	SRR098038.fastq.gz	3ed359db0a9ee75fee6572563ba15671	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR098/SRR098038/SRR098038.fastq.gz
+
+# LTEE clone ZDB30: population Ara-3, generation 32,000 (Blount et al. 2012,
+# study PRJNA188723).
+# Paired-end Illumina Genome Analyzer II, 2x35 bp, 25,400,140 read pairs,
+# ~1.39 GB gzipped total. AXIS: insert size. This is the ONLY kilobase-scale
+# library anywhere in the LTEE collection -- ENA nominal_length 2834, so each
+# pair spans ~2.76 kb of unsequenced sequence. Nothing else exercises the
+# pair-distance machinery at that scale.
+#
+# It is also 384x as served, far above the 40-80x the other sets were picked
+# for, so long_ltee_ara_m3_32k_mp2800 runs breseq with '-l 80' to cap what is
+# PARSED. The full file is still downloaded and md5-verified: the checksum has
+# to cover exactly the bytes ENA serves, which is why the data is not
+# subsampled on disk instead.
+ena_SRR098033	SRR098033_1.fastq.gz	26dc71e8b0b87e156e8ba1b04a56fdbf	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR098/SRR098033/SRR098033_1.fastq.gz
+ena_SRR098033	SRR098033_2.fastq.gz	454ed28395c6cfceb61058409a0b88dd	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR098/SRR098033/SRR098033_2.fastq.gz
+
+# LTEE clone REL10985: population Ara+6, generation 40,000, hypermutator
+# (Raeside et al. 2014, "Large chromosomal rearrangements during a long-term
+# evolution experiment with Escherichia coli"; study PRJNA257406).
+# Single-end Illumina Genome Analyzer IIx, 36 bp, 5,541,345 reads, ~239 MB
+# gzipped, ~43x. AXIS: the low end of the coverage band -- 43x is where
+# low-depth behavior actually gets exercised -- carrying by far the heaviest
+# mutation load of any set here (the curated genome diff has 2,205 SNPs).
+ena_SRR1536190	SRR1536190.fastq.gz	a3c580831c0b42998e16c6e32a0fa194	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR153/000/SRR1536190/SRR1536190.fastq.gz
+
+# LTEE clone REL10411: population Ara+3, generation 30,000, mismatch-repair
+# deficient hypermutator (Tenaillon et al. 2016; study PRJNA295606).
+# Paired-end Illumina HiSeq 2500, 2x150 bp, 1,809,983 read pairs, ~300 MB
+# gzipped total, ~82x. AXIS: the longest reads in the suite, and a mutational
+# spectrum dominated by SHORT INDELS rather than SNPs -- 126 INS and 59 DEL in
+# the curated genome diff, i.e. the homopolymer regime.
+ena_SRR2588848	SRR2588848_1.fastq.gz	f78d4fda4103df89f7394f31f1ef1cad	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/008/SRR2588848/SRR2588848_1.fastq.gz
+ena_SRR2588848	SRR2588848_2.fastq.gz	61c0054ebf9e609303abd372c623894b	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/008/SRR2588848/SRR2588848_2.fastq.gz
+
+# LTEE clone REL11393: population Ara+1, generation 50,000, non-mutator
+# (Tenaillon et al. 2016; study PRJNA295606).
+# Paired-end Illumina HiSeq 2000, 2x101 bp, 1,720,420 read pairs, ~296 MB
+# gzipped total, ~75x. AXIS: structural variation. The latest generation in the
+# suite and the richest STRUCTURAL mutation set in the coverage band -- 42 MOB,
+# 26 DEL, 3 AMP and the only INV of any clone considered.
+ena_SRR2584534	SRR2584534_1.fastq.gz	d8b6a428bd34786215af0b06f1ac40e3	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/004/SRR2584534/SRR2584534_1.fastq.gz
+ena_SRR2584534	SRR2584534_2.fastq.gz	fe62cf0f9fbd5ce9bd419c3740d68469	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/004/SRR2584534/SRR2584534_2.fastq.gz

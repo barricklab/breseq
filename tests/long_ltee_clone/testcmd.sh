@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SELF=`dirname ${BASH_SOURCE}`
-TEST_CORES=8
+TEST_CORES=4
 # Large real-world data, downloaded on demand and md5-verified rather than
 # committed (see tests/test_data_manifest.tsv and tests/fetch_test_data.sh).
 # Declared here, next to TEST_CORES and *before* sourcing common.sh, so that
@@ -10,7 +10,7 @@ TEST_CORES=8
 # (deduplicated across tests). common.sh's do_test acts on it too, so
 # './tests/test.sh test long_ltee_clone' -- which bypasses Snakemake entirely --
 # fetches the same data.
-TEST_DATA=ena_SRR2589061,ncbi_REL606
+TEST_DATA=ena_SRR2589061,ltee_REL606
 . ${SELF}/../common.sh
 
 CURRENT_OUTPUTS[0]="${SELF}/data/annotated.gd"
@@ -25,9 +25,12 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # of 'make test'. The same clone is the worked example in
 # docs/tutorial-curation-ecoli-ltee.md.
 #
-# The reference is used as the gzipped .gbff.gz served by NCBI, with no
-# decompression step: breseq reads gzipped references transparently, so the md5
-# in the manifest covers exactly the bytes that are parsed.
+# The reference is the Barrick lab's curated REL606.gbk (pinned to a commit of
+# barricklab/LTEE), NOT the NCBI RefSeq assembly this test originally used. The
+# RefSeq GenBank annotates no IS elements at all, and breseq predicts MOB from
+# annotated mobile elements, so against RefSeq this clone's IS-element activity
+# came out as unassigned JC evidence and zero MOB entries. See the comment on the
+# ltee_REL606 row in tests/test_data_manifest.tsv.
 #
 # ${DOWNLOADDIR} is ./tests/data/downloads unless BRESEQ_TEST_DATA_DIR points
 # elsewhere. Either is fine for the comparison -- do_check filters out
@@ -40,7 +43,7 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # change will fail this test even with breseq itself unchanged. That is
 # deliberate for a test whose job is to detect drift on real data;
 # dev-environment.yml pins bowtie2 for exactly this reason.
-REFERENCE_ARG="-r ${DOWNLOADDIR}/ncbi_REL606/GCF_000017985.1_ASM1798v1_genomic.gbff.gz"
+REFERENCE_ARG="-r ${DOWNLOADDIR}/ltee_REL606/REL606.gbk"
 
 TESTCMD="\
     ${BRESEQ} \
