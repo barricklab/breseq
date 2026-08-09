@@ -39,17 +39,29 @@ namespace breseq {
   //  fragment histogram reweighted by the gap length, which is what this returns.
   //
   //  Note what is deliberately NOT done: unlike the insert model dp_evidence builds from the same
-  //  file, nothing is truncated from above at the discordant distance cutoff. For DP that truncation
-  //  is right -- past the cutoff a pair is its own evidence. For PD it would be fatal, because every
-  //  pair beyond the cutoff would then be indistinguishable from every other, and PD could never
-  //  arbitrate against DP on a breakpoint they both see.
+  //  file, nothing is truncated at the DISCORDANT DISTANCE CUTOFF. For DP that truncation is right --
+  //  past the cutoff a pair is its own evidence. For PD it would be fatal, because every pair beyond
+  //  the cutoff would then be indistinguishable from every other, and PD could never arbitrate
+  //  against DP on a breakpoint they both see.
+  //
+  //  `max_distance` is a different and much higher bound: the longest distance a covering pair can be
+  //  OBSERVED at, which is max_span, twice the discordant cutoff. Everything between the cutoff and
+  //  max_span is still modelled, so the arbitration above is unaffected. Pass 0 for no bound.
+  //
+  //  Truncating there is not optional. The weighting below grows with distance, and the raw histogram
+  //  runs out to the length of the genome on chimeric and mis-mapped pairs, so without a bound ~0.1%
+  //  of the pairs carry ~75% of the null's mass, the null expects gaps of several hundred kb, and
+  //  every pair the scanner can actually see falls in its extreme left tail. The seed test then fires
+  //  everywhere. A null must be conditioned on the same support its observations are drawn from, and
+  //  pd_pair_scanner::fetch_callback already discards anything past max_span.
   //
   //  Shared with the seeding step in identify_mutations.cpp, so the null the candidate regions were
-  //  found under and the null they are then judged under are the same by construction.
+  //  found under and the null they are then judged under are the same by construction -- which means
+  //  both callers must pass the SAME max_distance.
   //
   //  `weighted` is indexed by distance; `total` is its sum. Returns false (leaving both empty/zero)
   //  when the histogram is missing or carries no usable weight.
-  bool pd_load_weighted_histogram(const string& file_name, int32_t trunc,
+  bool pd_load_weighted_histogram(const string& file_name, int32_t trunc, int32_t max_distance,
                                   vector<double>& weighted, double& total);
 
   //! Predict Pair Distance (PD) evidence.

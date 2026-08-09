@@ -49,7 +49,7 @@ namespace breseq {
   // The null distribution
   // ---------------------------------------------------------------------------------------------
 
-  bool pd_load_weighted_histogram(const string& file_name, int32_t trunc,
+  bool pd_load_weighted_histogram(const string& file_name, int32_t trunc, int32_t max_distance,
                                   vector<double>& weighted, double& total)
   {
     weighted.clear();
@@ -65,6 +65,23 @@ namespace breseq {
       int32_t d = from_string<int32_t>(fields[0]);
       double n = from_string<double>(fields[1]);
       if ((d < 0) || (n <= 0.0)) continue;
+      // Drop everything past the longest distance a covering pair can be OBSERVED at.
+      //
+      // This histogram is the raw mapping-distance distribution, and its far tail is chimeric and
+      // mis-mapped pairs -- a few hundred of them, at distances up to the length of the genome.
+      // Keeping them here is not conservative, it is fatal, because of the length weighting below:
+      // weight grows with distance, so on a real E. coli library ~0.1% of the pairs, sitting at
+      // distances of 10^5-10^6, carried ~75% of the null's entire probability mass. The null then
+      // expects a typical covering pair to have a gap of several hundred kb, every pair that can
+      // actually be seen lands in its extreme left tail (mean quantile 0.13 instead of 0.5), and the
+      // rank-sum seed test fires 'shifted shorter' at essentially every position with coverage --
+      // 50,446 candidate regions over 72% of the genome, all one direction.
+      //
+      // A null has to be conditioned on the same support the observations are drawn from, and the
+      // scanner discards any pair beyond max_distance (pd_pair_scanner::fetch_callback). Truncating
+      // here is what makes the two agree. It also keeps the null's array small, which matters: the
+      // array length is what total_supporting() iterates over, once per likelihood evaluation.
+      if ((max_distance > 0) && (d > max_distance)) continue;
       double weight = static_cast<double>(d - trunc);
       if (weight <= 0.0) continue;   // overlapping mates: no gap, so never a covering pair
       if (static_cast<int32_t>(weighted.size()) <= d) weighted.resize(d + 1, 0.0);
@@ -99,12 +116,12 @@ namespace breseq {
 
     //! Build from the shared weighted histogram. `smooth` is the half-width of the moving average,
     //  which keeps a sparsely-populated bin from dominating a likelihood ratio.
-    bool build(const string& file_name, int32_t read_length, int32_t smooth)
+    bool build(const string& file_name, int32_t read_length, int32_t smooth, int32_t max_distance)
     {
       trunc = 2 * read_length;
       vector<double> w;
       double total = 0.0;
-      if (!pd_load_weighted_histogram(file_name, trunc, w, total)) return false;
+      if (!pd_load_weighted_histogram(file_name, trunc, max_distance, w, total)) return false;
 
       g.assign(w.size(), 0.0);
       double norm = 0.0;
@@ -597,19 +614,26 @@ namespace breseq {
       }
     }
 
-    pd_null null;
+    // The span has to be settled BEFORE the null is built, because it bounds the null: see
+    // pd_load_weighted_histogram for why an unbounded one is unusable. This is the same derivation
+    // the seeding step in identify_mutations.cpp does, and the two must agree.
     int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
+    int32_t max_span = settings.pair_distance_maximum_span;
+    if (max_span <= 0) max_span = static_cast<int32_t>(2.0 * distance_cutoff + 0.5);
+    // Degenerate library geometry (a span no larger than the reads themselves) leaves nothing to
+    // bound: fall back to the whole histogram, as before, rather than to an empty null.
+    int32_t null_max_distance = (max_span > 2 * read_length) ? max_span : 0;
+
+    pd_null null;
     if (base.empty()
         || !null.build(Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", base),
-                       read_length, 5)) {
+                       read_length, 5, null_max_distance)) {
       WARN("Pair distance (PD) evidence prediction needs the paired mapping distance histogram, which "
            "is not available. No PD evidence will be predicted.");
       pd_gd.write(settings.pd_genome_diff_file_name);
       return;
     }
 
-    int32_t max_span = settings.pair_distance_maximum_span;
-    if (max_span <= 0) max_span = static_cast<int32_t>(2.0 * distance_cutoff + 0.5);
     if (max_span <= null.trunc) max_span = null.max_distance();
 
     //
@@ -1241,14 +1265,18 @@ namespace breseq {
         distance_cutoff = it->second.distance_cutoff;
       }
     }
-    pd_null null;
+    // Same order as the prediction path above: the span bounds the null, so it comes first. The plot
+    // must be drawn against the null the call was made under, not a different one.
     int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
-    if (base.empty()
-        || !null.build(Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", base),
-                       read_length, 5)) return;
-
     int32_t max_span = settings.pair_distance_maximum_span;
     if (max_span <= 0) max_span = static_cast<int32_t>(2.0 * distance_cutoff + 0.5);
+    int32_t null_max_distance = (max_span > 2 * read_length) ? max_span : 0;
+
+    pd_null null;
+    if (base.empty()
+        || !null.build(Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", base),
+                       read_length, 5, null_max_distance)) return;
+
     if (max_span <= null.trunc) max_span = null.max_distance();
 
     create_path(settings.evidence_path);

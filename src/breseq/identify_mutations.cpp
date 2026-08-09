@@ -89,13 +89,14 @@ void identify_mutations(
  Returns false (leaving cdf empty, which disables PD for this group's reads) if the histogram is
  missing or carries no usable weight.
  */
-static bool pd_build_cdf(const string& hist_file_name, int32_t trunc, vector<int64_t>& cdf)
+static bool pd_build_cdf(const string& hist_file_name, int32_t trunc, int32_t max_distance,
+                         vector<int64_t>& cdf)
 {
   cdf.clear();
 
   vector<double> weighted;
   double total = 0.0;
-  if (!pd_load_weighted_histogram(hist_file_name, trunc, weighted, total)) return false;
+  if (!pd_load_weighted_histogram(hist_file_name, trunc, max_distance, weighted, total)) return false;
 
   cdf.resize(weighted.size(), 0);
   double below = 0.0;
@@ -876,7 +877,10 @@ identify_mutations_pileup::identify_mutations_pileup(
     double derived_span = 0.0;
     double median_gap = 0.0;
 
-    int usable_groups = 0;
+    // Two passes, because the span bounds the null and so has to be known before any CDF is built --
+    // see pd_load_weighted_histogram for what an unbounded null does to the seed test. pd_evidence
+    // derives the span exactly this way, which is what keeps the null a region is FOUND under and the
+    // null it is later JUDGED under identical.
     for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
       if (!rfs->is_paired()) continue;
       map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(rfs->m_files[0].m_id);
@@ -884,16 +888,27 @@ identify_mutations_pileup::identify_mutations_pileup(
       PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs->m_base_name);
       if (it == pmdd.end()) continue;
 
-      string hist_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", rfs->m_base_name);
-      if (!pd_build_cdf(hist_file_name, trunc, _dp_groups[gi->second].pd_cdf)) continue;
-      usable_groups++;
-
       derived_span = max(derived_span, 2.0 * it->second.distance_cutoff);
       median_gap = max(median_gap, it->second.median - static_cast<double>(trunc));
     }
 
     _pd_max_span = _settings.pair_distance_maximum_span;
     if (_pd_max_span <= 0) _pd_max_span = static_cast<int32_t>(derived_span + 0.5);
+
+    // Matches the fallback in pd_evidence: a span no larger than the reads leaves nothing to bound.
+    int32_t null_max_distance = (_pd_max_span > trunc) ? _pd_max_span : 0;
+
+    int usable_groups = 0;
+    for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
+      if (!rfs->is_paired()) continue;
+      map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(rfs->m_files[0].m_id);
+      if (gi == _fastq_index_to_dp_group.end()) continue;
+      if (pmdd.find(rfs->m_base_name) == pmdd.end()) continue;
+
+      string hist_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", rfs->m_base_name);
+      if (!pd_build_cdf(hist_file_name, trunc, null_max_distance, _dp_groups[gi->second].pd_cdf)) continue;
+      usable_groups++;
+    }
 
     // Derive the seed's |z| threshold when the user did not pin it. Adjacent columns share nearly
     // all of their covering pairs, so the tests are not independent and a fixed z is not a
