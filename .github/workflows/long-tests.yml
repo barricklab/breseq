@@ -1,0 +1,68 @@
+name: long-tests
+
+# The 'long' tests run breseq end to end on real, full-size sequencing data
+# downloaded from ENA and NCBI (see tests/test_data_manifest.tsv). They are
+# deliberately NOT part of the pull-request workflow:
+#
+#   * They take hours on a complete bacterial genome, far past the 60-minute
+#     timeout that build-and-test.yml uses.
+#   * They download gigabytes, which would happen once per OS on every pull
+#     request for no extra signal -- long tests exercise data volume and
+#     real-world data, not platform portability, which the ~75 fast tests
+#     already cover on both Linux and macOS.
+#   * A required check must not go red because a third-party FTP site is down.
+#
+# So: Linux only, weekly, plus on demand before a release.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 7 * * 0'        # Sundays, 07:00 UTC
+
+jobs:
+  long-test:
+    name: long tests (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash -el {0}     # login shell: activates conda env + compiler vars
+    env:
+      # Keep the downloads outside the checkout so the cache action owns them and
+      # nothing can accidentally be committed.
+      BRESEQ_TEST_DATA_DIR: ${{ runner.temp }}/breseq-test-data
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up conda environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          environment-file: dev-environment.yml
+          activate-environment: breseq-dev
+          auto-activate: false
+
+      # Keyed on the manifest, so any md5 or URL change invalidates the cache --
+      # exactly right, since the data is supposed to be immutable and a changed
+      # checksum means we genuinely want to re-download. Note GitHub caps caches
+      # at 10 GB per repository and evicts entries unused for 7 days; the weekly
+      # schedule is what keeps this one warm.
+      - name: Restore test-data cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/breseq-test-data
+          key: breseq-test-data-${{ hashFiles('tests/test_data_manifest.tsv') }}
+
+      - name: Build
+        run: |
+          ./bootstrap.sh
+          ./configure
+          make -j$(getconf _NPROCESSORS_ONLN)
+
+      # A separate step from the tests themselves so that a download failure is
+      # distinguishable from a test failure at a glance, and so the time spent
+      # downloading is visible in the run summary.
+      - name: Fetch test data
+        run: make test-data
+
+      - name: Run long tests
+        run: make test-long

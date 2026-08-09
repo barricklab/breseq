@@ -30,8 +30,24 @@ GDTOOLS="${TESTBINPREFIX}/gdtools"
 TEST_CORES=${TEST_CORES:-1}
 BRESEQ_TEST_THREAD_ARG="-j ${TEST_CORES}"
 
+# Large real-world data sets this test needs downloaded before it can run, as a
+# comma-separated list of dataset names from tests/test_data_manifest.tsv. Like
+# TEST_CORES, set it *before* sourcing this script. Only 'long' tests may use it
+# (tests/Snakefile enforces that, so 'make test' never touches the network); the
+# Snakefile parses the same declaration to schedule the downloads as real job
+# graph nodes, deduplicated across tests.
+TEST_DATA=${TEST_DATA:-}
+
 # path to test data:
 DATADIR=${COMMONDIR}/data
+
+# Path to the on-demand, md5-verified downloads used by 'long' tests. Set
+# BRESEQ_TEST_DATA_DIR to share one cache between worktrees (or to keep it off
+# this filesystem). Note this lives under tests/data/ but deliberately NOT inside
+# any test directory: do_clean below does 'rm -Rf <testdir>/data', which would
+# destroy a cache placed there. No clean action removes these downloads --
+# 'make clean-test-data' is the explicit way to do that.
+DOWNLOADDIR=${BRESEQ_TEST_DATA_DIR:-${DATADIR}/downloads}
 # this is a find-compatible list of files that we'll hash:
 #FILE_PATTERN='( -name *.tab -or -name *.html ) -and -not -name settings.tab -and -not -name summary.tab'
 FILE_PATTERN='-name output.gd'
@@ -127,6 +143,38 @@ do_check() {
 	done
 }
 
+# Download and md5-verify any data sets this test declared with TEST_DATA.
+#
+# Idempotent and fast: when tests/Snakefile already fetched them (or another
+# worktree sharing BRESEQ_TEST_DATA_DIR did), this is a few stat() calls rather
+# than a re-hash of multi-gigabyte files. It exists so that running a single test
+# directly -- './tests/test.sh test <name>', which bypasses Snakemake entirely --
+# gets its data too. Any failure (no network, 404, checksum mismatch) aborts the
+# test rather than letting breseq run against missing or wrong input.
+do_fetch_test_data() {
+	[[ -z "${TEST_DATA}" ]] && return 0
+
+	# Long tests and the fetch script are not shipped in the distribution
+	# tarball, while common.sh is; a distributed test never sets TEST_DATA, but
+	# fail clearly rather than confusingly if that ever changes.
+	if [[ ! -x "${COMMONDIR}/fetch_test_data.sh" ]]; then
+		echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+		echo "Failed check"
+		echo "This test declares TEST_DATA=${TEST_DATA} but"
+		echo "${COMMONDIR}/fetch_test_data.sh is missing or not executable."
+		echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+		exit 1
+	fi
+
+	if ! "${COMMONDIR}/fetch_test_data.sh" ${TEST_DATA//,/ }; then
+		echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+		echo "Failed check"
+		echo "Could not obtain test data (${TEST_DATA}); see the message above."
+		echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+		exit 1
+	fi
+}
+
 do_breseq() {
 	echo "BRESEQ COMMAND:"
 	echo $TESTCMD
@@ -185,6 +233,9 @@ do_clean() {
 	# Artifacts written by the parallel test runner (Snakefile / run_logged_test.sh)
 	rm -f $1/test.log $1/test.result $1/test.done
 
+	# NOTE: downloaded test data (${DOWNLOADDIR}) is deliberately NOT removed here,
+	# so that neither 'make clean-tests' nor 'make clean' forces a multi-gigabyte
+	# re-download. Use 'make clean-test-data' to delete it explicitly.
 }
 
 
@@ -220,6 +271,7 @@ do_test() {
         ;;
         rebuild)
             do_clean $TESTDIR
+            do_fetch_test_data
             do_breseq
             do_build $TESTDIR
         ;;
@@ -227,6 +279,7 @@ do_test() {
             do_show $TESTDIR
         ;;
         test)
+            do_fetch_test_data
             do_breseq
             do_check $TESTDIR
             [[ "${CHECK_FAILED}" -ne 0 ]] && exit 1

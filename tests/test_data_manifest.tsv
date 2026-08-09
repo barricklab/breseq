@@ -1,0 +1,61 @@
+# breseq long-test data manifest.
+#
+# Large, real-world test data that is downloaded on demand rather than committed
+# (see tests/fetch_test_data.sh). A 'long' test declares what it needs with a
+# TEST_DATA=<dataset>[,<dataset>...] line in its testcmd.sh; every row here whose
+# dataset column matches is fetched, md5-verified and cached before the test runs.
+#
+# Columns (TAB-separated):
+#   dataset  Logical group name. MUST match [A-Za-z0-9_]+ -- tests/Snakefile parses
+#            TEST_DATA with the same [\w,]+ regex it uses for TEST_DEPENDS, so dots
+#            and hyphens are not allowed. Flatten accession punctuation in the
+#            dataset name (GCF_000017985.1 -> ncbi_REL606); file names keep theirs.
+#            Rows sharing a dataset form one group. Cached at <cachedir>/<dataset>/.
+#   file     Name to cache the artifact under. Basename only -- no '/' and no '..'.
+#   md5      md5 of the file EXACTLY AS SERVED. Any mismatch is a hard error: it
+#            means the remote data drifted (or the download is corrupt), and any
+#            expected.gd built from it is no longer meaningful. Do not "fix" a
+#            mismatch by pasting in the new md5 without re-reviewing the test.
+#   url      Full URL. Must be https:// -- curl's --fail is HTTP-only, so an
+#            ftp:// URL cannot report a clean 404. (file:// is allowed too, but
+#            only for the offline fixtures used by tests/fetch_test_data_1.)
+#
+# Note that breseq reads gzipped references transparently, so '.gbff.gz' and
+# '.fna.gz' are used as served -- there is no decompression step, and the md5
+# therefore covers exactly the bytes breseq parses.
+#
+# ---------------------------------------------------------------------------
+# WHERE THE VALUES COME FROM -- do not hand-derive them.
+#
+# READS (ENA). The portal API returns the URL and the md5 together:
+#
+#   curl -s 'https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2589061&result=read_run&fields=fastq_ftp,fastq_md5,fastq_bytes'
+#
+# Take fastq_ftp verbatim and prefix it with 'https://'. Do NOT construct the path
+# by hand: the directory rule depends on accession length -- a 9-character
+# accession has no numbered subdirectory, a 10-character one has the last digit
+# zero-padded to 3 ('.../SRR258/001/SRR2589061/'), an 11-character one the last
+# two, and so on. Getting this subtly wrong yields a 404 at test time.
+#
+# REFERENCES (NCBI). Use the VERSIONED assembly directory, which is immutable,
+# and never the '/latest_assembly_versions/' symlink (which is not). Each assembly
+# directory publishes its own checksums:
+#
+#   curl -s https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/017/985/GCF_000017985.1_ASM1798v1/md5checksums.txt
+#
+# ---------------------------------------------------------------------------
+#dataset	file	md5	url
+
+# Escherichia coli B str. REL606 -- the ancestral strain of the Long-Term
+# Evolution Experiment, and the reference for the read sets below.
+# 4.6 Mb, ~1.4 MB gzipped.
+ncbi_REL606	GCF_000017985.1_ASM1798v1_genomic.gbff.gz	15b4bbd969d274c99919bcd5d57d4d87	https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/017/985/GCF_000017985.1_ASM1798v1/GCF_000017985.1_ASM1798v1_genomic.gbff.gz
+
+# LTEE clone REL4540A: population Ara-5, generation 10,000, clone A, non-mutator
+# (Tenaillon et al. 2016, "E. coli genome evolution over 50,000 generations").
+# Paired-end Illumina HiSeq 2000, 2,384,764 read pairs, ~404 MB gzipped total,
+# roughly 100x coverage of the 4.6 Mb genome. This is the same accession used as
+# the worked example in docs/tutorial-curation-ecoli-ltee.md, where its metadata
+# is given as 'Ara-5_10000gen_4540A'.
+ena_SRR2589061	SRR2589061_1.fastq.gz	a0fa82604bd3c71e5e660ae5d530bc8b	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/001/SRR2589061/SRR2589061_1.fastq.gz
+ena_SRR2589061	SRR2589061_2.fastq.gz	e66d0ce2238e5bc0fa81d1d11f027506	https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/001/SRR2589061/SRR2589061_2.fastq.gz

@@ -121,8 +121,45 @@ budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventi
   test finishes successfully first — `common.sh` ignores the variable, and the serial
   `./tests/test.sh <action> tests` runner (and its `run.sh`/`build.sh`/`rebuild.sh` wrappers)
   doesn't need it since their sorted discovery order already happens to run dependencies first.
+- **External test data (long tests only)**: a `long`-named test that needs large real-world data
+  declares `TEST_DATA=<dataset>[,<dataset>...]` next to `TEST_CORES` in its `testcmd.sh`. Datasets
+  are defined in `tests/test_data_manifest.tsv` (`dataset` / `file` / `md5` / `url`, tab-separated)
+  and fetched by `tests/fetch_test_data.sh`, which downloads with `curl` to a temp file in the
+  destination directory, md5-verifies it, and only then renames it into place — so a failed or
+  corrupt download can never leave a plausible-looking file behind. Reference files are used as the
+  gzipped `.gbff.gz`/`.fna.gz` that NCBI serves (breseq reads gzipped references transparently), so
+  the md5 covers exactly the bytes breseq parses.
+  - **A checksum mismatch is a hard failure, never a warning.** It means the remote data drifted, so
+    every `expected.gd` built from it is suspect. Recovery: re-query the source for the new md5
+    (the manifest header has the exact `curl` commands), update it, `./tests/test.sh rebuild
+    <name>`, and *review the resulting diff* — don't just paste in the new checksum.
+  - **Cache**: `tests/data/downloads/` (gitignored), or set `BRESEQ_TEST_DATA_DIR` to share one
+    cache between worktrees. It lives under `tests/data/` but deliberately outside any test
+    directory, because `do_clean` does `rm -Rf <testdir>/data`. Budget roughly 0.5–2 GB per dataset
+    *plus* a similar amount of `tests/<name>/data/` output while a long test runs.
+  - **`make test` never touches the network.** Long tests aren't discovered without
+    `--config long=1`, and `Snakefile` raises a `WorkflowError` if a non-long test declares
+    `TEST_DATA`. `Snakefile` parses `TEST_DATA` with the same anchored regex it uses for
+    `TEST_CORES`/`TEST_DEPENDS` and makes each dataset a job-graph node, so a dataset shared by
+    several long tests downloads once; `common.sh`'s `do_test` runs the same fetch (a stat-only
+    no-op when already cached) so `./tests/test.sh test <name>`, which bypasses Snakemake, works too.
+  - **Targets**: `make test-data` pre-fetches everything, `make verify-test-data` forces a full
+    re-hash of the cache (to detect local corruption — it re-hashes, it does not re-download), and
+    `make clean-test-data` deletes it. `make clean-tests` and `make clean` deliberately do **not**
+    delete downloads; they only remove `tests/.test_data_stamps/`.
+  - When rebuilding a long test's `expected.gd`, do it with `BRESEQ_TEST_DATA_DIR` **unset** so the
+    committed file keeps repo-relative paths. (`DIFF_IGNORE` strips `#=COMMAND`/`#=REFSEQ`/
+    `#=READSEQ` before comparing, so an absolute path doesn't *break* the test — it just bakes
+    someone's home directory into a committed file.) Note `#=MAPPED-BASES`/`#=MAPPED-READS` *are*
+    compared, so a bowtie2 version bump fails a long test even with breseq unchanged.
+  - `tests/fetch_test_data_1` is an offline self-test of the fetcher (it uses `curl`'s `file://`
+    support against small committed files), so the download, checksum-mismatch and failure paths are
+    covered by every `make test` run without any network.
+  - Beware: test-name matching for "long" is a **substring** check, so a directory named e.g.
+    `nonlong_foo` is treated as a long test and skipped by `make test`.
 - **Logs**: each test's output is captured to `tests/<test_name>/test.log`; `make clean-tests`
-  removes these (along with `test.result`, `test.done`, and Snakemake's `.snakemake/` directory).
+  removes these (along with `test.result`, `test.done`, Snakemake's `.snakemake/` directory, and
+  `tests/.test_data_stamps/`).
 - **Summary & CI**: after the run, `tests/print_test_summary.sh` prints a PASS/FAIL + timing table
   per test plus an overall total, and exits non-zero if any test failed — `make test`/`make
   test-long` propagate that status, so they're suitable for driving CI (e.g. GitHub Actions).
@@ -137,6 +174,10 @@ A test directory whose name matches `tests/*_local*/` (e.g. `tests/<name>_local`
 1. Add data files under `tests/data/` (reuse existing data when possible; don't add large files to git).
 2. Create `tests/<test_name>/testcmd.sh` by copying an existing one and editing the `TESTCMD=` and `CURRENT_OUTPUTS`/`EXPECTED_OUTPUTS` lines. If the test runs `breseq` with multiple threads, set `TEST_CORES=N` (matching the `-j` value) before sourcing `common.sh`; otherwise leave it unset (defaults to 1).
 3. Run `./tests/<test_name>/testcmd.sh rebuild` to generate `expected.gd`.
+4. For a test on large real-world data, name the directory `long_<something>`, add its files to
+   `tests/test_data_manifest.tsv` (with checksums taken from the source — see the manifest header),
+   and declare `TEST_DATA=<dataset>[,...]` in the `testcmd.sh`. Reference it as
+   `${DOWNLOADDIR}/<dataset>/<file>`. It then runs only under `make test-long`.
 
 ## Code Architecture
 

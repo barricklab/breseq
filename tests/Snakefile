@@ -30,6 +30,15 @@
 # scheduling would not otherwise ensure. Serial runners (tests/run.sh etc.)
 # don't need this -- their sorted discovery order already happens to do the
 # right thing for the current set of dependent tests.
+#
+# A 'long' test that needs large real-world data (reads from ENA, references from
+# NCBI) declares it with a 'TEST_DATA=<dataset>[,<dataset>...]' assignment, again
+# alongside TEST_CORES. Each dataset becomes a node in the job graph, so a data
+# set shared by several long tests is downloaded exactly once and independent data
+# sets download in parallel. See tests/test_data_manifest.tsv and
+# tests/fetch_test_data.sh. 'make test' never downloads anything: long tests are
+# not discovered without --config long=1, and declaring TEST_DATA on a non-long
+# test is a hard error (see below).
 
 import glob
 import os
@@ -86,13 +95,59 @@ def parse_test_depends(name):
     return []
 
 
+def parse_test_data(name):
+    """Read the TEST_DATA=<dataset>[,<dataset>...] declaration from a testcmd.sh,
+    defaulting to no external data. Each dataset names a group of rows in
+    tests/test_data_manifest.tsv that tests/fetch_test_data.sh downloads,
+    md5-verifies and caches. Only 'long' tests may declare this -- see the
+    assertion below."""
+    with open(os.path.join("tests", name, "testcmd.sh")) as f:
+        for line in f:
+            m = re.match(r"^\s*TEST_DATA=([\w,]+)\s*$", line)
+            if m:
+                return m.group(1).split(",")
+    return []
+
+
 TESTS = discover_tests()
 TEST_CORES = {name: parse_test_cores(name) for name in TESTS}
 TEST_DEPENDS = {name: parse_test_depends(name) for name in TESTS}
+TEST_DATA = {name: parse_test_data(name) for name in TESTS}
+
+# Where the per-dataset "this has been fetched" markers live. Deliberately inside
+# the worktree and NOT in the data cache itself: the cache may be shared between
+# worktrees (BRESEQ_TEST_DATA_DIR) and must not be owned by any one Snakemake run.
+# 'make clean-tests' removes this directory but never the cache.
+TEST_DATA_STAMP_DIR = "tests/.test_data_stamps"
+
+# Safety net keeping 'make test' completely offline. Long tests are the only ones
+# allowed to declare TEST_DATA, and they are excluded from TESTS entirely unless
+# --config long=1 was passed, so a plain 'make test' can never instantiate a
+# fetch_test_data job. Catch a misplaced declaration loudly here rather than
+# silently downloading gigabytes during a normal test run or in CI.
+_offenders = sorted(n for n, d in TEST_DATA.items() if d and "long" not in n)
+if _offenders:
+    raise WorkflowError(
+        "TEST_DATA may only be declared by tests whose directory name contains "
+        "'long' (i.e. those that run only under 'make test-long'), because it "
+        "triggers network downloads. Offending tests: " + ", ".join(_offenders)
+    )
 
 
-def test_dependencies(wildcards):
-    return [f"tests/{dep}/test.done" for dep in TEST_DEPENDS.get(wildcards.test, [])]
+def test_inputs(wildcards):
+    """A test's prerequisites: any tests it depends on (TEST_DEPENDS), plus one
+    marker per external dataset it declares (TEST_DATA). Routing the fetch through
+    the job graph means several long tests sharing a dataset download it once, and
+    independent datasets download in parallel."""
+    deps = [f"tests/{dep}/test.done" for dep in TEST_DEPENDS.get(wildcards.test, [])]
+    data = [f"{TEST_DATA_STAMP_DIR}/{ds}.fetched"
+            for ds in TEST_DATA.get(wildcards.test, [])]
+    return deps + data
+
+
+wildcard_constraints:
+    # Matches the dataset-name rule enforced by 'fetch_test_data.sh --lint'.
+    dataset=r"[A-Za-z0-9_]+",
 
 
 rule all:
@@ -100,9 +155,32 @@ rule all:
         [f"tests/{test}/test.done" for test in TESTS]
 
 
+rule fetch_test_data:
+    """Download and md5-verify one dataset from tests/test_data_manifest.tsv.
+
+    Only the marker is declared as output, never the cached data: Snakemake
+    deletes a failed job's outputs, and the cache is potentially shared between
+    worktrees. fetch_test_data.sh keeps its own sidecar stamps next to the cached
+    files, so running this against an already-populated cache is a handful of
+    stat() calls rather than a re-hash of gigabytes.
+
+    'resources: download_slots' caps how many downloads run at once, but note that
+    a resource is only enforced when a limit is supplied on the command line --
+    hence the --resources flag in Makefile.am's test-long target."""
+    output:
+        touch(f"{TEST_DATA_STAMP_DIR}/{{dataset}}.fetched")
+    log:
+        f"{TEST_DATA_STAMP_DIR}/{{dataset}}.log"
+    threads: 1
+    resources:
+        download_slots=1
+    shell:
+        "tests/fetch_test_data.sh {wildcards.dataset} > {log} 2>&1"
+
+
 rule run_test:
     input:
-        test_dependencies
+        test_inputs
     output:
         touch("tests/{test}/test.done")
     log:

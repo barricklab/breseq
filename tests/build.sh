@@ -22,6 +22,9 @@ if [[ "${TESTNAME}" == "all" ]]; then
 		NAME=`basename $(dirname ${TESTCMD})`
 		[[ "${NAME}" == _* ]] && continue
 		[[ "${NAME}" == *_disabled ]] && continue
+		# Skip 'long'-named tests, matching tests/test.sh and tests/Snakefile.
+		# Promote one explicitly by name when that is what you actually want.
+		[[ "${NAME}" == *long* ]] && continue
 		echo "=== ${ACTION}: ${NAME} ==="
 		"${TESTCMD}" ${ACTION}
 	done

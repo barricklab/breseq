@@ -837,7 +837,10 @@ namespace breseq {
   
   void cReferenceSequences::PrivateLoadFile(const string& file_name, const string& genbank_field_for_seq_id)
   {
-    ifstream in(file_name.c_str());
+    // flexgzfstream so that a gzipped reference is sniffed correctly here: the
+    // format is determined from the first line below, which would otherwise be
+    // binary garbage for a '.gbff.gz' / '.fna.gz' downloaded from NCBI.
+    flexgzfstream in(file_name.c_str(), ios_base::in);
     ASSERT(in.good(), "Could not open reference file: " +file_name);
     
     str_uint old_load = m_seq_id_loaded;
@@ -880,7 +883,7 @@ namespace breseq {
     switch (file_type) {
       case GENBANK:
       {
-        ifstream gbk_in(file_name.c_str());
+        flexgzfstream gbk_in(file_name.c_str(), ios_base::in);
         ASSERT(in.good(), "Could not open GenBank file: " +file_name);
         string line;
         bool eof_found = false;
@@ -1797,20 +1800,35 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
   }
 }
 
-// Consume input lines up to and including the GenBank record terminator "//"
-// (or until EOF). Used when a record has no ORIGIN nucleotide-sequence block
-// (e.g. a CONTIG assembly record) so that any following records stay aligned.
-static void skip_to_record_end(ifstream& in) {
+// Consume the lines following a GenBank CONTIG (assembly join) line, stopping at
+// either an ORIGIN block or the "//" record terminator.
+//
+// A CONTIG line does NOT by itself mean the record carries no sequence. NCBI's
+// RefSeq "CON" division records for complete genomes -- which is what you get from
+// the assembly FTP site as <assembly>_genomic.gbff.gz -- contain a CONTIG join
+// AND a full ORIGIN nucleotide sequence. Treating CONTIG as "no sequence" and
+// skipping to the end of the record silently discarded the sequence of every such
+// reference, which then failed later with a confusing "No sequence found for
+// reference" error.
+//
+// Returns true if an ORIGIN line was found, leaving the stream positioned on the
+// first sequence line so ReadGenBankFileSequence() can take over; returns false
+// if the record ended first (a genuine sequence-less CONTIG record), having
+// consumed the terminator so any following records stay aligned.
+static bool skip_contig_to_origin_or_record_end(istream& in) {
   string line;
   while (!in.eof()) {
     breseq::getline(in, line);
-    if (GetWord(line) == "//") break;
+    string first_word = GetWord(line);
+    if (first_word == "ORIGIN") return true;
+    if (first_word == "//") return false;
   }
+  return false;
 }
 
 void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& genbank_field_for_seq_id) {
 
-  ifstream in(in_file_name.c_str(), ios_base::in);
+  flexgzfstream in(in_file_name.c_str(), ios_base::in);
   ASSERT(!in.fail(), "Could not open GenBank file: " + in_file_name);
 
   string header_terminator;
@@ -1856,8 +1874,11 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& 
     if (section_terminator == "ORIGIN") {
       ReadGenBankFileSequence(in, this_seq);
     } else if (section_terminator == "CONTIG") {
-      // No nucleotide sequence in this record. Skip to the record terminator.
-      skip_to_record_end(in);
+      // A CONTIG join may still be followed by an ORIGIN block holding the actual
+      // sequence (NCBI RefSeq "CON" records for complete genomes are like this).
+      if (skip_contig_to_origin_or_record_end(in)) {
+        ReadGenBankFileSequence(in, this_seq);
+      }
     }
     // section_terminator == "//" or "" (EOF): no sequence; terminator already consumed.
 
@@ -1881,7 +1902,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& 
 }
 
 
-bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name, const string& genbank_field_for_seq_id, string& out_header_terminator) {
+bool cReferenceSequences::ReadGenBankFileHeader(istream& in, const string& file_name, const string& genbank_field_for_seq_id, string& out_header_terminator) {
 
   // All files have a LOCUS line
   // The sequence ID is assigned with this order of preference LOCUS > ACCESSION > VERSION
@@ -2079,7 +2100,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
  *  The string may cover multiple lines. Currently we do not handle discontinuous features,
  *  and features that cross the origin of a circular chromosome are returned with end < start. 
  */
-list<cLocation> cAnnotatedSequence::ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in, bool safe_create_feature_locations) {
+list<cLocation> cAnnotatedSequence::ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, istream& in, bool safe_create_feature_locations) {
 
 // Typical coordinate strings:
 //   1485..1928
@@ -2207,7 +2228,7 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& i
 //  /anticodon=(pos:complement(1144371..1144373),aa:Arg,
 //            seq:cct)
   
-void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in) 
+void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::istream& in)
 {
   // delete leading slash
   tag.erase(0,1);
@@ -2292,7 +2313,7 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifs
   
 }
 
-void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s, string& out_terminator) {
+void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::istream& in, cAnnotatedSequence& s, string& out_terminator) {
   //std::cout << "features" << std::endl;
 
   // Which top-level keyword ended the FEATURES table. Normally ORIGIN (the
@@ -2489,7 +2510,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
   }
 }
 
-void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s) {
+void cReferenceSequences::ReadGenBankFileSequence(std::istream& in, cAnnotatedSequence& s) {
 
   s.m_fasta_sequence.set_name(s.m_seq_id);
 
@@ -2713,7 +2734,7 @@ void cReferenceSequences::ReadBull(const string& file_name) {
     this->add_seq(BULL_DUMMY_SEQ_ID, file_name);
   }
     
-  ifstream in(file_name.c_str());
+  flexgzfstream in(file_name.c_str(), ios_base::in);
   if(!in.good()) WARN("Could not open file:" + file_name);
 
   char line[10];

@@ -62,6 +62,13 @@ tests/*/test.done
 tests/*/test.log
 tests/*/test.result
 tests/lambda_mixed_pop_cl_tabulate/contingency_loci.csv
+## On-demand, md5-verified data downloaded for 'long' tests, plus the per-worktree
+## markers recording that a dataset was fetched. See tests/test_data_manifest.tsv
+## and tests/fetch_test_data.sh. Both patterns are needed explicitly:
+## 'tests/*/data' above is the wrong depth, and while the repo-wide '*.gz' would
+## incidentally hide the FASTQ files it would not hide the .md5ok sidecars.
+tests/data/downloads/
+tests/.test_data_stamps/
 tests/*-local*/
 tests/data/*-local*/
 # ...but keep checked-in expected outputs even when they end in an otherwise-ignored

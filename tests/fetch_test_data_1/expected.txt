@@ -1,0 +1,39 @@
+=== a good file is downloaded and verified ===
+fetch good_plain: exit=0
+  [fetched] good_plain/lambda.3.gbk
+  cached file: present
+  stamp: present
+
+=== re-running trusts the stamp instead of re-hashing ===
+refetch good_plain: exit=0
+  [cached] good_plain/lambda.3.gbk
+
+=== a gzipped file is stored as served, not decompressed ===
+fetch good_gz: exit=0
+  [fetched] good_gz/reads.3.fastq.gz
+  cached file: present
+  no decompressed sibling: absent
+
+=== a checksum mismatch is fatal and poisons nothing ===
+fetch bad_md5: exit=3
+  cached file: absent
+  partial file: absent
+
+=== an unreachable URL is fatal and poisons nothing ===
+fetch missing: exit=2
+  cached file: absent
+
+=== tampering with a cached file invalidates its stamp ===
+refetch after tampering: exit=0
+  [fetched] good_plain/lambda.3.gbk
+
+=== --verify re-hashes even when the stamp is good ===
+verify good_plain: exit=0
+  [verified] good_plain/lambda.3.gbk
+
+=== --lint rejects a malformed manifest ===
+lint bad manifest: exit=1
+lint good manifest: exit=0
+
+=== an unknown dataset name is rejected ===
+fetch nonexistent: exit=1
