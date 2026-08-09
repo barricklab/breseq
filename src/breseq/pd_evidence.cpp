@@ -816,9 +816,52 @@ namespace breseq {
     }
 
     //
+    // Step 3b: collapse calls that would emit the SAME PD entry.
+    //
+    // A PD's identity in a genome diff is its two sides and nothing else -- (seq_id, position) and
+    // (seq_id, position + max(delta, 0) + 1). size_shift and every count are key=value fields, which
+    // cDiffEntry::compare does not look at when testing for duplicates. So two seed regions that
+    // place their breakpoint on the same base emit byte-identical entries whenever both shifts are
+    // negative (a negative shift is carried by size_shift alone, and both sides then report nothing
+    // removed) or both are the same size, and cGenomeDiff::write treats that as a fatal duplicate.
+    //
+    // Non-maximum suppression above does not prevent this. It only marks the weaker call, it does
+    // not drop it, and both marked and unmarked calls are emitted.
+    //
+    // Keep exactly one call per emitted identity: the one suppression already chose, falling back to
+    // more supporting pairs and then to the earlier call when suppression cannot decide (both were
+    // suppressed by some third call). Every tie-break is order-independent, so which call survives
+    // does not depend on the order the seed regions happened to be scanned in.
+    //
+    vector<bool> emit(calls.size(), true);
+    {
+      map<string,size_t> best_by_identity;
+      for (size_t i = 0; i < calls.size(); i++) {
+        string identity = calls[i].seq_id + ":" + to_string(calls[i].position)
+                        + ":" + to_string(max(calls[i].delta, 0));
+        map<string,size_t>::iterator it = best_by_identity.find(identity);
+        if (it == best_by_identity.end()) {
+          best_by_identity[identity] = i;
+          continue;
+        }
+        size_t j = it->second;
+        bool i_better = (calls[j].suppressed && !calls[i].suppressed) ||
+                        ((calls[i].suppressed == calls[j].suppressed) &&
+                         (calls[i].supporting > calls[j].supporting));
+        if (i_better) {
+          emit[j] = false;
+          it->second = i;
+        } else {
+          emit[i] = false;
+        }
+      }
+    }
+
+    //
     // Step 4: emit.
     //
     for (size_t i = 0; i < calls.size(); i++) {
+      if (!emit[i]) continue;
       const pd_call& c = calls[i];
 
       // The two sides bracket the reference bases the event removed, so they are separated by

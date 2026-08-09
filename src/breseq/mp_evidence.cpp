@@ -877,9 +877,50 @@ namespace breseq {
     }
 
     //
+    // Step 3b: collapse calls that would emit the SAME MP entry.
+    //
+    // An MP's identity in a genome diff is (seq_id, position, strand) and nothing else -- every count
+    // is a key=value field, which cDiffEntry::compare does not look at when testing for duplicates.
+    // Two candidates that place on the same base and strand therefore emit identical entries, and
+    // cGenomeDiff::write treats that as a fatal duplicate.
+    //
+    // The suppression step above does not prevent this: it only marks the weaker call, it does not
+    // drop it, and marked calls are still emitted. Two candidates at the SAME position are also a
+    // case suppression cannot break, since neither is nearer than the other.
+    //
+    // Keep exactly one call per emitted identity: the one suppression already chose, falling back to
+    // more supporting reads and then to the earlier call. Every tie-break is order-independent, so
+    // which call survives does not depend on the order candidates were visited in.
+    //
+    vector<bool> emit(calls.size(), true);
+    {
+      map<string,size_t> best_by_identity;
+      for (size_t i = 0; i < calls.size(); i++) {
+        string identity = calls[i].seq_id + ":" + to_string(calls[i].position)
+                        + ":" + to_string(calls[i].strand);
+        map<string,size_t>::iterator it = best_by_identity.find(identity);
+        if (it == best_by_identity.end()) {
+          best_by_identity[identity] = i;
+          continue;
+        }
+        size_t j = it->second;
+        bool i_better = (calls[j].suppressed && !calls[i].suppressed) ||
+                        ((calls[i].suppressed == calls[j].suppressed) &&
+                         (calls[i].supporting > calls[j].supporting));
+        if (i_better) {
+          emit[j] = false;
+          it->second = i;
+        } else {
+          emit[i] = false;
+        }
+      }
+    }
+
+    //
     // Step 4: emit.
     //
     for (size_t i = 0; i < calls.size(); i++) {
+      if (!emit[i]) continue;
       const mp_call& c = calls[i];
 
       cDiffEntry mp(MP);
