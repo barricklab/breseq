@@ -165,6 +165,19 @@ namespace breseq {
   extern const char* MP_TOTAL_COUNT;
   extern const char* MP_CANDIDATE_COUNT;
 
+  //For PD
+  extern const char* PD_SIZE_SHIFT;
+  extern const char* PD_SIZE_SHIFT_LOWER;
+  extern const char* PD_SIZE_SHIFT_UPPER;
+  extern const char* PD_POSITION_RANGE;
+  extern const char* PD_SUPPORTING_COUNT;
+  extern const char* PD_AGAINST_COUNT;
+  extern const char* PD_AMBIGUOUS_COUNT;
+  extern const char* PD_DISTINCT_COUNT;
+  extern const char* PD_TOTAL_COUNT;
+  extern const char* PD_CANDIDATE_COUNT;
+  extern const char* PD_SEED_Z;
+
   //For SC
   extern const char* SC_READ_COUNT;
   extern const char* SC_TOTAL_COUNT;
@@ -183,7 +196,7 @@ namespace breseq {
 
   // Types of diff entries:
   enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, INT,
-    RA, MC, JC, CN, UN, SC, DP, MP, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
+    RA, MC, JC, CN, UN, SC, DP, MP, PD, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
   
   extern const vector<string> gd_keys_with_ids;
   

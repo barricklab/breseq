@@ -21,6 +21,7 @@
 #include "mutation_predictor.h"
 
 #include "output.h"
+#include "dp_evidence.h"
 #include "identify_mutations.h"
 #include "resolve_alignments.h"
 
@@ -2958,8 +2959,15 @@ namespace breseq {
 
     }
 
+    // Drop any discordant-pair (DP) item that a pair-distance (PD) item already describes, BEFORE
+    // the DP attachment below, so a superseded DP is never attached to a mutation on its way out.
+    remove_DP_superseded_by_PD(settings, summary, gd);
+
     // Attach a matching discordant-pair (DP) evidence item to each mutation whose JC it matches.
     add_matching_DP_evidence(gd);
+
+    // Same for pair-distance (PD) evidence.
+    add_matching_PD_evidence(gd);
 
     // Also combine DP with MOBs by their unique side (IS sides may be on different copies); a DP that
     // localizes a specific non-consensus IS copy sets the MOB's mob_region.
@@ -3070,6 +3078,112 @@ namespace breseq {
             mut._evidence.push_back((*d)->_id);
         }
       }
+    }
+  }
+
+  // Attach a pair-distance (PD) evidence item as ALSO supporting a mutation when it describes the
+  // same breakpoint as a JC that already supports it -- the direct analogue of add_matching_DP_evidence
+  // above, and it matters most for the case PD snapped onto that very junction, where the two agree
+  // to the base.
+  void MutationPredictor::add_matching_PD_evidence(cGenomeDiff& gd)
+  {
+    map<string, vector<string> > pd_by_key;
+    vector<diff_entry_ptr_t> pds;
+    diff_entry_list_t pd_list = gd.get_list(make_vector<gd_entry_type>(PD));
+    for (diff_entry_list_t::iterator it = pd_list.begin(); it != pd_list.end(); it++) {
+      cDiffEntry& pd = **it;
+      if (pd.entry_exists(REJECT)) continue;
+      pd_by_key[junction_side_key(pd)].push_back(pd._id);
+      pds.push_back(*it);
+    }
+    if (pds.empty()) return;
+
+    diff_entry_list_t muts = gd.mutation_list();
+    for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+      cDiffEntry& mut = **it;
+      vector<string> evidence_now = mut._evidence;
+      for (vector<string>::iterator ev = evidence_now.begin(); ev != evidence_now.end(); ev++) {
+        diff_entry_ptr_t e = gd.find_by_id(*ev);
+        if (e.get() == NULL || e->_type != JC) continue;
+
+        map<string, vector<string> >::const_iterator m = pd_by_key.find(junction_side_key(*e));
+        if (m == pd_by_key.end()) continue;
+        for (vector<string>::const_iterator pdid = m->second.begin(); pdid != m->second.end(); pdid++) {
+          if (find(mut._evidence.begin(), mut._evidence.end(), *pdid) == mut._evidence.end())
+            mut._evidence.push_back(*pdid);
+        }
+      }
+    }
+  }
+
+  // Remove every discordant-pair (DP) item that a pair-distance (PD) item already describes.
+  //
+  // The two see the same event from opposite ends of the same distribution. When a deletion is large
+  // enough, the tail of its spanning pairs crosses the discordant cutoff and DP seeds on that tail;
+  // PD meanwhile uses the whole population. So the DP is built from a handful of the most extreme
+  // pairs while the PD is built from all of them, and the PD is better in every respect that matters
+  // -- it localizes from more evidence, it can snap to a junction, and it reports the event's size,
+  // which DP cannot. Keeping both would list one event twice, with the weaker entry's coordinates
+  // disagreeing with the stronger one's.
+  //
+  // The match window is deliberately much wider than the slop used for JC comparisons. A DP side is
+  // placed at the innermost aligned edge of its few supporting pairs, which sits short of the true
+  // breakpoint by however much of the fragment those pairs left unsequenced -- routinely tens to
+  // hundreds of bases, and by construction never past it. One paired-mapping distance is the natural
+  // scale of that error, and two distinct events closer together than that are not separable by pair
+  // evidence in any case.
+  void MutationPredictor::remove_DP_superseded_by_PD(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {
+    (void)settings;
+
+    diff_entry_list_t pd_list = gd.get_list(make_vector<gd_entry_type>(PD));
+    if (pd_list.empty()) return;
+    diff_entry_list_t dp_list = gd.get_list(make_vector<gd_entry_type>(DP));
+    if (dp_list.empty()) return;
+
+    bool inner3p = true;
+    double D = 0.0, pair_median = 0.0;
+    if (!paired_library_params(summary, inner3p, D, pair_median)) return;
+    int32_t window = max(1, static_cast<int32_t>(pair_median));
+
+    // Each doomed DP remembers which PD displaced it, so a mutation that was resting on the DP can
+    // be handed the PD instead. predictMCplusDPtoDEL builds a deletion out of an MC plus a DP, and
+    // simply dropping that DP would leave the deletion standing on half the evidence it was
+    // predicted from, with nothing in the output explaining where the other half went.
+    map<string, string> superseded_by;
+    for (diff_entry_list_t::iterator di = dp_list.begin(); di != dp_list.end(); di++) {
+      cDiffEntry& dp = **di;
+      for (diff_entry_list_t::iterator pi = pd_list.begin(); pi != pd_list.end(); pi++) {
+        cDiffEntry& pd = **pi;
+        if (pd.entry_exists(REJECT)) continue;
+        if (!same_junction_side(dp, "side_1", pd, "side_1", window)) continue;
+        if (!same_junction_side(dp, "side_2", pd, "side_2", window)) continue;
+        superseded_by[dp._id] = pd._id;
+        break;
+      }
+    }
+    if (superseded_by.empty()) return;
+
+    // Substitute in every mutation's evidence list first, so nothing is left pointing at an entry
+    // that no longer exists.
+    diff_entry_list_t muts = gd.mutation_list();
+    for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+      cDiffEntry& mut = **it;
+      vector<string> updated;
+      for (size_t k = 0; k < mut._evidence.size(); k++) {
+        map<string, string>::const_iterator s = superseded_by.find(mut._evidence[k]);
+        const string& id = (s == superseded_by.end()) ? mut._evidence[k] : s->second;
+        if (find(updated.begin(), updated.end(), id) == updated.end()) updated.push_back(id);
+      }
+      mut._evidence = updated;
+    }
+
+    diff_entry_list_t* all = gd.get_mutable_list_ptr();
+    for (diff_entry_list_t::iterator it = all->begin(); it != all->end(); ) {
+      if (((*it)->_type == DP) && (superseded_by.count((*it)->_id) > 0))
+        it = gd.remove(it);
+      else
+        it++;
     }
   }
 

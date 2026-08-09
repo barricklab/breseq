@@ -269,6 +269,7 @@ namespace breseq
     bool paired_mapping;                                     // Default = true COMMAND-LINE OPTION (disable with --no-paired-mapping)
     bool predict_discordant_pairs;                           // Default = false COMMAND-LINE OPTION (--predict-discordant-pairs; requires paired-mapping)
     bool predict_missing_pairs;                              // Default = false COMMAND-LINE OPTION (--predict-missing-pairs; requires paired-mapping)
+    bool predict_pair_distance;                              // Default = false COMMAND-LINE OPTION (--predict-pair-distance; requires paired-mapping)
 
     // Reference sequences
     vector<string> all_reference_file_names;    // REQUIRED COMMAND-LINE OPTION (filled by below)
@@ -422,6 +423,16 @@ namespace breseq
     int32_t missing_pair_minimum_distinct;                // Default = 2;         COMMAND-LINE OPTION
     double missing_pair_frequency_cutoff;                 // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
 
+    //! Settings: Pair Distance (PD) Evidence
+    int32_t pair_distance_seed;                           // Default = 3;         COMMAND-LINE OPTION
+    double pair_distance_tail_quantile;                   // Default = 0.05;      COMMAND-LINE OPTION
+    double pair_distance_seed_z;                          // Default = 0 (derive from reference length); COMMAND-LINE OPTION
+    int32_t pair_distance_maximum_span;                   // Default = 0 (derive: 2 * distance_cutoff);  COMMAND-LINE OPTION
+    int32_t pair_distance_minimum_pairs;                  // Default = 3;         COMMAND-LINE OPTION
+    int32_t pair_distance_minimum_distinct;               // Default = 2;         COMMAND-LINE OPTION
+    int32_t pair_distance_minimum_shift;                  // Default = 0 (derive from the distribution width); COMMAND-LINE OPTION
+    double pair_distance_frequency_cutoff;                // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
+
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
     uint32_t soft_clipping_minimum_bases;                 // Default = 12        COMMAND-LINE OPTION
@@ -520,6 +531,7 @@ namespace breseq
     uint32_t max_rejected_soft_clipping_evidence_to_show;  // Default = 20
     uint32_t max_rejected_discordant_pair_evidence_to_show; // Default = 20
     uint32_t max_rejected_missing_pair_evidence_to_show;    // Default = 20
+    uint32_t max_rejected_pair_distance_evidence_to_show;   // Default = 20
 		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!
 		bool lenski_format;                                     // Default = false (not a public option!)
@@ -660,6 +672,11 @@ namespace breseq
     string mp_candidate_regions_file_name;
     string missing_pair_done_file_name;
     string mp_genome_diff_file_name;
+    string pd_candidate_regions_file_name;
+    string pair_distance_done_file_name;
+    string pd_genome_diff_file_name;
+    // PD gates/model/tally, persisted for the same reason as the DP summary above.
+    string pair_distance_summary_file_name;
 
 
 		//! Paths: Copy Number Variation

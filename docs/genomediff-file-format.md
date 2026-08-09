@@ -119,7 +119,7 @@ pairs that store optional information.
 
 *mutation* types are 3 letters: SNP, SUB, DEL, INS, MOB, AMP, CON, INV.
 
-*evidence* types are 2 letters: RA, MC, JC, UN.
+*evidence* types are 2 letters: RA, MC, JC, UN, CN, SC, DP, MP, PD.
 
 *validation* types are 4 letters: TSEQ, PFLP, RFLP, PFGE, PHYL, CURA.
 
@@ -560,6 +560,65 @@ in the ranges \[start, start+start_range\] \[end-end_range, end\].
 
     Number of bases that the two sides of the new junction have in
     common.
+
+### PD: Pair distance evidence
+
+A point where the read pairs whose unsequenced middle gap spans it map at a systematically different
+distance from the one the sequencing library predicts. Pairs mapping *farther* apart than expected
+mean the sample is missing reference sequence there; pairs mapping *closer together* mean sequence
+was added. Neither shift has to be large enough to make any individual pair discordant, which is what
+distinguishes PD from `JC` (which needs a read split across the breakpoint) and from `DP` (which
+tests each pair on its own, and applies no cutoff at all on the short side).
+
+Predicted only when `--predict-pair-distance` is given. This functionality is experimental.
+
+Line specification:
+
+4.  **side_1\_seq_id** *\<string>*
+
+    id of reference sequence fragment containing side 1.
+
+5.  **side_1\_position** *\<uint32>*
+
+    last retained base of the left flank.
+
+6.  **side_1\_strand** *\<1/-1>*
+
+    always -1: the retained flank lies at coordinates at or below side_1\_position.
+
+7.  **side_2\_seq_id** *\<string>*
+
+    id of reference sequence fragment containing side 2.
+
+8.  **side_2\_position** *\<uint32>*
+
+    first retained base of the right flank. The two sides therefore bracket exactly the reference
+    bases the event removed, and are adjacent when it removed none.
+
+9.  **side_2\_strand** *\<1/-1>*
+
+    always +1.
+
+Notable name=value pairs:
+
+*   **size_shift** *\<int32>* — the estimated shift in mapping distance, in bases. Positive means
+    reference sequence is missing from the sample (a deletion of that many bases, which is also the
+    separation of the two sides). Negative means sequence was added, and the sides are adjacent: PD
+    cannot place inserted sequence in the reference, and it cannot tell a pure insertion of *I* bases
+    from a replacement of *k* reference bases by *k + I* inserted ones, so it reports the minimal
+    reading and lets `size_shift` carry the length.
+*   **size_shift_lower**, **size_shift_upper** — profile-likelihood interval for `size_shift`. A call
+    whose interval includes zero is rejected.
+*   **position_range** *\<uint32>* — width of the interval of positions the supporting pairs agree
+    on. Zero means they pin a single base, which normally happens only when the call snapped onto a
+    junction.
+*   **shifted_pair_count**, **normal_pair_count**, **ambiguous_pair_count** — of the pairs sampled
+    across this point, how many had a distance that decisively supports the call, decisively argues
+    against it, and neither. The frequency is computed from the first two.
+*   **distinct_pair_count** — distinct fragment ends among the supporting pairs, so that PCR
+    duplicates of one molecule cannot carry a prediction.
+*   **snapped_to_junction** — present when the coordinates were taken from a validated split-read
+    junction inside the interval, and are therefore exact to the base.
 
 ### UN: Unknown base evidence
 

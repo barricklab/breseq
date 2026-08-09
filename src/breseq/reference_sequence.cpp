@@ -4071,7 +4071,8 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       } break;
         
       case JC:
-      case DP:{
+      case DP:
+      case PD:{
         cDiffEntry side_1;
         side_1[SEQ_ID] = mut["side_1_seq_id"];
         annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true);
