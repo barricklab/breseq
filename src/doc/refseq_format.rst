@@ -14,6 +14,9 @@ Three types of input files are accepted for reference sequences:
 Each loaded sequence is assigned a ``SEQ_ID`` as explained below. Sequences and their annotations can be input in different files as long as the ``SEQ_ID`` matches between files.
 
 .. note::
+  Reference files may be **gzip-compressed**, in any of these three formats. Compression is detected from the contents of the file rather than from its name, so the file does not need a ``.gz`` extension. This means files can be used exactly as downloaded from NCBI, for example the ``*_genomic.gbff.gz`` and ``*_genomic.fna.gz`` files served from the assembly FTP site, with no need to decompress them first.
+
+.. note::
   During a run, |breseq| merges and converts all input reference sequences into one annotated reference file that is output as ``data/reference.gff3``. If you are having trouble interpreting how |breseq| is loading your reference files, you should examine this file.
 
 Sequences

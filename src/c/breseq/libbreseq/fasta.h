@@ -126,7 +126,10 @@ namespace breseq {
 	/*! File class.
 	 */ 
   
-  class cFastaFile : public fstream {
+  // Reads gzipped as well as plain FASTA (and, via cReferenceSequences::ReadGFF,
+  // GFF3) files -- flexgzfstream detects compression from the file's magic bytes.
+  // Output is never gzipped.
+  class cFastaFile : public flexgzfstream {
     
   public:
     string    m_file_name;  

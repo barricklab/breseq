@@ -24,7 +24,7 @@ namespace breseq {
   
   //constructor
   cFastaFile::cFastaFile(const string &file_name, ios_base::openmode mode) 
-    : fstream(file_name.c_str(), mode)
+    : flexgzfstream(file_name.c_str(), mode)
     , m_file_name(file_name)
     , m_current_line()
     , m_current_line_num(0)

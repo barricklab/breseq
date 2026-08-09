@@ -389,27 +389,64 @@ namespace breseq {
     return ( magic[0] == static_cast<char>(0x1f) && magic[1] == static_cast<char>(0x8b));
   }
   
-  // handles file that may or may not be
-  class flexgzfstream {
+  // handles file that may or may not be gzipped
+  //
+  // This IS-A std::iostream (rather than merely owning one), so it is a drop-in
+  // replacement for std::fstream/std::ifstream at a call site: operator<< and
+  // operator>>, breseq::getline(), eof(), fail(), good() and close() all work on
+  // it directly. That matters for reference sequence files, where the same object
+  // is used both as a bare stream (e.g. cReferenceSequences::ReadGFF/WriteGFF)
+  // and through the helper methods of cFastaFile, which derives from this.
+  //
+  // Compression is detected from the file's magic bytes rather than the file name,
+  // so a gzipped input file is read transparently whatever it is called (NCBI, for
+  // example, serves references as '.gbff.gz' / '.fna.gz'). Output is never gzipped.
+  class flexgzfstream : public std::iostream {
   protected:
+    // Only one of these is ever attached as the stream buffer; the other stays
+    // closed. They are members (rather than a heap-allocated stream) so that
+    // their destructors run -- gzstreambuf::~gzstreambuf() calls close(), which
+    // is what flushes any buffered output and finishes the gzip stream.
+    gzstreambuf m_gzbuf;
+    std::filebuf m_filebuf;
+
+    // Always points at *this. Kept so that code written against the older
+    // pointer-holding version of this class still reads correctly (see cFastqFile).
     std::iostream* m_stream;
-    
+
   public:
-    flexgzfstream() : m_stream(NULL) {}
-    
+    flexgzfstream() : std::iostream(NULL), m_stream(this) {}
+
     flexgzfstream(const char * file_name, std::ios::openmode mode)
+      : std::iostream(NULL), m_stream(this)
     {
-      if ( (mode & ios::in) && file_is_gzipped(file_name)) {
-        m_stream = new iogzstream(file_name, mode);
-      } else {
-        m_stream = new std::fstream(file_name, mode);
-      }
-      ASSERT(m_stream && !m_stream->fail(), "Could not open file: " +  std::string(file_name));
+      open(file_name, mode);
     }
-    
-    std::iostream * get_stream() { return m_stream; }
-    
-    ~flexgzfstream() { if (m_stream) delete m_stream; }
+
+    void open(const char * file_name, std::ios::openmode mode)
+    {
+      bool use_gzip = (mode & ios::in) && file_is_gzipped(file_name);
+
+      // Note: basic_ios::rdbuf() calls clear(), so it must come before any
+      // setstate() reporting a failure to open.
+      if (use_gzip) {
+        rdbuf(&m_gzbuf);
+        if (!m_gzbuf.open(file_name, mode)) setstate(std::ios::badbit);
+      } else {
+        rdbuf(&m_filebuf);
+        if (!m_filebuf.open(file_name, mode)) setstate(std::ios::badbit);
+      }
+
+      ASSERT(!fail(), "Could not open file: " +  std::string(file_name));
+    }
+
+    void close()
+    {
+      if (m_gzbuf.is_open()) m_gzbuf.close();
+      if (m_filebuf.is_open()) m_filebuf.close();
+    }
+
+    std::iostream * get_stream() { return this; }
   };
  
   inline void copy_file(const string& in_fn, const string& out_fn)

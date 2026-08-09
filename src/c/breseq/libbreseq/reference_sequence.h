@@ -568,7 +568,7 @@ public:
         m_end_is_indeterminate = loc.stranded_end_is_indeterminate();
       }
     
-      void ReadGenBankTag(string& tag, string& s, ifstream& in);
+      void ReadGenBankTag(string& tag, string& s, istream& in);
     
       string get_nucleotide_sequence(const cAnnotatedSequence& seq) const;
     
@@ -781,7 +781,7 @@ public:
       }
     
       // Read GenBank coords
-      list<cLocation> ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in, bool safe_create_feature_locations);
+      list<cLocation> ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, istream& in, bool safe_create_feature_locations);
       //Parse portion of GenBank coords string
       list<cLocation> ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, bool safe_create_feature_locations, int8_t in_strand = 1);
     
@@ -893,10 +893,12 @@ public:
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names, const string& genbank_field_for_seq_id = "AUTOMATIC");
-    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name, const string& genbank_field_for_seq_id, string& out_header_terminator);
-    //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
-    void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s, string& out_terminator);
-    void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
+    // Takes std::istream (not std::ifstream) so that references can be read
+    // through flexgzfstream, i.e. transparently gzipped.
+    bool ReadGenBankFileHeader(std::istream& in, const string& file_name, const string& genbank_field_for_seq_id, string& out_header_terminator);
+    //void ReadGenBankTag(std::string& tag, std::string& s, std::istream& in);
+    void ReadGenBankFileSequenceFeatures(std::istream& in, cAnnotatedSequence& s, string& out_terminator);
+    void ReadGenBankFileSequence(std::istream& in, cAnnotatedSequence& s);
     
     //!< Write GenBank file
     void WriteGenBankFileHeader(std::ofstream& out, const cAnnotatedSequence& s);
