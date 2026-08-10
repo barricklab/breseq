@@ -792,8 +792,21 @@ namespace breseq {
         }
       }
 
-      // Final counts at the placed breakpoint.
-      pd_classify_pairs(covering, null, b, delta, supporting, against, ambiguous, distinct, category);
+      // Final counts at the placed breakpoint, over the WHOLE window -- as above, pd_classify_pairs
+      // applies the coverage test itself, so passing everything makes the denominator every molecule
+      // sampled across b.
+      //
+      // Not `covering`. That set is the pairs spanning the SEED's peak column, built for the shift
+      // estimate where coverage of one particular column is the point. Passing it here would filter
+      // twice, on peak_position and then on b, and count only the pairs that happen to span both.
+      // The loss is not even-handed: a supporting pair spans the event, so its gap is long and
+      // reaches both points easily, while an ordinary pair's gap is the library's own -- 30 bases on
+      // some of these libraries -- and almost never covers two separated columns at once. So the
+      // against count collapses toward zero and, since the reported frequency is
+      // supporting / (supporting + against), every call comes out looking clonal. It also disagreed
+      // with the evidence plot, which filters on b alone and therefore drew pairs the table did not
+      // count.
+      pd_classify_pairs(pairs, null, b, delta, supporting, against, ambiguous, distinct, category);
 
       pd_call c;
       c.seq_id = r.seq_id;
