@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	17:43:43 09 Aug 2026
+#=CREATED	14:04:12 10 Aug 2026
 #=PROGRAM	breseq 0.50.0 revision 0472aa213629
 #=COMMAND	./src/breseq/breseq -j 4 -o ./tests/long_ltee_ara_p1_50k_pe101 -r ./tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ltee_REL606/REL606.gbk --predict-discordant-pairs --predict-missing-pairs --predict-pair-distance --predict-soft-clipping ./tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_1.fastq.gz ./tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_2.fastq.gz
 #=REFSEQ	./tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ltee_REL606/REL606.gbk

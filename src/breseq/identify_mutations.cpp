@@ -898,6 +898,8 @@ identify_mutations_pileup::identify_mutations_pileup(
     // Matches the fallback in pd_evidence: a span no larger than the reads leaves nothing to bound.
     int32_t null_max_distance = (_pd_max_span > trunc) ? _pd_max_span : 0;
 
+    _pd_z_hist.assign(kPDzHistBins, 0);
+
     int usable_groups = 0;
     for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
       if (!rfs->is_paired()) continue;
@@ -2465,6 +2467,18 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
     double mean_offset = (static_cast<double>(_pd_u) - static_cast<double>(_pd_n) * static_cast<double>(kPDuScale) / 2.0)
                          / static_cast<double>(kPDuScale);
     z = mean_offset * sqrt(12.0 / static_cast<double>(_pd_n));
+
+    // Record it, so the spread of z over the whole genome can be measured and the threshold
+    // corrected for it once the pileup is done. See pd_z_inflation(). Every scored column counts,
+    // including the ones that go on to seed a region: real events are far too rare to move an
+    // interquartile range, and excluding them would be the circular step of using the threshold to
+    // decide what may inform the threshold.
+    if (_pd_n >= kPDzHistMinCovering) {
+      int bin = static_cast<int>(floor(z * kPDzHistPerUnit)) + kPDzHistLimit * kPDzHistPerUnit;
+      if (bin < 0) bin = 0;
+      if (bin >= kPDzHistBins) bin = kPDzHistBins - 1;
+      _pd_z_hist[bin]++;
+    }
   }
 
   for (int bin = 0; bin < kPDnBins; bin++) {
@@ -2521,8 +2535,62 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
  has its leftmost mate within one maximum span of it, so the rescan is guaranteed to re-derive the
  same set. A difference array has no membership list to write out in any case.
  */
+double identify_mutations_pileup::pd_z_inflation() const
+{
+  if (_pd_z_hist.empty()) return 1.0;
+
+  uint64_t total = 0;
+  for (size_t i = 0; i < _pd_z_hist.size(); i++) total += _pd_z_hist[i];
+  // Below this there is no useful quantile to read, and a whole-genome pileup is never this small
+  // unless PD was effectively inactive anyway.
+  if (total < 1000) return 1.0;
+
+  // Interquartile range, read off the histogram. Bin centres, so a half-bin offset either side.
+  uint64_t want_lo = total / 4, want_hi = (total * 3) / 4;
+  double q_lo = 0.0, q_hi = 0.0;
+  uint64_t run = 0;
+  bool have_lo = false, have_hi = false;
+  for (size_t i = 0; i < _pd_z_hist.size(); i++) {
+    run += _pd_z_hist[i];
+    double centre = (static_cast<double>(i) + 0.5) / kPDzHistPerUnit - kPDzHistLimit;
+    if (!have_lo && (run >= want_lo)) { q_lo = centre; have_lo = true; }
+    if (!have_hi && (run >= want_hi)) { q_hi = centre; have_hi = true; break; }
+  }
+  if (!have_lo || !have_hi) return 1.0;
+
+  // 1.34898 = the IQR of a standard normal, so this is the sd the null WOULD have if it were normal
+  // with this spread. Under the model the seed assumes, it is 1.
+  double sd = (q_hi - q_lo) / 1.34898038;
+  if (!(sd > 1.0)) return 1.0;
+  return sd;
+}
+
 void identify_mutations_pileup::write_pd_candidate_regions(const string& filename)
 {
+  // Deflate the seed z by how far it is actually dispersed, and drop what no longer clears the
+  // threshold. Doing it here rather than in the streaming test is what makes it measurable at all:
+  // the spread is a property of the whole genome and is not known until the pileup has finished.
+  //
+  // This can only ever REMOVE regions -- the factor is never below 1 -- so nothing the uncorrected
+  // test would have found is missed. The one approximation is that a region's extent is still the
+  // uncorrected one; a corrected region would sometimes be narrower, or split in two. Only
+  // peak_position is used downstream (it is where pd_evidence starts its rescan) and that is
+  // unaffected, since rescaling by a constant does not move which column has the largest |z|.
+  double inflation = pd_z_inflation();
+  if (inflation > 1.0) {
+    size_t before = _pd_candidate_regions.size();
+    vector<pd_candidate_region> kept;
+    kept.reserve(_pd_candidate_regions.size());
+    for (vector<pd_candidate_region>::const_iterator r = _pd_candidate_regions.begin(); r != _pd_candidate_regions.end(); r++) {
+      if (fabs(r->peak_z) / inflation >= _pd_z_seed) kept.push_back(*r);
+    }
+    _pd_candidate_regions.swap(kept);
+    cerr << "  PD seed z is dispersed " << std::fixed << std::setprecision(2) << inflation
+         << "x wider than the unit normal its threshold assumes; correcting for it leaves "
+         << _pd_candidate_regions.size() << " of " << before << " candidate regions." << endl;
+    cerr.unsetf(std::ios::fixed);
+  }
+
   // Sort by (seq_id, start, direction) so a nearby deletion and insertion appear adjacent.
   sort(_pd_candidate_regions.begin(), _pd_candidate_regions.end(),
        [](const pd_candidate_region& a, const pd_candidate_region& b) {

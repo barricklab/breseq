@@ -318,6 +318,16 @@ namespace breseq {
     //! Fixed-point scale for the accumulated distance quantiles. Integer accumulation keeps the
     //! running sum exactly reproducible across platforms, which the test suite depends on.
     static const int64_t kPDuScale = 1048576;  // 1 << 20
+
+    //! Histogram of the per-column seed z, used to measure how far the seed statistic is actually
+    //! dispersed relative to the unit normal its threshold assumes. See pd_z_inflation().
+    //! Covers [-kPDzHistLimit, +kPDzHistLimit] in steps of 1/kPDzHistPerUnit; anything outside is
+    //! clamped into the end bins, which is harmless because only the central quartiles are read.
+    static const int   kPDzHistPerUnit = 50;
+    static const int   kPDzHistLimit   = 40;
+    static const int   kPDzHistBins    = 2 * kPDzHistLimit * kPDzHistPerUnit + 1;
+    //! Columns shallower than this contribute a z too lumpy to be worth binning.
+    static const int32_t kPDzHistMinCovering = 4;
     //! A completed PD candidate region: one run of columns seeding in a single shift direction.
     struct pd_candidate_region {
       string   seq_id;
@@ -386,6 +396,23 @@ namespace breseq {
 
     //! Write the accumulated PD candidate regions to a CSV (one operation, after the pileup).
     void write_pd_candidate_regions(const string& filename);
+
+    //! How much wider the seed z actually runs than the unit normal its threshold assumes.
+    //
+    //  The seed treats the pairs covering a column as independent draws from a genome-wide null, so
+    //  the mean of their quantiles has sd sqrt(1/12/n) and z is standard normal. Neither half holds
+    //  exactly: the local distance distribution drifts along the genome (size selection interacting
+    //  with GC, mappability, coverage structure), and every pair covering a column shares that drift.
+    //  The wider the library the more pairs share it, and since z grows as sqrt(n) while the drift
+    //  does not shrink, z inflates. Measured on real data: 1.2x on a 232 bp library, 3.3x on a
+    //  2837 bp mate-pair library, where it turns a nominal 4.5 sigma into about 1.4.
+    //
+    //  Estimated from the interquartile range of z over every scored column, which is the standard
+    //  variance-inflation (quasi-likelihood) correction. The IQR is used rather than the sd because
+    //  real events live in the tails and must not inflate the estimate of the null's own spread.
+    //  Returns 1.0 when there is too little data to measure, and never returns less than 1.0 -- an
+    //  under-dispersed statistic is not evidence that the threshold should be relaxed.
+    double pd_z_inflation() const;
 
 
 	protected:
@@ -537,6 +564,7 @@ namespace breseq {
 		int32_t _pd_region_peak_tail[kPDnBins];             //!< tail pairs at that column
 		double _pd_region_peak_z[kPDnBins];                 //!< signed z at that column
 		vector<pd_candidate_region> _pd_candidate_regions;  //!< all completed regions (written once after the pileup)
+		vector<uint64_t> _pd_z_hist;                        //!< seed z over every scored column, for pd_z_inflation()
 	};
 
   
