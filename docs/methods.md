@@ -644,6 +644,31 @@ Missing coverage typically indicates a large deletion event. When a
 junction also exists that precisely joins compatible endpoints,
 _breseq_ predicts a deletion (DEL) mutation.
 
+*MC evidence = DEL mutation, between homologous copies*
+
+A deletion that occurred between two near-identical copies of a sequence
+leaves no junction at all: a read crossing the breakpoint aligns just as
+well to either copy, so there is nothing to split. When the two copies
+are an annotated `repeat_region` (an IS element, say), the annotation is
+enough to place the deletion. When they are not — paralogous genes, an
+rRNA operon, any unannotated repeat — _breseq_ works the deletion out
+from the reads instead.
+
+What survives such a deletion is a single hybrid copy: the left copy up
+to the crossover point, the right copy after it. The offset that aligns
+the two copies is also the size of the deletion, and it is recovered
+from the reference sequence, seeded by the boundaries of the missing
+coverage. The crossover is then located at the columns where the two
+copies actually differ: on each of them, coverage has moved from one
+copy to the other, and the position where that flips is the breakpoint.
+Reads that tie between the two copies are counted here even though base
+calling discards them, since which copy a read came from is exactly the
+question being asked.
+
+This is reported like any other large deletion, with a `between=` field
+naming the two homologous features. Use
+`--skip-homologous-DEL-prediction` to turn it off.
+
 ## Mobile element insertions
 
 *JC+JC evidence = MOB mutation*

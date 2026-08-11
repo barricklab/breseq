@@ -47,9 +47,11 @@ namespace breseq {
 
     // Functions that handle specific predictions
     void predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
-    //! Deletions whose ends fall in homologous sequence, where no split-read junction can exist and
-    //! the discordant read pairs are the only evidence that spans the breakpoint.
-    void predictMCplusDPtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& dp, diff_entry_list_t& mc, diff_entry_list_t& ra);
+    //! Deletions between two near-identical copies of an UNANNOTATED repeat, where no split-read
+    //! junction can exist. Reads data/reference.bam directly, including the redundantly placed reads
+    //! that base calling discards, and falls back to RA evidence when there is no BAM. A discordant
+    //! pair is used when one is present, but only to seed the search and as extra evidence.
+    void predictMCtoDELbyHomology(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& mc, diff_entry_list_t& dp, diff_entry_list_t& ra);
     void predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
     void predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc, bool use_redundant_sides = false);
     void predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& ra, diff_entry_list_t& mc );

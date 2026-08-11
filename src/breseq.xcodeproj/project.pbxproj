@@ -57,6 +57,7 @@
 		70C6B3A524A4140A00AFCC94 /* ctpl_stl.h in Headers */ = {isa = PBXBuildFile; fileRef = 70C6B3A424A4140A00AFCC94 /* ctpl_stl.h */; };
 		70D64E932ACE3DA600BB9EF1 /* soft_clipping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D64E922ACE3DA600BB9EF1 /* soft_clipping.cpp */; };
 		70D64EA12ACE3DA600BB9EF1 /* dp_evidence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D64EA02ACE3DA600BB9EF1 /* dp_evidence.cpp */; };
+		70D64F012ACE3DA600BB9EF1 /* homologous_deletion.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D64F012ACE3DA600BB9EF2 /* homologous_deletion.cpp */; };
 		70D64EB12ACE3DA600BB9EF1 /* mp_evidence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D64EB02ACE3DA600BB9EF1 /* mp_evidence.cpp */; };
 		70D64EC12ACE3DA600BB9EF1 /* pd_evidence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D64EC02ACE3DA600BB9EF1 /* pd_evidence.cpp */; };
 		70D64EC12ACE3DA600BB9EF1 /* portable_random.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D64EC02ACE3DA600BB9EF1 /* portable_random.cpp */; };
@@ -180,10 +181,12 @@
 		70D64E922ACE3DA600BB9EF1 /* soft_clipping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = soft_clipping.cpp; path = breseq/soft_clipping.cpp; sourceTree = SOURCE_ROOT; };
 		70D64E942ACE3DBF00BB9EF1 /* soft_clipping.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = soft_clipping.h; sourceTree = "<group>"; };
 		70D64EA02ACE3DA600BB9EF1 /* dp_evidence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = dp_evidence.cpp; path = breseq/dp_evidence.cpp; sourceTree = SOURCE_ROOT; };
+		70D64F012ACE3DA600BB9EF2 /* homologous_deletion.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = homologous_deletion.cpp; path = breseq/homologous_deletion.cpp; sourceTree = SOURCE_ROOT; };
 		70D64EB02ACE3DA600BB9EF1 /* mp_evidence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mp_evidence.cpp; path = breseq/mp_evidence.cpp; sourceTree = SOURCE_ROOT; };
 		70D64EC02ACE3DA600BB9EF1 /* pd_evidence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pd_evidence.cpp; path = breseq/pd_evidence.cpp; sourceTree = SOURCE_ROOT; };
 		70D64EC02ACE3DA600BB9EF1 /* portable_random.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = portable_random.cpp; path = breseq/portable_random.cpp; sourceTree = SOURCE_ROOT; };
 		70D64EA22ACE3DA600BB9EF1 /* dp_evidence.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dp_evidence.h; sourceTree = "<group>"; };
+		70D64F012ACE3DA600BB9EF3 /* homologous_deletion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = homologous_deletion.h; sourceTree = "<group>"; };
 		70D64EB22ACE3DA600BB9EF1 /* mp_evidence.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mp_evidence.h; sourceTree = "<group>"; };
 		70D64EC22ACE3DA600BB9EF1 /* pd_evidence.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pd_evidence.h; sourceTree = "<group>"; };
 		70D64EC22ACE3DA600BB9EF1 /* portable_random.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = portable_random.h; sourceTree = "<group>"; };
@@ -275,6 +278,7 @@
 				70B9320E1394008200885753 /* settings.cpp */,
 				70D64E922ACE3DA600BB9EF1 /* soft_clipping.cpp */,
 				70D64EA02ACE3DA600BB9EF1 /* dp_evidence.cpp */,
+				70D64F012ACE3DA600BB9EF2 /* homologous_deletion.cpp */,
 				70D64EB02ACE3DA600BB9EF1 /* mp_evidence.cpp */,
 				70D64EC02ACE3DA600BB9EF1 /* pd_evidence.cpp */,
 				70D64EC02ACE3DA600BB9EF1 /* portable_random.cpp */,
@@ -339,6 +343,7 @@
 				70CB7224140FEB6400D578EB /* settings.h */,
 				70D64E942ACE3DBF00BB9EF1 /* soft_clipping.h */,
 				70D64EA22ACE3DA600BB9EF1 /* dp_evidence.h */,
+				70D64F012ACE3DA600BB9EF3 /* homologous_deletion.h */,
 				70D64EB22ACE3DA600BB9EF1 /* mp_evidence.h */,
 				70D64EC22ACE3DA600BB9EF1 /* pd_evidence.h */,
 				70D64EC22ACE3DA600BB9EF1 /* portable_random.h */,
@@ -521,6 +526,7 @@
 				70160F15202BF3DD004FDA46 /* genome_diff_entry.cpp in Sources */,
 				70D64E932ACE3DA600BB9EF1 /* soft_clipping.cpp in Sources */,
 				70D64EA12ACE3DA600BB9EF1 /* dp_evidence.cpp in Sources */,
+				70D64F012ACE3DA600BB9EF1 /* homologous_deletion.cpp in Sources */,
 				70D64EB12ACE3DA600BB9EF1 /* mp_evidence.cpp in Sources */,
 				70D64EC12ACE3DA600BB9EF1 /* pd_evidence.cpp in Sources */,
 				70D64EC12ACE3DA600BB9EF1 /* portable_random.cpp in Sources */,
