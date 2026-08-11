@@ -72,6 +72,9 @@ const char* MC_SIDE_2="mc_side_2";
 const char* NO_SHOW="no_show";
 const char* PLOT="plot";
 const char* PLOT_MESSAGE="plot_message";
+const char* PLOT_2="plot_2";
+const char* PLOT_CAPTION="plot_caption";
+const char* PLOT_2_CAPTION="plot_2_caption";
 const char* PREFIX="prefix";
 const char* TRUNCATE_END="truncate_end";
 const char* TRUNCATE_START="truncate_start";
@@ -1325,6 +1328,9 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "<tr>" << th() <<
                     th() <<
                     th() <<
+                    // The extra plot-link column only exists under --predict-copy-number, so that
+                    // every other run's summary.html is unchanged.
+                    (settings.predict_copy_number ? th() : "") <<
                     th("seq id") <<
                     th("length") <<
                     th(ALIGN_CENTER, "fit mean") <<
@@ -1408,10 +1414,25 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       //else {
       //  HTML << td("");
       //}
+
+      // CNery's bias-corrected coverage across this whole reference sequence, with its HMM copy
+      // number calls. Missing if CNery produced no usable output for this sequence.
+      if (settings.predict_copy_number) {
+        string cn_plot = settings.file_name(settings.cn_overview_coverage_plot_file_name, "@", it->m_seq_id);
+        if (file_exists(cn_plot.c_str())) {
+          string cn_basename = cString(cn_plot).get_base_name();
+          string cn_href = settings.zip_html
+            ? settings.local_html_evidence_file_name + "#" + cn_basename
+            : Settings::relative_path(cn_plot, settings.output_path);
+          HTML << td( a(cn_href, nonbreaking("copy number")) );
+        } else {
+          HTML << td("");
+        }
+      }
     }
     // Junction-Only reference sequence
     else {
-      HTML << td("colspan=\"3\" align=\"center\"", nonbreaking("junction-only"));
+      HTML << td(string("colspan=\"") + (settings.predict_copy_number ? "4" : "3") + "\" align=\"center\"", nonbreaking("junction-only"));
     }
         
     HTML << td(it->m_seq_id);
@@ -5181,19 +5202,26 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
   for (diff_entry_list_t::iterator itr = items_CN.begin(); itr != items_CN.end(); itr ++)
   {
     diff_entry_ptr_t item = *itr;
-    
-    add_evidence(_EVIDENCE_FILE_NAME,
-                 item,
-                 item,
-                 make_map<string,string>
+
+    diff_entry_map_t cn_fields = make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
                  (PREFIX, "CN_PLOT")
                  (SEQ_ID, (*item)[SEQ_ID])
                  (START, (*item)[START])
                  (END,  (*item)[END])
-                 (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
-    
+                 (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME]); // filled by draw_coverage
+
+    // The corrected coverage CNery actually called this region from, over the same interval as the
+    // raw plot above it (stamped by CNEvidence::draw_evidence_plots). Absent when CNery's per-window
+    // output was not available, in which case the page keeps just the raw plot and no captions.
+    if (item->entry_exists("_cn_corrected_plot_file_name")) {
+      cn_fields[PLOT_2] = (*item)["_cn_corrected_plot_file_name"];
+      cn_fields[PLOT_CAPTION] = "Read coverage depth";
+      cn_fields[PLOT_2_CAPTION] = "Copy number from CNery bias-corrected coverage";
+    }
+
+    add_evidence(_EVIDENCE_FILE_NAME, item, item, cn_fields);
   }
   
   
@@ -5402,12 +5430,24 @@ cOutputEvidenceFiles::html_evidence_file (
     HTML << "<p>";
   }
 
-  if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
-    if (file_exists( (settings.evidence_path + "/" + item[PLOT]).c_str() )) {
-      HTML << div(ALIGN_LEFT, img("style=\"width:100%;max-width:1200px;height:auto;\"", item[PLOT]));
+  // Emits one plot image, optionally captioned. A caption is only worth printing when the page
+  // carries more than one image and the reader has to tell them apart.
+  auto emit_plot = [&](const char* plot_key, const char* caption_key) {
+    if (item.entry_exists(caption_key) && !item[caption_key].empty())
+      HTML << "<p>" << b(item[caption_key]) << endl;
+    if (file_exists( (settings.evidence_path + "/" + item[plot_key]).c_str() )) {
+      HTML << div(ALIGN_LEFT, img("style=\"width:100%;max-width:1200px;height:auto;\"", item[plot_key]));
     } else {
       HTML << div(ALIGN_LEFT, "Failed to generate coverage plot.");
     }
+  };
+
+  if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
+    emit_plot(PLOT, PLOT_CAPTION);
+    // A second plot only ever accompanies a first one, so it hangs off this branch rather than
+    // getting a fallback of its own.
+    if (item.entry_exists(PLOT_2) && !item[PLOT_2].empty())
+      emit_plot(PLOT_2, PLOT_2_CAPTION);
   } else if ( item.entry_exists(BAM_PATH) && item.entry_exists(FASTA_PATH)
               && file_exists(item[BAM_PATH].c_str()) && file_exists(item[FASTA_PATH].c_str()) ) {
     stringstream ss;

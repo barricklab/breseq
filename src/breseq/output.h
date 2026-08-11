@@ -67,6 +67,11 @@ extern const char* MC_SIDE_2;
 extern const char* NO_SHOW;
 extern const char* PLOT;
 extern const char* PLOT_MESSAGE;
+// An evidence page shows PLOT and then, when set, a second image below it (PLOT_2). The captions
+// are optional and only worth setting when there are two images to tell apart.
+extern const char* PLOT_2;
+extern const char* PLOT_CAPTION;
+extern const char* PLOT_2_CAPTION;
 extern const char* PREFIX;
 extern const char* TRUNCATE_END;
 extern const char* TRUNCATE_START;

@@ -2741,6 +2741,13 @@ int breseq_default_action(int argc, char* argv[])
         breseq::draw_pair_distance_evidence_plots(settings, summary, ref_seq_info, gd);
     }
 
+    // CNery's bias-corrected coverage: a per-reference overview, plus a per-CN-item plot whose
+    // filename is stamped on the entry as _cn_corrected_plot_file_name -- so, like the three above,
+    // this has to run before cOutputEvidenceFiles. Not gated on no_evidence_html: it draws the
+    // overviews either way and skips only the per-item plots, matching draw_coverage.
+    if (settings.predict_copy_number)
+      CNEvidence::draw_evidence_plots(settings, ref_seq_info, gd);
+
     // !!! Currently, we need to wait for the creation of coverage plots to finish
     // b/c we check whether files exist in creating the HTML files next.
     Settings::sync_threads();

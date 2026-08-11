@@ -1580,7 +1580,16 @@ namespace breseq
     if (this->base_output_path.size() > 0) this->copy_number_variation_path = this->base_output_path + "/" + this->copy_number_variation_path;
     this->copy_number_variation_done_file_name = this->copy_number_variation_path + "/copy_number_variation.done";
     this->copy_number_evidence_genome_diff_file_name = this->copy_number_variation_path + "/@.cn_evidence.gd";
-    
+    this->cnery_output_path = this->copy_number_variation_path + "/cnery_out";
+    // CNery names every file it writes <basename of its -o argument><seq_id>_<what>, with no
+    // separator anywhere, so its output prefix is the basename of the directory we hand it.
+    {
+      const string cnery_file_prefix = path_to_filename(this->cnery_output_path) + "@";
+      this->cnery_cnv_csv_file_name = this->cnery_output_path + "/CNV_csv/" + cnery_file_prefix + "_CNV.csv";
+      this->cnery_break_points_file_name = this->cnery_output_path + "/CNV_csv/" + cnery_file_prefix + "_break_pts.csv";
+      this->cnery_otr_results_file_name = this->cnery_output_path + "/OTR_corr/" + cnery_file_prefix + "_otr_results.json";
+    }
+
     //! Paths: Output
 		this->output_path = "output";
 		if (this->base_output_path.size() > 0) this->output_path = this->base_output_path + "/" + this->output_path;
@@ -1606,6 +1615,7 @@ namespace breseq
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
 		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.svg";
+		this->cn_overview_coverage_plot_file_name = this->coverage_plot_path + "/@.cn_overview.svg";
 
 		this->output_calibration_path = this->evidence_path;
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.svg";

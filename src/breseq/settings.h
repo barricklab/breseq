@@ -683,7 +683,15 @@ namespace breseq
     string copy_number_variation_path;
     string copy_number_variation_done_file_name;
     string copy_number_evidence_genome_diff_file_name;
-    
+    // Where CNery is told to write its output, and the two per-reference CSVs it produces there.
+    // CNery derives the prefix it stamps on every output file from the LAST PATH COMPONENT of its
+    // -o argument, so the basename of cnery_output_path is baked into the two file names below.
+    string cnery_output_path;
+    string cnery_cnv_csv_file_name;
+    string cnery_break_points_file_name;
+    // Where CNery records the origin/terminus of replication it inferred for the OTR correction.
+    string cnery_otr_results_file_name;
+
     string periodicity_table_file_name;
     string periodicity_done_file_name;
     
@@ -712,7 +720,10 @@ namespace breseq
 		string local_coverage_plot_path;
 		string coverage_plot_path;
 		string overview_coverage_plot_file_name;
-    
+		// Whole-reference plot of CNery's bias-corrected coverage and its HMM copy-number calls
+		// (@ = seq_id). Only written under --predict-copy-number.
+		string cn_overview_coverage_plot_file_name;
+
 		string output_calibration_path;
 		string unique_only_coverage_plot_file_name;
 		string concordant_pair_crossing_plot_file_name;       // single run-wide reference plot (no token)
