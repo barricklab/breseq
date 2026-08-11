@@ -5196,12 +5196,21 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
     }
   }
 
-  // Copy number evidence
-  diff_entry_list_t items_CN = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
-  
+  // Copy number evidence. Every CN item gets a page, including the ones a mutation rests on -- the
+  // same as MC above. This used to filter those out, which was invisible only because nothing ever
+  // cited CN as evidence; once an AMP does, filtering left its CN chip in the mutation table as bare
+  // text with no page to link to.
+  diff_entry_list_t items_CN = gd.show_list(make_vector<gd_entry_type>(CN));
+
   for (diff_entry_list_t::iterator itr = items_CN.begin(); itr != items_CN.end(); itr ++)
   {
     diff_entry_ptr_t item = *itr;
+
+    // Point the page at the mutation this CN supports, when there is one, so it opens in the same
+    // context the other evidence types do.
+    diff_entry_ptr_t parent_item;
+    diff_entry_list_t parents = gd.using_evidence_list(*item);
+    parent_item = (parents.size() > 0) ? parents.front() : item;
 
     diff_entry_map_t cn_fields = make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
@@ -5221,7 +5230,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
       cn_fields[PLOT_2_CAPTION] = "Copy number from CNery bias-corrected coverage";
     }
 
-    add_evidence(_EVIDENCE_FILE_NAME, item, item, cn_fields);
+    add_evidence(_EVIDENCE_FILE_NAME, item, parent_item, cn_fields);
   }
   
   
@@ -5416,7 +5425,9 @@ cOutputEvidenceFiles::html_evidence_file (
   
   diff_entry_list_t evidence_list = gd.in_evidence_list(*parent_item);
 
-  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC)(DP)(PD)(MP);
+  // CN belongs here now that a mutation can rest on it: without it, a CN evidence page opened in the
+  // context of the AMP it supports would show the mutation and no copy number table at all.
+  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC)(DP)(PD)(MP)(CN);
   
   for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
   {

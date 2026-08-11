@@ -48,6 +48,7 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     ${REFERENCE_ARG} \
+    --predict-copy-number \
     --predict-discordant-pairs \
     --predict-missing-pairs \
     --predict-pair-distance \

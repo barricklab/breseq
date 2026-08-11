@@ -2869,6 +2869,10 @@ namespace breseq {
     mc.remove_if(cDiffEntry::ignored_and_not_user_defined());
     mc.remove_if(cDiffEntry::rejected_and_not_user_defined());
 
+    // Copy number evidence, present only under --predict-copy-number. Everything that consumes it
+    // below is skipped when this is empty, so a run without the option is completely unaffected.
+    diff_entry_list_t cn = gd.get_list(make_vector<gd_entry_type>(CN));
+
     ///
     // evidence JC + JC = MOB mutation
     ///
@@ -2897,6 +2901,19 @@ namespace breseq {
       diff_entry_list_t dp = gd.get_list(make_vector<gd_entry_type>(DP));
       diff_entry_list_t ra_for_crossover = gd.get_list(make_vector<gd_entry_type>(RA));
       predictMCtoDELbyHomology(settings, summary, gd, mc, dp, ra_for_crossover);
+    }
+
+    ///
+    // evidence JC + CN, and CN + repeat => AMP mutations
+    ///
+    //
+    // Deliberately ahead of the polymorphism filter below: an amplification is usually still growing
+    // in the population, so its junction is exactly the sub-consensus kind that filter removes -- as
+    // its own comment says. Both are no-ops without CN evidence.
+    if (!cn.empty()) {
+      cerr << "  Predicting amplifications from junctions and copy number..." << endl;
+      predictJCplusCNtoAMP(settings, summary, gd, jc, cn);
+      predictCNplusRepeatToAMP(settings, summary, gd, jc, cn);
     }
 
 		///
@@ -3202,6 +3219,462 @@ namespace breseq {
   // hundreds of bases, and by construction never past it. One paired-mapping distance is the natural
   // scale of that error, and two distinct events closer together than that are not separable by pair
   // evidence in any case.
+  // The CN entry whose span covers most of [start, end], or NULL. CN boundaries are tiled, so an
+  // interval derived from base-resolution evidence never lines up with them exactly; requiring the
+  // majority of the interval to be inside is the useful test rather than containment.
+  static cDiffEntry* cn_covering(diff_entry_list_t& cn, const string& seq_id, int32_t start, int32_t end)
+  {
+    cDiffEntry* best = NULL;
+    int32_t best_overlap = 0;
+    int32_t length = end - start + 1;
+    if (length <= 0) return NULL;
+
+    for (diff_entry_list_t::iterator it = cn.begin(); it != cn.end(); it++) {
+      cDiffEntry& c = **it;
+      if (c[SEQ_ID] != seq_id) continue;
+      int32_t overlap = min(end, from_string<int32_t>(c[END]))
+                      - max(start, from_string<int32_t>(c[START])) + 1;
+      if (overlap <= 0) continue;
+      if (2 * overlap < length) continue;
+      if (overlap > best_overlap) { best_overlap = overlap; best = &c; }
+    }
+    return best;
+  }
+
+  // Build the MOB implied by a single IS junction, with the target-site duplication left undetermined.
+  //
+  // One junction fixes where the element landed and which way round it is, but the duplication size
+  // needs the junction on the OTHER side of the element to measure against -- and at an amplification
+  // boundary that junction lies inside a copy of the element, so it is redundant and gets discarded
+  // before prediction. Same situation predictMCplusJCtoDEL's two-junction IS case is in, and the same
+  // answer: emit duplication_size 0 flagged indeterminate rather than invent a number.
+  //
+  // Returns false if the junction was never annotated with an IS interval.
+  static bool mob_from_single_IS_junction(cDiffEntry& j, bool polymorphism_prediction, cDiffEntry& mob)
+  {
+    if (!j.entry_exists("_is_interval")) return false;
+
+    const string& is_side     = j["_is_interval"];
+    const string& unique_side = j["_unique_interval"];
+
+    int32_t is_strand = -( n(j[is_side + "_strand"])
+                         * n(j["_" + is_side + "_is_strand"])
+                         * n(j[unique_side + "_strand"]) );
+
+    mob._type = MOB;
+    mob._evidence.push_back(j._id);
+    mob
+      (SEQ_ID,                           j[unique_side + "_seq_id"])
+      (REPEAT_NAME,                      j["_" + is_side + "_is_name"])
+      (STRAND,                           to_string<int32_t>(is_strand))
+      ("duplication_size",               "0")
+      ("indeterminate_duplication_size", "1")
+      (POSITION,                         j[unique_side + "_position"]);
+
+    if (polymorphism_prediction) mob[FREQUENCY] = "1";
+    return true;
+  }
+
+  // Nearest annotated copy of one repeat family to `position`. direction -1 wants a copy lying at or
+  // before it, +1 at or after; a position inside a copy counts as distance zero. Filtering by family
+  // is the point: the closest element to a boundary is often not the family the junction names (at
+  // one real boundary an IS150 sits 423 bp away and the IS186 actually involved 2104 bp away).
+  static cFeatureLocation* closest_repeat_of_family(cAnnotatedSequence& seq, const string& family,
+                                                    int32_t position, int32_t direction, int32_t slop)
+  {
+    cFeatureLocation* best = NULL;
+    int32_t best_d = slop + 1;
+    for (cFeatureLocationList::iterator it = seq.m_repeat_locations.begin(); it != seq.m_repeat_locations.end(); it++) {
+      cFeatureLocation& r = *it;
+      if ((*r.get_feature())["name"] != family) continue;
+
+      int32_t d;
+      if ((r.get_start_1() <= position) && (position <= r.get_end_1())) {
+        d = 0;
+      } else {
+        int32_t edge = (direction < 0) ? r.get_end_1() : r.get_start_1();
+        if ((direction < 0) && (edge > position)) continue;
+        if ((direction > 0) && (edge < position)) continue;
+        d = abs(edge - position);
+      }
+      if (d < best_d) { best_d = d; best = &r; }
+    }
+    return best;
+  }
+
+  static bool mc_fragment_start_lt(const cDiffEntry* a, const cDiffEntry* b)
+  {
+    return from_string<int32_t>((*const_cast<cDiffEntry*>(a))[START])
+         < from_string<int32_t>((*const_cast<cDiffEntry*>(b))[START]);
+  }
+
+  void MutationPredictor::predictJCplusCNtoAMP(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                               diff_entry_list_t& jc, diff_entry_list_t& cn)
+  {
+    (void)settings; (void)summary;
+    if (cn.empty()) return;
+
+    for (diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); ) {
+      cDiffEntry& j = **jc_it;
+
+      // Same geometry predictJCtoINSorSUBorDEL derives, kept deliberately identical so the two agree
+      // on what "points back upstream" means.
+      if (j["side_1_seq_id"] != j["side_2_seq_id"]) { jc_it++; continue; }
+      if ((n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1)) { jc_it++; continue; }
+
+      int32_t side_1_strand = n(j["side_1_strand"]);
+      int32_t side_2_strand = n(j["side_2_strand"]);
+      if (side_1_strand == side_2_strand) { jc_it++; continue; }
+
+      string seq_id = j["side_1_seq_id"];
+      int32_t side_1_position = n(j["side_1_position"]);
+      int32_t side_2_position = n(j["side_2_position"]);
+
+      if (side_2_position < side_1_position) {
+        swap(side_1_position, side_2_position);
+        swap(side_1_strand, side_2_strand);
+      }
+      // Lower side on the minus strand is a deletion, not a duplication.
+      if (side_1_strand == -1) { jc_it++; continue; }
+
+      int32_t size = side_2_position - side_1_position + 1;
+
+      // Below the cutoff this is predictJCtoINSorSUBorDEL's INS to make, not ours. Taking only the
+      // junctions it drops is what keeps that path's output unchanged.
+      if (size <= kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) { jc_it++; continue; }
+
+      cDiffEntry* cn_item = cn_covering(cn, seq_id, side_1_position, side_2_position);
+      if (cn_item == NULL) { jc_it++; continue; }
+      int32_t copies = from_string<int32_t>((*cn_item)[COPY_NUMBER]);
+      if (copies < 2) { jc_it++; continue; }
+
+      // Right-shift to the highest coordinates that describe the same duplication, which is what
+      // gdtools NORMALIZE enforces so that two runs reporting one event compare equal. A tandem block
+      // [p, p+size-1] is indistinguishable from [p+1, p+size] exactly when ref[p] == ref[p+size], so
+      // walk while that holds. Junction coordinates are not normalized to begin with: on the LTEE
+      // rnk-citT amplification this moves 625889 to 625890, which is both where NORMALIZE lands it
+      // and what the curated genome diff records.
+      //
+      // Capped at one full period -- a perfectly repeating block would otherwise walk a whole unit
+      // and describe the same duplication all over again.
+      int32_t position = side_1_position;
+      int32_t seq_length = static_cast<int32_t>(ref_seq_info[seq_id].m_length);
+      for (int32_t moved = 0; moved < size; moved++) {
+        if (position + size > seq_length) break;
+        if (ref_seq_info.get_sequence_1(seq_id, position, position)
+            != ref_seq_info.get_sequence_1(seq_id, position + size, position + size)) break;
+        position++;
+      }
+
+      cDiffEntry mut(AMP);
+      mut._evidence = make_vector<string>(j._id)(cn_item->_id);
+      mut[SEQ_ID] = seq_id;
+      mut[POSITION] = to_string<int32_t>(position);
+      mut[SIZE] = to_string<int32_t>(size);
+      mut[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
+      gd.add(mut);
+
+      jc_it = jc.erase(jc_it);
+    }
+  }
+
+  void MutationPredictor::predictCNplusRepeatToAMP(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                                   diff_entry_list_t& jc, diff_entry_list_t& cn)
+  {
+    (void)settings; (void)summary;
+    if (cn.empty()) return;
+
+    // How far from a CN boundary the pre-existing copy may sit. The HMM only resolves to its tile
+    // size and the amplified unit does not have to end exactly on the element, so this is loose:
+    // measured distances on real events are 223, 423 and 2104 bp.
+    const int32_t kRepeatBoundarySlop = 3000;
+    // How far a MOB or junction may sit from a CN boundary and still be that boundary. The anchor
+    // itself is base-resolution; what is loose is the CN edge, which the HMM only places to within a
+    // few of its tiles. Measured on real events: 26, 73, 755 and 1195 bp. The family match and the
+    // requirement that the partner side lie in a repeat are what actually keep this specific.
+    const int32_t kAnchorSlop = 2000;
+
+    diff_entry_list_t mob_list = gd.get_list(make_vector<gd_entry_type>(MOB));
+
+    for (diff_entry_list_t::iterator ci = cn.begin(); ci != cn.end(); ci++) {
+      cDiffEntry& c = **ci;
+      int32_t copies = from_string<int32_t>(c[COPY_NUMBER]);
+      if (copies < 2) continue;
+
+      const string& seq_id = c[SEQ_ID];
+      int32_t cn_start = from_string<int32_t>(c[START]);
+      int32_t cn_end   = from_string<int32_t>(c[END]);
+
+      if (ref_seq_info.seq_id_to_index(seq_id) >= ref_seq_info.size()) continue;
+      cAnnotatedSequence& seq = ref_seq_info[seq_id];
+
+      // Try each end as the NEW copy in turn; the other end then has to carry the annotated one.
+      for (int end_choice = 0; end_choice < 2; end_choice++) {
+        int32_t annotated_at = (end_choice == 0) ? cn_end : cn_start;
+        int32_t anchor_at    = (end_choice == 0) ? cn_start : cn_end;
+
+        // The new copy is not in the reference, so only a MOB or a junction reports it -- and it is
+        // that anchor, not the nearest annotation, which says WHICH family recombined.
+        bool mob_anchor = false;
+        int32_t anchor_position = 0;
+        string anchor_id, family;
+        cDiffEntry* anchor_jc = NULL;
+        diff_entry_ptr_t anchor_mob_ptr;
+
+        for (diff_entry_list_t::iterator mi = mob_list.begin(); mi != mob_list.end(); mi++) {
+          cDiffEntry& m = **mi;
+          if (m[SEQ_ID] != seq_id) continue;
+          int32_t p = from_string<int32_t>(m[POSITION]);
+          if (abs(p - anchor_at) > kAnchorSlop) continue;
+          mob_anchor = true; anchor_position = p; anchor_id = m._id; family = m[REPEAT_NAME];
+          anchor_mob_ptr = *mi;
+          break;
+        }
+
+        if (!mob_anchor) {
+          for (diff_entry_list_t::iterator ji = jc.begin(); ji != jc.end(); ji++) {
+            cDiffEntry& j = **ji;
+            for (int side = 1; side <= 2; side++) {
+              string me    = "side_" + to_string(side) + "_";
+              string other = "side_" + to_string(3 - side) + "_";
+              if (j[me + "seq_id"] != seq_id) continue;
+              int32_t p = n(j[me + "position"]);
+              if (abs(p - anchor_at) > kAnchorSlop) continue;
+              // The partner side has to sit in a repeat family -- that is the evidence a new copy of
+              // one landed here. Read it from the _side_N_is_* fields prepare_junctions computes, NOT
+              // from side_N_gene_name: gene names are filled in by annotate_mutations, which runs
+              // after prediction, so at this point they are empty.
+              if (!j.entry_exists("_" + other + "is")) continue;
+              if (j["_" + other + "is_name"].empty()) continue;
+              anchor_position = p; anchor_id = j._id; family = j["_" + other + "is_name"];
+              anchor_jc = &j;
+              break;
+            }
+            if (!anchor_id.empty()) break;
+          }
+        }
+        if (anchor_id.empty() || family.empty()) continue;
+
+        // The other end. Usually a pre-existing copy of the same family, annotated in the reference.
+        cFeatureLocation* rep = closest_repeat_of_family(seq, family, annotated_at,
+                                                         (end_choice == 0) ? -1 : 1,
+                                                         kRepeatBoundarySlop);
+
+        // ...but both ends can be NEW copies, when a transposition dropped one element and the
+        // amplification then recombined it against a second new copy. Nothing in the reference marks
+        // either end, so the far end has to be anchored the same way this one was.
+        cDiffEntry far_mob;
+        bool far_mob_is_new = false;
+        int32_t far_position = 0;
+        string far_id;
+        diff_entry_ptr_t far_mob_ptr;
+        cDiffEntry* far_jc = NULL;
+
+        if (rep == NULL) {
+          for (diff_entry_list_t::iterator mi = mob_list.begin(); mi != mob_list.end(); mi++) {
+            cDiffEntry& m = **mi;
+            if (m[SEQ_ID] != seq_id) continue;
+            if (m[REPEAT_NAME] != family) continue;
+            int32_t p = from_string<int32_t>(m[POSITION]);
+            if (abs(p - annotated_at) > kAnchorSlop) continue;
+            far_position = p; far_id = m._id; far_mob_ptr = *mi;
+            break;
+          }
+
+          // Only a junction there: the element is real but its second junction lies inside a copy of
+          // itself and was discarded, so mint the MOB it implies with the duplication size left
+          // undetermined rather than leaving the insertion unreported.
+          if (far_id.empty()) {
+            for (diff_entry_list_t::iterator ji = jc.begin(); ji != jc.end(); ji++) {
+              cDiffEntry& j2 = **ji;
+              if (&j2 == anchor_jc) continue;
+              for (int side = 1; side <= 2; side++) {
+                string me    = "side_" + to_string(side) + "_";
+                string other = "side_" + to_string(3 - side) + "_";
+                if (j2[me + "seq_id"] != seq_id) continue;
+                int32_t p = n(j2[me + "position"]);
+                if (abs(p - annotated_at) > kAnchorSlop) continue;
+                if (!j2.entry_exists("_" + other + "is")) continue;
+                if (j2["_" + other + "is_name"] != family) continue;
+                if (!mob_from_single_IS_junction(j2, settings.polymorphism_prediction, far_mob)) continue;
+                far_position = p; far_mob_is_new = true; far_jc = &j2;
+                break;
+              }
+              if (far_mob_is_new) break;
+            }
+          }
+          if (far_id.empty() && !far_mob_is_new) continue;
+        }
+
+        // Two shapes, and which one applies turns on whether the reference already contains a copy of
+        // the element inside the amplified interval. Both were checked against the curated LTEE
+        // genome diffs (barricklab/LTEE-Ecoli), which agree with the coordinates derived here to the
+        // base in both cases.
+        //
+        //  (a) A pre-existing ANNOTATED copy at one end. Run the block from the new copy through the
+        //      end of that element, so the element is inside the block and repeating it reproduces
+        //      one between every pair of copies. Nothing else is needed -- no mediated=, no extra MOB.
+        //      Curated form: plain "AMP REL606 2749275 26603 2".
+        //
+        //  (b) BOTH copies new. The reference has no element in the interval, so the block is pure
+        //      unique sequence and the element has to come from mediated=, which lays one down with
+        //      each new copy. The MOB that reports the first copy anchors the low end, and the AMP is
+        //      placed within= its target-site duplication so the two are ordered: the insertion
+        //      happened first, then recombination amplified the region between it and the second copy.
+        //      Curated form: "MOB ... IS186 1 8" plus
+        //      "AMP REL606 3517306 108140 2 mediated=IS186 mediated_strand=-1 within=<mob>:2".
+        //      within= only means something when the MOB's duplication size is known; a MOB minted
+        //      from a lone junction has an indeterminate one and therefore no second copy to sit in.
+        //
+        // Only evidence items go in _evidence -- a MOB is a mutation, and a non-evidence id is
+        // silently dropped from the list, so the tie to it is carried by within=.
+        int32_t position, last;
+        string mediated_family;
+        int32_t mediated_strand = 0;
+        diff_entry_ptr_t order_after_mob;
+        vector<string> evidence = make_vector<string>(c._id);
+        if (anchor_jc != NULL) evidence.push_back(anchor_jc->_id);
+
+        if (rep != NULL) {
+          if (end_choice == 0) {        // annotated copy at the high-coordinate end
+            position = anchor_position;
+            last     = rep->get_end_1();
+          } else {                      // annotated copy at the low-coordinate end
+            position = rep->get_start_1();
+            last     = anchor_position;
+          }
+        } else {
+          // Needs a MOB to anchor and to order against; a pair of bare junctions says an element is
+          // involved but not that it was ever placed.
+          if (!mob_anchor) continue;
+          // Written with the anchoring MOB at the low end, matching the curated layout.
+          if (far_position <= anchor_position) continue;
+
+          position = anchor_position;
+          last     = far_position;
+          mediated_family = family;
+          mediated_strand = from_string<int32_t>((*anchor_mob_ptr)[STRAND]);
+          if (far_jc != NULL) evidence.push_back(far_jc->_id);
+
+          // Order the amplification after the insertion it recombined against, when there are two
+          // copies of the target site to speak of.
+          if (!anchor_mob_ptr->entry_exists("indeterminate_duplication_size")
+              && (from_string<int32_t>((*anchor_mob_ptr)["duplication_size"]) > 0))
+            order_after_mob = anchor_mob_ptr;
+        }
+
+        int32_t size = last - position + 1;
+        if (size <= kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) continue;
+
+        cDiffEntry mut(AMP);
+        mut._evidence = evidence;
+        mut[SEQ_ID] = seq_id;
+        mut[POSITION] = to_string<int32_t>(position);
+        mut[SIZE] = to_string<int32_t>(size);
+        mut[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
+
+        if (!mediated_family.empty()) {
+          mut[MEDIATED] = mediated_family;
+          mut[MEDIATED_STRAND] = to_string<int32_t>(mediated_strand);
+          if (order_after_mob.get() != NULL)
+            mut["within"] = order_after_mob->_id + ":2";
+        }
+
+        gd.add(mut);
+        break; // this CN region is accounted for
+      }
+    }
+  }
+
+  // Join MC fragments that one CN copy-number-0 region spans. See the header for why.
+  //
+  // Runs before mutation prediction (from breseq_cmdline, on the merged evidence genome diff) rather
+  // than inside predict(), so the joined MC is what gets written to evidence.gd and shown in the
+  // HTML. Doing it later would leave the on-disk evidence and the report disagreeing with the
+  // deletion that was predicted from it.
+  void merge_MC_fragments_spanned_by_CN(cGenomeDiff& gd, uint32_t max_island)
+  {
+    diff_entry_list_t cn_list = gd.get_list(make_vector<gd_entry_type>(CN));
+    if (cn_list.empty()) return;
+    diff_entry_list_t mc_list = gd.get_list(make_vector<gd_entry_type>(MC));
+    if (mc_list.size() < 2) return;
+
+    set<string> absorbed;
+
+    for (diff_entry_list_t::iterator ci = cn_list.begin(); ci != cn_list.end(); ci++) {
+      cDiffEntry& cn = **ci;
+
+      // copy_number is a POSITIONAL field on CN, so it is always present; only a call of zero says
+      // the region is deleted outright, which is the only thing that licenses bridging an island.
+      if (from_string<int32_t>(cn[COPY_NUMBER]) != 0) continue;
+
+      const string& seq_id = cn[SEQ_ID];
+      int32_t cn_start = from_string<int32_t>(cn[START]);
+      int32_t cn_end   = from_string<int32_t>(cn[END]);
+
+      // Fragments that are mostly inside this CN region. Overlap rather than containment: a fragment
+      // routinely runs past the CN boundary, because the HMM only resolves to its tile size while the
+      // MC is called per base (in the real manB/cpsG case the first fragment starts ~1 kb before the
+      // CN does). Requiring the majority of the fragment to lie inside keeps a large MC that merely
+      // clips the edge of the region from being dragged in.
+      vector<cDiffEntry*> frags;
+      for (diff_entry_list_t::iterator mi = mc_list.begin(); mi != mc_list.end(); mi++) {
+        cDiffEntry& mc = **mi;
+        if (mc[SEQ_ID] != seq_id) continue;
+        if (absorbed.count(mc._id)) continue;
+
+        int32_t mc_start = from_string<int32_t>(mc[START]);
+        int32_t mc_end   = from_string<int32_t>(mc[END]);
+        int32_t overlap  = min(mc_end, cn_end) - max(mc_start, cn_start) + 1;
+        if (overlap <= 0) continue;
+        if (2 * overlap < (mc_end - mc_start + 1)) continue;
+
+        frags.push_back(&mc);
+      }
+      if (frags.size() < 2) continue;
+
+      sort(frags.begin(), frags.end(), mc_fragment_start_lt);
+
+      // Merge maximal runs of fragments separated by small islands, so one oversized gap costs only
+      // the fragments across it rather than the whole region.
+      size_t run_start = 0;
+      for (size_t i = 1; i <= frags.size(); i++) {
+        bool breaks_run = true;
+        if (i < frags.size()) {
+          int32_t island = from_string<int32_t>((*frags[i])[START])
+                         - from_string<int32_t>((*frags[i - 1])[END]) - 1;
+          breaks_run = (island > static_cast<int32_t>(max_island));
+        }
+        if (!breaks_run) continue;
+
+        if (i - run_start >= 2) {
+          cDiffEntry& first = *frags[run_start];
+          cDiffEntry& last  = *frags[i - 1];
+
+          // The joined entry keeps the outer extents and each end's own coverage numbers; the inner
+          // boundaries the islands created are exactly what we are discarding.
+          first[END] = last[END];
+          if (last.entry_exists(END_RANGE))         first[END_RANGE]         = last[END_RANGE];
+          if (last.entry_exists(RIGHT_INSIDE_COV))  first[RIGHT_INSIDE_COV]  = last[RIGHT_INSIDE_COV];
+          if (last.entry_exists(RIGHT_OUTSIDE_COV)) first[RIGHT_OUTSIDE_COV] = last[RIGHT_OUTSIDE_COV];
+
+          for (size_t k = run_start + 1; k < i; k++) absorbed.insert(frags[k]->_id);
+        }
+        run_start = i;
+      }
+    }
+
+    if (absorbed.empty()) return;
+
+    diff_entry_list_t* all = gd.get_mutable_list_ptr();
+    for (diff_entry_list_t::iterator it = all->begin(); it != all->end(); ) {
+      if (((*it)->_type == MC) && (absorbed.count((*it)->_id) > 0))
+        it = gd.remove(it);
+      else
+        it++;
+    }
+  }
+
   void MutationPredictor::remove_DP_superseded_by_PD(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
     (void)settings;

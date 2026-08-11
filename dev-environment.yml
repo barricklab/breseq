@@ -3,6 +3,10 @@ channels:
   - conda-forge
   - bioconda
   - defaults
+# Barrick lab pre-release channel, published by barricklab/conda. Carries development builds that
+# are not on conda-forge/bioconda -- currently CNery, whose builds are tagged with the git commit
+# they were made from (build string g<short sha>).
+  - https://barricklab.github.io/conda/
 dependencies:
 # Needed for compiling
 #  => Should be compatible with any versions
@@ -28,13 +32,20 @@ dependencies:
   - bowtie2=2.5.5
   - gnuplot=6.0.4
   - phylip=3.697
-  - pip
-  - pip:
-    # CNery doesn't pin an upper bound on pandas; pip otherwise resolves the
-    # newest pandas (3.x), which dropped the private DataFrame._append that
-    # CNery's HMM code still calls, crashing at runtime.
-    - pandas>=2.2.0,<3
-    - git+https://github.com/barricklab/CNery.git
+# CNery, run by breseq for --predict-copy-number.
+#  => Need to lock the version for consistency, and more sharply than the others: CN evidence feeds
+#     deletion and amplification prediction, so a change in how CNery places a copy-number boundary
+#     moves the coordinates breseq reports. Installing from git HEAD instead is what left the CN test
+#     (tests/lambda_mixed_pop_cn_evidence_disabled) unreproducible and disabled.
+#
+#     The build string is the CNery git commit. ga50689f is the version every CN result in the tree
+#     was produced and checked against. Moving to a newer build is a deliberate step, not a refresh:
+#     gba1ead5 changes the median-filter window used to smooth coverage at deletion/amplification
+#     boundaries, which is exactly what sets the CN coordinates.
+#
+#     This package pins pandas itself (>=2.2.0,<3), which the previous pip install could not do --
+#     pip resolved pandas 3.x, which dropped the private DataFrame._append that CNery's HMM calls.
+  - cnery-prerelease=0.0.0=ga50689f
 # Used to run the consistency tests in parallel ('make test')
 #  => See tests/Snakefile
   - python

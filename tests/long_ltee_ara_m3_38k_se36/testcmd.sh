@@ -54,6 +54,7 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     ${REFERENCE_ARG} \
+    --predict-copy-number \
     ${DOWNLOADDIR}/ena_SRR098038/SRR098038.fastq.gz \
     "
 

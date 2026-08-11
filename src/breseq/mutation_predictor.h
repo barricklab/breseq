@@ -34,6 +34,24 @@ using namespace std;
 
 namespace breseq {
 
+  //! Largest run of coverage that a CN copy-number-0 region is allowed to bridge when joining
+  //! missing-coverage fragments (see merge_MC_fragments_spanned_by_CN). One CNery tile: the HMM
+  //! decides copy number over 200 bp windows, so an island it called deleted through is smaller
+  //! than that by construction. Real cases observed are 21 and 31 bp.
+  const uint32_t kMaxMCMergeIslandBases = 200;
+
+  //! Join missing-coverage fragments that a single CN copy-number-0 region spans into one MC.
+  //!
+  //! The MC state machine has no gap tolerance -- one column above the propagation cutoff ends the
+  //! entry (identify_mutations.cpp) -- so a few reads mismapped into the middle of a real deletion
+  //! split it into fragments. Each fragment then seeds predictMCtoDELbyHomology's register search
+  //! with its own (too short) extent, and every fragment misses. A CN region called at copy number
+  //! zero across the whole span is independent evidence that the island is not real coverage.
+  //!
+  //! Extents come from the MC fragments, never from the CN region: CN boundaries are tiled at 200 bp
+  //! while MC boundaries are per-base, and the deletion callers want the precise ones.
+  void merge_MC_fragments_spanned_by_CN(cGenomeDiff& gd, uint32_t max_island = kMaxMCMergeIslandBases);
+
 	class MutationPredictor
 	{
 	public:
@@ -55,6 +73,34 @@ namespace breseq {
     void predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
     void predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc, bool use_redundant_sides = false);
     void predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& ra, diff_entry_list_t& mc );
+
+    //! Tandem amplification: a junction pointing back upstream on the same strand, whose span a CN
+    //! region calls at two or more copies. The junction gives base-resolution endpoints and proves
+    //! the copies are adjacent; CN supplies the copy number, which a junction alone cannot.
+    //!
+    //! Deliberately separate from predictJCtoINSorSUBorDEL, which caps a junction-derived event at
+    //! kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation while normalize_INS_to_AMP requires a repeat
+    //! unit LARGER than that same constant -- so no junction can reach AMP through that path. This
+    //! one takes only junctions above the cap, leaving that path's behavior untouched.
+    void predictJCplusCNtoAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& cn);
+
+    //! Amplification between an existing copy of a repeat family and a new copy of it. The existing
+    //! copy is an annotated repeat_region at one end of the CN region; the new copy exists only in
+    //! this sample, so it is never annotated and can only be anchored by the MOB or the single
+    //! junction that reports it. The junction at the end lying inside the existing copy has a
+    //! redundant side and is discarded upstream, which is why coverage has to close the gap.
+    //!
+    //! This is recombination between two copies that both exist by the time it happens, so the tag is
+    //! always between=, never mediated= -- mediated= describes a different event, where a new element
+    //! is laid down with each new copy, and it would make APPLY insert one element too many.
+    //!
+    //! The duplicated block is written to END on a repeat copy, so repeating it reproduces the
+    //! element between every pair of copies, exactly as the real amplification does. When the copy at
+    //! the high-coordinate end is the NEW one, it is not in the reference to point at, so the AMP is
+    //! placed within= the MOB that reports it and begins inside that element. Coordinates are taken
+    //! at the highest positions that give the same result, the convention gdtools NORMALIZE enforces
+    //! so two runs of the same event compare equal.
+    void predictCNplusRepeatToAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& cn);
     
     void filter_JC_indel_evidence(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
 

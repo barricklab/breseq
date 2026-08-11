@@ -2599,6 +2599,13 @@ int breseq_default_action(int argc, char* argv[])
           evidence_gd.merge_preserving_duplicates(cn_gd);
         }
       }
+
+      // A few mismapped reads inside a real deletion split its missing coverage into fragments, and
+      // each fragment is then too short to seed deletion prediction. Where a CN region called at copy
+      // number zero spans them, join them back into one MC. Done here, before the evidence is
+      // written, so evidence.gd and the HTML show the same single MC the deletion rests on.
+      merge_MC_fragments_spanned_by_CN(evidence_gd);
+
       evidence_gd.write(settings.evidence_genome_diff_file_name);
 
       // predict mutations from evidence in the GenomeDiff

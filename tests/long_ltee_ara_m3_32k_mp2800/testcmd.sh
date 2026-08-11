@@ -101,6 +101,7 @@ TESTCMD="\
     -o ${SELF} \
     ${REFERENCE_ARG} \
     -l 80 \
+    --predict-copy-number \
     --predict-discordant-pairs \
     --predict-missing-pairs \
     --predict-pair-distance \
