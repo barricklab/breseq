@@ -26,6 +26,22 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # Stock breseq options: the three pair predictors require paired mapping, so
 # there is nothing to turn on here.
 #
+# This is also THE test for predicting a deletion between two unannotated paralogs
+# from missing coverage alone: DEL 2032711 23293 between manB and cpsG. Being
+# single-end there is no discordant pair, no read crosses the breakpoint in a way
+# that can be split into a junction, and 36 bp reads that do cross tie between the
+# two copies and are dropped as redundant -- so there is not one RA anywhere near
+# the locus either. Coverage is the only evidence, and the crossover is recovered
+# by reading which copy the surviving reads came from at each column where the two
+# copies differ. If this DEL disappears, that whole path is dead; no other test
+# exercises it on real data without a DP to fall back on.
+#
+# The position is exact to the limit of the data. The crossover falls in a 123 bp
+# stretch (2032588-2032711) where the two copies happen to be identical, so any
+# start in that interval yields the same sequence; 2032711 is the rightmost one,
+# matching the right-shift convention normalize_to_sequence() applies to DEL. The
+# SIZE, 23293, is exact.
+#
 # See tests/long_ltee_clone/testcmd.sh for the notes that apply to every long
 # test: rebuild with BRESEQ_TEST_DATA_DIR unset so the committed expected.gd
 # keeps repo-relative paths, and note that #=MAPPED-BASES / #=MAPPED-READS are

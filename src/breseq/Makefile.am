@@ -47,6 +47,7 @@ libbreseq_la_SOURCES = \
 	flagged_regions.cpp \
 	genome_diff.cpp \
 	genome_diff_entry.cpp \
+	homologous_deletion.cpp \
 	identify_mutations.cpp \
 	mp_evidence.cpp \
 	pd_evidence.cpp \
@@ -83,6 +84,7 @@ libbreseq_la_SOURCES = \
 	flagged_regions.h \
 	genome_diff.h \
 	genome_diff_entry.h \
+	homologous_deletion.h \
 	identify_mutations.h \
 	mp_evidence.h \
 	pd_evidence.h \

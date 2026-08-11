@@ -74,6 +74,20 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # test does NOT pass it, so it maps at the stock 0.9 while the other three paired
 # long tests map at 0.5.
 #
+# Also covers the manB/cpsG paralogous deletion at LOW coverage (~10x) and from a
+# badly fragmented MC. The single large MC 2032710-2054821 implies a register of
+# 22112, which is 1181 bp short of the true 23293 -- the register search recovers
+# the right one anyway (identity 0.947 against a best decoy of 0.411), so
+# DEL 2032711 23293 is predicted here with no JC and no DP.
+#
+# That deletion also REMOVES a SNP this test used to call: cpsG T423S at 2054830.
+# It was never a point mutation. 2054830 sits in the right copy; its homologue in
+# the left copy is 2031537, one of the columns where the two paralogs differ, and
+# it lies before the crossover -- so the surviving hybrid carries the left copy's
+# A there, and reads placed on the right copy read as T->A. Without the deletion
+# call breseq promoted that to an annotated amino-acid change in a gene that is in
+# fact deleted. Do not "restore" it.
+#
 # See tests/long_ltee_clone/testcmd.sh for the notes that apply to every long
 # test: rebuild with BRESEQ_TEST_DATA_DIR unset so the committed expected.gd
 # keeps repo-relative paths, and note that #=MAPPED-BASES / #=MAPPED-READS are

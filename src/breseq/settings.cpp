@@ -497,6 +497,7 @@ namespace breseq
     ("skip-RA-MC-prediction", "Skip generating read alignment and missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("skip-JC-prediction", "Skip generating new junction evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("skip-MC-prediction", "Skip generating missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("skip-homologous-DEL-prediction", "Skip predicting large deletions between two near-identical copies of an unannotated repeat (paralogous genes, an rRNA operon) from missing coverage evidence. These deletions leave no new junction, so they are located by reading which copy the surviving reads came from.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -837,6 +838,7 @@ namespace breseq
     this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
     this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("skip-JC-prediction");
     this->skip_missing_coverage_prediction = options.count("skip-MC-prediction");
+    this->skip_homologous_deletion_prediction = options.count("skip-homologous-DEL-prediction");
     
     //! Settings: Debugging
     this->keep_all_intermediates = options.count("keep-intermediates");
@@ -1249,6 +1251,7 @@ namespace breseq
     this->skip_new_junction_prediction = false;
 		this->skip_read_alignment_and_missing_coverage_prediction = false;
 		this->skip_missing_coverage_prediction = false;
+    this->skip_homologous_deletion_prediction = false;
     this->no_evidence_html = false;
 		this->predict_copy_number = false;
 		this->do_periodicity = false;

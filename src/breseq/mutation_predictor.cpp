@@ -22,6 +22,7 @@
 
 #include "output.h"
 #include "dp_evidence.h"
+#include "homologous_deletion.h"
 #include "identify_mutations.h"
 #include "resolve_alignments.h"
 
@@ -1479,27 +1480,71 @@ namespace breseq {
   // repeats and everything else requires a JC), and the mutation is lost even though the coverage
   // evidence is unambiguous.
   //
-  // Discordant pairs ARE able to span such a breakpoint, because they link mates across the whole
-  // deleted interval instead of reading through it. This pairs an unexplained MC with a DP whose two
-  // sides have deletion geometry, then works out where inside the homology the crossover actually sits.
-  void MutationPredictor::predictMCplusDPtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd,
-                                               diff_entry_list_t& dp, diff_entry_list_t& mc, diff_entry_list_t& ra)
+  // What survives such a deletion is a single HYBRID copy: the left copy up to the crossover, the right
+  // copy after it. Every step below follows from that. The register d (which is also the deletion size)
+  // is the offset that aligns the two copies, and it can be read straight off the reference sequence,
+  // seeded by the MC boundaries. The crossover is then the one place where the reads stop showing the
+  // left copy's bases and start showing the right copy's, measured at the columns where the two copies
+  // actually differ. See homologous_deletion.h for why pooling the two copies' piles recovers that
+  // series at full depth, and why the reads carrying it are invisible as RA evidence.
+  //
+  // A discordant pair, when the library is paired and one is present, gives a better seed than the MC
+  // boundaries and is worth recording as evidence -- but it is not required, and nothing else here
+  // depends on it.
+  void MutationPredictor::predictMCtoDELbyHomology(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                                   diff_entry_list_t& mc, diff_entry_list_t& dp, diff_entry_list_t& ra)
   {
-    // Everything here is scaled by the read length, because every discrepancy this has to absorb is a
-    // read-length artifact: a DP side is placed at the innermost aligned end of its supporting pairs and
-    // an MC boundary is where coverage falls off, so against a homologous boundary they disagree by up
-    // to about one read (53, 70, 58 and 46 bp on the REL606 colanic-acid deletion, read lengths ~130-143).
+    if (settings.skip_homologous_deletion_prediction) return;
+    if (mc.empty()) return;
+
     int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
     if (read_length <= 0) return;
-    const int32_t kMCtoDPSlop    = read_length;         // MC boundary <-> DP side
-    const int32_t kOffsetSearch  = 2 * read_length;     // both sides can be off, so the offset by twice
-    const int32_t kHomologyWindow = 3 * read_length;    // how far out to look for informative RA calls
-    // Window for judging whether a candidate register really is a homologous alignment. Kept close to
-    // the boundary on purpose: widen it and the measurement runs off the end of the homologous block
-    // into unrelated sequence (+/-600 bp drops this locus from 0.96 to 0.85) and rejects real cases.
-    const int32_t kIdentityWindow = read_length;
 
-    if (dp.empty() || mc.empty()) return;
+    // A DP side is placed at the innermost aligned end of its supporting pairs and an MC boundary is
+    // where coverage falls off, so against a homologous boundary they disagree by up to about one read.
+    const int32_t kMCtoDPSlop = read_length;
+
+    // Window for measuring whether a candidate register really is a homologous alignment. Deliberately
+    // narrow and NOT scaled by read length: at +/-75 the true register scores 0.95-0.98 on the REL606
+    // colanic-acid deletion while the best wrong one scores 0.40, and widening it runs the measurement
+    // off the end of the homologous block into unrelated sequence (at +/-150 one of these MCs, whose
+    // boundary sits only 50 bp inside the block, drops to 0.80 and would be rejected).
+    const int32_t kRegisterWindow = 75;
+
+    // The MC boundaries can be wrong by as much as the homologous block is long, because that is the
+    // stretch over which redundancy suppresses unique coverage. The worst real case seen is 1181 bp;
+    // this leaves room for blocks up to rRNA-operon scale. Scoring one register is ~300 byte
+    // comparisons, so a scan this wide is still only single-digit milliseconds per MC.
+    const int32_t kRegisterSearchHalfWidth = max(2 * read_length, 5000);
+
+    // A high identity on its own means nothing between paralogs that are identical in long stretches
+    // everywhere; what marks the true register is that nothing else comes close. Note this deliberately
+    // does NOT use settings.consensus_frequency_cutoff, which is 0.50 in consensus mode -- low enough
+    // to admit wrong registers that measure 0.49.
+    const double kMinRegisterIdentity = 0.85;
+    const double kMinRegisterMargin = 0.25;
+    const int32_t kRegisterMarginExclusion = 2 * read_length;
+
+    const int32_t kBlockStep = 50;
+    const double kBlockIdentity = 0.80;
+    const int32_t kBlockMaxExtent = 20000;
+    // Anything a single read can span is a junction, and belongs to predictMCplusJCtoDEL.
+    const int32_t kMinBlockLength = max(read_length, 50);
+
+    // The false-positive gate. Under the deletion hypothesis only one copy exists in the sample and a
+    // column reads ~1.0; with both copies still present it reads ~0.5.
+    const double kMinAlleleFraction = 0.80;
+    // Two calls could come from a single mismapped pile; three spanning more than the typical distance
+    // between discriminating columns could not.
+    const int32_t kMinColumnsEachSide = 3;
+    const double kMinReadConsistency = 0.90;
+
+    // The reads that carry this signal are exactly the ones base calling discards as redundant, so the
+    // BAM is the primary source. RA evidence can still bracket the crossover when the reads happened to
+    // place uniquely, which is the only thing available to callers that have no BAM at all (gdtools).
+    bool have_bam = file_exists(settings.reference_bam_file_name.c_str())
+                 && file_exists(settings.reference_fasta_file_name.c_str());
+    homology_base_counter* counter = NULL;
 
     // Observed base per position, for every RA that called something different from the reference. At a
     // deletion between near-identical copies these are not mutations at all: they are the surviving
@@ -1539,91 +1584,126 @@ namespace breseq {
         dp_item = &d;
         break;
       }
-      if (dp_item == NULL) continue;
 
       cAnnotatedSequence& seq = ref_seq_info[seq_id];
       int32_t seq_len = static_cast<int32_t>(seq.m_length);
-      map<string, map<int32_t, string> >::const_iterator rb = ra_base.find(seq_id);
-      if (rb == ra_base.end()) continue;
-      const map<int32_t, string>& obs = rb->second;
 
-      // --- find the homologous register from the read alignments --------------------------------------
-      // The deletion joins x to x + d, so the two flanks are the same sequence offset by d. Neither the
-      // MC boundaries nor the longest run of identical bases gives d reliably -- coverage falls off
-      // gradually through homology, and between two 94%-identical paralogs long identity runs are
-      // everywhere, most of them nowhere near the crossover.
-      //
-      // The reads pin it. Where reads mapped to one copy actually came from the other, breseq calls an
-      // RA whose new base is the OTHER copy's base at the homologous position. Only the true register
-      // explains those calls, so score each candidate d by how many it accounts for.
-      // Two criteria, because neither alone is enough: only a handful of RA calls sit near the
-      // boundary, so several registers explain the same number by chance (on this locus a wrong offset
-      // 312 bp away tied at 2), and the longest run of identical bases is meaningless between paralogs
-      // that are identical in long stretches everywhere. Take the register that explains the most read
-      // evidence, breaking ties by how well the two flanks actually align, and require that alignment
-      // to be real before believing any of it.
-      //
-      // "Real" is the same bar the run already uses for calling one sequence the consensus: the flanks
-      // must agree at least as often as a base has to, to be called. manB/cpsG sit at 0.96-0.98 against
-      // the 0.95 default, while a wrong register is near the 0.25 of random sequence. A cutoff of 0
-      // (the OFF setting) leaves identity as the tie-break only, which is still what picks the register.
-      const double kMinFlankIdentity = settings.consensus_frequency_cutoff;
-      int32_t d0 = n((*dp_item)[SIDE_2_POSITION]) - n((*dp_item)[SIDE_1_POSITION]);
-      int32_t best_d = 0, best_score = 0;
-      double best_ident = 0.0;
-      for (int32_t d = d0 - kOffsetSearch; d <= d0 + kOffsetSearch; d++) {
-        if (d <= 0) continue;
-        int32_t score = 0;
-        for (map<int32_t, string>::const_iterator o = obs.begin(); o != obs.end(); o++) {
-          int32_t x = o->first;
-          bool near_left  = (abs(x - mc_start) <= kHomologyWindow);
-          bool near_right = (abs(x - mc_end)   <= kHomologyWindow);
-          if (!near_left && !near_right) continue;
-          if (o->second.size() != 1) continue;
-          // left copy showing the right copy's base, or right copy showing the left copy's base
-          if (near_left && (x + d <= seq_len)
-              && (seq.get_sequence_1(x) != seq.get_sequence_1(x + d))
-              && (o->second[0] == seq.get_sequence_1(x + d))) score++;
-          if (near_right && (x - d >= 1)
-              && (seq.get_sequence_1(x) != seq.get_sequence_1(x - d))
-              && (o->second[0] == seq.get_sequence_1(x - d))) score++;
-        }
-        if (score == 0) continue;
-        // How well the two flanks align at this register, over a window around the boundary.
-        int32_t ilo = max(1, mc_start - kIdentityWindow);
-        int32_t ihi = min(seq_len - d, mc_start + kIdentityWindow);
-        if (ihi <= ilo) continue;
-        int32_t same = 0;
-        for (int32_t x = ilo; x <= ihi; x++)
-          if (seq.get_sequence_1(x) == seq.get_sequence_1(x + d)) same++;
-        double ident = static_cast<double>(same) / static_cast<double>(ihi - ilo + 1);
-        if ((score > best_score) || ((score == best_score) && (ident > best_ident))) {
-          best_score = score; best_d = d; best_ident = ident;
+      // --- find the homologous register ---------------------------------------------------------------
+      // The deletion joins x to x + d, so the two copies are the same sequence offset by d. That is a
+      // property of the reference alone, and the MC gives a seed good to a few hundred bases -- a DP,
+      // when there is one, gives a better one. Neither the MC boundaries nor the longest run of
+      // identical bases IS the answer: coverage falls off gradually through homology, and between two
+      // 95%-identical paralogs long identity runs are everywhere, most of them nowhere near the
+      // crossover. What identifies the register is that nothing else comes close to it.
+      int32_t d_seed = mc_end - mc_start + 1;
+      if (dp_item != NULL)
+        d_seed = n((*dp_item)[SIDE_2_POSITION]) - n((*dp_item)[SIDE_1_POSITION]);
+      if (d_seed <= 0) continue;
+
+      double best_identity = 0.0, runner_up_identity = 0.0;
+      int32_t best_d = find_homologous_register(seq, mc_start, mc_end, d_seed,
+                                                kRegisterSearchHalfWidth, kRegisterWindow,
+                                                kMinRegisterIdentity, kMinRegisterMargin,
+                                                kRegisterMarginExclusion,
+                                                best_identity, runner_up_identity);
+      if (best_d == 0) continue;
+
+      // --- measure the homologous block ---------------------------------------------------------------
+      // Either MC boundary may have fallen outside the block, so grow from both and keep the better.
+      int32_t block_start = 0, block_end = 0;
+      homologous_block_extent(seq, best_d, mc_start, kBlockStep, kBlockIdentity, kBlockMaxExtent,
+                              block_start, block_end);
+      {
+        int32_t alt_start = 0, alt_end = 0;
+        homologous_block_extent(seq, best_d, mc_end - best_d, kBlockStep, kBlockIdentity, kBlockMaxExtent,
+                                alt_start, alt_end);
+        if ((alt_end - alt_start) > (block_end - block_start)) {
+          block_start = alt_start; block_end = alt_end;
         }
       }
-      // No register explains the read evidence, or the "homology" is not homology -- do not guess.
-      if ((best_d == 0) || (best_ident < kMinFlankIdentity)) continue;
+      int32_t block_length = block_end - block_start + 1;
+      if (block_length < kMinBlockLength) continue;
+      if ((block_start < 1) || (block_end + best_d > seq_len)) continue;
+      // The two copies have to be separate stretches of the genome. If they overlap, this is a tandem
+      // array rather than a pair of copies, the block and its image are the same reference positions,
+      // and pooling them would count the same reads twice. Tandem repeats are handled elsewhere.
+      if (best_d < block_length) continue;
 
-      // --- bracket the crossover ----------------------------------------------------------------------
-      // Reads carrying the right copy's base while mapped to the LEFT copy sit at or past the crossover;
-      // reads carrying the left copy's base while mapped to the RIGHT copy sit before it. Those two
-      // bound it from either side, in left-copy coordinates.
-      int32_t last_left = 0, first_right = 0;
-      for (map<int32_t, string>::const_iterator o = obs.begin(); o != obs.end(); o++) {
-        int32_t x = o->first;
-        if (o->second.size() != 1) continue;
-        if ((abs(x - mc_start) <= kHomologyWindow) && (x + best_d <= seq_len)
-            && (seq.get_sequence_1(x) != seq.get_sequence_1(x + best_d))
-            && (o->second[0] == seq.get_sequence_1(x + best_d))) {
-          if ((first_right == 0) || (x < first_right)) first_right = x;
+      // The MC boundaries can only be wrong by as much as the block is long -- that is the stretch over
+      // which redundancy suppresses unique coverage -- plus about a read at each end.
+      if (abs(d_seed - best_d) > block_length + 2 * read_length) continue;
+
+      vector<int32_t> positions;
+      discriminating_positions(seq, best_d, block_start, block_end, positions);
+      if (positions.empty()) continue;
+
+      // --- read out which copy the hybrid carries at each discriminating column ------------------------
+      homology_columns_t columns;
+      int32_t last_left = 0, first_right = 0, n_left = 0, n_right = 0, n_violations = 0;
+      bool found = false;
+
+      if (have_bam) {
+        if (counter == NULL)
+          counter = new homology_base_counter(settings.reference_bam_file_name,
+                                              settings.reference_fasta_file_name,
+                                              settings.base_quality_cutoff);
+
+        set<int32_t> left_positions, right_positions;
+        for (size_t i = 0; i < positions.size(); i++) {
+          left_positions.insert(positions[i]);
+          right_positions.insert(positions[i] + best_d);
         }
-        if ((abs(x - mc_end) <= kHomologyWindow) && (x - best_d >= 1)
-            && (seq.get_sequence_1(x) != seq.get_sequence_1(x - best_d))
-            && (o->second[0] == seq.get_sequence_1(x - best_d))) {
-          if (x - best_d > last_left) last_left = x - best_d;
+
+        counter->clear();
+        counter->set_read_recording(left_positions, 0);
+        counter->count_region(seq_id, block_start, block_end);
+        counter->set_read_recording(right_positions, best_d);
+        counter->count_region(seq_id, block_start + best_d, block_end + best_d);
+
+        // Scale the per-column floor to the run's own depth, so this works at 10x and at 100x. The
+        // surviving flank contributes essentially full coverage to whichever side of the flip a column
+        // falls on; well below a fifth of average there is noise or mismapping, not the hybrid.
+        uint32_t min_column_coverage = 3;
+        CoverageSummaries::const_iterator cov = summary.unique_coverage.find(seq_id);
+        if (cov != summary.unique_coverage.end())
+          min_column_coverage = max(min_column_coverage,
+                                    static_cast<uint32_t>(0.20 * cov->second.average));
+
+        build_homology_columns(seq, best_d, positions, counter->tallies(),
+                               min_column_coverage, kMinAlleleFraction, columns);
+
+        // A real crossover is a perfect step. Allow one column of slop for an error or a homopolymer
+        // artifact, and 5% once the block is long enough for that to be the looser bound.
+        int32_t n_called = 0;
+        for (size_t i = 0; i < columns.size(); i++)
+          if (columns[i].call != 0) n_called++;
+
+        found = find_crossover_interval(columns, kMinColumnsEachSide,
+                                        max(1, static_cast<int32_t>(0.05 * n_called)),
+                                        last_left, first_right, n_left, n_right, n_violations);
+
+        // A read that shows the right copy's allele and then the left copy's further along cannot have
+        // come from the hybrid. If that keeps happening, whatever is here is not one clean crossover.
+        if (found) {
+          int32_t informative_reads = 0;
+          double consistency = read_allele_consistency(seq, best_d, counter->read_alleles(),
+                                                       informative_reads);
+          if (consistency < kMinReadConsistency) found = false;
         }
       }
-      if ((first_right == 0) || (last_left == 0) || (last_left >= first_right)) continue;
+
+      // Reads that placed uniquely still leave RA evidence, which is all a caller with no BAM has, and
+      // it can bracket the crossover from a handful of calls. That is a much thinner basis than the
+      // columns above, so only lean on it when there is no BAM to consult, or when a discordant pair
+      // has independently confirmed the deletion geometry.
+      if (!found && (!have_bam || (dp_item != NULL))) {
+        map<string, map<int32_t, string> >::const_iterator rb = ra_base.find(seq_id);
+        if (rb == ra_base.end()) continue;
+        build_homology_columns_from_ra(seq, best_d, positions, rb->second, columns);
+        found = find_crossover_interval(columns, 1, 0,
+                                        last_left, first_right, n_left, n_right, n_violations);
+      }
+      if (!found) continue;
 
       // The crossover lies in (last_left, first_right]; every position in there yields identical
       // sequence, so the START is ambiguous by that much while the SIZE is exact -- both endpoints
@@ -1633,27 +1713,16 @@ namespace breseq {
       int32_t position = first_right;
       if ((position < 1) || (position + best_d - 1 > seq_len)) continue;
 
-      cDiffEntry mut(DEL);
-      mut[SEQ_ID] = seq_id;
-      mut[POSITION] = s(position);
-      mut[SIZE] = s(best_d);
-      mut._evidence = make_vector<string>(mc_item._id)(dp_item->_id);
-      if (settings.polymorphism_prediction) mut[FREQUENCY] = "1";
+      vector<string> evidence_ids = make_vector<string>(mc_item._id);
+      if (dp_item != NULL) evidence_ids.push_back(dp_item->_id);
 
-      // Name the two homologous features the deletion sits between, following the 'between' convention
-      // used for a deletion between two copies of a repeat family. annotate_repeat_hotspots() preserves
-      // a value set here unless it finds annotated repeat_regions at the boundaries.
-      cFeatureLocation* f1 = cReferenceSequences::get_overlapping_feature(seq.m_gene_locations, position);
-      cFeatureLocation* f2 = cReferenceSequences::get_overlapping_feature(seq.m_gene_locations, position + best_d - 1);
-      if ((f1 != NULL) && (f2 != NULL)) {
-        string n1 = (*f1->get_feature())["name"], n2 = (*f2->get_feature())["name"];
-        if (!n1.empty() && !n2.empty()) mut["between"] = (n1 == n2) ? n1 : (n1 + "," + n2);
-      }
-
-      gd.add(mut);
+      gd.add(make_homologous_deletion(seq, position, best_d, evidence_ids,
+                                      settings.polymorphism_prediction));
       mc_it = mc.erase(mc_it);
       mc_it--;
     }
+
+    if (counter != NULL) delete counter;
   }
 
   void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc, bool use_redundant_sides)
@@ -2819,14 +2888,15 @@ namespace breseq {
     predictMCplusJCtoDEL(settings, summary, gd, jc, mc);
 
     ///
-    // evidence MC + DP => DEL mutation (deletion between homologous copies, where no JC can exist)
+    // evidence MC => DEL mutation (deletion between homologous copies, where no JC can exist)
     ///
     // Runs after the JC cases so split-read evidence, which locates a breakpoint to the base, always
     // wins; this only sees the MC items those cases left unexplained.
+    cerr << "  Predicting large deletions between homologous sequences..." << endl;
     {
       diff_entry_list_t dp = gd.get_list(make_vector<gd_entry_type>(DP));
       diff_entry_list_t ra_for_crossover = gd.get_list(make_vector<gd_entry_type>(RA));
-      predictMCplusDPtoDEL(settings, summary, gd, dp, mc, ra_for_crossover);
+      predictMCtoDELbyHomology(settings, summary, gd, mc, dp, ra_for_crossover);
     }
 
 		///
