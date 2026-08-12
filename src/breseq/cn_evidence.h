@@ -92,6 +92,10 @@ namespace breseq {
     // become a multi-megabyte SVG.
     static vector<cnery_window> bin_cnery_windows(const vector<cnery_window>& in, size_t max_points);
 
+    // The ori-ter ramp at one position, evaluated in GENOMIC coordinates from the two endpoints
+    // CNery reports. See the definition for why its per-window column cannot be drawn as a line.
+    static double otr_ramp_at(const cnery_otr& otr, int32_t position, int32_t seq_length);
+
     static void ingest_csv_for_seq_id(
                                       const string& seq_id,
                                       const string& cnv_file_name,
@@ -101,7 +105,8 @@ namespace breseq {
 
     // Emits one gnuplot SVG over [plot_start, plot_end]. Windows outside that range are ignored.
     // A shaded_start/shaded_end narrower than the plot range greys out the flanks around it.
-    // The ori/ter markers are drawn only where they fall inside the plotted range.
+    // The ori/ter markers are drawn only where they fall inside the plotted range. seq_length is the
+    // whole sequence, needed because the ori-ter ramp wraps around its end.
     static void render_cn_plot(
                                const string& output_svg,
                                const string& seq_id,
@@ -110,7 +115,8 @@ namespace breseq {
                                int32_t plot_end,
                                int32_t shaded_start,
                                int32_t shaded_end,
-                               const cnery_otr& otr
+                               const cnery_otr& otr,
+                               int32_t seq_length
                                );
 
   }; // class CNEvidence

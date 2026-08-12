@@ -264,6 +264,40 @@ void CNEvidence::ingest_csv_for_seq_id(
 // have to land in the same place.
 // ---------------------------------------------------------------------------------------------
 
+// The ori-ter ramp at one position, in GENOMIC coordinates.
+//
+// The ramp is two straight lines: one from the terminus up to the origin, and one from the origin
+// back down to the terminus the other way around the chromosome. Both are evaluated here from the
+// two endpoints CNery reports, rather than read out of its per-window otr_gc_corr_fact column.
+//
+// That column cannot be plotted against position as a line. CNery builds the ramp linear in WINDOW
+// INDEX, and it drops every window overlapping repeat coverage -- on REL606 about 1,400 windows are
+// missing, with holes up to 5.9 kb. Linear in index is therefore NOT linear in position: the measured
+// slope wanders (0.0789 to 0.0827 per Mb on one test) and the line visibly bends and breaks at every
+// hole, so the two arms never meet. Evaluating the ramp here restores what it actually is -- two
+// straight segments that join at the origin, at the terminus, and across the end of the sequence.
+double CNEvidence::otr_ramp_at(const cnery_otr& otr, int32_t position, int32_t seq_length)
+{
+  int32_t ori = otr.origin, ter = otr.terminus;
+  double  yori = otr.origin_cov, yter = otr.terminus_cov;
+
+  // Arm 1 runs directly between the two, arm 2 the other way round, through the sequence end.
+  int32_t lo = min(ori, ter), hi = max(ori, ter);
+  double  ylo = (lo == ori) ? yori : yter;
+  double  yhi = (hi == ori) ? yori : yter;
+
+  if ((position >= lo) && (position <= hi)) {
+    if (hi == lo) return ylo;
+    return ylo + (yhi - ylo) * static_cast<double>(position - lo) / static_cast<double>(hi - lo);
+  }
+
+  // Outside [lo, hi]: on the wrapping arm, measured from hi forward through the end and back to lo.
+  int32_t span = seq_length - (hi - lo);
+  if (span <= 0) return ylo;
+  int32_t along = (position > hi) ? (position - hi) : (seq_length - hi + position);
+  return yhi + (ylo - yhi) * static_cast<double>(along) / static_cast<double>(span);
+}
+
 // Coverage is averaged over each bin, but the copy number kept is the one FURTHEST FROM 1 -- taking
 // a max would hide deletions and taking a mean would smear every narrow event into the baseline,
 // and it is exactly the narrow events an overview is scanned for.
@@ -313,7 +347,8 @@ void CNEvidence::render_cn_plot(
                                 int32_t plot_end,
                                 int32_t shaded_start,
                                 int32_t shaded_end,
-                                const cnery_otr& otr
+                                const cnery_otr& otr,
+                                int32_t seq_length
                                 )
 {
   // CNery drops any window overlapping repeat/redundant coverage rather than correcting it, so the
@@ -322,11 +357,12 @@ void CNEvidence::render_cn_plot(
   string tab_file_name = output_svg + ".tab";
   ofstream tab(tab_file_name.c_str());
   ASSERT(tab.good(), "Could not write file: " + tab_file_name);
-  tab << "position\traw\tcorrected\totr_fit\tcopy_number" << endl;
+  tab << "position\traw\tcorrected\tcopy_number" << endl;
 
   double max_y = 0;
   bool have_copy_number = false;
-  bool have_otr_fit = false;
+  double otr_fit_sum = 0;
+  size_t otr_fit_n = 0;
   size_t n_drawn = 0;
   int32_t previous_end = 0;
 
@@ -342,13 +378,12 @@ void CNEvidence::render_cn_plot(
     int32_t midpoint = w.start + (w.end - w.start) / 2;
     tab << midpoint << "\t" << w.raw_cov << "\t" << w.corrected_cov << "\t";
     if (w.otr_fit_cov > 0) {
-      tab << w.otr_fit_cov;
-      have_otr_fit = true;
+      // Only kept to set the axis and to place a flat line when there is no ori-ter bias; the ramp
+      // itself is drawn from its endpoints, not from these per-window values.
+      otr_fit_sum += w.otr_fit_cov;
+      otr_fit_n++;
       if (w.otr_fit_cov > max_y) max_y = w.otr_fit_cov;
-    } else {
-      tab << "NaN";
     }
-    tab << "\t";
     if (w.copy_number >= 0) {
       tab << w.copy_number;
       have_copy_number = true;
@@ -367,6 +402,42 @@ void CNEvidence::render_cn_plot(
   if (n_drawn == 0) {
     remove(tab_file_name.c_str());
     return;
+  }
+
+  // The ori-ter ramp, as its own file with no gaps in it. Only the vertices are written -- the ends
+  // of the plotted range plus whichever of the origin and terminus fall inside it -- because between
+  // those the ramp IS a straight line, so gnuplot drawing straight between them is exact. Keeping it
+  // out of the main table also keeps it clear of the blank lines that break the coverage traces at
+  // unmeasured regions: those breaks are right for measurements and wrong for a model.
+  string fit_file_name = output_svg + ".fit.tab";
+  bool have_otr_fit = false;
+  {
+    vector<int32_t> vertices;
+    vertices.push_back(plot_start);
+    if ((otr.terminus > plot_start) && (otr.terminus < plot_end)) vertices.push_back(otr.terminus);
+    if ((otr.origin > plot_start) && (otr.origin < plot_end)) vertices.push_back(otr.origin);
+    vertices.push_back(plot_end);
+    sort(vertices.begin(), vertices.end());
+    vertices.erase(unique(vertices.begin(), vertices.end()), vertices.end());
+
+    ofstream fit(fit_file_name.c_str());
+    ASSERT(fit.good(), "Could not write file: " + fit_file_name);
+    fit << "position\totr_fit" << endl;
+    if (otr.detected && (otr.origin_cov > 0) && (otr.terminus_cov > 0) && (seq_length > 0)) {
+      for (size_t k = 0; k < vertices.size(); k++) {
+        double y = otr_ramp_at(otr, vertices[k], seq_length);
+        fit << vertices[k] << "\t" << y << endl;
+        if (y > max_y) max_y = y;
+      }
+      have_otr_fit = true;
+    } else if (otr_fit_n > 0) {
+      // No ori-ter bias found: CNery divides by a constant, so the honest picture is a flat line.
+      double flat = otr_fit_sum / static_cast<double>(otr_fit_n);
+      fit << plot_start << "\t" << flat << endl;
+      fit << plot_end << "\t" << flat << endl;
+      have_otr_fit = true;
+    }
+    fit.close();
   }
 
   // Floor the axis at 2.5 so that a region called at copy number 1 still shows the baseline line
@@ -446,10 +517,11 @@ void CNEvidence::render_cn_plot(
   clauses.push_back(quoted_tab + " using \"position\":\"raw\" with lines lc rgb 'grey60' lw 3 title 'uncorrected'");
   clauses.push_back(quoted_tab + " using \"position\":\"corrected\" with lines lc rgb 'blue' lw 4 title 'GC + ori-ter corrected'");
   if (have_otr_fit) {
-    // The straight-line ramp itself. Its distance from the single-copy line at 1.0 IS the
-    // correction applied at each position: corrected = GC-corrected / this. Drawing both together
-    // is what makes the size and direction of the correction readable rather than inferred.
-    clauses.push_back(quoted_tab + " using \"position\":\"otr_fit\" with lines lc rgb 'black' lw 3 title 'ori-ter bias fit (divided out)'");
+    // The straight-line ramp itself, from its own gap-free file. Its distance from the single-copy
+    // line at 1.0 IS the correction applied at each position: corrected = GC-corrected / this.
+    // Drawing both together is what makes the size and direction of the correction readable rather
+    // than inferred.
+    clauses.push_back(double_quote(fit_file_name) + " using \"position\":\"otr_fit\" with lines lc rgb 'black' lw 3 title 'ori-ter bias fit (divided out)'");
   }
   if (have_copy_number) {
     // Piecewise-constant by nature (one HMM state per window), hence steps rather than lines.
@@ -464,6 +536,7 @@ void CNEvidence::render_cn_plot(
   make_svg_responsive(output_svg);
 
   remove(tab_file_name.c_str());
+  remove(fit_file_name.c_str());
   remove(log_name.c_str());
 }
 
@@ -503,7 +576,8 @@ void CNEvidence::draw_evidence_plots(
       vector<cnery_window> overview_windows = bin_cnery_windows(windows, 4000);
       render_cn_plot(overview_svg, seq.m_seq_id, overview_windows,
                      1, static_cast<int32_t>(seq.m_length),
-                     1, static_cast<int32_t>(seq.m_length), otr);
+                     1, static_cast<int32_t>(seq.m_length), otr,
+                     static_cast<int32_t>(seq.m_length));
     }
 
     if (settings.no_evidence_html) continue;
@@ -522,7 +596,8 @@ void CNEvidence::draw_evidence_plots(
       int32_t plot_end = min(static_cast<int32_t>(seq.m_length), end + flanking);
 
       string svg = settings.evidence_path + "/CN_" + item._id + ".svg";
-      render_cn_plot(svg, seq.m_seq_id, windows, plot_start, plot_end, start, end, otr);
+      render_cn_plot(svg, seq.m_seq_id, windows, plot_start, plot_end, start, end, otr,
+                     static_cast<int32_t>(seq.m_length));
 
       if (file_exists(svg.c_str()))
         item["_cn_corrected_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);
