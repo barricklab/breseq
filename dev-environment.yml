@@ -46,9 +46,31 @@ dependencies:
 #     This package pins pandas itself (>=2.2.0,<3), which the previous pip install could not do --
 #     pip resolved pandas 3.x, which dropped the private DataFrame._append that CNery's HMM calls.
   - cnery-prerelease=0.0.0=ga50689f
-# Used to run the consistency tests in parallel ('make test')
-#  => See tests/Snakefile
-  - python
+# What CNery computes with.
+#  => Need to lock the versions for consistency, because pinning CNery's own build string is not
+#     enough. CNery fits the ori-ter and GC corrections with scipy.optimize.minimize, scipy.stats,
+#     scipy.ndimage and statsmodels, so the arithmetic -- and with it the trailing digits of the
+#     corrected coverage breseq reports -- belongs to these packages, not to CNery. Left unpinned
+#     they came in as transitive dependencies and were re-resolved by every 'conda env create'.
+#
+#     This is not hypothetical: recreating this environment on 2026-08-12 moved one CN entry's
+#     relative_coverage from 0.035776 to 0.0357757 with breseq and CNery both unchanged, failing
+#     long_ltee_ara_m3_32k_mp2800. breseq now writes that field at three significant figures so
+#     noise this small cannot fail a test, but these pins are what keep the CN *coordinates*
+#     stable, and those do feed deletion and amplification prediction (see above).
+#
+#     libopenblas is here for the same reason one step down: a BLAS kernel change reorders the
+#     reductions underneath numpy. It is the pin most likely to make a solve fail on another
+#     platform; drop it before dropping the others.
+  - numpy=2.5.2
+  - scipy=1.18.0
+  - pandas=2.3.3
+  - statsmodels=0.14.6
+  - libopenblas=0.3.34
+# Used to run the consistency tests in parallel ('make test'), and to run CNery.
+#  => See tests/Snakefile. Pinned to the minor version because it anchors the build strings of
+#     everything above -- the numeric stack is only as pinned as the interpreter it is built for.
+  - python=3.14
   - snakemake-minimal
 # Used to build the documentation website (mkdocs) -- 'make docs'/./binarydist.sh
 #  => Unpinned: pure build tooling, doesn't affect breseq's own output reproducibility

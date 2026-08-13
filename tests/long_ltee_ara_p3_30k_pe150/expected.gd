@@ -1,7 +1,7 @@
 #=GENOME_DIFF	1.0
-#=CREATED	15:03:07 11 Aug 2026
-#=PROGRAM	breseq 0.50.0 revision 8ef017f86b8d
-#=COMMAND	./src/breseq/breseq -j 4 -o tests/long_ltee_ara_p3_30k_pe150 -r tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ltee_REL606/REL606.gbk --predict-copy-number --predict-discordant-pairs --predict-missing-pairs --predict-pair-distance --predict-soft-clipping tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ena_SRR2588848/SRR2588848_1.fastq.gz tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ena_SRR2588848/SRR2588848_2.fastq.gz
+#=CREATED	19:34:21 12 Aug 2026
+#=PROGRAM	breseq 0.50.0 revision c333ad77bdea
+#=COMMAND	./src/breseq/breseq -j 7 -o tests/long_ltee_ara_p3_30k_pe150 -r tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ltee_REL606/REL606.gbk --predict-copy-number --predict-discordant-pairs --predict-missing-pairs --predict-pair-distance --predict-soft-clipping tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ena_SRR2588848/SRR2588848_1.fastq.gz tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ena_SRR2588848/SRR2588848_2.fastq.gz
 #=REFSEQ	tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ltee_REL606/REL606.gbk
 #=READSEQ	tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ena_SRR2588848/SRR2588848_1.fastq.gz
 #=READSEQ	tests/long_ltee_ara_p3_30k_pe150/../data/downloads/ena_SRR2588848/SRR2588848_2.fastq.gz
@@ -2564,8 +2564,8 @@ CN	2550	.	REL606	547701	553300	0	gene_name=[nmpC]–[ECB_00512]	gene_product=[nm
 CN	2551	.	REL606	556001	588400	0	gene_name=[ECB_00513]–ybdK	gene_product=[ECB_00513],ECB_00514,ECB_00515,ECB_00516,ECB_00517,appY,ompT,envY,ybcH,nfrA,nfrB,nfrB,ECB_00524,yhhI,ECB_00526,ECB_00527,ECB_00528,ECB_00529,ECB_00530,cusS,cusR,cusC,ylcC,cusB,cusA,pheP,ybdG,nfnB,ybdF,ybdJ,ybdK	locus_tag=[ECB_00513]–[ECB_00542]	relative_coverage=0	tile_size=200
 CN	2552	.	REL606	1430501	1442600	0	gene_name=[ydbK]–tynA	gene_product=[ydbK],ydbJ,hslJ,ldhA,ydbH,ynbE,ydbL,feaR,feaB,tynA	locus_tag=[ECB_01349]–[ECB_01358]	relative_coverage=0	tile_size=200
 CN	2553	.	REL606	1604601	1605500	0	gene_name=stfR	gene_position=coding (383-1282/2379 nt)	gene_product=predicted tail fiber protein	gene_strand=<	locus_tag=ECB_01508	relative_coverage=0	tile_size=200
-CN	2554	.	REL606	2032201	2055500	0	gene_name=[manB]–[cpsG]	gene_product=[manB],manC,insB-14,insA-14,wbbD,wbbC,wzy,wbbB,wbbA,vioB,vioA,wzx,rmlC,rfbA,rfbD,rfbB,galF,wcaM,wcaL,wcaK,wzxC,wcaJ,[cpsG]	locus_tag=[ECB_01932]–[ECB_01954]	relative_coverage=0.00527918	tile_size=200
-CN	2555	.	REL606	3895001	3901200	0	gene_name=rbsD–[yieO]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,rbsR,[yieO]	locus_tag=[ECB_03634]–[ECB_03640]	relative_coverage=0.0172189	tile_size=200
+CN	2554	.	REL606	2032201	2055500	0	gene_name=[manB]–[cpsG]	gene_product=[manB],manC,insB-14,insA-14,wbbD,wbbC,wzy,wbbB,wbbA,vioB,vioA,wzx,rmlC,rfbA,rfbD,rfbB,galF,wcaM,wcaL,wcaK,wzxC,wcaJ,[cpsG]	locus_tag=[ECB_01932]–[ECB_01954]	relative_coverage=0.00528	tile_size=200
+CN	2555	.	REL606	3895001	3901200	0	gene_name=rbsD–[yieO]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,rbsR,[yieO]	locus_tag=[ECB_03634]–[ECB_03640]	relative_coverage=0.0172	tile_size=200
 UN	2556	.	REL606	15841	15841
 UN	2557	.	REL606	227401	227455
 UN	2558	.	REL606	227461	227461

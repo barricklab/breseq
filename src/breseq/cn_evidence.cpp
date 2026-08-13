@@ -246,7 +246,19 @@ void CNEvidence::ingest_csv_for_seq_id(
     item[END] = to_string<int32_t>(end_pos);
     item["tile_size"] = to_string<uint32_t>(window_size);
     item["copy_number"] = to_string<int32_t>(copy_number);
-    item["relative_coverage"] = to_string<double>((coverage_n > 0) ? (coverage_sum / coverage_n) : 0.0);
+    // Three significant figures, deliberately. This number is CNery's, fitted with scipy and
+    // statsmodels, and its trailing digits move whenever that stack is re-resolved -- 0.035776 became
+    // 0.0357757 on long_ltee_ara_m3_32k_mp2800 from nothing but a fresh conda env, failing the test on
+    // a difference of 2e-7. Nothing consumes that precision: the only reader is the CN evidence page,
+    // which renders this at two decimal places (output.cpp), and mutation prediction reads
+    // copy_number, never this. Three digits leaves about a thousandfold margin over that drift.
+    //
+    // Default float format, not fixed or scientific: fixed(3) would crush the small values that
+    // matter most here (0.00117571 -> 0.001), and scientific would turn the clean 0 that a fully
+    // deleted region gets into 0.00e+00.
+    ostringstream relative_coverage;
+    relative_coverage << setprecision(3) << ((coverage_n > 0) ? (coverage_sum / coverage_n) : 0.0);
+    item["relative_coverage"] = relative_coverage.str();
 
     gd.add(item);
   }
