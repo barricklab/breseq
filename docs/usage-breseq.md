@@ -153,6 +153,21 @@ plot. `TSV` reproduces the output of the deprecated `--table` option. (DEFAULT=P
 Only plot/tabulate the total coverage at a position. That is, do not not
 output the coverage on each genomic strand.
 
+`--per-read-group`
+
+Repeat every coverage column once per read group (`@RG`) in the BAM file, prefixed
+`RG-#_`, where `#` is the read group's index in the BAM header. The normal columns are
+still output first and are unchanged, so this only *adds* columns; at each position the
+per-read-group values sum to the corresponding total. The same repeat is applied to the
+`#`-commented region averages at the end of the table.
+
+breseq writes one read group per read file set, so a pair of paired-end read files shares
+a single read group. A BAM file with no read groups produces a single `RG-0` set holding
+all of the coverage.
+
+Requires a table output format (`--format TSV` or `--format CSV`); combining it with a
+plot format is an error.
+
 `--resolution <int>`
 
 Number of positions to output coverage information for in interval

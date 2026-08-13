@@ -34,6 +34,10 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   
   ASSERT( (seq_id.length() > 0) || !start_pos || !end_pos, "Invalid region: \"" + region + "\"");
 
+  // The gnuplot script below selects data by column NAME from the table this writes, so the plot
+  // path always tabulates the plain column set. Anything else silently changes what gets plotted.
+  m_per_read_group = false;
+
   // Load summary file of fitting coverage from breseq output
   if (m_show_average) {
     ASSERT(file_exists(m_average_file_name.c_str()), "Could not open file with fit coverage: " + m_average_file_name + "\n");
@@ -216,19 +220,34 @@ void coverage_output::table(const string& region, const string& output_file_name
   m_table_delimiter = (m_output_format == "csv") ? "," : "\t";
   const string& d = m_table_delimiter;
 
+  // The coverage column names, in emission order. Reused for the aggregate header, for the
+  // per-read-group header, and to size the zero-coverage rows -- so the three cannot drift apart.
+  vector<string> coverage_column_names;
   if (m_total_only) {
-    m_output_table << "position" << d << "ref_base" << d
-      << "unique_cov" << d << "redundant_cov" << d << "total_cov"
-      << std::endl;
+    coverage_column_names = make_vector<string>("unique_cov")("redundant_cov")("total_cov");
   } else {
-    m_output_table << "position" << d << "ref_base" << d
-      << "unique_top_cov" << d << "unique_bot_cov" << d
-      << "redundant_top_cov" << d << "redundant_bot_cov" << d
-      << "raw_redundant_top_cov" << d << "raw_redundant_bot_cov" << d
-      << "unique_top_begin" << d << "unique_bot_begin"
-      << std::endl;
+    coverage_column_names = make_vector<string>
+      ("unique_top_cov")("unique_bot_cov")
+      ("redundant_top_cov")("redundant_bot_cov")
+      ("raw_redundant_top_cov")("raw_redundant_bot_cov")
+      ("unique_top_begin")("unique_bot_begin");
   }
-    
+
+  m_output_table << "position" << d << "ref_base";
+  for (size_t c = 0; c < coverage_column_names.size(); c++)
+    m_output_table << d << coverage_column_names[c];
+
+  // Per-read-group repeats come AFTER the aggregate columns, which keep their names and positions.
+  // plot()'s gnuplot script refers to those by name, and CNery parses this table, so appending is
+  // the only safe way to extend it.
+  if (m_per_read_group) {
+    for (size_t g = 0; g < num_read_group_columns(); g++)
+      for (size_t c = 0; c < coverage_column_names.size(); c++)
+        m_output_table << d << read_group_column_prefix(g) << coverage_column_names[c];
+  }
+  m_output_table << std::endl;
+
+
   this->clear();
   
   // pileup handles everything else, including into file
@@ -246,7 +265,19 @@ void coverage_output::table(const string& region, const string& output_file_name
   m_output_table << "#" << d << "region_repeat_average_cov" << d << ( m_region_average_repeat_coverage / m_region_num_positions) << std::endl;
   m_output_table << "#" << d << "region_average_cov" << d << ( m_region_average_coverage / m_region_num_positions) << std::endl;
   m_output_table << "#" << d << "number_of_positions" << d << m_region_num_positions << std::endl;
-  
+
+  // Per-read-group averages, over the same denominator: number_of_positions counts reference
+  // positions, not reads, so it is shared and is not repeated per group.
+  if (m_per_read_group) {
+    for (size_t g = 0; g < num_read_group_columns(); g++) {
+      const string p = read_group_column_prefix(g);
+      m_output_table << "#" << d << p << "region_unique_average_cov" << d << ( m_rg_region_average_unique_coverage[g] / m_region_num_positions) << std::endl;
+      m_output_table << "#" << d << p << "region_repeat_average_cov" << d << ( m_rg_region_average_repeat_coverage[g] / m_region_num_positions) << std::endl;
+      m_output_table << "#" << d << p << "region_average_cov" << d << ( m_rg_region_average_coverage[g] / m_region_num_positions) << std::endl;
+    }
+  }
+
+
   m_output_table.close();
 }
   
@@ -263,6 +294,12 @@ void coverage_output::clear()
   m_region_average_repeat_coverage = 0;
   m_region_average_coverage = 0;
   m_region_num_positions = 0;
+
+  // Sized here rather than in the constructor: the read group count comes from the BAM header,
+  // which pileup_base has already parsed by the time any table is requested.
+  m_rg_region_average_unique_coverage.assign(num_read_group_columns(), 0.0);
+  m_rg_region_average_repeat_coverage.assign(num_read_group_columns(), 0.0);
+  m_rg_region_average_coverage.assign(num_read_group_columns(), 0.0);
 }
 
 /*! Called for each alignment.
@@ -277,15 +314,14 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   
   // print positions not called because there were no reads
   const string& d = m_table_delimiter;
+  const size_t num_coverage_columns = m_total_only ? 3 : 8;
   for (uint32_t i=m_last_position_1+1; i<pos; i++) {
-    if (m_total_only) {
-      m_output_table << i << d << refseq[i-1] << d << 0 << d << 0 << d << 0
-      << std::endl;
-    } else {
-      m_output_table << i << d << refseq[i-1] << d << 0 << d << 0 << d
-        << 0 << d << 0 << d << 0 << d << 0 << d << 0 << d << 0 << std::endl;
-    }
-    
+    m_output_table << i << d << refseq[i-1];
+    // No reads here, so every coverage column is zero -- including each read group's repeat.
+    size_t zero_columns = num_coverage_columns * (m_per_read_group ? (1 + num_read_group_columns()) : 1);
+    for (size_t c = 0; c < zero_columns; c++) m_output_table << d << 0;
+    m_output_table << std::endl;
+
     // Add to the positions, but don't add to the coverage
     m_region_num_positions++;
   }
@@ -320,7 +356,17 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   double redundant_cov[2] = {0.0, 0.0};
   uint32_t raw_redundant_cov[2] = {0,0};
   uint32_t unique_begin_reads[2] = {0,0};
-  
+
+  // Per-read-group copies of the four accumulators above, flattened as [group*2 + strand]. These
+  // are kept ALONGSIDE the aggregates rather than being summed into them: the aggregates must stay
+  // bit-for-bit what they were before this option existed, and redundant_cov is a double whose
+  // value depends on summation order.
+  const size_t num_rg = m_per_read_group ? num_read_group_columns() : 0;
+  vector<uint32_t> rg_unique_cov(num_rg * 2, 0);
+  vector<double>   rg_redundant_cov(num_rg * 2, 0.0);
+  vector<uint32_t> rg_raw_redundant_cov(num_rg * 2, 0);
+  vector<uint32_t> rg_unique_begin_reads(num_rg * 2, 0);
+
   // for each alignment within this pileup:
   for(pileup::const_iterator a=p.begin(); a!=p.end(); ++a) {
     
@@ -331,7 +377,11 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
     
     uint32_t redundancy = a->redundancy();
     uint32_t reversed = a->reversed();
-    
+
+    // Resolved once per alignment. Unresolvable reads (and every read of a BAM with no @RG) come
+    // back as group 0, which is why this is always a valid index.
+    size_t rg_slot = m_per_read_group ? (p.read_group_index(*a) * 2 + reversed) : 0;
+
     bool first_base_matched;
     bool this_is_first_base;
     if (!reversed) { 
@@ -350,7 +400,11 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
       if (this_is_first_base) {
         unique_begin_reads[reversed]++;
       }
-      
+      if (m_per_read_group) {
+        rg_unique_cov[rg_slot]++;
+        if (this_is_first_base) rg_unique_begin_reads[rg_slot]++;
+      }
+
       
       if (this_is_first_base && m_read_begin_output.is_open()) {
         
@@ -394,8 +448,12 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
     else
     {
       raw_redundant_cov[reversed]++;
-      redundant_cov[reversed] += 1.0/redundancy;			
-    }		
+      redundant_cov[reversed] += 1.0/redundancy;
+      if (m_per_read_group) {
+        rg_raw_redundant_cov[rg_slot]++;
+        rg_redundant_cov[rg_slot] += 1.0/redundancy;
+      }
+    }
   }
   
   
@@ -410,16 +468,38 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
     m_output_table << pos << d << ref_base << d
       << (unique_cov[0] + unique_cov[1]) << d
       << (redundant_cov[0] + redundant_cov[1]) << d
-      << (unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1])
-      << std::endl;
+      << (unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1]);
   } else {
     m_output_table << pos << d << ref_base << d
       << unique_cov[0] << d << unique_cov[1] << d
       << redundant_cov[0] << d << redundant_cov[1] << d
       << raw_redundant_cov[0] << d << raw_redundant_cov[1] << d
-      << unique_begin_reads[0] << d << unique_begin_reads[1]
-      << std::endl;
+      << unique_begin_reads[0] << d << unique_begin_reads[1];
   }
+
+  // Same column order as above, repeated once per read group, matching the header written by table().
+  if (m_per_read_group) {
+    for (size_t g = 0; g < num_rg; g++) {
+      const size_t t = g*2, b = g*2 + 1;
+      if (m_total_only) {
+        m_output_table << d
+          << (rg_unique_cov[t] + rg_unique_cov[b]) << d
+          << (rg_redundant_cov[t] + rg_redundant_cov[b]) << d
+          << (rg_unique_cov[t] + rg_unique_cov[b] + rg_redundant_cov[t] + rg_redundant_cov[b]);
+      } else {
+        m_output_table << d
+          << rg_unique_cov[t] << d << rg_unique_cov[b] << d
+          << rg_redundant_cov[t] << d << rg_redundant_cov[b] << d
+          << rg_raw_redundant_cov[t] << d << rg_raw_redundant_cov[b] << d
+          << rg_unique_begin_reads[t] << d << rg_unique_begin_reads[b];
+      }
+
+      m_rg_region_average_unique_coverage[g] += rg_unique_cov[t] + rg_unique_cov[b];
+      m_rg_region_average_repeat_coverage[g] += rg_redundant_cov[t] + rg_redundant_cov[b];
+      m_rg_region_average_coverage[g]        += rg_unique_cov[t] + rg_unique_cov[b] + rg_redundant_cov[t] + rg_redundant_cov[b];
+    }
+  }
+  m_output_table << std::endl;
 }
   
   
