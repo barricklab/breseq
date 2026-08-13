@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SELF=`dirname ${BASH_SOURCE}`
-TEST_CORES=4
+TEST_CORES=7
 # Large real-world data, downloaded on demand and md5-verified rather than
 # committed. See tests/long_ltee_clone/testcmd.sh for what TEST_DATA does and
 # why it has to be declared here, before common.sh is sourced.

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SELF=`dirname ${BASH_SOURCE}`
-TEST_CORES=4
+TEST_CORES=7
 # Large real-world data, downloaded on demand and md5-verified rather than
 # committed (see tests/test_data_manifest.tsv and tests/fetch_test_data.sh).
 # Declared here, next to TEST_CORES and *before* sourcing common.sh, so that
