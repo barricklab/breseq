@@ -123,6 +123,11 @@ namespace breseq {
     // match a JC that already supports that mutation.
     void add_matching_PD_evidence(cGenomeDiff& gd);
 
+    // Attach a copy number (CN) evidence item as evidence for a DEL mutation that already explains
+    // it. Never used to predict a deletion -- only to stop a copy-number-zero region describing a
+    // deletion breseq already called from being reported a second time as unassigned evidence.
+    void add_matching_CN_evidence(cGenomeDiff& gd);
+
     // Remove any DP item that a PD item already describes. PD sees the whole distribution where DP
     // sees only its discordant tail, so where both fire on one breakpoint the DP is redundant and
     // its coordinates are the worse of the two.

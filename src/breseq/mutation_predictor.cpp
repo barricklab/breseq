@@ -3056,6 +3056,10 @@ namespace breseq {
     // Same for pair-distance (PD) evidence.
     add_matching_PD_evidence(gd);
 
+    // Same for copy number (CN) evidence, matched by span against a deletion rather than by
+    // breakpoint against a junction.
+    add_matching_CN_evidence(gd);
+
     // Also combine DP with MOBs by their unique side (IS sides may be on different copies); a DP that
     // localizes a specific non-consensus IS copy sets the MOB's mob_region.
     combine_DP_with_MOB_by_unique_side(gd);
@@ -3199,6 +3203,89 @@ namespace breseq {
           if (find(mut._evidence.begin(), mut._evidence.end(), *pdid) == mut._evidence.end())
             mut._evidence.push_back(*pdid);
         }
+      }
+    }
+  }
+
+  // Attach a copy number (CN) item as ALSO supporting a deletion that already explains it.
+  //
+  // Prediction never uses CN to CALL a deletion -- that always comes from MC/JC/RA -- but a region
+  // the HMM called at copy number zero across a deletion breseq already predicted is describing that
+  // same event. Leaving it unattached reports it a second time under "unassigned copy number
+  // evidence", as though it were an observation nothing accounted for.
+  //
+  // The match is made in TILES, not in percent. A CN boundary can only land on a multiple of CNery's
+  // window (tile_size), while a deletion's boundaries come from base-resolution MC/JC/RA evidence, so
+  // the two never agree exactly and the disagreement is bounded by the tiling rather than by the size
+  // of the event. Percent overlap is the wrong statistic here: it makes a short deletion look like a
+  // poor match purely because the tile is a large fraction of it. In the LTEE data a 407 bp deletion
+  // pairs with a CN region that overhangs it by 81 bp -- under half a tile, but only 80% overlap,
+  // while every large deletion trivially clears 99%.
+  //
+  // So the CN has to lie INSIDE the deletion, allowing one tile of slop at each end. Deliberately
+  // one-directional: the deletion does not have to be mostly covered, which is what lets one long
+  // deletion collect several CN regions when the HMM breaks it up, and lets a CN region sitting well
+  // inside a longer deletion attach at all.
+  //
+  // Only copy number zero qualifies. One copy is the baseline and is never emitted; two or more is
+  // the AMP paths' input (predictJCplusCNtoAMP and predictCNplusRepeatToAMP both require copies >= 2)
+  // -- which is also why no CN item can end up cited by both an AMP and a DEL.
+  //
+  // Deletions at or below one tile are skipped: CNery cannot resolve an event smaller than its own
+  // window, so a CN region overlapping a 1 bp deletion is a coincidence of position and not a
+  // measurement of it. Without this a large amplified region would attach itself to any incidental
+  // single-base deletion inside it.
+  void MutationPredictor::add_matching_CN_evidence(cGenomeDiff& gd)
+  {
+    // The same two filters output.cpp applies when building the unassigned copy number table, so an
+    // item hidden from that table here is exactly one it would otherwise have shown. Neither is set
+    // on CN by the current pipeline; they are here so the two stay in step if that changes.
+    vector<diff_entry_ptr_t> cns;
+    diff_entry_list_t cn_list = gd.get_list(make_vector<gd_entry_type>(CN));
+    for (diff_entry_list_t::iterator it = cn_list.begin(); it != cn_list.end(); it++) {
+      cDiffEntry& cn = **it;
+      if (cn.entry_exists(REJECT)) continue;
+      if (cn.entry_exists(IGNORE)) continue;
+      // copy_number is a positional field on CN, so it is always present.
+      if (from_string<int32_t>(cn[COPY_NUMBER]) != 0) continue;
+      cns.push_back(*it);
+    }
+    // Leaves a run without --predict-copy-number bit-identical.
+    if (cns.empty()) return;
+
+    diff_entry_list_t dels = gd.get_list(make_vector<gd_entry_type>(DEL));
+    for (diff_entry_list_t::iterator it = dels.begin(); it != dels.end(); it++) {
+      cDiffEntry& mut = **it;
+
+      int32_t del_size  = from_string<int32_t>(mut[SIZE]);
+      int32_t del_start = from_string<int32_t>(mut[POSITION]);
+      int32_t del_end   = del_start + del_size - 1;
+
+      for (vector<diff_entry_ptr_t>::iterator cn_it = cns.begin(); cn_it != cns.end(); cn_it++) {
+        cDiffEntry& cn = **cn_it;
+        if (cn[SEQ_ID] != mut[SEQ_ID]) continue;
+
+        // Read start/end directly -- get_reference_coordinate_start/end() are not implemented for CN.
+        int32_t cn_start = from_string<int32_t>(cn[START]);
+        int32_t cn_end   = from_string<int32_t>(cn[END]);
+
+        // tile_size is written by CNEvidence on every CN item it creates, but it is not one of the
+        // type's required fields, so a CN read back from a hand-made genome diff may not have it.
+        // Falling back to zero slop degrades this to strict containment rather than asserting.
+        int32_t tile = cn.entry_exists("tile_size") ? from_string<int32_t>(cn["tile_size"]) : 0;
+
+        if (del_size <= tile) continue;               // below what CNery can resolve
+        if (cn_start < del_start - tile) continue;    // hangs off the start by more than one tile
+        if (cn_end   > del_end   + tile) continue;    // ... or off the end
+
+        // A CN region abutting a boundary can satisfy the two tests above while overlapping the
+        // deletion barely or not at all, so require most of it to actually be inside.
+        int32_t overlap = min(del_end, cn_end) - max(del_start, cn_start) + 1;
+        if (2 * overlap < cn_end - cn_start + 1) continue;
+
+        // Append, never insert: output.cpp reads in_evidence_list().front() for INS mutations.
+        if (find(mut._evidence.begin(), mut._evidence.end(), cn._id) == mut._evidence.end())
+          mut._evidence.push_back(cn._id);
       }
     }
   }
