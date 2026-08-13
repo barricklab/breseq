@@ -313,6 +313,7 @@ int do_bam2cov(int argc, char* argv[]) {
   options.addUsage("", NORMAL_OPTION);
   options.addUsage("Advanced Output Options", NORMAL_OPTION);
   options("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, NORMAL_OPTION);
+  options("per-read-group", "Repeat every coverage column once per read group (@RG) in the BAM file, prefixed RG-#_ where # is the read group's index in the BAM header. The normal columns are still output first, so this only adds columns. Requires a table format (TSV or CSV). A BAM file with no read groups produces a single RG-0 set.", TAKES_NO_ARGUMENT, NORMAL_OPTION);
   options("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, NORMAL_OPTION);
   options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line", TAKES_NO_ARGUMENT, NORMAL_OPTION);
   options("summary-json-file,j", "Path to summary.json file containing the average coverage", settings.data_json_summary_file_name, NORMAL_OPTION);
@@ -409,6 +410,11 @@ int do_bam2cov(int argc, char* argv[]) {
 
   bool table_mode = (output_format == "tsv") || (output_format == "csv");
 
+  // Per-read-group output only exists as extra table columns; there is no plot equivalent.
+  if (options.count("per-read-group") && !table_mode) {
+    ERROR("The --per-read-group option requires a table output format.\nUse --format TSV or --format CSV.");
+  }
+
   if (table_mode) {
     cerr << "+++   Tabulating coverage..." << endl;
   } else {
@@ -423,6 +429,7 @@ int do_bam2cov(int argc, char* argv[]) {
 
   // Set options
   co.total_only(options.count("total-only"));
+  co.per_read_group(options.count("per-read-group"));
   co.output_format( output_format );
   if (options.count("show-average")) {
     co.show_average( options.count("show-average"), options["summary-json-file"] );

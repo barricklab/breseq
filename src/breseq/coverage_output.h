@@ -40,6 +40,7 @@ namespace breseq
     string    m_table_delimiter; // field separator used when writing tables ("\t" for tsv, "," for csv)
     uint32_t  m_downsample;
     bool      m_total_only;
+    bool      m_per_read_group; // repeat the coverage columns once per read group (text formats only)
     uint32_t  m_shaded_flanking;
     
     bool      m_show_average;
@@ -62,7 +63,15 @@ namespace breseq
     double    m_region_average_repeat_coverage;
     double    m_region_average_coverage;
     uint32_t  m_region_num_positions;
-    
+
+    // Per-read-group versions of the three region averages above, indexed by read group. Only
+    // sized/accumulated when m_per_read_group is set. The aggregate values are NOT derived from
+    // these -- they are accumulated independently, so that turning this option on cannot perturb
+    // the existing columns through a change in floating-point summation order.
+    vector<double> m_rg_region_average_unique_coverage;
+    vector<double> m_rg_region_average_repeat_coverage;
+    vector<double> m_rg_region_average_coverage;
+
     map<string,uint32_t> m_read_begin_top_bins;
     map<string,uint32_t> m_read_begin_bot_bins;
     map<string,uint32_t> m_ref_begin_top_bins;
@@ -83,6 +92,7 @@ namespace breseq
     
     coverage_output( const string& bam, const string& fasta, const int thread_id = 0, const string& intermediate_path = "/tmp" )
       : pileup_base(bam, fasta), m_output_format("png"), m_table_delimiter("\t"), m_downsample(0), m_total_only(false)
+      , m_per_read_group(false)
       , m_shaded_flanking(0), m_show_average(false), m_fixed_coverage_scale(0.0)
       , m_thread_id(thread_id)
       , m_intermediate_path(intermediate_path)
@@ -118,7 +128,29 @@ namespace breseq
     
     bool total_only(bool _total_only)
       { m_total_only = _total_only; return m_total_only; }
- 
+
+    //! Repeat every coverage column once per read group, prefixed "RG-<n>_".
+    //
+    // Text formats only: plot() reaches its data through table() and its gnuplot script names
+    // columns explicitly, so it forces this back off before tabulating.
+    bool per_read_group(bool _per_read_group)
+      { m_per_read_group = _per_read_group; return m_per_read_group; }
+
+    //! Number of read group column sets to emit.
+    //
+    // At least one, so a BAM with no @RG lines still produces a single RG-0 set -- which is the
+    // group every unresolvable read already falls back to (see read_group_index_map::index).
+    size_t num_read_group_columns() const
+      { return max(read_groups().size(), static_cast<size_t>(1)); }
+
+    //! Column-name prefix for one read group: "RG-<n>_".
+    //
+    // Deliberately the read group INDEX rather than its @RG ID string: the index is always a dense
+    // integer, whereas an ID from another tool can contain a tab, comma or space and would break
+    // the header row of the very table it labels.
+    static string read_group_column_prefix(size_t read_group_index)
+      { return "RG-" + to_string(read_group_index) + "_"; }
+
     void show_average(const bool show_average, const string& average_file_name)
     { m_show_average = show_average; m_average_file_name = average_file_name; }
     

@@ -72,8 +72,11 @@ tests/.test_data_stamps/
 tests/*-local*/
 tests/data/*-local*/
 # ...but keep checked-in expected outputs even when they end in an otherwise-ignored
-# extension (e.g. *.txt above); runtime output* files stay ignored.
+# extension (e.g. *.txt, *.tab above); runtime output* files stay ignored.
+# Note tests/bam2cov/expected.tab predates the *.tab rule and is tracked already, so it
+# is unaffected either way -- the negation is what lets a NEW .tab golden be committed.
 !tests/*/expected*.txt
+!tests/*/expected*.tab
 
 src/breseq/breseq/
 src/breseq/breseq
