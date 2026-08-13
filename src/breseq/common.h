@@ -571,11 +571,48 @@ namespace breseq {
     return file_empty(filename.c_str());
   }
 
+	//! Normalize a SAM FLAG on the way out of breseq.
+	//
+	// Keeps bits 0-7 (through 0x80 BAM_FREAD2) and bits 9+ (0x200 BAM_FQCFAIL and up), dropping
+	// only 0x100 BAM_FSECONDARY -- breseq resolves each read to a single placement, so nothing it
+	// writes is a secondary alignment.
+	//
+	// This deliberately preserves 0x40/0x80: they are how a record says which mate it is, which is
+	// what makes a read group shared by both mates of a pair still resolvable to a single read
+	// file. Before read groups existed, 0x80 was dropped here along with 0x100.
 	inline uint32_t fix_flags(uint32_t flags)
 	{
-		flags = ((flags >> 9) << 9) + flags % 128;
+		flags = ((flags >> 9) << 9) + flags % 256;
 		return flags;
 	}
+
+  //! One SAM @RG read group.
+  //
+  // breseq emits one per cReadFileSet, so both mates of a paired set share a group; the mate is
+  // recovered from BAM_FREAD1/BAM_FREAD2. See Settings::read_groups().
+  struct cReadGroup {
+    string id;           // @RG ID -- breseq writes the set's index, but never parses it back as a
+                         //           number, so a BAM from any other source is equally readable.
+    string library;      // @RG LB -- the cReadFileSet base name (a read pair's shared name)
+    string sample;       // @RG SM
+    string description;  // @RG DS -- names the member read files
+  };
+  typedef vector<cReadGroup> cReadGroupList;
+
+  //! Make a string safe to write as a SAM header tag value.
+  //
+  // Tag values are tab-delimited and newline-terminated, so an embedded tab or newline would
+  // silently corrupt the header into extra fields or lines. Sample names can come straight from
+  // --name or a genome diff title, so they are arbitrary user text.
+  inline string sanitize_sam_tag_value(const string& value)
+  {
+    string s;
+    for (string::const_iterator it = value.begin(); it != value.end(); it++) {
+      char c = *it;
+      s += ((c >= ' ') && (c <= '~')) ? c : ' ';
+    }
+    return s;
+  }
 
 	template <typename T, typename U> struct make_map : public map<T,U>
 	{

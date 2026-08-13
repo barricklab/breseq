@@ -189,7 +189,7 @@ namespace breseq {
   public:
     alignment_list reference_alignments;
 		alignment_list junction_alignments;
-		uint32_t fastq_file_index;
+		read_group_ref rg;
 		int32_t mapping_quality_difference;
 		uint32_t degenerate_count;
     // The read's best alignment score against the reference genome. Kept alongside
@@ -198,19 +198,19 @@ namespace breseq {
     // consideration we need this baseline plus that candidate's own X5 tag. See score_junction().
     int32_t best_reference_score;
 
-    JunctionMatch() : fastq_file_index(0), mapping_quality_difference(0), degenerate_count(0), best_reference_score(0) {}
+    JunctionMatch() : rg(), mapping_quality_difference(0), degenerate_count(0), best_reference_score(0) {}
 
     JunctionMatch(
                     const alignment_list& _reference_alignments,
                     const alignment_list&  _junction_alignments,
-                    uint32_t _fastq_file_index,
+                    const read_group_ref& _rg,
                     int32_t _mapping_quality_difference,
                     uint32_t _degenerate_count,
                     int32_t _best_reference_score = 0
                     )
           :reference_alignments(_reference_alignments)
           ,junction_alignments(_junction_alignments)
-          ,fastq_file_index(_fastq_file_index)
+          ,rg(_rg)
           ,mapping_quality_difference(_mapping_quality_difference)
           ,degenerate_count(_degenerate_count)
           ,best_reference_score(_best_reference_score)
@@ -314,8 +314,8 @@ namespace breseq {
   struct HeldDiscordantPair {
     alignment_list unique_alignments;      // the unique mate (exactly one alignment)
     alignment_list redundant_alignments;   // the IS mate (all best-score copies)
-    uint32_t unique_fastq_file_index;
-    uint32_t redundant_fastq_file_index;
+    read_group_ref unique_rg;
+    read_group_ref redundant_rg;
     string   unique_seq_id;
     int32_t  unique_position;              // reference_start_1 of the unique mate (clustering key)
     double   window;                       // per-read-set clustering window (paired distance cutoff)
@@ -385,7 +385,7 @@ namespace breseq {
                                 const SequenceTrimsList& trim_list, 
                                 alignment_list& reference_alignments, 
                                 bam_file& reference_tam, 
-                                uint32_t fastq_file_index
+                                const read_group_ref& rg
                                 );
                                 
 

@@ -412,8 +412,11 @@ void resolve_alignments(
 
 	cGenomeDiff gd;
     
-  bam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
-  bam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out);
+  // These two become data/reference.bam and 06_bam/junction.bam (samtools sort preserves @RG), so
+  // this is where read groups reach the output a user -- or CNery, via bam2cov -- actually reads.
+  const cReadGroupList read_groups = settings.read_groups();
+  bam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out, read_groups);
+  bam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out, read_groups);
   
   settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_reference_sam_file_name);
   settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_junction_sam_file_name);
@@ -816,7 +819,7 @@ void resolve_alignments(
 		{
 			JunctionMatch& match = *unique_junction_match_map[key][j];
 			bam_alignment& a = *(match.junction_alignments.front().get());
-			uint32_t fastq_file_index = match.fastq_file_index;
+			const read_group_ref& rg = match.rg;
       
       // at this point, all degeneracy should have been removed!
       assert(match.junction_alignments.size() == 1);
@@ -834,7 +837,7 @@ void resolve_alignments(
 				resolved_reference_tam.write_moved_alignment(
 					a,
           resolved_junction_tam.target_name(a),
-					fastq_file_index,
+					rg,
 					item[side_key + "_seq_id"],
 					from_string<int32_t>(item[side_key + "_position"]),
 					from_string<int32_t>(item[side_key + "_strand"]),
@@ -1140,7 +1143,7 @@ static void dispatch_mate_result(
                                  const SequenceTrimsList& trims_list,
                                  bam_file& resolved_reference_tam,
                                  bam_file* junction_tam,
-                                 uint32_t fastq_file_index,
+                                 const read_group_ref& rg,
                                  const string& read_name,
                                  MateResolution& m,
                                  map<string,uint32_t>& all_junction_ids,
@@ -1153,7 +1156,7 @@ static void dispatch_mate_result(
   // best match is to the reference, record in that SAM file.
   if (m.mapping_quality_difference <= 0)
   {
-    _write_reference_matches(settings, summary, ref_seq_info, trims_list, m.this_reference_alignments, resolved_reference_tam, fastq_file_index);
+    _write_reference_matches(settings, summary, ref_seq_info, trims_list, m.this_reference_alignments, resolved_reference_tam, rg);
   }
   else
   {
@@ -1161,7 +1164,7 @@ static void dispatch_mate_result(
                                         new JunctionMatch(
                                                           m.this_reference_alignments,   // reference sequence alignments
                                                           m.this_junction_alignments,    // the BEST candidate junction alignments
-                                                          fastq_file_index,              // index of the fastq file this read came from
+                                                          rg,              // index of the fastq file this read came from
                                                           m.mapping_quality_difference,  // difference between reference junction alignments (in # mismatches)
                                                           0,                             //
                                                           static_cast<int32_t>(m.best_reference_score)
@@ -1445,7 +1448,10 @@ void load_junction_alignments(
   }
 
   cFastqQualityConverter fqc("SANGER", "SANGER");
-  uint32_t fastq_file_index = 0;
+  // One read group per read file SET, numbered over the sets that survived conversion and
+  // --limit-fold-coverage filtering -- the same list Settings::read_groups() emits @RG lines for,
+  // so this index and the header agree. Both mates of a paired set share it.
+  uint32_t set_index = 0;
 
   // Per-reference-position difference array counting concordant read pairs whose inner gap spans each
   // position, pooled across all paired read-file sets. Indexed by BAM target id (consistent across sets
@@ -1465,6 +1471,9 @@ void load_junction_alignments(
       ///
       bam_file* reference_tam = NULL;
       bam_file* junction_tam = NULL;
+
+      // A one-file set is a read group with no mates, so the writers leave its mate bits alone.
+      const read_group_ref rg(set_index, false, false);
 
       const cReadFile& rf = rfs.m_files[0];
       string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
@@ -1651,7 +1660,7 @@ void load_junction_alignments(
           if (verbose)
             cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
 
-          _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
+          _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, rg);
         }
         else
         {
@@ -1662,7 +1671,7 @@ void load_junction_alignments(
                                               new JunctionMatch(
                                                                 this_reference_alignments,    // reference sequence alignments
                                                                 this_junction_alignments,     // the BEST candidate junction alignments
-                                                                fastq_file_index,             // index of the fastq file this read came from
+                                                                rg,             // index of the fastq file this read came from
                                                                 mapping_quality_difference,   // difference between reference junction alignments (in # mismatches)
                                                                 0,                            //
                                                                 static_cast<int32_t>(best_reference_score)
@@ -1718,7 +1727,7 @@ void load_junction_alignments(
       if (junction_tam != NULL) delete junction_tam;
       if (reference_tam != NULL) delete reference_tam;
 
-      fastq_file_index++;
+      set_index++;
       continue;
     }
 
@@ -1729,9 +1738,10 @@ void load_junction_alignments(
 
     const cReadFile& rf1 = rfs.m_files[0];
     const cReadFile& rf2 = rfs.m_files[1];
-    uint32_t fastq_file_index_1 = fastq_file_index;
-    uint32_t fastq_file_index_2 = fastq_file_index + 1;
-    fastq_file_index += 2;
+    // Both mates land in the SAME read group and are told apart by BAM_FREAD1/BAM_FREAD2.
+    const read_group_ref rg_1(set_index, false, true);
+    const read_group_ref rg_2(set_index, true,  true);
+    set_index++;
 
     end_progress_line();
     cerr << "  READ FILE SET:" << rfs.m_base_name << endl;
@@ -1932,8 +1942,8 @@ void load_junction_alignments(
             MateResolution& rm = m1_unique ? m2 : m1;
             h.unique_alignments = um.this_reference_alignments;
             h.redundant_alignments = rm.this_reference_alignments;
-            h.unique_fastq_file_index = m1_unique ? fastq_file_index_1 : fastq_file_index_2;
-            h.redundant_fastq_file_index = m1_unique ? fastq_file_index_2 : fastq_file_index_1;
+            h.unique_rg = m1_unique ? rg_1 : rg_2;
+            h.redundant_rg = m1_unique ? rg_2 : rg_1;
             bam_alignment* ua = um.this_reference_alignments.front().get();
             h.unique_seq_id = ref_seq_info[ua->reference_target_id()].m_seq_id;
             h.unique_position = ua->reference_start_1();
@@ -1954,8 +1964,8 @@ void load_junction_alignments(
         // Held pairs are written in the post-streaming merge-back (after the copy vote); all others
         // are written inline here exactly as before.
         if (!held_aside) {
-          _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);
-          _write_reference_matches(settings, summary, ref_seq_info, trims_list, m2.this_reference_alignments, resolved_reference_tam, fastq_file_index_2);
+          _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, rg_1);
+          _write_reference_matches(settings, summary, ref_seq_info, trims_list, m2.this_reference_alignments, resolved_reference_tam, rg_2);
         }
       }
       else
@@ -1986,13 +1996,14 @@ void load_junction_alignments(
 
         // Mark before dispatching: dispatch_mate_result routes a reference-best mate to
         // _write_reference_matches -> bam_file::write_alignments, which preserves these flags
-        // (fix_flags strips only 0x80/0x100). A junction-best mate is never marked here, so the
+        // (fix_flags strips only 0x100; 0x80 is then set from the read group). A junction-best
+        // mate is never marked here, so the
         // flags can never reach write_moved_alignment's RNEXT/PNEXT handling.
         if (m1_singleton_reference) mark_mate_unmapped(m1.this_reference_alignments);
         if (m2_singleton_reference) mark_mate_unmapped(m2.this_reference_alignments);
 
-        dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_1, fastq_file_index_1, seq1.m_name, m1, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
-        dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, fastq_file_index_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
+        dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_1, rg_1, seq1.m_name, m1, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
+        dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, rg_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
       }
     } // End loop through every read pair
 
@@ -2095,6 +2106,18 @@ void load_sam_only_alignments(
   }
 
   vector<cReadFile> flat_sam_read_files = read_files.flat_files();
+
+  // Resolution is flattened per file here, but read groups are still per SET, as everywhere else --
+  // so a flat file index has to be mapped back to its set plus which mate it is. Using the flat
+  // index directly as a group index would name a group that does not exist whenever a set is paired.
+  vector<read_group_ref> flat_read_groups;
+  {
+    uint32_t on_set_index = 0;
+    for (cReadFileSets::iterator rfs_it = read_files.begin(); rfs_it != read_files.end(); rfs_it++, on_set_index++)
+      for (size_t m = 0; m < rfs_it->m_files.size(); m++)
+        flat_read_groups.push_back(read_group_ref(on_set_index, (m == 1), rfs_it->is_paired()));
+  }
+
   for (uint32_t sam_file_index = 0; sam_file_index < flat_sam_read_files.size(); sam_file_index++)
   {
 
@@ -2158,7 +2181,7 @@ void load_sam_only_alignments(
       }
       
       // best match is to the reference, record in that SAM file.
-      _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, sam_file_index);
+      _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, flat_read_groups[sam_file_index]);
       
     } // End loop through every read in file
 
@@ -2218,7 +2241,7 @@ bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_inf
 }
 
 
-void _write_reference_matches(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, bam_file& reference_tam, uint32_t fastq_file_index)
+void _write_reference_matches(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, bam_file& reference_tam, const read_group_ref& rg)
 {
   (void)settings;
 	// Nice try, no alignments
@@ -2235,7 +2258,7 @@ void _write_reference_matches(const Settings& settings, Summary& summary, cRefer
 
   // write_alignments() computes the XL/XR trims itself from trims_list (recomputing them for
   // any read whose ends it soft-clips), so we no longer precompute a Trims vector here.
-	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims_list, &ref_seq_info, true, true);
+	reference_tam.write_alignments(rg, reference_alignments, &trims_list, &ref_seq_info, true, true);
 }
 
 // Post-streaming DP merge-back. Held ambiguous discordant pairs (one unique mate + one IS mate that
@@ -2311,8 +2334,8 @@ void write_held_discordant_pairs(Settings& settings, Summary& summary, cReferenc
       OrientationDistance od = same_tid ? compute_orientation_and_distance(ua, chosen) : OrientationDistance{"NA", 0};
       mark_pair_info(ua, chosen, same_tid, od.orientation, od.distance, /*is_concordant=*/false);
 
-      _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.unique_alignments, resolved_reference_tam, h.unique_fastq_file_index);
-      _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.redundant_alignments, resolved_reference_tam, h.redundant_fastq_file_index);
+      _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.unique_alignments, resolved_reference_tam, h.unique_rg);
+      _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.redundant_alignments, resolved_reference_tam, h.redundant_rg);
     }
 
     i = j;
@@ -2756,7 +2779,7 @@ void resolve_junction(
 			JunctionMatchPtr& repeat_match_ptr = it->second;
       JunctionMatch& repeat_match = *repeat_match_ptr;
       
-			uint32_t fastq_file_index = repeat_match.fastq_file_index;
+			const read_group_ref& rg = repeat_match.rg;
       
 			// Success for this candidate junction...
 			// purge all references to this from the degenerate match hash
@@ -2850,7 +2873,7 @@ void resolve_junction(
         // reference genome. (Any read that also matched a passing junction would already
         // have been claimed by it in the earlier pass and removed from here, so a read
         // reaching this point failed on every real junction.) Write it back once.
-        _write_reference_matches(settings, summary, ref_seq_info, trims_list, repeat_match.reference_alignments, resolved_reference_tam, fastq_file_index);
+        _write_reference_matches(settings, summary, ref_seq_info, trims_list, repeat_match.reference_alignments, resolved_reference_tam, rg);
 
         // Write the read's alignment to the (marginal) junction SAM file once.
         if (has_non_overlap_alignment) {
@@ -2859,7 +2882,7 @@ void resolve_junction(
           alignments.read_base_quality_char_string_reversed = repeat_match.junction_alignments.read_base_quality_char_string_reversed;
 
           alignments.push_back(matched_alignment);
-          resolved_junction_tam.write_alignments(fastq_file_index, alignments, &junction_trims_list, &junction_ref_seq_info, true);
+          resolved_junction_tam.write_alignments(rg, alignments, &junction_trims_list, &junction_ref_seq_info, true);
         }
 			}
 		}
@@ -2883,17 +2906,17 @@ void resolve_junction(
     {
       JunctionMatch& item = *((*unique_matches)[i]);
       // Write out the matches to the proper SAM file(s) depending on whether the junction succeeded or failed
-      uint32_t fastq_file_index = item.fastq_file_index;
+      const read_group_ref& rg = item.rg;
       
       // ONLY if we failed: write matches to reference sequences
       if (failed)
       {
         alignment_list this_reference_al = item.reference_alignments;
-        _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
+        _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, rg);
       }
       
       // REGARDLESS of success: write matches to the candidate junction SAM file
-      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, &junction_trims_list, &junction_ref_seq_info, true);
+      resolved_junction_tam.write_alignments(rg, item.junction_alignments, &junction_trims_list, &junction_ref_seq_info, true);
     }
   }
 

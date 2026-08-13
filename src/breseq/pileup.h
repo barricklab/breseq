@@ -57,6 +57,12 @@ namespace breseq {
 
 		//! Retrieve the reference sequence for this pileup.
 		char* reference_sequence() const;
+
+		//! Index of an alignment's read group, or 0 when it cannot be resolved.
+		//
+		// The resolution table belongs to the pileup_base, since it is derived from the BAM header
+		// and an alignment_wrapper deliberately cannot see one.
+		inline uint32_t read_group_index(const alignment_wrapper& a) const { return _pb.read_group_index(a); }
     
     inline char reference_base_char_0(uint32_t pos0) const 
       { return reference_sequence()[pos0]; } ;

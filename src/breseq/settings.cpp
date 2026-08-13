@@ -1668,6 +1668,30 @@ namespace breseq
     this->resolve_sample_name();
   }
 
+  cReadGroupList Settings::read_groups() const
+  {
+    cReadGroupList return_value;
+
+    for (cReadFileSets::const_iterator it = this->read_file_sets.begin(); it != this->read_file_sets.end(); it++) {
+
+      vector<string> member_base_names;
+      for (vector<cReadFile>::const_iterator rf = it->m_files.begin(); rf != it->m_files.end(); rf++)
+        member_base_names.push_back(rf->base_name());
+
+      cReadGroup rg;
+      // The index within this list. Written as a decimal string for readability, but nothing reads
+      // it back as a number -- an ID is resolved to an index by its position among the header's
+      // @RG lines, so a BAM written by any other tool works the same way.
+      rg.id          = to_string(return_value.size());
+      rg.library     = sanitize_sam_tag_value(it->m_base_name);
+      rg.sample      = sanitize_sam_tag_value(this->sample_name);
+      rg.description = sanitize_sam_tag_value("breseq read files: " + join(member_base_names, ","));
+      return_value.push_back(rg);
+    }
+
+    return return_value;
+  }
+
   void Settings::resolve_sample_name()
   {
     // 1. An explicit --name always wins.

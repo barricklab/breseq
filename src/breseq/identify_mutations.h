@@ -130,8 +130,8 @@ namespace breseq {
 	 */
 	struct polymorphism_data {
 		//! Constructor.
-		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t f, int32_t mq, const covariate_values_t& cv)
-		: _base_char(b), _quality(q), _strand(s), _fastq_file_index(f), _mapping_quality(mq), _cv(cv)
+		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t mq, const covariate_values_t& cv)
+		: _base_char(b), _quality(q), _strand(s), _mapping_quality(mq), _cv(cv)
     , _log10_pr_max(0.0) {
       for (uint8_t j=0; j<base_list_size; j++) { _log10_pr[j] = 0.0; _r[j] = 0.0; }
 		}
@@ -139,7 +139,6 @@ namespace breseq {
 		base_char _base_char;
 		uint8_t _quality;
 		int _strand;
-		int32_t _fastq_file_index;
     int32_t _mapping_quality;
     covariate_values_t _cv;
 
@@ -222,8 +221,7 @@ namespace breseq {
 	public:
 		typedef map<string,int> base_count_t;
 		typedef map<uint8_t,base_count_t> qual_map_t;
-    typedef map<int32_t,qual_map_t> fastq_map_t;
-    
+
     //! Information that is tracked per-sequence.
 		struct sequence_info {
 			/*! Coverage count table.
@@ -272,8 +270,15 @@ namespace breseq {
     //! of one breakpoint spread, which is what both are looking for.
     struct dp_group {
       double          window_width;
-      uint32_t        r1_m_id;      //!< m_files[0].m_id (R1 fastq file index)
-      uint32_t        r2_m_id;      //!< m_files[1].m_id (R2 fastq file index)
+      //! The `<n>:` prefix each mate's read name was given during 01_sequence_conversion, used to
+      //! rebuild a pair's two read names for display. Derived from cReadFile::m_id + 1, matching
+      //! dp_evidence/mp_evidence. This is deliberately NOT the read group index: the read-name
+      //! prefix is assigned in set order BEFORE read files are pruned, while the read group index
+      //! is assigned after, so the two disagree whenever a read file is dropped. (That prefix
+      //! numbering is itself inconsistent with m_id when pairing reorders the command line -- a
+      //! pre-existing bug, left alone here so DP/MP descriptors do not silently change.)
+      uint32_t        r1_read_name_prefix;
+      uint32_t        r2_read_name_prefix;
       deque<dp_read>  reads[kDPnBins];
       deque<mp_read>  mp_reads[kMPnBins];
       //! Start positions of ALL primary mapped reads of each focal strand currently in-window --
@@ -479,7 +484,6 @@ namespace breseq {
     cErrorTable _error_table;
 
 		vector<sequence_info> _seq_info; //!< information about each sequence.
-		fastq_map_t error_hash; //!< fastq_file_index -> quality map.
 		shared_info s; // summary stats
 		
 		// this is used to output detailed coverage data:
@@ -510,7 +514,11 @@ namespace breseq {
 		// All per-bin state is indexed by bin = strand*3 + orient (see kDPnBins / dp_group).
 		int32_t _dp_seed;                                   //!< --discordant-pair-seed threshold (applied per bin)
 		vector<dp_group> _dp_groups;                        //!< one entry per paired read group with valid stats
-		map<uint32_t, int> _fastq_index_to_dp_group;        //!< cReadFile::m_id -> index into _dp_groups (absent = not paired)
+		vector<int> _read_group_to_dp_group;               //!< read group index -> index into _dp_groups (-1 = not paired)
+
+		//! The DP/MP/PD group a read belongs to, or -1 if its read group has none.
+		//! Defined in the .cpp because pileup is only forward-declared here.
+		int dp_group_for(const pileup& p, const alignment_wrapper& a) const;
 		int32_t _dp_metric[kDPnBins];                       //!< running count of in-window discordant reads, per bin
 		uint32_t _dp_region_start[kDPnBins];                //!< UNDEFINED_UINT32 = not currently in a region, per bin
 		uint32_t _dp_region_max_count[kDPnBins];            //!< peak metric while the current region is open, per bin
@@ -520,7 +528,7 @@ namespace breseq {
 
 		// these are state variables used by the missing-pair (MP) region method.
 		// All per-bin state is indexed by bin = focal-read strand (see kMPnBins). The read groups and
-		// their window widths are shared with the DP method above (_dp_groups / _fastq_index_to_dp_group).
+		// their window widths are shared with the DP method above (_dp_groups / _read_group_to_dp_group).
 		bool _mp_enabled;                                   //!< --predict-missing-pairs AND at least one paired group
 		int32_t _mp_seed;                                   //!< --missing-pair-seed threshold (applied per bin)
 		double _mp_seed_fraction;                           //!< --missing-pair-seed-fraction enrichment threshold

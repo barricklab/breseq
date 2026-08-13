@@ -191,6 +191,27 @@ namespace breseq {
       
       //* determining error probabilities to use during
       bool alignment_position_to_covariates(const pileup_wrapper& a, int32_t insert_count, covariate_values_t& cv);
+
+      //! Teach this table how to turn a record's read group back into a single read file.
+      //
+      // The k_read_set covariate is per read FILE, but a BAM record names its read GROUP, which
+      // for a paired set covers two files. Both arguments come from the BAM being read: the map
+      // from its header, the partition from that map plus the run's read file sets.
+      void set_read_file_partition(const read_group_index_map* rg_map, const read_file_partition& partition)
+      {
+        m_rg_map = rg_map;
+        m_read_file_partition = partition;
+      }
+
+      //! The flat read file index for a record: its read group, plus which mate it is.
+      //
+      // Returns 0 when the partition was never set or the BAM has no read groups, which is what
+      // the X2:i: tag this replaced also yielded on a BAM breseq did not write.
+      uint32_t read_file_index(const alignment_wrapper& a) const
+      {
+        if ((m_rg_map == NULL) || m_read_file_partition.empty()) return 0;
+        return m_read_file_partition.index(m_rg_map->index(a), (a.flag() & BAM_FREAD2) != 0);
+      }
       
       //* accessors
       double get_log10_prob(covariate_values_t& cv);
@@ -203,6 +224,11 @@ namespace breseq {
       covariates_max_t          m_covariate_max;          // maximum value of each covariate
       covariates_enforce_max_t  m_covariate_enforce_max;  // do not throw an error if max exceeded, reassign value to max
       covariates_offset_t       m_covariate_offset;       // number to multiply this covariate by when constructing row numbers
+
+      // Read group -> read file resolution for the BAM being read. Not owned; the map belongs to
+      // the pileup_base/bam_file that opened the header.
+      const read_group_index_map* m_rg_map = NULL;
+      read_file_partition         m_read_file_partition;
 
     public:
       bool                      m_per_position;

@@ -828,6 +828,12 @@ identify_mutations_pileup::identify_mutations_pileup(
   // load the error table file and convert back to probabilities
   _error_table.read_log10_prob_table(settings.error_rates_file_name);
   _error_table.log10_prob_to_prob();
+
+  // The k_read_set covariate indexes a read FILE, but a record names its read GROUP -- which for a
+  // paired set spans two files. Give the table this BAM's header groups so it can recombine the
+  // group with the mate flag and land on the same read file the rates were fit for.
+  _error_table.set_read_file_partition(&read_groups(),
+                                       make_read_file_partition(read_groups(), settings.read_file_sets));
   
   if (_print_per_position_file) {
     _per_position_file.open(_settings.mutation_identification_per_position_file_name.c_str());
@@ -840,24 +846,29 @@ identify_mutations_pileup::identify_mutations_pileup(
 
   // Set up discordant-pair (DP) candidate-region detection.
   // For each PAIRED read group with a valid paired-mapping-distance fit, build a sliding-window
-  // group with width W = median + 2.42 * MAD, and map each member file's BAM index (cReadFile::m_id)
-  // to that group so we can classify a read's group by its fastq_file_index() during the pileup.
+  // group with width W = median + 2.42 * MAD, and map that read group's BAM index to it so we can
+  // classify a read's group by its read_group_index() during the pileup.
+  //
+  // Keyed on the BAM's own read group index -- which is what the RG:Z: tag resolves to -- rather
+  // than on cReadFile::m_id. m_id is assigned in command-line order and is never renumbered when
+  // read files are dropped by conversion or --limit-fold-coverage, so it was a different index
+  // space from the one the lookup used.
   const PairedMappingDistanceDistributionSummaries& pmdd = summary.preliminary_paired_mapping_distance_distribution;
-  for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
-    if (!rfs->is_paired()) continue;
-    PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs->m_base_name);
+  _read_group_to_dp_group.assign(settings.read_file_sets.size(), -1);
+  for (size_t set_index = 0; set_index < settings.read_file_sets.size(); set_index++) {
+    const cReadFileSet& rfs = settings.read_file_sets[set_index];
+    if (!rfs.is_paired()) continue;
+    PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs.m_base_name);
     if (it == pmdd.end()) continue;
     if (it->second.median <= 0.0) continue;
 
     dp_group g;
     g.window_width = it->second.median + 2.42 * it->second.mad;
-    g.r1_m_id = rfs->m_files[0].m_id;  // R1 fastq file index
-    g.r2_m_id = rfs->m_files[1].m_id;  // R2 fastq file index
+    g.r1_read_name_prefix = rfs.m_files[0].m_id + 1;  // see dp_group for why this is m_id-derived
+    g.r2_read_name_prefix = rfs.m_files[1].m_id + 1;
     int group_index = static_cast<int>(_dp_groups.size());
     _dp_groups.push_back(g);
-    for (vector<cReadFile>::const_iterator rf = rfs->m_files.begin(); rf != rfs->m_files.end(); rf++) {
-      _fastq_index_to_dp_group[rf->m_id] = group_index;
-    }
+    _read_group_to_dp_group[set_index] = group_index;
   }
 
   // Missing-pair (MP) detection rides on the same groups, so it can only run once they exist. Unlike
@@ -881,11 +892,11 @@ identify_mutations_pileup::identify_mutations_pileup(
     // see pd_load_weighted_histogram for what an unbounded null does to the seed test. pd_evidence
     // derives the span exactly this way, which is what keeps the null a region is FOUND under and the
     // null it is later JUDGED under identical.
-    for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
-      if (!rfs->is_paired()) continue;
-      map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(rfs->m_files[0].m_id);
-      if (gi == _fastq_index_to_dp_group.end()) continue;
-      PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs->m_base_name);
+    for (size_t set_index = 0; set_index < settings.read_file_sets.size(); set_index++) {
+      const cReadFileSet& rfs = settings.read_file_sets[set_index];
+      if (!rfs.is_paired()) continue;
+      if (_read_group_to_dp_group[set_index] < 0) continue;
+      PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs.m_base_name);
       if (it == pmdd.end()) continue;
 
       derived_span = max(derived_span, 2.0 * it->second.distance_cutoff);
@@ -901,14 +912,15 @@ identify_mutations_pileup::identify_mutations_pileup(
     _pd_z_hist.assign(kPDzHistBins, 0);
 
     int usable_groups = 0;
-    for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
-      if (!rfs->is_paired()) continue;
-      map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(rfs->m_files[0].m_id);
-      if (gi == _fastq_index_to_dp_group.end()) continue;
-      if (pmdd.find(rfs->m_base_name) == pmdd.end()) continue;
+    for (size_t set_index = 0; set_index < settings.read_file_sets.size(); set_index++) {
+      const cReadFileSet& rfs = settings.read_file_sets[set_index];
+      if (!rfs.is_paired()) continue;
+      int group_index = _read_group_to_dp_group[set_index];
+      if (group_index < 0) continue;
+      if (pmdd.find(rfs.m_base_name) == pmdd.end()) continue;
 
-      string hist_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", rfs->m_base_name);
-      if (!pd_build_cdf(hist_file_name, trunc, null_max_distance, _dp_groups[gi->second].pd_cdf)) continue;
+      string hist_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", rfs.m_base_name);
+      if (!pd_build_cdf(hist_file_name, trunc, null_max_distance, _dp_groups[group_index].pd_cdf)) continue;
       usable_groups++;
     }
 
@@ -1204,6 +1216,15 @@ identify_mutations_pileup::~identify_mutations_pileup()
 {
 }
 
+/*! The DP/MP/PD group a read belongs to, or -1 if its read group has none.
+ */
+int identify_mutations_pileup::dp_group_for(const pileup& p, const alignment_wrapper& a) const
+{
+  uint32_t rg = p.read_group_index(a);
+  if (rg >= _read_group_to_dp_group.size()) return -1;
+  return _read_group_to_dp_group[rg];
+}
+
 /*! One entry of a candidate region's discordant_pairs list: the read-pair key followed by the
     ALIGNED extent of this region's read of that pair, "<key>__<read_start>__<read_end>".
 
@@ -1303,9 +1324,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       if ((insert_count == 0) && !_dp_groups.empty() && (i->reference_start_1() == position)) {
         if (i->is_paired() && !i->unmapped() && !i->proper_pair() &&
             !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP))) {
-          map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(i->fastq_file_index());
-          if (gi != _fastq_index_to_dp_group.end()) {
-            const dp_group& g = _dp_groups[gi->second];
+          int gi = dp_group_for(p, *i);
+          if (gi >= 0) {
+            const dp_group& g = _dp_groups[gi];
 
             // Bin by (focal-read strand) x (pair orientation). Strand: 0 = forward, 1 = reverse.
             int s = i->reversed() ? 1 : 0;
@@ -1320,16 +1341,16 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             int bin = s * 3 + o;
 
             // Build the condensed read-pair key: <read1_name>__<read2_name>__<r1_insert_size>.
-            // breseq names mates <file_index>:<read_num> sharing read_num (fastq.cpp), and never sets
-            // BAM_FREAD1/2, so R1/R2 role comes from fastq_file_index() vs the group's R1/R2 file ids.
-            bool focal_is_r1 = (i->fastq_file_index() == g.r1_m_id);
+            // breseq names mates <file_index>:<read_num> sharing read_num (fastq.cpp); both mates
+            // are in one read group, so R1/R2 role comes from the mate flag.
+            bool focal_is_r1 = !(i->flag() & BAM_FREAD2);
             string fname = i->read_name();
             size_t colon = fname.find(':');
             string read1_name, read2_name;
             if (colon != string::npos) {
               string counter = fname.substr(colon + 1);
-              read1_name = to_string(g.r1_m_id + 1) + ":" + counter;
-              read2_name = to_string(g.r2_m_id + 1) + ":" + counter;
+              read1_name = to_string(g.r1_read_name_prefix) + ":" + counter;
+              read2_name = to_string(g.r2_read_name_prefix) + ":" + counter;
             } else {
               // Fallback for unexpected naming: use the focal name for its own slot only.
               read1_name = focal_is_r1 ? fname : "";
@@ -1346,7 +1367,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             // A tie-broken redundant discordant pair keeps X1>1 on its marked alignment (see
             // resolve_alignments.cpp); flag its DP side redundant so it propagates to DP evidence.
             dr.redundant = (i->redundancy() > 1);
-            _dp_groups[gi->second].reads[bin].push_back(dr);
+            _dp_groups[gi].reads[bin].push_back(dr);
             ++_dp_metric[bin];
             // If a region in this bin is already open (from a previous column), this newly entering
             // read belongs to it, so append its key now. Reads entering on the column that OPENS a
@@ -1369,13 +1390,13 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       //## sequence that is in neither the reference nor any candidate junction.
       if (_mp_enabled && (insert_count == 0) && (i->reference_start_1() == position)) {
         if (!i->unmapped() && !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY))) {
-          map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(i->fastq_file_index());
-          if (gi != _fastq_index_to_dp_group.end()) {
+          int gi = dp_group_for(p, *i);
+          if (gi >= 0) {
             int bin = i->reversed() ? 1 : 0;
 
             // Every primary mapped read of this strand enters the denominator window, whether or not
             // its mate is missing. The seed test below is an ENRICHMENT test, and it needs both terms.
-            _dp_groups[gi->second].mp_all_reads[bin].push_back(position);
+            _dp_groups[gi].mp_all_reads[bin].push_back(position);
             ++_mp_total_metric[bin];
 
             if (i->is_paired() && (i->flag() & BAM_FMUNMAP)) {
@@ -1383,7 +1404,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
               mr.start_pos = position;
               mr.end_pos = i->reference_end_1();
               mr.redundant = (i->redundancy() > 1);
-              _dp_groups[gi->second].mp_reads[bin].push_back(mr);
+              _dp_groups[gi].mp_reads[bin].push_back(mr);
               ++_mp_metric[bin];
               // As for DP: reads entering on the column that OPENS a region are captured by the
               // open-time snapshot in check_missing_pair_completion (which runs after this loop),
@@ -1433,9 +1454,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             // redundancy as evidence that a side sits on a multicopy element.
             && (i->redundancy() <= 1)) {
 
-          map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(i->fastq_file_index());
-          if (gi != _fastq_index_to_dp_group.end()) {
-            const vector<int64_t>& cdf = _dp_groups[gi->second].pd_cdf;
+          int gi = dp_group_for(p, *i);
+          if (gi >= 0) {
+            const vector<int64_t>& cdf = _dp_groups[gi].pd_cdf;
             int32_t d = i->insert_size();
 
             int32_t lo = static_cast<int32_t>(i->reference_end_1());
@@ -1482,7 +1503,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
       //## gather information about the aligned base
       int32_t redundancy = i->redundancy();
-      int32_t fastq_file_index = i->fastq_file_index();
       int strand = i->strand();
       bool trimmed = i->is_trimmed(on_insert_position_past_base);
       
@@ -1542,7 +1562,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         ++pos_info[baseindex2char(cv.obs_base())][1+strand];
         
         //##### this is for polymorphism prediction and making strings
-        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(),cv.read_set(), i->mapping_quality(), cv));
+        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(), i->mapping_quality(), cv));
 
         //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
