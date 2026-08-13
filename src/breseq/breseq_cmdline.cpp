@@ -2527,10 +2527,21 @@ int breseq_default_action(int argc, char* argv[])
     if (settings.do_step(settings.copy_number_variation_done_file_name, "Predicting copy number variation evidence")) {
 
       CNEvidence::predict(settings, summary, ref_seq_info);
+      summary.copy_number.store(settings.copy_number_summary_file_name);
 
       settings.done_step(settings.copy_number_variation_done_file_name);
 
     } // End of if cnv done file
+
+    // Restore on a restart that skipped the step above: Output reports the ori-ter fit and the
+    // correction statistics in summary.html and summary.json, and nothing else on disk holds them --
+    // CNery's own output is gone once the pipeline has completed.
+    //
+    // Guarded on existence rather than retrieved unconditionally, because an output directory left
+    // by a breseq that predates this file has the stage's done-file but not the file itself, and
+    // retrieve() asserts rather than degrading. Missing simply means the section is not reported.
+    if (file_exists(settings.copy_number_summary_file_name.c_str()))
+      summary.copy_number.retrieve(settings.copy_number_summary_file_name);
 
   } // End of if do_cnv
 

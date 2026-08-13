@@ -1592,6 +1592,7 @@ namespace breseq
       this->cnery_break_points_file_name = this->cnery_output_path + "/CNV_csv/" + cnery_file_prefix + "_break_pts.csv";
       this->cnery_otr_results_file_name = this->cnery_output_path + "/OTR_corr/" + cnery_file_prefix + "_otr_results.json";
     }
+    this->copy_number_summary_file_name = this->copy_number_variation_path + "/copy_number_summary.json";
 
     //! Paths: Output
 		this->output_path = "output";
@@ -1619,6 +1620,7 @@ namespace breseq
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
 		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.svg";
 		this->cn_overview_coverage_plot_file_name = this->coverage_plot_path + "/@.cn_overview.svg";
+		this->gc_bias_plot_file_name = this->coverage_plot_path + "/@.gc_bias.svg";
 
 		this->output_calibration_path = this->evidence_path;
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.svg";

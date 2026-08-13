@@ -692,6 +692,9 @@ namespace breseq
     string cnery_break_points_file_name;
     // Where CNery records the origin/terminus of replication it inferred for the OTR correction.
     string cnery_otr_results_file_name;
+    // Our own distillation of the above, kept because everything else in this directory is deleted
+    // when the run finishes but Output still has to report it.
+    string copy_number_summary_file_name;
 
     string periodicity_table_file_name;
     string periodicity_done_file_name;
@@ -724,6 +727,8 @@ namespace breseq
 		// Whole-reference plot of CNery's bias-corrected coverage and its HMM copy-number calls
 		// (@ = seq_id). Only written under --predict-copy-number.
 		string cn_overview_coverage_plot_file_name;
+		// Coverage vs. window GC content, before and after the GC correction CNery fit and divided out.
+		string gc_bias_plot_file_name;
 
 		string output_calibration_path;
 		string unique_only_coverage_plot_file_name;

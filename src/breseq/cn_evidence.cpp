@@ -44,7 +44,17 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
     string break_pts_file_name = settings.file_name(settings.cnery_break_points_file_name, "@", seq.m_seq_id);
     string gd_file_name = settings.file_name(settings.copy_number_evidence_genome_diff_file_name, "@", seq.m_seq_id);
 
-    ingest_csv_for_seq_id(seq.m_seq_id, cnv_file_name, break_pts_file_name, gd_file_name);
+    vector<cnery_window> windows;
+    ASSERT(read_cnery_windows(cnv_file_name, windows),
+           "Could not open CNery output file: " + cnv_file_name);
+
+    ingest_csv_for_seq_id(seq.m_seq_id, windows, break_pts_file_name, gd_file_name);
+
+    // Recorded now because none of what it is derived from survives the run: this whole directory is
+    // deleted once the pipeline completes, but Output still has to report how the analysis went.
+    cnery_otr otr;
+    read_cnery_otr(settings.file_name(settings.cnery_otr_results_file_name, "@", seq.m_seq_id), otr);
+    summarize(otr, windows, summary.copy_number[seq.m_seq_id]);
   }
 }
 
@@ -97,6 +107,7 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
   size_t win_st_col = string::npos, win_len_col = string::npos, rel_cov_col = string::npos;
   size_t win_end_col = string::npos, raw_cov_col = string::npos, copy_number_col = string::npos;
   size_t otr_fit_col = string::npos;
+  size_t gc_percent_col = string::npos, gc_cov_col = string::npos, gc_fit_col = string::npos;
   for (size_t i = 0; i < header_fields.size(); i++) {
     if (header_fields[i] == "win_st") win_st_col = i;
     else if (header_fields[i] == "win_len") win_len_col = i;
@@ -105,6 +116,9 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
     else if (header_fields[i] == "norm_raw_cov") raw_cov_col = i;
     else if (header_fields[i] == "prob_copy_number") copy_number_col = i;
     else if (header_fields[i] == "otr_gc_corr_fact") otr_fit_col = i;
+    else if (header_fields[i] == "gc_percent") gc_percent_col = i;
+    else if (header_fields[i] == "gc_corr_norm_cov") gc_cov_col = i;
+    else if (header_fields[i] == "gc_corr_fact") gc_fit_col = i;
   }
   ASSERT((win_st_col != string::npos) && (win_len_col != string::npos) && (rel_cov_col != string::npos),
          "Unexpected column layout in CNery output file: " + cnv_file_name);
@@ -112,7 +126,7 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
   // Highest column index actually read, so a truncated row can be skipped rather than indexed past.
   size_t max_needed_col = 0;
   const size_t used_cols[] = { win_st_col, win_len_col, rel_cov_col, win_end_col, raw_cov_col,
-                               copy_number_col, otr_fit_col };
+                               copy_number_col, otr_fit_col, gc_percent_col, gc_cov_col, gc_fit_col };
   for (size_t i = 0; i < sizeof(used_cols) / sizeof(used_cols[0]); i++) {
     if ((used_cols[i] != string::npos) && (used_cols[i] > max_needed_col)) max_needed_col = used_cols[i];
   }
@@ -131,6 +145,9 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
     w.corrected_cov = from_string<double>(fields[rel_cov_col]);
     w.raw_cov = (raw_cov_col != string::npos) ? from_string<double>(fields[raw_cov_col]) : 0.0;
     w.otr_fit_cov = (otr_fit_col != string::npos) ? from_string<double>(fields[otr_fit_col]) : 0.0;
+    w.gc_percent = (gc_percent_col != string::npos) ? from_string<double>(fields[gc_percent_col]) : 0.0;
+    w.gc_corrected_cov = (gc_cov_col != string::npos) ? from_string<double>(fields[gc_cov_col]) : 0.0;
+    w.gc_corr_fact = (gc_fit_col != string::npos) ? from_string<double>(fields[gc_fit_col]) : 0.0;
     w.copy_number = (copy_number_col != string::npos) ? from_string<int32_t>(fields[copy_number_col]) : -1;
     windows.push_back(w);
   }
@@ -198,15 +215,11 @@ bool CNEvidence::read_cnery_otr(const string& otr_file_name, cnery_otr& otr)
 // relative coverage value to display for that range.
 void CNEvidence::ingest_csv_for_seq_id(
                                        const string& seq_id,
-                                       const string& cnv_file_name,
+                                       const vector<cnery_window>& windows,
                                        const string& break_pts_file_name,
                                        const string& gd_file_name
                                        )
 {
-  vector<cnery_window> windows;
-  ASSERT(read_cnery_windows(cnv_file_name, windows),
-         "Could not open CNery output file: " + cnv_file_name);
-
   uint32_t window_size = windows.size() ? static_cast<uint32_t>(windows[0].length) : 0;
 
   ifstream break_pts_file(break_pts_file_name.c_str());
@@ -253,6 +266,113 @@ void CNEvidence::ingest_csv_for_seq_id(
   break_pts_file.close();
 
   gd.write(gd_file_name);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Distilling the run into the numbers reported in summary.html and summary.json
+// ---------------------------------------------------------------------------------------------
+
+// Sorts in place; the callers below have no use for the original order.
+static double cnery_median(vector<double>& v)
+{
+  if (v.empty()) return 0.0;
+  sort(v.begin(), v.end());
+  size_t n = v.size();
+  return (n % 2) ? v[n / 2] : 0.5 * (v[n / 2 - 1] + v[n / 2]);
+}
+
+// Robust coefficient of variation: 1.4826 * MAD / median. The constant makes the MAD a consistent
+// estimator of the standard deviation for normally distributed data, so this reads on the same scale
+// as an ordinary CV while ignoring the handful of extreme windows that CNery's coverage clipping and
+// the ragged ends of a reference sequence leave behind. Takes its argument by value: it reorders it.
+static double cnery_robust_cv(vector<double> v)
+{
+  double med = cnery_median(v);
+  if (med <= 0.0) return 0.0;
+  for (size_t i = 0; i < v.size(); i++) v[i] = fabs(v[i] - med);
+  return 1.4826 * cnery_median(v) / med;
+}
+
+void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& windows, CopyNumberSummary& cns)
+{
+  cns.otr_detected = otr.detected;
+  cns.origin = otr.origin;
+  cns.terminus = otr.terminus;
+  cns.origin_coverage = otr.origin_cov;
+  cns.terminus_coverage = otr.terminus_cov;
+  cns.otr_ratio = otr.ratio;
+
+  if (windows.empty()) return;
+
+  cns.window_size = windows[0].length;
+
+  // The step, as the most common gap between consecutive window starts rather than the mean gap:
+  // CNery drops every window overlapping repeat coverage, and those holes -- up to 5.9 kb on REL606
+  // -- would drag a mean well above the step actually used.
+  {
+    map<int32_t, uint32_t> step_counts;
+    for (size_t i = 1; i < windows.size(); i++) {
+      int32_t step = windows[i].start - windows[i - 1].start;
+      if (step > 0) step_counts[step]++;
+    }
+    uint32_t best_count = 0;
+    for (map<int32_t, uint32_t>::const_iterator it = step_counts.begin(); it != step_counts.end(); it++) {
+      if (it->second > best_count) { best_count = it->second; cns.window_step = it->first; }
+    }
+  }
+
+  // How large the GC correction was. A range that barely straddles 1.0 means there was almost no GC
+  // bias to remove, so a dramatic-looking correction would deserve suspicion.
+  bool have_gc_factor = false;
+  for (size_t i = 0; i < windows.size(); i++) {
+    double f = windows[i].gc_corr_fact;
+    if (f <= 0.0) continue;
+    if (!have_gc_factor) {
+      cns.gc_correction_min = cns.gc_correction_max = f;
+      have_gc_factor = true;
+    } else {
+      if (f < cns.gc_correction_min) cns.gc_correction_min = f;
+      if (f > cns.gc_correction_max) cns.gc_correction_max = f;
+    }
+  }
+
+  // The three spreads are only meaningful against each other, so they must come from ONE set of
+  // windows. Requiring all three values to be positive is what makes that possible: CNery leaves
+  // otr_gc_corr_norm_cov at 0 wherever raw coverage fell below 10% of the median, so scoring each
+  // stage over "its own" non-zero windows would compare different parts of the genome.
+  vector<size_t> usable, single_copy;
+  for (size_t i = 0; i < windows.size(); i++) {
+    const cnery_window& w = windows[i];
+    if ((w.raw_cov <= 0.0) || (w.gc_corrected_cov <= 0.0) || (w.corrected_cov <= 0.0)) continue;
+    usable.push_back(i);
+    if (w.copy_number == 1) single_copy.push_back(i);
+  }
+
+  // Restricting to single-copy windows is the point: a real amplification or deletion inflates the
+  // spread at every stage equally, which would hide exactly the improvement being measured. Fall
+  // back to all windows when there are too few calls to select on -- either because the HMM column
+  // was missing, or because so much of the sequence is non-single-copy that the subset is not
+  // representative -- and record which happened so the report can say so.
+  const size_t kMinimumSpreadWindows = 100;
+  const vector<size_t>& selected = (single_copy.size() >= kMinimumSpreadWindows) ? single_copy : usable;
+  cns.spread_single_copy = (single_copy.size() >= kMinimumSpreadWindows);
+  cns.spread_windows = selected.size();
+  if (selected.empty()) return;
+
+  vector<double> raw, gc, otr_gc;
+  raw.reserve(selected.size());
+  gc.reserve(selected.size());
+  otr_gc.reserve(selected.size());
+  for (size_t k = 0; k < selected.size(); k++) {
+    const cnery_window& w = windows[selected[k]];
+    raw.push_back(w.raw_cov);
+    gc.push_back(w.gc_corrected_cov);
+    otr_gc.push_back(w.corrected_cov);
+  }
+
+  cns.cv_uncorrected = cnery_robust_cv(raw);
+  cns.cv_gc_corrected = cnery_robust_cv(gc);
+  cns.cv_otr_gc_corrected = cnery_robust_cv(otr_gc);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -319,15 +439,24 @@ vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cner
     w.length = w.end - w.start;
 
     double raw_sum = 0, corrected_sum = 0, otr_fit_sum = 0;
+    double gc_percent_sum = 0, gc_corrected_sum = 0, gc_fit_sum = 0;
     int32_t extreme_cn = in[lo].copy_number;
     for (size_t i = lo; i < hi; i++) {
       raw_sum += in[i].raw_cov;
       corrected_sum += in[i].corrected_cov;
       otr_fit_sum += in[i].otr_fit_cov;
+      gc_percent_sum += in[i].gc_percent;
+      gc_corrected_sum += in[i].gc_corrected_cov;
+      gc_fit_sum += in[i].gc_corr_fact;
       if (labs(in[i].copy_number - 1) > labs(extreme_cn - 1)) extreme_cn = in[i].copy_number;
     }
     w.raw_cov = raw_sum / static_cast<double>(hi - lo);
     w.corrected_cov = corrected_sum / static_cast<double>(hi - lo);
+    // Not drawn on the overview this binning feeds, but averaged rather than left at the first
+    // window's value so a binned list stays a faithful summary of the windows it replaced.
+    w.gc_percent = gc_percent_sum / static_cast<double>(hi - lo);
+    w.gc_corrected_cov = gc_corrected_sum / static_cast<double>(hi - lo);
+    w.gc_corr_fact = gc_fit_sum / static_cast<double>(hi - lo);
     // The ramp is piecewise linear, so a bin mean is its value at the bin centre -- averaging does
     // not distort it the way it smooths the coverage traces.
     w.otr_fit_cov = otr_fit_sum / static_cast<double>(hi - lo);
@@ -540,6 +669,122 @@ void CNEvidence::render_cn_plot(
   remove(log_name.c_str());
 }
 
+void CNEvidence::render_gc_bias_plot(
+                                     const string& output_svg,
+                                     const string& seq_id,
+                                     const vector<cnery_window>& windows
+                                     )
+{
+  // The correction curve doubles as the check for whether there is anything to draw: CNery only
+  // emits gc_corr_fact when it ran a GC correction at all.
+  vector<pair<double, double> > curve;   // (GC%, correction factor)
+  for (size_t i = 0; i < windows.size(); i++) {
+    if ((windows[i].gc_corr_fact <= 0.0) || (windows[i].gc_percent <= 0.0)) continue;
+    curve.push_back(make_pair(windows[i].gc_percent * 100.0, windows[i].gc_corr_fact));
+  }
+  if (curve.empty()) return;
+
+  // gc_corr_fact is a function of GC alone, so the tens of thousands of windows collapse to one
+  // point per distinct GC value. Sorting by GC is what lets gnuplot join them into the curve.
+  sort(curve.begin(), curve.end());
+  curve.erase(unique(curve.begin(), curve.end()), curve.end());
+
+  // A whole bacterial chromosome is ~46,000 windows, and two scatter series that size make an SVG
+  // tens of megabytes. Striding preserves the shape of the cloud; the curve above is left intact
+  // because it is small already and is the part that has to be read precisely.
+  const size_t kMaximumScatterPoints = 5000;
+  size_t stride = 1;
+  {
+    size_t n_scatter = 0;
+    for (size_t i = 0; i < windows.size(); i++) {
+      if ((windows[i].gc_percent > 0.0) && (windows[i].raw_cov > 0.0)) n_scatter++;
+    }
+    if (n_scatter > kMaximumScatterPoints) stride = (n_scatter / kMaximumScatterPoints) + 1;
+  }
+
+  string tab_file_name = output_svg + ".tab";
+  ofstream tab(tab_file_name.c_str());
+  ASSERT(tab.good(), "Could not write file: " + tab_file_name);
+  tab << "gc\traw\tgc_corrected" << endl;
+
+  double max_y = 0;
+  size_t kept = 0, n_drawn = 0;
+  for (size_t i = 0; i < windows.size(); i++) {
+    const cnery_window& w = windows[i];
+    if ((w.gc_percent <= 0.0) || (w.raw_cov <= 0.0)) continue;
+    if ((kept++ % stride) != 0) continue;
+
+    tab << (w.gc_percent * 100.0) << "\t" << w.raw_cov << "\t";
+    // Absent under --bias none: keep the window's raw value on the plot rather than dropping the row.
+    if (w.gc_corrected_cov > 0.0) {
+      tab << w.gc_corrected_cov;
+      if (w.gc_corrected_cov > max_y) max_y = w.gc_corrected_cov;
+    } else {
+      tab << "NaN";
+    }
+    tab << endl;
+
+    if (w.raw_cov > max_y) max_y = w.raw_cov;
+    n_drawn++;
+  }
+  tab.close();
+
+  if (n_drawn == 0) {
+    remove(tab_file_name.c_str());
+    return;
+  }
+
+  string curve_file_name = output_svg + ".fit.tab";
+  {
+    ofstream fit(curve_file_name.c_str());
+    ASSERT(fit.good(), "Could not write file: " + curve_file_name);
+    fit << "gc\tfactor" << endl;
+    for (size_t i = 0; i < curve.size(); i++) {
+      fit << curve[i].first << "\t" << curve[i].second << endl;
+      if (curve[i].second > max_y) max_y = curve[i].second;
+    }
+  }
+
+  // Clip the axis rather than fitting it to the tail: a handful of windows sit at many times the
+  // median (rDNA, prophage), and letting them set the range flattens the bulk of the cloud into a
+  // band too thin to read. 3.0 keeps the single-copy line at 1.0 comfortably mid-plot.
+  max_y = min(3.0, max(2.0, max_y * 1.1));
+
+  ostringstream s;
+  s << "set datafile columnheaders" << endl;
+  s << "set datafile missing 'NaN'" << endl;
+  // noenhanced, as in render_cn_plot: reference sequence ids routinely contain underscores.
+  s << "set terminal svg size 2200,1200 font ',28' noenhanced" << endl;
+  s << "set output " << double_quote(output_svg) << endl;
+  s << "set tics out" << endl;
+  s << "set border lw 2" << endl;
+  s << "set xlabel 'GC content of " << seq_id << " window (%)'" << endl;
+  s << "set ylabel 'Relative Coverage'" << endl;
+  s << "set yrange [0:" << to_string<double>(max_y) << "]" << endl;
+  s << "set bmargin 6" << endl;
+  s << "set key below horizontal Left reverse font ',20' width 4 samplen 1.5" << endl;
+
+  string quoted_tab = double_quote(tab_file_name);
+  vector<string> clauses;
+  clauses.push_back("1 with lines lc rgb 'dark-grey' lw 3 dt 2 title 'single copy'");
+  clauses.push_back(quoted_tab + " using \"gc\":\"raw\" with points pt 7 ps 0.4 lc rgb 'grey60' title 'uncorrected'");
+  clauses.push_back(quoted_tab + " using \"gc\":\"gc_corrected\" with points pt 7 ps 0.4 lc rgb 'blue' title 'GC corrected'");
+  // The curve that was divided out. How far it departs from 1.0 IS the size of the correction, and
+  // the blue cloud should sit flat about 1.0 exactly where the grey cloud follows this line.
+  clauses.push_back(double_quote(curve_file_name) + " using \"gc\":\"factor\" with lines lc rgb 'black' lw 4 title 'GC bias fit (divided out)'");
+  s << "plot " << join(clauses, string(", \\\n     ")) << endl;
+
+  string script_name = output_svg + ".gp";
+  string log_name    = output_svg + ".gp.log";
+  run_gnuplot_script(s.str(), script_name, log_name);
+
+  make_svg_responsive(output_svg);
+
+  remove(tab_file_name.c_str());
+  remove(curve_file_name.c_str());
+  remove(log_name.c_str());
+}
+
 void CNEvidence::draw_evidence_plots(
                                      const Settings& settings,
                                      cReferenceSequences& ref_seq_info,
@@ -579,6 +824,11 @@ void CNEvidence::draw_evidence_plots(
                      1, static_cast<int32_t>(seq.m_length), otr,
                      static_cast<int32_t>(seq.m_length));
     }
+
+    // The GC correction the coverage above was corrected BY. Wants the unbinned windows: binning
+    // averages together windows of unrelated GC content, which is exactly the axis this plots.
+    render_gc_bias_plot(settings.file_name(settings.gc_bias_plot_file_name, "@", seq.m_seq_id),
+                        seq.m_seq_id, windows);
 
     if (settings.no_evidence_html) continue;
 
