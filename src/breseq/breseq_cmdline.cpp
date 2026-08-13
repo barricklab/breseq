@@ -68,7 +68,7 @@ int do_bam2aln(int argc, char* argv[]) {
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("bam,b", "BAM database file of read alignments", "data/reference.bam");
   options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
-  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=ACCESSION_START-END.alignment.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names ACCESSION_START-END.alignment.*, ... (DEFAULT=.)");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
   options("format", "Format of output alignment(s): HTML, TXT, or JSON", "HTML");
   options("max-flanking-columns,w", "Maximum number of bases in aligned reads to show flanking the region of interest (0=ALL)", 100);
@@ -171,32 +171,35 @@ int do_bam2aln(int argc, char* argv[]) {
                         from_string<uint32_t>(options["minimum-mapping-quality"])
                         );
     
-    string default_file_name = region_list[j];
-    
+    // Automatically generated file names use the region with its colon replaced by an
+    // underscore, so that they are valid/portable file names on all platforms.
+    string region_file_name = substitute(region_list[j], ":", "_") + ".alignment";
+
     string output_string;
+    string file_extension;
     if (format == "HTML") {
       output_string = ao.html_alignment(region_list[j]);
-      default_file_name += ".html";
+      file_extension = ".html";
     }
     else if (format == "TXT") {
       output_string = ao.text_alignment(region_list[j]);
-      default_file_name += ".txt";
+      file_extension = ".txt";
     }
     else if (format == "JSON") {
       output_string = ao.json_alignment(region_list[j]);
-      default_file_name += ".txt";
+      file_extension = ".json";
     }
-      
+
     if (options.count("stdout")) {
       cout << output_string << endl;
     } else {
       ///Write to file
-      string file_name = default_file_name;
-            
+      string file_name = region_file_name + file_extension;
+
       if (options.count("output")) {
         file_name = options["output"];
         if(region_list.size() > 1)  {
-          file_name = (split(options["output"], "."))[0] + "_" + region_list[j] + ".html";  }
+          file_name = (split(options["output"], "."))[0] + "_" + region_file_name + file_extension;  }
       }
       
       // Create the output path if necessary
@@ -305,7 +308,7 @@ int do_bam2cov(int argc, char* argv[]) {
   options("bam,b", "BAM database file of read alignments", "data/reference.bam");
   options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
   // options controlling what files are output
-  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=ACCESSION_START-END.coverage.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with automatically generated names (DEFAULT=.). When no region is provided, one file is created per reference sequence, named ACCESSION.coverage.*");
   options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
   options("format", "Format of output: PNG, PDF, or SVG for a coverage plot; TSV (tab-separated) or CSV (comma-separated) for a coverage table", "PNG");
@@ -469,6 +472,13 @@ int do_bam2cov(int argc, char* argv[]) {
     }
   }
   
+  // When no regions were requested, the region list above was faked up to span each reference
+  // sequence end to end. Those coordinates are not something the user asked for, so they are
+  // left out of automatically generated file names (one file per sequence, so they are not
+  // needed to keep the names unique either). Coordinates that came from a requested region --
+  // or from a real tile -- are kept.
+  bool whole_sequence_regions = tiling_mode && !options.count("tile-size") && !options.count("tile-overlap");
+
   for(vector<string>::iterator it = region_list.begin(); it!= region_list.end(); it++)
   {
     string& region = *it;
@@ -481,6 +491,17 @@ int do_bam2cov(int argc, char* argv[]) {
     cReferenceSequences::normalize_region(region);
     cerr << "  Region : " << region << endl;
 
+    // Automatically generated file names use the region with its colon replaced by an
+    // underscore, so that they are valid/portable file names on all platforms.
+    string region_file_name = substitute(region, ":", "_");
+    if (whole_sequence_regions) {
+      string seq_id;
+      uint32_t start_pos_1, end_pos_1;
+      cReferenceSequences::parse_region(region, seq_id, start_pos_1, end_pos_1);
+      region_file_name = seq_id;
+    }
+    region_file_name += ".coverage";
+
     string file_name;
     // When the user supplies a single explicit output file name, it is used verbatim
     // (they include the extension). Otherwise breseq generates the name and appends the
@@ -488,16 +509,16 @@ int do_bam2cov(int argc, char* argv[]) {
     bool explicit_output_file = false;
     if (!tiling_mode && (region_list.size() == 1)) {
       if (options["output"].empty()) {
-        file_name = *it;
+        file_name = region_file_name;
       } else {
         file_name = options["output"];
         explicit_output_file = true;
       }
     } else {
       if (options["output"].empty()) {
-        file_name = *it;
+        file_name = region_file_name;
       } else {
-        file_name = options["output"] + "/" + options["prefix"] + region;
+        file_name = options["output"] + "/" + options["prefix"] + region_file_name;
       }
     }
 
