@@ -437,6 +437,69 @@ namespace breseq{
     {}
   };
 
+  // How CNery's copy number analysis of one reference sequence went: the replication bias it fit and
+  // divided out, and how much flatter each successive correction actually made the coverage.
+  //
+  // Kept because none of it is recoverable afterwards -- CNery writes it into
+  // 09_copy_number_variation/, which the pipeline deletes when it finishes, and the CN evidence
+  // entries record only the calls, not the fit that produced them.
+  class CopyNumberSummary : public JSONStorable<CopyNumberSummary>
+  {
+  public:
+    // The ori-ter replication bias. When otr_detected is false CNery found none, and the
+    // coordinates below are the placeholders it writes in that case (the first and last position of
+    // the sequence) rather than a real origin and terminus.
+    bool     otr_detected;
+    int32_t  origin;              // 1-based genomic coordinate (CNery's "Origin window" is not an index)
+    int32_t  terminus;
+    double   origin_coverage;     // the fitted ramp's height at the origin ...
+    double   terminus_coverage;   // ... and at the terminus
+    double   otr_ratio;           // origin_coverage / terminus_coverage: the peak-to-trough ratio
+
+    // Resolution the analysis was run at.
+    int32_t  window_size;
+    int32_t  window_step;
+
+    // How large the GC correction was: the range of the LOWESS factor divided out. A range close to
+    // 1.0-1.0 means there was hardly any GC bias to remove.
+    double   gc_correction_min;
+    double   gc_correction_max;
+
+    // Spread of the same coverage measurement after each successive correction, as a robust
+    // coefficient of variation (1.4826 * MAD / median). Measured over single-copy windows only, so
+    // that a real amplification or deletion -- which inflates all three equally -- cannot mask the
+    // improvement the corrections made.
+    uint64_t spread_windows;      // how many windows the three values below were computed over
+    bool     spread_single_copy;  // false => no HMM calls to select on, so all windows were used
+    double   cv_uncorrected;
+    double   cv_gc_corrected;
+    double   cv_otr_gc_corrected;
+
+    CopyNumberSummary()
+    : otr_detected(false)
+    , origin(0)
+    , terminus(0)
+    , origin_coverage(0.0)
+    , terminus_coverage(0.0)
+    , otr_ratio(0.0)
+    , window_size(0)
+    , window_step(0)
+    , gc_correction_min(0.0)
+    , gc_correction_max(0.0)
+    , spread_windows(0)
+    , spread_single_copy(false)
+    , cv_uncorrected(0.0)
+    , cv_gc_corrected(0.0)
+    , cv_otr_gc_corrected(0.0)
+    {}
+  };
+
+  class CopyNumberSummaries : public map<string, CopyNumberSummary>, public JSONStorable<CopyNumberSummaries>
+  {
+  public:
+    CopyNumberSummaries() {}
+  };
+
 	class Summary : public JSONStorable<Summary>
 	{
 	public:
@@ -449,6 +512,8 @@ namespace breseq{
     ErrorCountSummaries preprocess_error_count;
     SoftClippingSummary soft_clipping;
     DiscordantPairSummary discordant_pair;
+    // Per reference sequence, and only under --predict-copy-number.
+    CopyNumberSummaries copy_number;
     // Stage-03 preprocessing fit (median/upper-MAD/cutoff/orientation + preprocessing-tabulated counts).
     PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
     // Final pass: same fit fields, plus mapped/concordant counts from BAM pair-flag assignment.
@@ -520,6 +585,14 @@ namespace breseq{
   // DiscordantPairSummary
   void to_json(json& j, const DiscordantPairSummary& s);
   void from_json(const json& j, DiscordantPairSummary& s);
+
+  // CopyNumberSummary
+  void to_json(json& j, const CopyNumberSummary& s);
+  void from_json(const json& j, CopyNumberSummary& s);
+
+  // CopyNumberSummaries
+  void to_json(json& j, const CopyNumberSummaries& s);
+  void from_json(const json& j, CopyNumberSummaries& s);
 
   // Summary
   void to_json(json& j, const Summary& s);
@@ -755,6 +828,7 @@ namespace breseq{
     PublicOptionsSummary options;
     SoftClippingSummary soft_clipping;
     DiscordantPairSummary discordant_pair;
+    CopyNumberSummaries copy_number;
     PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
     PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;
 

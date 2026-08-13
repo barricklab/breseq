@@ -293,6 +293,11 @@ string html_discordant_pair_table_string(diff_entry_list_t& dp,
 // library/background values they were derived from, and the resulting accept/reject tally.
 string html_discordant_pair_gates_string(const Settings& settings, Summary& summary);
 
+// summary.html block reporting how CNery's copy number analysis went for each reference sequence:
+// the replication bias it fit and divided out, how much flatter each correction stage made the
+// coverage, and links to the two plots. Empty unless --predict-copy-number produced a summary.
+string html_copy_number_string(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);
+
 string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------

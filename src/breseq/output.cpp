@@ -1476,7 +1476,15 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   if (one_no_coverage) {
     HTML << "<p>" << "<span class=\"gray_table_row\">Insufficient coverage</span> Reference sequence counted as entirely deleted due to low coverage. Try either the <code>-t,--targeted-sequencing</code> or the <code>-c,--contig-reference </code> option if you want mutations called for these reference sequences." << endl;
   }
-  
+
+  ////
+  // Copy number variation
+  ////
+
+  // How CNery's analysis went: the replication bias it fit, and how much each correction stage
+  // flattened the coverage the copy number calls are made from. Empty without --predict-copy-number.
+  HTML << html_copy_number_string(settings, summary, ref_seq_info);
+
   ////
   // Junction evidence
   ////
@@ -2814,6 +2822,154 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
            + td(tally)) << endl;
 
   ss << "</table>" << endl;
+  return ss.str();
+}
+
+// The zip-aware href every plot link in summary.html is built from: inside the evidence archive the
+// pages are addressed by fragment, outside it by relative path.
+static string cn_plot_href(const Settings& settings, const string& plot_file_name)
+{
+  return settings.zip_html
+    ? settings.local_html_evidence_file_name + "#" + cString(plot_file_name).get_base_name()
+    : Settings::relative_path(plot_file_name, settings.output_path);
+}
+
+// A corrected spread, followed by how far it moved from the previous stage. The change is the point
+// of the column -- an absolute CV means little on its own, but "-44%" says the correction worked.
+static string cn_cv_cell(double cv, double previous_cv)
+{
+  string s = to_string(cv, 3, false);
+  if ((previous_cv > 0.0) && (cv > 0.0)) {
+    double percent = 100.0 * (cv - previous_cv) / previous_cv;
+    s += " " + nonbreaking("(" + (percent > 0.0 ? string("+") : string(""))
+                           + to_string(percent, 0, false) + "%)");
+  }
+  return s;
+}
+
+string html_copy_number_string(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
+{
+  if (!settings.predict_copy_number) return "";
+  if (summary.copy_number.empty()) return "";
+
+  stringstream ss;
+  ss << "<p>" << endl;
+  ss << h2("Copy Number Variation") << endl;
+
+  ////
+  // The replication bias CNery fit and divided out
+  ////
+
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
+  ss << tr(th("colspan=\"8\" align=\"left\" class=\"discordant_pair_header_row\"",
+              "Ori-ter replication bias fit")) << endl;
+  ss << "<tr>" << th() << th() << th(ALIGN_LEFT, "reference sequence")
+     << th(ALIGN_CENTER, "origin") << th(ALIGN_CENTER, "terminus")
+     << th(ALIGN_CENTER, nonbreaking("coverage at ori")) << th(ALIGN_CENTER, nonbreaking("coverage at ter"))
+     << th(ALIGN_CENTER, nonbreaking("peak-to-trough")) << "</tr>" << endl;
+
+  bool one_no_bias = false;
+  bool one_all_windows = false;
+
+  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+
+    CopyNumberSummaries::const_iterator cn_it = summary.copy_number.find(it->m_seq_id);
+    if (cn_it == summary.copy_number.end()) continue;
+    const CopyNumberSummary& cn = cn_it->second;
+
+    ss << start_tr();
+
+    // The two plots for this reference. Both are absent when Output is re-run on its own, since
+    // 09_copy_number_variation/ -- which they are drawn from -- is gone by then.
+    string cn_plot = settings.file_name(settings.cn_overview_coverage_plot_file_name, "@", it->m_seq_id);
+    ss << td(file_exists(cn_plot.c_str())
+             ? a(cn_plot_href(settings, cn_plot), nonbreaking("copy number")) : "");
+    string gc_plot = settings.file_name(settings.gc_bias_plot_file_name, "@", it->m_seq_id);
+    ss << td(file_exists(gc_plot.c_str())
+             ? a(cn_plot_href(settings, gc_plot), nonbreaking("GC bias")) : "");
+
+    ss << td(it->m_seq_id);
+
+    if (cn.otr_detected) {
+      ss << td(ALIGN_RIGHT, commify(to_string(cn.origin)));
+      ss << td(ALIGN_RIGHT, commify(to_string(cn.terminus)));
+      ss << td(ALIGN_CENTER, to_string(cn.origin_coverage, 3, false));
+      ss << td(ALIGN_CENTER, to_string(cn.terminus_coverage, 3, false));
+      ss << td(ALIGN_CENTER, to_string(cn.otr_ratio, 2, false) + "&times;");
+    } else {
+      // CNery still writes coordinates in this case -- the first and last position of the sequence
+      // -- but they are placeholders, not a fit, so printing them would invent a result.
+      ss << td("colspan=\"5\" align=\"center\"", nonbreaking("no ori-ter bias detected"));
+      one_no_bias = true;
+    }
+
+    ss << end_tr();
+  }
+  ss << "</table>" << endl;
+
+  ////
+  // What each correction stage actually accomplished
+  ////
+
+  ss << "<p>" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
+  ss << tr(th("colspan=\"6\" align=\"left\" class=\"discordant_pair_header_row\"",
+              "Coverage spread after each correction")) << endl;
+  ss << "<tr>" << th(ALIGN_LEFT, "reference sequence") << th(ALIGN_CENTER, "window")
+     << th(ALIGN_CENTER, nonbreaking("GC correction"))
+     << th(ALIGN_CENTER, "uncorrected") << th(ALIGN_CENTER, nonbreaking("GC corrected"))
+     << th(ALIGN_CENTER, nonbreaking("GC + ori-ter corrected")) << "</tr>" << endl;
+
+  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+
+    CopyNumberSummaries::const_iterator cn_it = summary.copy_number.find(it->m_seq_id);
+    if (cn_it == summary.copy_number.end()) continue;
+    const CopyNumberSummary& cn = cn_it->second;
+
+    ss << start_tr();
+    ss << td(it->m_seq_id);
+    ss << td(ALIGN_CENTER, cn.window_size
+             ? nonbreaking(to_string(cn.window_size) + " bp / " + to_string(cn.window_step) + " bp step")
+             : "NA");
+
+    // The span of the factor divided out. A range hugging 1.0 means there was almost no GC bias, so
+    // the GC-corrected column beside it has little room to improve on the uncorrected one.
+    ss << td(ALIGN_CENTER, (cn.gc_correction_max > 0.0)
+             ? nonbreaking(to_string(cn.gc_correction_min, 2, false) + "-"
+                           + to_string(cn.gc_correction_max, 2, false) + "&times;")
+             : "NA");
+
+    if (cn.cv_uncorrected > 0.0) {
+      ss << td(ALIGN_CENTER, to_string(cn.cv_uncorrected, 3, false));
+      ss << td(ALIGN_CENTER, cn_cv_cell(cn.cv_gc_corrected, cn.cv_uncorrected));
+      ss << td(ALIGN_CENTER, cn_cv_cell(cn.cv_otr_gc_corrected, cn.cv_gc_corrected));
+      if (!cn.spread_single_copy) one_all_windows = true;
+    } else {
+      ss << td("colspan=\"3\" align=\"center\"", "NA");
+    }
+
+    ss << end_tr();
+  }
+  ss << "</table>" << endl;
+
+  ss << "<p>" << b("Coverage spread") << " is a robust coefficient of variation "
+     << "(1.4826 &times; MAD / median) of the relative coverage across windows, measured over the same "
+     << "windows at each stage so the three are comparable. It should fall from left to right: that "
+     << "drop is how much the GC and ori-ter corrections actually flattened the coverage the copy "
+     << "number calls are made from." << endl;
+
+  if (one_all_windows) {
+    ss << "<p>" << "Spread is normally measured over single-copy windows only, so that a real "
+       << "amplification or deletion cannot mask the improvement. For at least one reference "
+       << "sequence above there were too few single-copy windows to do that, and all windows were "
+       << "used instead." << endl;
+  }
+  if (one_no_bias) {
+    ss << "<p>" << b("No ori-ter bias detected") << " CNery found no replication-associated coverage "
+       << "gradient to correct for this reference sequence, so it divided out a constant instead of "
+       << "a ramp. This is expected for plasmids and for cultures sequenced at stationary phase." << endl;
+  }
+
   return ss.str();
 }
 

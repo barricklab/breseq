@@ -57,14 +57,21 @@ namespace breseq {
   private:
 
     // One row of CNery's <prefix><seq_id>_CNV.csv: a single sliding window.
+    //
+    // The three coverage values are the SAME measurement after successive corrections --
+    // raw_cov -> gc_corrected_cov -> corrected_cov -- which is what makes comparing their spread a
+    // readout of how much each correction stage actually accomplished.
     struct cnery_window {
-      int32_t start;          // win_st                (1-based, inclusive)
-      int32_t end;            // win_end
-      int32_t length;         // win_len
-      double  raw_cov;        // norm_raw_cov          (normalized, uncorrected)
-      double  corrected_cov;  // otr_gc_corr_norm_cov  (normalized, GC- and ori-ter-corrected)
-      double  otr_fit_cov;    // otr_gc_corr_fact      (the ori-ter ramp that was divided out)
-      int32_t copy_number;    // prob_copy_number      (HMM Viterbi state)
+      int32_t start;             // win_st                (1-based, inclusive)
+      int32_t end;               // win_end
+      int32_t length;            // win_len
+      double  gc_percent;        // gc_percent            (a FRACTION, 0-1, despite the name)
+      double  raw_cov;           // norm_raw_cov          (normalized, uncorrected)
+      double  gc_corrected_cov;  // gc_corr_norm_cov      (normalized, GC-corrected)
+      double  gc_corr_fact;      // gc_corr_fact          (the LOWESS GC curve that was divided out)
+      double  corrected_cov;     // otr_gc_corr_norm_cov  (normalized, GC- and ori-ter-corrected)
+      double  otr_fit_cov;       // otr_gc_corr_fact      (the ori-ter ramp that was divided out)
+      int32_t copy_number;       // prob_copy_number      (HMM Viterbi state)
     };
 
     // The origin and terminus of replication CNery inferred, and used to build its OTR correction.
@@ -96,9 +103,17 @@ namespace breseq {
     // CNery reports. See the definition for why its per-window column cannot be drawn as a line.
     static double otr_ramp_at(const cnery_otr& otr, int32_t position, int32_t seq_length);
 
+    // Distills the fit and the per-window coverage into the numbers summary.html and summary.json
+    // report. Must happen in stage 09: everything it reads is deleted when the pipeline finishes.
+    static void summarize(
+                          const cnery_otr& otr,
+                          const vector<cnery_window>& windows,
+                          CopyNumberSummary& cns
+                          );
+
     static void ingest_csv_for_seq_id(
                                       const string& seq_id,
-                                      const string& cnv_file_name,
+                                      const vector<cnery_window>& windows,
                                       const string& break_pts_file_name,
                                       const string& gd_file_name
                                       );
@@ -118,6 +133,18 @@ namespace breseq {
                                const cnery_otr& otr,
                                int32_t seq_length
                                );
+
+    // Coverage against window GC content, before and after the GC correction. Drawn from CNery's own
+    // gc_corr_fact column rather than from its GC_bias PDF, which is pooled across every reference
+    // sequence and whose "LOWESS fit" line is really a degree-2 polyfit through the correction
+    // factors rather than the LOWESS curve that was actually divided out.
+    //
+    // Does nothing if CNery emitted no GC columns (--bias none or --bias otr).
+    static void render_gc_bias_plot(
+                                    const string& output_svg,
+                                    const string& seq_id,
+                                    const vector<cnery_window>& windows
+                                    );
 
   }; // class CNEvidence
 

@@ -462,6 +462,61 @@ void from_json(const json& j, DiscordantPairSummary& s)
   s.items_ignored_circular = get_uint64_or_default(j, "items_ignored_circular");
 }
 
+void to_json(json& j, const CopyNumberSummary& s)
+{
+  j = json{
+    {"otr_detected", s.otr_detected},
+    {"origin", s.origin},
+    {"terminus", s.terminus},
+    {"origin_coverage", s.origin_coverage},
+    {"terminus_coverage", s.terminus_coverage},
+    {"otr_ratio", s.otr_ratio},
+    {"window_size", s.window_size},
+    {"window_step", s.window_step},
+    {"gc_correction_min", s.gc_correction_min},
+    {"gc_correction_max", s.gc_correction_max},
+    {"spread_windows", s.spread_windows},
+    {"spread_single_copy", s.spread_single_copy},
+    {"cv_uncorrected", s.cv_uncorrected},
+    {"cv_gc_corrected", s.cv_gc_corrected},
+    {"cv_otr_gc_corrected", s.cv_otr_gc_corrected},
+  };
+}
+
+void from_json(const json& j, CopyNumberSummary& s)
+{
+  // All defaulted: a summary written before copy number reporting existed must still load.
+  s.otr_detected = j.count("otr_detected") ? j.at("otr_detected").get<bool>() : false;
+  s.origin = static_cast<int32_t>(get_double_or_default(j, "origin"));
+  s.terminus = static_cast<int32_t>(get_double_or_default(j, "terminus"));
+  s.origin_coverage = get_double_or_default(j, "origin_coverage");
+  s.terminus_coverage = get_double_or_default(j, "terminus_coverage");
+  s.otr_ratio = get_double_or_default(j, "otr_ratio");
+  s.window_size = static_cast<int32_t>(get_double_or_default(j, "window_size"));
+  s.window_step = static_cast<int32_t>(get_double_or_default(j, "window_step"));
+  s.gc_correction_min = get_double_or_default(j, "gc_correction_min");
+  s.gc_correction_max = get_double_or_default(j, "gc_correction_max");
+  s.spread_windows = get_uint64_or_default(j, "spread_windows");
+  s.spread_single_copy = j.count("spread_single_copy") ? j.at("spread_single_copy").get<bool>() : false;
+  s.cv_uncorrected = get_double_or_default(j, "cv_uncorrected");
+  s.cv_gc_corrected = get_double_or_default(j, "cv_gc_corrected");
+  s.cv_otr_gc_corrected = get_double_or_default(j, "cv_otr_gc_corrected");
+}
+
+void to_json(json& j, const CopyNumberSummaries& s)
+{
+  for (CopyNumberSummaries::const_iterator it = s.begin(); it != s.end(); it++) {
+    j[it->first] = it->second;
+  }
+}
+
+void from_json(const json& j, CopyNumberSummaries& s)
+{
+  for (json::const_iterator it = j.begin(); it != j.end(); ++it) {
+    s[it.key()] = it.value();
+  }
+}
+
 void to_json(json& j, const Summary& s)
 {
   j = json{
@@ -474,6 +529,7 @@ void to_json(json& j, const Summary& s)
     {"preprocess_alignments", s.preprocess_alignments},
     {"soft_clipping", s.soft_clipping},
     {"discordant_pair", s.discordant_pair},
+    {"copy_number", s.copy_number},
     {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
@@ -492,6 +548,8 @@ void from_json(const json& j, Summary& s)
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
   if (j.count("discordant_pair"))
     s.discordant_pair = j.at("discordant_pair").get<DiscordantPairSummary>();
+  if (j.count("copy_number"))
+    s.copy_number = j.at("copy_number").get<CopyNumberSummaries>();
   if (j.count("preliminary_paired_mapping_distance_distribution"))
     s.preliminary_paired_mapping_distance_distribution = j.at("preliminary_paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
   if (j.count("paired_mapping_distance_distribution"))
@@ -715,6 +773,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   , options(t)
   , soft_clipping(s.soft_clipping)
   , discordant_pair(s.discordant_pair)
+  , copy_number(s.copy_number)
   , preliminary_paired_mapping_distance_distribution(s.preliminary_paired_mapping_distance_distribution)
   , paired_mapping_distance_distribution(s.paired_mapping_distance_distribution)
 { }
@@ -1059,6 +1118,7 @@ void to_json(json& j, const PublicSummary& s)
     {"options", s.options},
     {"soft_clipping", s.soft_clipping},
     {"discordant_pair", s.discordant_pair},
+    {"copy_number", s.copy_number},
     {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
@@ -1074,6 +1134,8 @@ void from_json(const json& j, PublicSummary& s)
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
   if (j.count("discordant_pair"))
     s.discordant_pair = j.at("discordant_pair").get<DiscordantPairSummary>();
+  if (j.count("copy_number"))
+    s.copy_number = j.at("copy_number").get<CopyNumberSummaries>();
   if (j.count("preliminary_paired_mapping_distance_distribution"))
     s.preliminary_paired_mapping_distance_distribution = j.at("preliminary_paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
   if (j.count("paired_mapping_distance_distribution"))
