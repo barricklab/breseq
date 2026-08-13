@@ -95,7 +95,12 @@ error_count_pileup::error_count_pileup(
 	// reserve enough space for the sequence info:
   vector< vector<string> > seq_ids_by_coverage_group = m_settings.seq_ids_by_coverage_group();
 	m_coverage_group_info.resize(seq_ids_by_coverage_group.size());
-  
+
+  // Error rates are per read FILE while a record names its read GROUP, so give the table what it
+  // needs to recombine the group with the mate flag. read_groups() is this BAM's own header.
+  m_error_table.set_read_file_partition(&read_groups(),
+                                        make_read_file_partition(read_groups(), m_settings.read_file_sets));
+
   set_print_progress(true);
   
   // Set up to print out file during pileup
@@ -859,7 +864,9 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
     int32_t q_length = i.read_length();
   
 		uint8_t* qscore = i.read_base_quality_bam_sequence(); // quality score array
-		int32_t fastq_file_index = i.fastq_file_index(); // sequencer-generated read file that this alignment belongs to
+		// Sequencer-generated read file this alignment belongs to: its read group, narrowed to one
+		// mate. R2 is noisier than R1, so they must not share an error model.
+		int32_t fastq_file_index = read_file_index(i);
 
     // Fill in all covariates that are used...
     covariate_values_t cv;
@@ -1089,7 +1096,7 @@ bool cErrorTable::alignment_position_to_covariates(const pileup_wrapper& a, int3
   //eventually include in above...
   cv.obs_base() = basebam2index(read_base_bam);
   cv.quality() = a.read_base_quality_0(q_pos_0);
-  cv.read_set() = a.fastq_file_index();
+  cv.read_set() = read_file_index(a);
   cv.read_pos() = q_pos_0;
   
   if (m_covariate_used[k_base_repeat]) cv.base_repeat() = a.base_repeat_0(q_pos_0);

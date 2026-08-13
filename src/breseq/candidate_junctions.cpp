@@ -215,48 +215,6 @@ namespace breseq {
     return true;
   }
 
-  // Splits unaligned reads out of a SAM file
-  void PreprocessAlignments::split_mapped_and_unmapped_alignments(
-                                                                    uint32_t fastq_file_index,
-                                                                    string fasta_file_name, 
-                                                                    string input_sam_file_name, 
-                                                                    string mapped_sam_file_name,
-                                                                    string unmapped_reads_fastq_file_name
-                                                                    )
-  {
-
-    bam_file mapped(mapped_sam_file_name, fasta_file_name, ios::out);
-    ofstream unmapped(unmapped_reads_fastq_file_name.c_str());
-
-    bam_file in(input_sam_file_name, fasta_file_name, ios::in);
-
-    alignment_list al;
-    while (in.read_alignments(al, false)) {
-      if (al.front()->unmapped()) {
-        unmapped << "@" << al.front()->read_name() << endl << al.front()->read_char_sequence() << endl << "+" << endl << al.front()->read_base_quality_char_string() << endl;
-      } else {
-        mapped.write_alignments(fastq_file_index, al);
-      }
-    }
-  }
-  void PreprocessAlignments::split_matched_alignments(uint32_t fastq_file_index,
-                                                      string fasta_file_name, 
-                                                      string input_sam_file_name,
-                                                      string matched_sam_file_name) 
-  {
-    bam_file in(input_sam_file_name, fasta_file_name, ios::in);
-    bam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
-
-    alignment_list al;
-    while (in.read_alignments(al, false)) {
-      if (!al.front()->unmapped()) {
-        matched.write_alignments(fastq_file_index, al);
-      }
-    }
-
-    return;
-  }
-  
   static void bam_to_read_index(const char* qname, int64_t& index_a, int64_t& index_b) {
     const char* colon = strchr(qname, ':');
     ASSERT(colon, "Malformed qname (missing ':'): " + string(qname));
@@ -304,7 +262,10 @@ namespace breseq {
     // write best alignments
     int32_t best_score = eligible_read_alignments(settings, ref_seq_info, alignments);
     (void) best_score;
-    BSAM.write_alignments(0, alignments, NULL);
+    // BSAM pools every read file, so it has no read group of its own. PSAM is the split BAM for
+    // the ONE read file these alignments came from, so its read group is theirs. (Before read
+    // groups this passed a hardcoded index of 0, mislabelling every read file but the first.)
+    BSAM.write_alignments(PSAM.default_read_group(), alignments, NULL);
 
     return true;
   }
@@ -808,15 +769,25 @@ namespace breseq {
       create_path(settings.candidate_junction_path);
     }
 
+    // Every BAM written here gets the full read group list, not just the groups whose reads it
+    // contains, so that a read group index means the same thing in all of them.
+    const cReadGroupList read_groups = settings.read_groups();
+
     // BSAM includes best matches as they are merged from all alignment files
     bam_file BSAM;
     if (do_preprocess) {
-      BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name);
+      BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name, read_groups);
     }
 
     uint32_t i = 0;
+    uint32_t set_index = 0;
     for (const auto& rfs : settings.read_file_sets)
     {
+      // One read group per read file SET, so both mates of a pair share this index.
+      const read_group_ref rg_r1(set_index, false, rfs.is_paired());
+      const read_group_ref rg_r2(set_index, true,  rfs.is_paired());
+      set_index++;
+
       if (!rfs.is_paired())
       {
         // ---- UNPAIRED: unchanged from before, just nested under the set loop ----
@@ -829,7 +800,8 @@ namespace breseq {
             end_progress_line();
             cerr << "  READ FILE::" << read_file.m_base_name << endl;
             string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
-            PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name);
+            PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name, read_groups);
+            PSAM.set_default_read_group(rg_r1);
             settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
           }
 
@@ -869,12 +841,14 @@ namespace breseq {
           end_progress_line();
           cerr << "  READ FILE::" << read_file_r1.m_base_name << endl;
           string split1 = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file_r1.m_base_name);
-          PSAM1.open_write(split1, reference_fasta_file_name);
+          PSAM1.open_write(split1, reference_fasta_file_name, read_groups);
+          PSAM1.set_default_read_group(rg_r1);
           settings.track_intermediate_file(settings.candidate_junction_done_file_name, split1);
 
           cerr << "  READ FILE::" << read_file_r2.m_base_name << endl;
           string split2 = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file_r2.m_base_name);
-          PSAM2.open_write(split2, reference_fasta_file_name);
+          PSAM2.open_write(split2, reference_fasta_file_name, read_groups);
+          PSAM2.set_default_read_group(rg_r2);
           settings.track_intermediate_file(settings.candidate_junction_done_file_name, split2);
         }
 
@@ -1061,7 +1035,7 @@ namespace breseq {
     // Don't write if there is only one alignment to be written,
     // it takes at least two to make a candidate junction.
     if (alignments.size() > 1) {
-      PSAM.write_alignments(0, alignments);
+      PSAM.write_alignments(PSAM.default_read_group(), alignments);
       return true;
     }
     return false;

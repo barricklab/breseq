@@ -993,6 +993,15 @@ namespace breseq
       return this->read_file_sets.base_name_to_read_file_name(base_name);
 		}
 
+    //! The SAM @RG read groups for this run: one per cReadFileSet, in set order.
+    //
+    // A paired set is ONE group -- both mates carry the same RG:Z: and are told apart by
+    // BAM_FREAD1/BAM_FREAD2 -- because a read group describes the library a fragment came from,
+    // which is what an external consumer (CNery, for per-group GC correction) wants to split on.
+    // Error rates are still fit per read FILE, since R2 is noisier than R1; see
+    // cErrorTable::read_file_index(), which recombines the group and the mate flag.
+    cReadGroupList read_groups() const;
+
 		void check_installed();
     
     bool do_step(const string& done_key, const string& message);

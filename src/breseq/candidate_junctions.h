@@ -388,18 +388,6 @@ namespace breseq {
   class PreprocessAlignments
   {
   public:
-    static void split_mapped_and_unmapped_alignments(
-                                                       uint32_t fastq_file_index,
-                                                       string fasta_file_name, 
-                                                       string input_sam_file_name, 
-                                                       string matched_sam_file_name, 
-                                                       string unmapped_reads_fastq_file_name
-                                                       );
-    static void split_matched_alignments(uint32_t fastq_file_index,
-                                         string fasta_file_name,
-                                         string input_sam_file_name,
-                                         string matched_sam_file_name);
-
     //! Merges stage1/stage2 alignment BAMs (if two-stage alignment was used) into
     //! reference_sam_file_name for each read file, optionally preprocessing for
     //! candidate junction identification in the same pass.

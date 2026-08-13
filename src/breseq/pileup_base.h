@@ -22,6 +22,7 @@
 #define _BRESEQ_PILEUP_BASE_H_
 
 #include "common.h"
+#include "alignment.h"
 
 using namespace std;
 namespace breseq {
@@ -73,6 +74,12 @@ class pileup_base {
     uint32_t num_targets() const {
       return m_bam_header->n_targets;
     }
+
+    //! Read groups declared in this BAM's header (empty when it has no @RG lines).
+    const read_group_index_map& read_groups() const { return m_read_groups; }
+
+    //! Index of an alignment's read group, or 0 when it cannot be resolved.
+    uint32_t read_group_index(const alignment_wrapper& a) const { return m_read_groups.index(a); }
   
     //! Retrieve the length of the given target.
     uint32_t target_length(uint32_t target) const {
@@ -191,6 +198,7 @@ class pileup_base {
 
     samFile* m_bam; //!< BAM file handle.
     bam_hdr_t* m_bam_header;
+    read_group_index_map m_read_groups; //!< @RG lines of m_bam_header, built once at open time
     hts_idx_t* m_bam_index;
     faidx_t* m_faidx;
     string m_bam_file_name;

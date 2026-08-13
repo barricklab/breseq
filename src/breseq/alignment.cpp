@@ -68,10 +68,11 @@ uint32_t alignment::query_length() const {
 }
 */
 
-/*! Retrieve the index of the read file that contained this alignment
+/*! Retrieve the SAM read group ID of this alignment, or NULL if it has none.
  */
-uint32_t alignment_wrapper::fastq_file_index() const {
-	return bam_aux2i(bam_aux_get(_a,"X2"));
+const char* alignment_wrapper::read_group_id() const {
+	uint8_t* aux = bam_aux_get(_a,"RG");
+	return (aux != NULL) ? bam_aux2Z(aux) : NULL;
 }
 
 //! Return number of locations on left of sequence to be trimmed
@@ -541,7 +542,69 @@ void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_
  *  Replaces the deprecated sam_header_read2() function removed in modern htslib.
  *  Accepts either the FASTA file itself or the .fai index path.
  */
-bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name) {
+void read_group_index_map::build(bam_hdr_t* hdr) {
+  m_ids.clear();
+  m_libraries.clear();
+  if (hdr == NULL) return;
+
+  int n = sam_hdr_count_lines(hdr, "RG");
+  if (n <= 0) return;   // -1 on error, 0 for a header with no read groups
+
+  kstring_t ks = KS_INITIALIZE;
+  for (int i = 0; i < n; i++) {
+    const char* id = sam_hdr_line_name(hdr, "RG", i);
+    if (id == NULL) continue;   // an @RG with no ID cannot be referred to by any record
+    m_ids.push_back(id);
+
+    ks.l = 0;
+    m_libraries.push_back((sam_hdr_find_tag_pos(hdr, "RG", i, "LB", &ks) == 0) ? string(ks.s) : string());
+  }
+  ks_free(&ks);
+}
+
+read_file_partition make_read_file_partition(const read_group_index_map& rg_map,
+                                             const cReadFileSets& read_file_sets)
+{
+  read_file_partition p;
+  if (read_file_sets.empty()) return p;
+
+  // Flat index of the first read file of each SET, in the order base_names()/flat_files() use.
+  vector<uint32_t> set_base;
+  vector<uint32_t> set_count;
+  uint32_t on_flat_index = 0;
+  for (cReadFileSets::const_iterator it = read_file_sets.begin(); it != read_file_sets.end(); it++) {
+    set_base.push_back(on_flat_index);
+    set_count.push_back(static_cast<uint32_t>(it->m_files.size()));
+    on_flat_index += static_cast<uint32_t>(it->m_files.size());
+  }
+
+  for (size_t g = 0; g < rg_map.size(); g++) {
+    // @RG LB is the set's base name. Matching on it (rather than on the group's position) keeps a
+    // re-opened BAM correct even if its header lists groups in another order.
+    size_t match = 0;
+    bool found = false;
+    const string& lb = rg_map.library(static_cast<uint32_t>(g));
+    if (!lb.empty()) {
+      for (size_t s = 0; s < read_file_sets.size(); s++) {
+        if (read_file_sets[s].m_base_name == lb) { match = s; found = true; break; }
+      }
+    }
+    // No LB, or an LB naming nothing we know about: assume the header lists groups in set order.
+    if (!found) { match = g; found = (g < set_base.size()); }
+
+    if (found && (match < set_base.size())) {
+      p.base.push_back(set_base[match]);
+      p.count.push_back(set_count[match]);
+    } else {
+      p.base.push_back(0);
+      p.count.push_back(1);
+    }
+  }
+
+  return p;
+}
+
+bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name, const cReadGroupList& read_groups) {
   // Strip .fai suffix to get base FASTA path for fai_load
   string fasta = fasta_file_name;
   if (fasta.size() > 4 && fasta.substr(fasta.size() - 4) == ".fai")
@@ -564,13 +627,23 @@ bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name) {
     }
     fai_destroy(fai);
   }
-  
+
+  // @RG after @SQ, per the SAM spec's header line ordering.
+  for (cReadGroupList::const_iterator it = read_groups.begin(); it != read_groups.end(); it++) {
+    hdr_text += "@RG\tID:" + it->id;
+    if (!it->library.empty())     hdr_text += "\tLB:" + it->library;
+    if (!it->sample.empty())      hdr_text += "\tSM:" + it->sample;
+    if (!it->description.empty()) hdr_text += "\tDS:" + it->description;
+    hdr_text += "\n";
+  }
+
   bam_hdr_t *hdr = sam_hdr_parse(hdr_text.size(), hdr_text.c_str());
   ASSERT(hdr, "Could not parse BAM header from FASTA index: " + fasta);
   return hdr;
 }
 
-bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode)
+bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode,
+                   const cReadGroupList& read_groups)
 : bam_header(NULL), m_bam_file(NULL)
 {
   if (mode == ios_base::in)
@@ -579,7 +652,7 @@ bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, i
   }
   else
   {
-    open_write(bam_file_name, fasta_file_name);
+    open_write(bam_file_name, fasta_file_name, read_groups);
   }
 }
 
@@ -602,14 +675,19 @@ void bam_file::open_read(const string& bam_file_name, const string& fasta_file_n
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
 
   bam_header = sam_hdr_read(m_bam_file);
+  m_read_groups.build(bam_header);
 }
 
-void bam_file::open_write(const string& bam_file_name, const string& fasta_file_name)
+void bam_file::open_write(const string& bam_file_name, const string& fasta_file_name,
+                          const cReadGroupList& read_groups)
 {
   m_bam_file = hts_open(bam_file_name.c_str(), "wb");
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
-  bam_header = make_bam_header_from_faidx(fasta_file_name);
+  bam_header = make_bam_header_from_faidx(fasta_file_name, read_groups);
   (void) sam_hdr_write(m_bam_file, bam_header);
+  // Built from the parsed header rather than from read_groups, so a written RG:Z: value is always
+  // an ID that actually appears in this file's header.
+  m_read_groups.build(bam_header);
 }
 
 bool bam_file::read_alignments(alignment_list& alignments, bool paired)
@@ -780,7 +858,7 @@ bool soft_clip_alignment_ends(
 }
 
 void bam_file::write_alignments(
-                                int32_t fastq_file_index,
+                                const read_group_ref& rg,
                                 const alignment_list& alignments,
                                 const SequenceTrimsList* trims_list,
                                 const cReferenceSequences* ref_seq_info_ptr,
@@ -836,7 +914,7 @@ void bam_file::write_alignments(
     bool AS_found = a.aux_get_i("AS", as);
     ASSERT(AS_found, "Could not find required tag AS for alignment.");
 
-    aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << alignments.size() << "\t" << "X2:i:" << fastq_file_index;
+    aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << alignments.size() << read_group_aux_tag(rg);
 
     if (trims_list != NULL) {
       Trims trim;
@@ -895,7 +973,7 @@ void bam_file::write_alignments(
 
     vector<string> ll;
     ll.push_back(a.read_name());
-    ll.push_back(to_string(fix_flags(a.flag())));
+    ll.push_back(to_string(apply_mate_flag(fix_flags(a.flag()), rg)));
     ll.push_back(bam_header->target_name[a.reference_target_id()]);
     ll.push_back(to_string(reference_start_1));
     ll.push_back(to_string<uint32_t>(a.mapping_quality()));
@@ -935,7 +1013,7 @@ void bam_file::write_alignments(
 void bam_file::write_moved_alignment(
                                      const alignment_wrapper& a,
                                      const string& junction_reference_name,
-                                     uint32_t fastq_file_index,
+                                     const read_group_ref& rg,
                                      const string& seq_id,
                                      int32_t reference_pos,
                                      int32_t reference_strand,
@@ -1263,7 +1341,7 @@ void bam_file::write_moved_alignment(
   bool AS_found = a.aux_get_i("AS", as);
   ASSERT(AS_found, "Could not find required tag AS for alignment.");
 
-	aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << 1 << "\t" << "X2:i:" << fastq_file_index;
+	aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << 1 << read_group_aux_tag(rg);
 
 	//this flag indicates this is a junction match and which side of the match is in the middle of the read across the junction
 	int32_t within_side = (reference_strand == 1) ? junction_side : (junction_side + 1) % 2;
@@ -1315,7 +1393,7 @@ void bam_file::write_moved_alignment(
 
   vector<string> ll = make_vector<string>
 		(a.read_name() + "-M" + to_string(junction_side))
-		(to_string(fix_flags(a.flag())))
+		(to_string(apply_mate_flag(fix_flags(a.flag()), rg)))
 		(seq_id)
 		(to_string(reference_match_start))
     ("255")
@@ -1436,9 +1514,11 @@ void bam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 
       cigar_string = ( left_padding > 0 ? to_string(left_padding) + "S" : "" ) + cigar_string + ( right_padding > 0 ? to_string(right_padding) + "S" : "" );
 
+      // Note this deliberately does NOT run the flag through fix_flags(), unlike the other two
+      // writers; only the mate bit is stamped, from the read group this BAM was opened with.
       vector<string> ll = make_vector<string>
         (a.read_name())
-        (to_string(a.flag()))
+        (to_string(apply_mate_flag(a.flag(), m_default_read_group)))
         (to_string(this->bam_header->target_name[a.reference_target_id()]))
         (to_string(rstart))
         (to_string(a.mapping_quality()))
@@ -1447,6 +1527,11 @@ void bam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
         (qseq_string)
         (quality_score_string)
       ;
+
+      // Split reads carried no aux tags at all before read groups existed. RG is added so that
+      // every record breseq writes names its read group, including in this intermediate.
+      string split_aux_tags = read_group_aux_tag(m_default_read_group);
+      if (!split_aux_tags.empty()) ll.push_back(split_aux_tags.substr(1)); // drop the leading tab
 
       {
         string sam_line = join(ll, "\t");

@@ -72,6 +72,10 @@ pileup_base::pileup_base(const string& bam, const string& fasta)
   m_bam_header = sam_hdr_read(m_bam);
   assert(m_bam_header);
 
+  // Once, here: the sam_hdr_* lookups can trigger a lazy re-parse of the whole header, which must
+  // never happen inside the pileup loop.
+  m_read_groups.build(m_bam_header);
+
 	// load all the reference sequences:
   m_faidx = fai_load(fasta.c_str());
   assert(m_faidx);

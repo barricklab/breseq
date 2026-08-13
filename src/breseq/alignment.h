@@ -143,8 +143,13 @@ class alignment_wrapper {
     inline uint8_t read_base_quality_0(const uint32_t pos) const { assert(pos<read_length()); return bam_get_qual(_a)[pos]; }
     inline uint8_t read_base_quality_1(const uint32_t pos) const { assert(pos<=read_length()); return bam_get_qual(_a)[pos-1]; }
 
-    //! Retrieve the index of the read file that contained this alignment.
-    uint32_t fastq_file_index() const;
+    //! The SAM read group ID (RG:Z:) of this alignment, or NULL if it has none.
+    //
+    // Returns the raw tag rather than an index because resolving an ID to a number needs the
+    // header's @RG list, which an alignment_wrapper deliberately does not have. Use
+    // read_group_index_map::index() (reachable as pileup::read_group_index() inside a pileup
+    // callback) to get a dense index. Returns const char* so hot pileup loops allocate nothing.
+    const char* read_group_id() const;
     
     //! Return number of locations on left of sequence to be trimmed
     uint32_t trim_left() const;
@@ -515,11 +520,118 @@ inline void print_alignment_list(const alignment_list& alignments)
 }
 
   
+/*! Resolves an alignment's RG:Z: tag to a dense index over a header's @RG lines.
+ *
+ *  Built once from a header -- the sam_hdr_* lookups can trigger a lazy re-parse of the whole
+ *  header, so they must never run inside a pileup loop. index() is then pure string comparison
+ *  against the handful of IDs.
+ *
+ *  Everything degrades to group 0: a header with no @RG, a record with no RG tag, and an ID that
+ *  is not in the header all return 0. That is what lets BAM2ALN/BAM2COV run against a BAM from
+ *  another tool (tests/data/bull/bull_1.bam has no @RG at all).
+ */
+class read_group_index_map {
+public:
+  read_group_index_map() {}
+
+  //! Read the @RG lines out of a header. Safe to call on a NULL header.
+  void build(bam_hdr_t* hdr);
+
+  size_t size() const { return m_ids.size(); }
+  const string& id(uint32_t i) const { return m_ids[i]; }
+  const string& library(uint32_t i) const { return m_libraries[i]; }
+
+  //! Index of this alignment's read group, or 0 when it cannot be resolved.
+  inline uint32_t index(const alignment_wrapper& a) const
+  {
+    // One group (or none) means there is nothing to distinguish, so skip the tag lookup entirely.
+    // This is the common case -- a single read file, or any BAM without read groups -- and makes
+    // the whole mechanism cheaper than the X2:i: integer tag it replaces.
+    if (m_ids.size() <= 1) return 0;
+
+    const char* rg = a.read_group_id();
+    if (rg == NULL) return 0;
+
+    // Linear scan: read groups number in the handful, so this beats hashing the ID string.
+    for (size_t i = 0; i < m_ids.size(); i++)
+      if (m_ids[i] == rg) return static_cast<uint32_t>(i);
+
+    return 0;
+  }
+
+private:
+  vector<string> m_ids;
+  vector<string> m_libraries;
+};
+
+/*! Maps (read group, mate) back to the flat index of a single read FILE.
+ *
+ *  A read group is one cReadFileSet, so a paired group covers two read files. Error rates are fit
+ *  per file -- R2 is measurably noisier than R1, so pooling them would degrade base quality
+ *  recalibration -- and this is what recovers the file from the group plus the mate flag.
+ *
+ *  The flat index it produces is the same one cReadFileSets::base_names()/flat_files() enumerate
+ *  (sets in order, R1 before R2), which is what error-rate output files are named by.
+ */
+struct read_file_partition {
+  vector<uint32_t> base;   //!< flat index of each group's first read file
+  vector<uint32_t> count;  //!< number of read files in each group (1 or 2)
+
+  bool empty() const { return base.empty(); }
+
+  uint32_t index(uint32_t group, bool is_read2) const
+  {
+    if (group >= base.size()) return 0;
+    // A single-file group has no second mate, so a stray 0x80 -- which only an --aligned-sam input
+    // can supply, since breseq stamps the bit only for genuinely paired groups -- must not index
+    // into the NEXT group's read file.
+    uint32_t offset = (is_read2 && (count[group] > 1)) ? 1 : 0;
+    return base[group] + offset;
+  }
+};
+
+/*! Build a read_file_partition for a BAM's read groups.
+ *
+ *  Groups are matched to read file sets by @RG LB (the set's base name) rather than by position or
+ *  by parsing the ID as a number, so re-opening a BAM whose header lists groups in some other order
+ *  still resolves correctly. Unmatched groups fall back to header order, and a run with no read
+ *  file sets at all (the standalone breseq ERROR_COUNT path) yields an empty partition, which
+ *  resolves everything to 0 -- what an untagged BAM did before read groups existed.
+ */
+// Declared, not included: settings.h reaches alignment.h through its own include chain, so
+// cReadFileSets is not yet defined at this point. The definition in alignment.cpp sees the
+// full type.
+class cReadFileSets;
+
+read_file_partition make_read_file_partition(const read_group_index_map& rg_map,
+                                             const cReadFileSets& read_file_sets);
+
+/*! Which read group (and which mate within it) a record being written belongs to.
+ *
+ *  Carried into the writers so the RG:Z: tag and the BAM_FREAD1/BAM_FREAD2 flag are set from one
+ *  value and can never disagree.
+ */
+struct read_group_ref {
+  uint32_t index;    //!< index into the destination BAM's @RG list; UNDEFINED_UINT32 = write no tag
+  bool     is_read2; //!< this record is the second mate of its group
+  bool     paired;   //!< the group has two member read files, so the writer owns the mate flag
+
+  read_group_ref() : index(UNDEFINED_UINT32), is_read2(false), paired(false) {}
+  // explicit: an implicit conversion here would let a bare read-file index silently become a read
+  // group, which is exactly the confusion this type exists to prevent.
+  explicit read_group_ref(uint32_t _index, bool _is_read2 = false, bool _paired = false)
+    : index(_index), is_read2(_is_read2), paired(_paired) {}
+
+  bool valid() const { return index != UNDEFINED_UINT32; }
+};
+
 /*! Build a bam_hdr_t from a FASTA file (or its .fai index).
  *  Replaces the deprecated sam_header_read2() removed in modern htslib.
  *  Declared here so any translation unit that includes alignment.h can use it.
+ *  Any read groups given are emitted as @RG lines after the @SQ block.
  */
-bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name);
+bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name,
+                                      const cReadGroupList& read_groups = cReadGroupList());
 
 /*! Soft-clip mis-mapped bases at the ends of an alignment.
  *
@@ -555,16 +667,28 @@ class bam_file {
   
 public:
   bam_file() : bam_header(NULL), m_bam_file(NULL) {}
-  bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode);
+  bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode,
+           const cReadGroupList& read_groups = cReadGroupList());
   ~bam_file();
-  
+
   void open_read(const string& bam_file_name, const string& fasta_file_name);
-  void open_write(const string& bam_file_name, const string& fasta_file_name);
-  
+  void open_write(const string& bam_file_name, const string& fasta_file_name,
+                  const cReadGroupList& read_groups = cReadGroupList());
+
   bool read_alignments(alignment_list& alignments, bool paired = false);
 
+  //! Read groups declared in this file's header (empty for a header with no @RG).
+  const read_group_index_map& read_groups() const { return m_read_groups; }
+
+  //! Read group used by writers that are not handed one per call.
+  //
+  // write_split_alignment() is reached through several layers of candidate-junction code that
+  // otherwise has no reason to know about read groups, so its BAM carries the value instead.
+  void set_default_read_group(const read_group_ref& rg) { m_default_read_group = rg; }
+  const read_group_ref& default_read_group() const { return m_default_read_group; }
+
   void write_alignments(
-                        int32_t fastq_file_index,
+                        const read_group_ref& rg,
                         const alignment_list& alignments,
                         const SequenceTrimsList* trims_list = NULL,
                         const cReferenceSequences* ref_seq_info = NULL,
@@ -575,7 +699,7 @@ public:
   void write_moved_alignment(
                              const alignment_wrapper& a,
                              const string& rname,
-                             uint32_t fastq_file_index,
+                             const read_group_ref& rg,
                              const string& seq_id,
                              int32_t reference_pos,
                              int32_t reference_strand,
@@ -606,8 +730,36 @@ public:
   bam_hdr_t* bam_header;
 
 protected:
+  //! "\tRG:Z:<id>" for this read group, or "" when there is nothing to tag with.
+  //
+  // The ID is taken from this file's own parsed header, so a record can never name a group the
+  // header does not declare.
+  string read_group_aux_tag(const read_group_ref& rg) const
+  {
+    if (!rg.valid() || (rg.index >= m_read_groups.size())) return "";
+    return "\tRG:Z:" + m_read_groups.id(rg.index);
+  }
+
+  //! Stamp the mate bit when this record's read group has two member read files.
+  //
+  // Only touched for a genuinely paired group: for a single-file group breseq has no opinion about
+  // mate identity, so whatever the record already carried (an --aligned-sam input can supply real
+  // mate flags) passes through untouched.
+  //
+  // Kept separate from fix_flags() because the writers do not agree about it -- write_alignments()
+  // and write_moved_alignment() normalize the flag, write_split_alignment() deliberately does not.
+  static uint32_t apply_mate_flag(uint32_t flags, const read_group_ref& rg)
+  {
+    if (!rg.paired) return flags;
+    flags &= ~(BAM_FREAD1 | BAM_FREAD2);
+    flags |= rg.is_read2 ? BAM_FREAD2 : BAM_FREAD1;
+    return flags;
+  }
+
   samFile* m_bam_file;                // used for input and output
   bam_alignment_ptr m_last_alignment; // contains alignment* last_alignment
+  read_group_index_map m_read_groups; // @RG lines of bam_header, for reading and for writing IDs
+  read_group_ref m_default_read_group;
 };
 	
 }
