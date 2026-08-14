@@ -86,13 +86,22 @@ void identify_mutations(
  discrete D is 1/2 + E[P(D=d)]/2, strictly greater than 1/2. Using G directly would give every
  column a small positive bias and seed the LONG bin genome-wide.
 
+ Also returns the mean gap of a covering pair, which is the mean of (d - trunc) under this same
+ length-biased distribution. That is the distance over which the set of pairs covering a column turns
+ over completely, so it is the correlation length of the seed statistic and hence what the effective
+ number of independent tests is the reference length divided by. It is computed here because the
+ weighted histogram is exactly what it is a moment of, and because the obvious alternative --
+ (median distance - 2 * read_length) -- is not the same quantity and goes NEGATIVE on any library
+ whose fragments are shorter than two reads, which silently disables the correction entirely.
+
  Returns false (leaving cdf empty, which disables PD for this group's reads) if the histogram is
  missing or carries no usable weight.
  */
 static bool pd_build_cdf(const string& hist_file_name, int32_t trunc, int32_t max_distance,
-                         vector<int64_t>& cdf)
+                         vector<int64_t>& cdf, double& mean_covering_gap)
 {
   cdf.clear();
+  mean_covering_gap = 0.0;
 
   vector<double> weighted;
   double total = 0.0;
@@ -100,14 +109,17 @@ static bool pd_build_cdf(const string& hist_file_name, int32_t trunc, int32_t ma
 
   cdf.resize(weighted.size(), 0);
   double below = 0.0;
+  double gap_sum = 0.0;
   for (size_t d = 0; d < weighted.size(); d++) {
     double mid = (below + 0.5 * weighted[d]) / total;
     below += weighted[d];
+    gap_sum += weighted[d] * (static_cast<double>(d) - static_cast<double>(trunc));
     int64_t scaled = static_cast<int64_t>(mid * static_cast<double>(identify_mutations_pileup::kPDuScale) + 0.5);
     if (scaled < 0) scaled = 0;
     if (scaled > identify_mutations_pileup::kPDuScale) scaled = identify_mutations_pileup::kPDuScale;
     cdf[d] = scaled;
   }
+  mean_covering_gap = gap_sum / total;
   return true;
 }
 
@@ -769,6 +781,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _pd_short(0)
 , _pd_u(0)
 , _pd_last_b(0)
+, _pd_mean_covering_gap(0.0)
 {
 
   // remove once used
@@ -789,6 +802,10 @@ identify_mutations_pileup::identify_mutations_pileup(
     _pd_region_peak_covering[bin] = 0;
     _pd_region_peak_tail[bin] = 0;
     _pd_region_peak_z[bin] = 0.0;
+    for (int step = 0; step < kPDLadderSteps; step++) {
+      _pd_ladder_open[bin][step] = false;
+      _pd_ladder_count[bin][step] = 0;
+    }
   }
 
   // Initialize per-bin missing-pair region state (bin = focal strand; see kMPnBins).
@@ -886,7 +903,6 @@ identify_mutations_pileup::identify_mutations_pileup(
     int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
     int32_t trunc = 2 * read_length;
     double derived_span = 0.0;
-    double median_gap = 0.0;
 
     // Two passes, because the span bounds the null and so has to be known before any CDF is built --
     // see pd_load_weighted_histogram for what an unbounded null does to the seed test. pd_evidence
@@ -900,7 +916,6 @@ identify_mutations_pileup::identify_mutations_pileup(
       if (it == pmdd.end()) continue;
 
       derived_span = max(derived_span, 2.0 * it->second.distance_cutoff);
-      median_gap = max(median_gap, it->second.median - static_cast<double>(trunc));
     }
 
     _pd_max_span = _settings.pair_distance_maximum_span;
@@ -917,28 +932,46 @@ identify_mutations_pileup::identify_mutations_pileup(
       if (!rfs.is_paired()) continue;
       int group_index = _read_group_to_dp_group[set_index];
       if (group_index < 0) continue;
-      if (pmdd.find(rfs.m_base_name) == pmdd.end()) continue;
+      PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs.m_base_name);
+      if (it == pmdd.end()) continue;
 
       string hist_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", rfs.m_base_name);
-      if (!pd_build_cdf(hist_file_name, trunc, null_max_distance, _dp_groups[group_index].pd_cdf)) continue;
+      double group_gap = 0.0;
+      if (!pd_build_cdf(hist_file_name, trunc, null_max_distance, _dp_groups[group_index].pd_cdf, group_gap)) continue;
+      // The orientation the null was built from. Pairs of any other orientation are not scored
+      // against it; see dp_group::pd_orientation.
+      _dp_groups[group_index].pd_orientation = it->second.majority_orientation;
+      _pd_mean_covering_gap = max(_pd_mean_covering_gap, group_gap);
       usable_groups++;
     }
 
-    // Derive the seed's |z| threshold when the user did not pin it. Adjacent columns share nearly
-    // all of their covering pairs, so the tests are not independent and a fixed z is not a
-    // genome-wide error rate. The effective number of independent tests is about (reference length /
-    // median gap) -- one per gap-width block -- so a two-sided 1% genome-wide rate wants
-    // z = ndtri(1 - 0.005 * median_gap / G).
+    // The seed is now only a sensitivity filter -- what a PD call has to clear is the genome-wide
+    // e-value computed in pd_evidence, which is calibrated from the region counts collected below.
+    // So this threshold is set LOW deliberately, low enough that the regions it produces are
+    // overwhelmingly noise, because that noise is the sample the calibration is fitted to. Setting it
+    // where a call would be believable would leave nothing to measure the null with.
+    //
+    // The analytic derivation is kept as the upper bound: whatever else, there is no point seeding
+    // where a normal null with the correct effective test count already expects many hits per genome.
+    // The effective number of tests is (reference length / mean covering gap) -- one per block over
+    // which the covering set turns over. Note this uses the measured covering gap and not
+    // (median - 2*read_length), which is negative on short-insert libraries and used to make this
+    // whole correction a no-op.
     _pd_z_seed = _settings.pair_distance_seed_z;
     if (_pd_z_seed <= 0.0) {
       double alpha_half = 0.005;
-      if ((median_gap > 0.0) && (_total_reference_length > 0))
-        alpha_half *= median_gap / static_cast<double>(_total_reference_length);
+      if ((_pd_mean_covering_gap > 0.0) && (_total_reference_length > 0))
+        alpha_half *= _pd_mean_covering_gap / static_cast<double>(_total_reference_length);
       if (alpha_half > 0.5) alpha_half = 0.5;
       if (alpha_half < 1e-12) alpha_half = 1e-12;
-      _pd_z_seed = ndtri(1.0 - alpha_half);
-      // Never go below the plain 3-sigma sense of "unusual", however short the reference.
-      if (_pd_z_seed < 3.0) _pd_z_seed = 3.0;
+      double analytic_z = ndtri(1.0 - alpha_half);
+      // Loose enough that the regions are overwhelmingly noise and there are several hundred of them
+      // to fit a tail to, tight enough that the per-region BAM rescan stays affordable. On the 3.6 Mb
+      // library this defect was found on it yields roughly 500 regions where the old threshold of 3.0
+      // yielded 113. Never seed ABOVE the analytic threshold: there is nothing to learn out there.
+      const double kPDSeedSensitivityFloor = 2.5;
+      _pd_z_seed = min(analytic_z, kPDSeedSensitivityFloor);
+      if (_pd_z_seed < 1.0) _pd_z_seed = 1.0;
     }
 
     _pd_enabled = (usable_groups > 0) && (_pd_max_span > 0);
@@ -1439,11 +1472,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       if (_pd_enabled && (insert_count == 0) && (i->reference_start_1() == position)) {
         // Qualification is deliberately all integer flag tests, with no aux-tag lookup: this block
         // sees ~100% of reads rather than DP's ~1%, so the string built by aux_get_Z("XP") would be
-        // a per-read cost. Orientation comes from the flags instead -- for the majority-orientation
-        // pair whose leftmost mate we are looking at, FR means this read is forward and its mate
-        // reverse, RF the other way around. Either is accepted; what matters is that both mates
-        // mapped to this reference in a normal arrangement, which the positive insert size and the
-        // matching mate target already establish.
+        // a per-read cost. Orientation comes from the flags instead -- for the pair whose leftmost
+        // mate we are looking at, FR means this read is forward and its mate reverse, RF the other
+        // way around -- and is then required to MATCH the group's majority orientation, the one the
+        // null was built from. Only FF/RR are excluded here; the FR/RF discrimination needs the
+        // group, so it happens below.
         if (i->is_paired() && !i->unmapped()
             && !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP))
             && (i->mate_reference_target_id() == i->reference_target_id())
@@ -1455,7 +1488,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             && (i->redundancy() <= 1)) {
 
           int gi = dp_group_for(p, *i);
-          if (gi >= 0) {
+          if (gi >= 0 && pd_orientation_matches(_dp_groups[gi].pd_orientation, *i)) {
             const vector<int64_t>& cdf = _dp_groups[gi].pd_cdf;
             int32_t d = i->insert_size();
 
@@ -1999,6 +2032,10 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
       _pd_region_peak_covering[bin] = 0;
       _pd_region_peak_tail[bin] = 0;
       _pd_region_peak_z[bin] = 0.0;
+      // Only the open flags: the ladder COUNTS are a whole-reference-set tally, which is the scale
+      // the multiple-testing correction is defined at. The flush call at the end of the previous
+      // target already closed anything open, so this is belt and braces.
+      for (int step = 0; step < kPDLadderSteps; step++) _pd_ladder_open[bin][step] = false;
     }
   }
 
@@ -2509,6 +2546,26 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
     // and prevents opening a spurious region that would never close.
     bool above = (tail >= _pd_seed) && right_way && (position <= target_length(seq_id));
 
+    // The same seed test at a ladder of thresholds, counting each excursion once as it closes. This
+    // measures how many INDEPENDENT chances to seed the reference actually offers -- the multiple
+    // testing correction PD needs -- without assuming either a correlation length or a tail shape.
+    // The gate is identical to the real one apart from the threshold, so the objects counted are the
+    // same kind of object. See pd_fit_region_tail().
+    {
+      bool in_sequence = (position <= target_length(seq_id));
+      bool tail_ok = (tail >= _pd_seed) && in_sequence;
+      double directed_z = (bin == kPDbinLong) ? z : -z;
+      for (int step = 0; step < kPDLadderSteps; step++) {
+        bool rung_above = tail_ok && (directed_z >= pd_ladder_z(step));
+        if (rung_above) {
+          _pd_ladder_open[bin][step] = true;
+        } else if (_pd_ladder_open[bin][step]) {
+          _pd_ladder_count[bin][step]++;
+          _pd_ladder_open[bin][step] = false;
+        }
+      }
+    }
+
     if (above) {
       if (_pd_region_start[bin] == UNDEFINED_UINT32) {
         _pd_region_start[bin] = position;
@@ -2585,30 +2642,130 @@ double identify_mutations_pileup::pd_z_inflation() const
   return sd;
 }
 
+bool identify_mutations_pileup::pd_fit_region_tail(double& out_log_intercept, double& out_sigma,
+                                                   double& out_fit_lo, double& out_fit_hi) const
+{
+  out_log_intercept = 0.0;
+  out_sigma = 1.0;
+  out_fit_lo = 0.0;
+  out_fit_hi = 0.0;
+  if (!_pd_enabled) return false;
+
+  // Below this a rung's count is too small to distinguish Poisson wobble, and too easily a
+  // meaningful fraction real events rather than noise. Both would bias the fitted tail.
+  const uint64_t kPDFitMinRegions = 20;
+  const int      kPDFitMinRungs   = 3;
+  // ... and above this the ladder is not yet a tail. Its lowest rungs are governed by the seed's
+  // tail-COUNT gate rather than by z, so they sit on a plateau -- 1061, 981, 851, 744 regions on the
+  // library this was written against, against 104 at |z| = 3. Fitting a Gaussian exponent through
+  // that plateau mixes bulk with tail and reports a spread that is neither. Start the window a factor
+  // of kPDFitTailFactor below the busiest rung instead, which is where the count has actually begun
+  // to fall like a tail.
+  const uint64_t kPDFitTailFactor = 3;
+
+  uint64_t max_count = 0;
+  for (int step = 0; step < kPDLadderSteps; step++) {
+    uint64_t count = 0;
+    for (int bin = 0; bin < kPDnBins; bin++) count += _pd_ladder_count[bin][step];
+    max_count = max(max_count, count);
+  }
+
+  // x = t^2 and y = log R(t): the model log R = a - t^2 / (2 sigma^2) is linear in x. Weight by the
+  // count, since var(log R) is about 1/R for a Poisson count.
+  double sw = 0.0, swx = 0.0, swy = 0.0, swxx = 0.0, swxy = 0.0;
+  int rungs = 0;
+  for (int step = 0; step < kPDLadderSteps; step++) {
+    uint64_t count = 0;
+    for (int bin = 0; bin < kPDnBins; bin++) count += _pd_ladder_count[bin][step];
+    if (count < kPDFitMinRegions) continue;
+    if (count * kPDFitTailFactor > max_count) continue;
+    double t = pd_ladder_z(step);
+    double x = t * t;
+    double y = log(static_cast<double>(count));
+    double w = static_cast<double>(count);
+    sw += w; swx += w * x; swy += w * y; swxx += w * x * x; swxy += w * x * y;
+    if (rungs == 0) out_fit_lo = t;
+    out_fit_hi = t;
+    rungs++;
+  }
+  if (rungs < kPDFitMinRungs) return false;
+
+  double denom = sw * swxx - swx * swx;
+  if (!(fabs(denom) > 0.0)) return false;
+  double slope = (sw * swxy - swx * swy) / denom;
+  double intercept = (swy - slope * swx) / sw;
+
+  // slope = -1 / (2 sigma^2), so a non-negative slope means R(t) does not fall with the threshold at
+  // all -- not a tail, and nothing to extrapolate from.
+  if (!(slope < 0.0)) return false;
+  double sigma = sqrt(-1.0 / (2.0 * slope));
+  if (!(sigma > 0.0) || !isfinite(sigma)) return false;
+
+  out_log_intercept = intercept;
+  out_sigma = sigma;
+  return true;
+}
+
+void identify_mutations_pileup::fill_pd_summary(PairDistanceSummary& s) const
+{
+  s.mean_covering_gap = _pd_mean_covering_gap;
+  s.n_effective_tests = (_pd_mean_covering_gap > 0.0)
+    ? static_cast<double>(_total_reference_length) / _pd_mean_covering_gap : 0.0;
+  s.seed_z_used = _pd_z_seed;
+  s.z_iqr_inflation = pd_z_inflation();
+  s.regions_seeded = _pd_candidate_regions.size();
+  s.region_tail_fit_ok = pd_fit_region_tail(s.region_tail_log_intercept, s.region_tail_sigma,
+                                            s.region_tail_fit_lo, s.region_tail_fit_hi);
+}
+
 void identify_mutations_pileup::write_pd_candidate_regions(const string& filename)
 {
-  // Deflate the seed z by how far it is actually dispersed, and drop what no longer clears the
-  // threshold. Doing it here rather than in the streaming test is what makes it measurable at all:
-  // the spread is a property of the whole genome and is not known until the pileup has finished.
+  // The regions are NOT filtered by pd_z_inflation() any more, and the seed z they cleared is
+  // deliberately low. Both changes serve the same end: what decides a PD call is now a genome-wide
+  // e-value computed in pd_evidence, and the calibration that e-value needs is fitted to these very
+  // regions. Throwing the weak ones away here would be discarding the null sample. It would also be
+  // inconsistent with the ladder counts written below, which are measured on the uncorrected z.
   //
-  // This can only ever REMOVE regions -- the factor is never below 1 -- so nothing the uncorrected
-  // test would have found is missed. The one approximation is that a region's extent is still the
-  // uncorrected one; a corrected region would sometimes be narrower, or split in two. Only
-  // peak_position is used downstream (it is where pd_evidence starts its rescan) and that is
-  // unaffected, since rescaling by a constant does not move which column has the largest |z|.
-  double inflation = pd_z_inflation();
-  if (inflation > 1.0) {
-    size_t before = _pd_candidate_regions.size();
-    vector<pd_candidate_region> kept;
-    kept.reserve(_pd_candidate_regions.size());
-    for (vector<pd_candidate_region>::const_iterator r = _pd_candidate_regions.begin(); r != _pd_candidate_regions.end(); r++) {
-      if (fabs(r->peak_z) / inflation >= _pd_z_seed) kept.push_back(*r);
+  // pd_z_inflation() survives as a reported diagnostic only. It is an interquartile range, so it
+  // describes the bulk of the z distribution and is blind to the tail -- on the library that exposed
+  // this it read 1.04x while the tail was about 2.5x too heavy for a normal. pd_fit_region_tail()
+  // measures the tail itself.
+  PairDistanceSummary calibration;
+  fill_pd_summary(calibration);
+
+  // Seeding loosely costs a BAM rescan per region, and on an over-dispersed library -- a mate-pair
+  // run, typically -- the low rungs can hold tens of thousands of them. The ladder already says how
+  // many regions each threshold yields, so raise the threshold to the lowest rung that stays inside
+  // the budget rather than guessing one up front. Several hundred regions is ample to fit a tail to;
+  // the rest only cost time. Whatever threshold this settles on is the one the calibration is
+  // conditioned on, since the retained regions are both the null sample and the tested population.
+  {
+    const uint64_t kPDMaxCandidateRegions = 3000;
+    double capped_z = calibration.seed_z_used;
+    for (int step = 0; step < kPDLadderSteps; step++) {
+      double t = pd_ladder_z(step);
+      if (t < calibration.seed_z_used) continue;
+      uint64_t count = 0;
+      for (int bin = 0; bin < kPDnBins; bin++) count += _pd_ladder_count[bin][step];
+      capped_z = t;
+      if (count <= kPDMaxCandidateRegions) break;
     }
-    _pd_candidate_regions.swap(kept);
-    cerr << "  PD seed z is dispersed " << std::fixed << std::setprecision(2) << inflation
-         << "x wider than the unit normal its threshold assumes; correcting for it leaves "
-         << _pd_candidate_regions.size() << " of " << before << " candidate regions." << endl;
-    cerr.unsetf(std::ios::fixed);
+    if (capped_z > calibration.seed_z_used) {
+      size_t before = _pd_candidate_regions.size();
+      vector<pd_candidate_region> kept;
+      kept.reserve(_pd_candidate_regions.size());
+      for (vector<pd_candidate_region>::const_iterator r = _pd_candidate_regions.begin(); r != _pd_candidate_regions.end(); r++)
+        if (fabs(r->peak_z) >= capped_z) kept.push_back(*r);
+      _pd_candidate_regions.swap(kept);
+      cerr << "  PD seeded " << before << " candidate regions at |z| >= "
+           << std::fixed << std::setprecision(2) << calibration.seed_z_used
+           << ", more than the rescan budget; raising the seed to " << capped_z
+           << " leaves " << _pd_candidate_regions.size() << "." << endl;
+      cerr.unsetf(std::ios::fixed);
+      calibration.seed_z_used = capped_z;
+      calibration.regions_seeded = _pd_candidate_regions.size();
+      _pd_z_seed = capped_z;
+    }
   }
 
   // Sort by (seq_id, start, direction) so a nearby deletion and insertion appear adjacent.
@@ -2621,17 +2778,49 @@ void identify_mutations_pileup::write_pd_candidate_regions(const string& filenam
 
   ofstream out(filename.c_str());
   ASSERT(!out.fail(), "Could not open output file: " + filename);
+
+  // Calibration first, as `#key=value` lines. This CSV is the only channel from the pileup to the PD
+  // prediction step, and none of this is recoverable from the regions alone.
+  out << std::fixed << std::setprecision(6);
+  out << "#mean_covering_gap=" << calibration.mean_covering_gap << endl;
+  out << "#n_effective_tests=" << calibration.n_effective_tests << endl;
+  out << "#seed_z=" << calibration.seed_z_used << endl;
+  out << "#z_iqr_inflation=" << calibration.z_iqr_inflation << endl;
+  out << "#region_tail_fit_ok=" << (calibration.region_tail_fit_ok ? 1 : 0) << endl;
+  out << "#region_tail_log_intercept=" << calibration.region_tail_log_intercept << endl;
+  out << "#region_tail_sigma=" << calibration.region_tail_sigma << endl;
+  out << "#region_tail_fit_lo=" << calibration.region_tail_fit_lo << endl;
+  out << "#region_tail_fit_hi=" << calibration.region_tail_fit_hi << endl;
+  // The raw ladder, so the fit can be second-guessed from the output alone.
+  out << "#region_ladder=";
+  for (int step = 0; step < kPDLadderSteps; step++) {
+    uint64_t count = 0;
+    for (int bin = 0; bin < kPDnBins; bin++) count += _pd_ladder_count[bin][step];
+    if (step) out << ";";
+    out << std::setprecision(2) << pd_ladder_z(step) << ":" << count;
+  }
+  out << endl;
+
   // 'direction' is L (pairs mapping farther apart than expected -- deletion-like) or S (closer --
   // insertion-like). The peak_* columns describe the single strongest column in the region, which
   // is where pd_evidence starts its rescan.
   out << "seq_id,start,end,direction,length,peak_position,peak_covering_count,peak_tail_count,peak_z" << endl;
-  out << std::fixed << std::setprecision(4);
+  out << std::setprecision(4);
   for (vector<pd_candidate_region>::const_iterator r = _pd_candidate_regions.begin(); r != _pd_candidate_regions.end(); r++) {
     out << r->seq_id << "," << r->start << "," << r->end << "," << r->direction << ","
         << (r->end - r->start + 1) << "," << r->peak_position << "," << r->peak_covering << ","
         << r->peak_tail << "," << r->peak_z << endl;
   }
   out.close();
+
+  cerr << "  PD seeded " << _pd_candidate_regions.size() << " candidate regions at |z| >= "
+       << std::fixed << std::setprecision(2) << calibration.seed_z_used
+       << " (mean covering gap " << std::setprecision(0) << calibration.mean_covering_gap
+       << " bases, " << calibration.n_effective_tests << " effective tests";
+  if (calibration.region_tail_fit_ok)
+    cerr << ", null tail sigma " << std::setprecision(2) << calibration.region_tail_sigma;
+  cerr << ")." << endl;
+  cerr.unsetf(std::ios::fixed);
 }
 
 

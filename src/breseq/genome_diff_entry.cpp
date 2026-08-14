@@ -160,6 +160,7 @@ namespace breseq {
   const char* PD_TOTAL_COUNT = "total_pair_count";
   const char* PD_CANDIDATE_COUNT = "candidate_covering_count";
   const char* PD_SEED_Z = "seed_z_score";
+  const char* PD_SCORE = "score";
 
   //For SC
   const char* SC_READ_COUNT = "read_count";

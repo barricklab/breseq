@@ -1316,6 +1316,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     // edge-weight spectrum, and the skew test switches off where it has no power), so the options
     // alone do not tell a user why a run predicted few or many DP items.
     HTML << html_discordant_pair_gates_string(settings, summary);
+    HTML << html_pair_distance_gates_string(settings, summary);
   }
 
   ////
@@ -2825,6 +2826,79 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
   return ss.str();
 }
 
+// The PD counterpart of the DP gates table. It matters more here than for DP, because PD's decisive
+// threshold is not a number anyone typed: it is an e-value against a null fitted to this run's own
+// candidate regions. Without this table there is nowhere a user could see what that null was.
+string html_pair_distance_gates_string(const Settings& settings, Summary& summary)
+{
+  const PairDistanceSummary& d = summary.pair_distance;
+  if (!settings.predict_pair_distance) return "";
+  if ((d.regions_seeded == 0) && (d.items_tested == 0)) return "";
+
+  stringstream ss;
+  ss << "<p>" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"3\" align=\"left\" class=\"pair_distance_header_row\"",
+              "Pair distance (PD) evidence gates")) << endl;
+  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+
+  // Library shape. The mean covering gap is the load-bearing number: it is the correlation length of
+  // the seed statistic, so it sets how many independent chances to seed the reference offers. The
+  // short-fragment warning is the same one the DP table carries, and it is the geometry that made an
+  // earlier version of this correction silently evaluate to nothing at all.
+  ss << tr(td("paired-mapping distance")
+           + td(to_string(d.pair_distance_median, 0, false) + " median"
+                + (d.pair_orientation.empty() ? "" : ", " + d.pair_orientation))
+           + td("read length " + to_string(d.read_length_avg, 0, false)
+                + (d.pair_distance_median < 2.0 * d.read_length_avg
+                   ? " &mdash; fragments are shorter than two reads, so only the minority of pairs with a gap can carry PD evidence"
+                   : ""))) << endl;
+
+  ss << tr(td("effective tests")
+           + td(to_string(d.n_effective_tests, 0, false))
+           + td("reference length / mean covering gap ("
+                + to_string(d.mean_covering_gap, 0, false)
+                + " bases), which is the distance over which the set of pairs covering a position turns over")) << endl;
+
+  // The seed is deliberately loose; say so, so nobody reads it as the acceptance threshold.
+  ss << tr(td("candidate seed")
+           + td("|z| &ge; " + to_string(d.seed_z_used, 2, false))
+           + td(to_string(d.regions_seeded) + " regions seeded &mdash; a sensitivity filter only, set low"
+                " so that these regions are almost all noise and can serve as the null the score below"
+                " is measured against")) << endl;
+
+  if (d.region_tail_fit_ok) {
+    ss << tr(td("seed null tail")
+             + td("&sigma; = " + to_string(d.region_tail_sigma, 2, false))
+             + td("fitted to the number of independent regions over |z| = "
+                  + to_string(d.region_tail_fit_lo, 2, false) + " to "
+                  + to_string(d.region_tail_fit_hi, 2, false)
+                  + "; the interquartile spread of z reads "
+                  + to_string(d.z_iqr_inflation, 2, false)
+                  + "x, which describes the bulk and not the tail")) << endl;
+  }
+
+  ss << tr(td("score cutoff")
+           + td(d.score_cutoff > 0.0 ? to_string(d.score_cutoff, 1, false) : string("OFF"))
+           + td(string("&minus;log10 of the expected number of PD regions in this reference reaching this"
+                " seed |z| by chance, read off the region counts measured above; a score of 0 means one"
+                " such region is expected per genome. This is the test that decides a call &mdash; every"
+                " other gate is a local sanity check."))) << endl;
+
+  string tally = to_string(d.items_accepted) + " accepted";
+  if (d.items_rejected_score) tally += ", " + to_string(d.items_rejected_score) + " rejected (score)";
+  if (d.items_rejected_other) tally += ", " + to_string(d.items_rejected_other) + " rejected (other gates)";
+  if (d.items_dropped_score)
+    tally += ", " + to_string(d.items_dropped_score)
+           + " dropped as expected by chance somewhere in this genome";
+  ss << tr(td("outcome")
+           + td(to_string(d.items_tested) + " examined")
+           + td(tally)) << endl;
+
+  ss << "</table>" << endl;
+  return ss.str();
+}
+
 // The zip-aware href every plot link in summary.html is built from: inside the evidence archive the
 // pages are addressed by fragment, outside it by relative path.
 static string cn_plot_href(const Settings& settings, const string& plot_file_name)
@@ -3437,7 +3511,7 @@ string html_pair_distance_table_string(diff_entry_list_t& list_ref, bool show_de
 
   ss << "<div id=\"pair_distance_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 12 : 11;
+  size_t total_cols = link ? 13 : 12;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -3455,6 +3529,7 @@ string html_pair_distance_table_string(diff_entry_list_t& list_ref, bool show_de
   ss << th("distinct") << endl;
   ss << th("freq") << endl;
   ss << th("range") << endl;
+  ss << th("score") << endl;
   ss << th("gene") << endl;
   ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
@@ -3505,6 +3580,11 @@ string html_pair_distance_table_string(diff_entry_list_t& list_ref, bool show_de
     // why an item here can be rejected at a frequency that reads as above the cutoff.
     ss << td(ALIGN_RIGHT,
              Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
+
+    // The genome-wide score: -log10 of the expected number of PD regions anywhere in this reference
+    // that would look at least this good by chance. 0 means "expected once per genome", so this is
+    // the column that says whether a call is believable at all -- everything to its left is local.
+    ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(PD_SCORE) ? c[PD_SCORE] : "&nbsp;")) << endl;
 
     if (c.entry_exists("side_1_gene_name"))
       ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c["side_1_gene_name"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));

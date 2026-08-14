@@ -433,6 +433,11 @@ namespace breseq
     int32_t pair_distance_minimum_distinct;               // Default = 2;         COMMAND-LINE OPTION
     int32_t pair_distance_minimum_shift;                  // Default = 0 (derive from the distribution width); COMMAND-LINE OPTION
     double pair_distance_frequency_cutoff;                // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
+    //! Genome-wide e-value gate on PD, as -log10(e-value): bigger is stricter, 0 = OFF. The e-value
+    //! is the expected number of PD regions anywhere in this reference that would score at least this
+    //! well by chance, computed against a null fitted to the run's own candidate regions. This is the
+    //! test that decides a PD call; every other pair_distance_* gate is a local sanity check.
+    double pair_distance_log10_e_value_cutoff;            // Default = 3;         COMMAND-LINE OPTION
 
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION

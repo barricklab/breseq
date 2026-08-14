@@ -410,6 +410,7 @@ namespace breseq
     // NOTE: pass sub-0.1 defaults as STRINGS -- see the note in the DP block above. Here the default is
     // mode-dependent, so it is registered empty and only read back when the user actually supplied it.
     ("pair-distance-tail-quantile", "Quantile of the paired-mapping distance distribution defining its tails, for the PD seed's counting test. (DEFAULT = 0.05)", "0.05", NORMAL_OPTION)
+    ("pair-distance-score-cutoff", "Log10 E-value cutoff for pair distance (PD) evidence (DEFAULT = 3). 0 = OFF. The E-value is the expected number of PD regions anywhere in the reference that would score at least this well by chance, measured against a null fitted to this run's own candidate regions rather than assumed -- so it adapts to genome size, coverage and library geometry instead of needing a tuned threshold. A score below 0 means the region is expected to occur by chance somewhere in the genome and it is discarded outright; a score below the cutoff is kept as marginal evidence.", 3.0, NORMAL_OPTION)
     ("pair-distance-frequency-cutoff", "Only accept PD evidence when the lower 95% confidence bound on its local variant frequency -- shifted read pairs divided by those plus the normal-distance pairs covering the same point -- is at or above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff, which tests the same kind of bound on the same kind of frequency, and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ;
 
@@ -751,6 +752,8 @@ namespace breseq
     ASSERT(this->pair_distance_minimum_distinct >= 0, "Argument --pair-distance-minimum-distinct must be >= 0")
     this->pair_distance_minimum_shift = from_string<int32_t>(options["pair-distance-minimum-shift"]);
     ASSERT(this->pair_distance_minimum_shift >= 0, "Argument --pair-distance-minimum-shift must be >= 0")
+    this->pair_distance_log10_e_value_cutoff = from_string<double>(options["pair-distance-score-cutoff"]);
+    ASSERT(this->pair_distance_log10_e_value_cutoff >= 0, "Argument --pair-distance-score-cutoff must be >= 0")
 
     this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
@@ -1358,6 +1361,7 @@ namespace breseq
     this->pair_distance_minimum_pairs = 3;
     this->pair_distance_minimum_distinct = 2;
     this->pair_distance_minimum_shift = 0;   // 0 = derive from the distribution width
+    this->pair_distance_log10_e_value_cutoff = 3.0;
     // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
     this->pair_distance_frequency_cutoff = 0.1;
 

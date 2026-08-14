@@ -45,6 +45,10 @@ namespace breseq {
   // Half-width of the chi-square(1) 95% profile-likelihood interval, in log-likelihood units.
   static const double kPDLogLDrop = 1.92;
 
+  // Smallest fraction of the covering-pair population that must still be able to bracket an event
+  // before that event size is worth proposing at all. See pd_null::build_shift_range.
+  static const double kPDMinSupportingMass = 0.02;
+
   // ---------------------------------------------------------------------------------------------
   // The null distribution
   // ---------------------------------------------------------------------------------------------
@@ -104,8 +108,14 @@ namespace breseq {
     double         floor; // small non-zero density outside the observed range
     int32_t        trunc; // 2 * read_length
     int32_t        median;
+    //! total_supporting(delta) for every delta in [shift_lo, shift_hi], cached. Two reasons: it does
+    //  not depend on the pairs yet pd_profile_logL needs it once per (region, delta), and the range
+    //  itself is a power bound -- see build_shift_range.
+    vector<double> h_total;
+    int32_t        shift_lo;
+    int32_t        shift_hi;
 
-    pd_null() : floor(0.0), trunc(0), median(0) {}
+    pd_null() : floor(0.0), trunc(0), median(0), shift_lo(0), shift_hi(0) {}
     bool ok() const { return !g.empty() && (trunc > 0) && (median > 0); }
     int32_t max_distance() const { return static_cast<int32_t>(g.size()) - 1; }
 
@@ -188,6 +198,60 @@ namespace breseq {
       for (int32_t d = lo; d <= hi; d++) s += supporting(d, delta);
       return s;
     }
+
+    //! Cached total_supporting(). Zero outside the searched range, which makes any delta there
+    //  unusable -- pd_profile_logL returns -inf on H <= 0.
+    double H(int32_t delta) const
+    {
+      if (h_total.empty()) return 0.0;
+      if ((delta < shift_lo) || (delta > shift_hi)) return 0.0;
+      return h_total[static_cast<size_t>(delta - shift_lo)];
+    }
+
+    /*! Settle which size shifts are worth proposing at all, and cache their normalizers.
+
+      The upper end is unchanged: a deletion is invisible once no fragment's gap reaches across it,
+      which is (longest usable distance - 2 * read length).
+
+      The lower end needs a real bound, and `max_span - trunc` is not one. As the insertion grows, the
+      set of fragments that could bracket it shrinks -- that is the (usable/gap) factor in
+      supporting() -- until total_supporting(delta) is a rounding error. The mixture likelihood stays
+      correctly normalized throughout, and that is exactly the trouble: dividing by a vanishing
+      normalizer concentrates all of h_delta onto the ragged far tail of g, where it can hand a
+      handful of ordinary pairs a density thousands of times the null's. The likelihood is then
+      unbounded in the same way a Gaussian mixture is when a component's variance goes to zero, and
+      the maximum lands on whichever sliver of the tail happens to line up with the observed
+      distances. On a 273 bp-median library this reported nine entirely ordinary pairs (distances
+      329-547, gaps of 30-248 bases) as a CLONAL 793 bp insertion, at total_supporting = 1.3e-4.
+
+      So the range is capped where the model still has power: at least `min_mass` of the covering-pair
+      population must remain able to bracket the event. Below that the fit is not measuring evidence,
+      it is measuring the shape of the null's tail. The bound is derived from the library rather than
+      fixed, so it widens by itself on a long-insert or mate-pair run.
+
+      Note the asymmetry is genuine and not a modelling shortcut: for a DELETION the reference gap a
+      supporting pair shows is its whole sample gap, so no fragment is selected against and
+      total_supporting is flat at 1. Only insertions lose fragments.
+     */
+    void build_shift_range(int32_t max_span, double min_mass)
+    {
+      h_total.clear();
+      shift_lo = 0;
+      shift_hi = 0;
+      int32_t bound = max_span - trunc;
+      if (bound < 1) return;
+
+      shift_hi = bound;
+      shift_lo = -1;
+      for (int32_t I = 1; I <= bound; I++) {
+        if (total_supporting(-I) < min_mass) break;
+        shift_lo = -I;
+      }
+
+      h_total.resize(static_cast<size_t>(shift_hi - shift_lo + 1), 0.0);
+      for (int32_t delta = shift_lo; delta <= shift_hi; delta++)
+        h_total[static_cast<size_t>(delta - shift_lo)] = total_supporting(delta);
+    }
   };
 
   // ---------------------------------------------------------------------------------------------
@@ -236,8 +300,9 @@ namespace breseq {
   //  has to see those too, both to measure them and to be able to supersede the DP they produce.
   class pd_pair_scanner : public pileup_base {
   public:
-    pd_pair_scanner(const string& bam, const string& fasta, int32_t max_span)
-      : pileup_base(bam, fasta), m_max_span(max_span), m_out(NULL) { set_print_progress(false); }
+    pd_pair_scanner(const string& bam, const string& fasta, int32_t max_span, const string& orientation)
+      : pileup_base(bam, fasta), m_max_span(max_span), m_orientation(orientation), m_out(NULL)
+      { set_print_progress(false); }
 
     int32_t tid_for_seq_id(const string& seq_id) const {
       for (uint32_t t = 0; t < num_targets(); t++)
@@ -266,7 +331,9 @@ namespace breseq {
       if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP)) return;
       if (a.mate_reference_target_id() != a.reference_target_id()) return;
       if (a.insert_size() <= 0) return;                                   // leftmost mate only
-      if (a.reversed() == ((a.flag() & BAM_FMREVERSE) != 0)) return;      // not FR or RF
+      // Must be the orientation the null was built from -- see pd_orientation_matches. Admitting the
+      // minority orientation was scoring one population against another population's distribution.
+      if (!pd_orientation_matches(m_orientation, a)) return;
       if (a.redundancy() > 1) return;                                     // arbitrary placement
 
       pd_pair p;
@@ -281,6 +348,7 @@ namespace breseq {
 
   private:
     int32_t m_max_span;
+    string m_orientation;
     vector<pd_pair>* m_out;
   };
 
@@ -297,7 +365,7 @@ namespace breseq {
   static double pd_profile_logL(const vector<pd_pair>& pairs, const pd_null& null,
                                 int32_t delta, double& f_hat)
   {
-    double H = null.total_supporting(delta);
+    double H = null.H(delta);
     if (H <= 0.0) { f_hat = 0.0; return -numeric_limits<double>::infinity(); }
 
     // A few EM rounds are plenty: the likelihood in f alone is concave, and delta -- the parameter
@@ -335,18 +403,16 @@ namespace breseq {
   //  `direction` restricts the search to the sign the seed found, so an insertion candidate cannot
   //  be explained away as a deletion (and the grid is half the size).
   static bool pd_estimate_shift(const vector<pd_pair>& pairs, const pd_null& null, char direction,
-                                int32_t max_span,
                                 int32_t& delta_hat, double& f_hat, double& logL_hat,
                                 int32_t& delta_lower, int32_t& delta_upper)
   {
     if (pairs.empty()) return false;
 
-    // An event can only be seen at all while some fragment's gap still accommodates it, which caps
-    // both directions at (longest usable distance - 2 * read length).
-    int32_t bound = max_span - null.trunc;
-    if (bound < 1) return false;
-    int32_t lo = (direction == 'L') ? 1 : -bound;
-    int32_t hi = (direction == 'L') ? bound : -1;
+    // An event can only be seen while enough of the covering population still brackets it; the null
+    // works that bound out from the library itself. See pd_null::build_shift_range.
+    if ((null.shift_lo > -1) || (null.shift_hi < 1)) return false;
+    int32_t lo = (direction == 'L') ? 1 : null.shift_lo;
+    int32_t hi = (direction == 'L') ? null.shift_hi : -1;
 
     delta_hat = 0;
     f_hat = 0.0;
@@ -396,7 +462,7 @@ namespace breseq {
     category.assign(pairs.size(), 0);
     set<pair<int32_t, int32_t> > ends;
 
-    double H = null.total_supporting(delta);
+    double H = null.H(delta);
     if (H <= 0.0) { distinct = 0; return; }
 
     int32_t deleted = max(delta, 0);
@@ -469,7 +535,7 @@ namespace breseq {
                                    int32_t& lo, int32_t& hi, int& depth_out)
   {
     int32_t deleted = max(delta, 0);
-    double H = null.total_supporting(delta);
+    double H = null.H(delta);
     if (H <= 0.0) return false;
 
     // Sweep endpoints: +1 where a pair's licensed interval opens, -1 just past where it closes.
@@ -574,6 +640,7 @@ namespace breseq {
     size_t   distinct;
     int32_t  candidate_covering;
     double   seed_z;
+    double   score;            // -log10 of the genome-wide e-value, filled in after the null is fitted
     bool     snapped;
     bool     contig_end;
     bool     inconsistent;
@@ -635,6 +702,20 @@ namespace breseq {
     }
 
     if (max_span <= null.trunc) max_span = null.max_distance();
+    null.build_shift_range(max_span, kPDMinSupportingMass);
+
+    // The orientation the null was built from; pairs of any other are not PD's to read. Empty when
+    // the paired-mapping fit made no majority call, in which case nothing is filtered.
+    string required_orientation;
+    {
+      PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(base);
+      if (it != pmdd.end()) {
+        required_orientation = it->second.majority_orientation;
+        summary.pair_distance.pair_distance_median = it->second.median;
+      }
+    }
+    summary.pair_distance.read_length_avg = summary.sequence_conversion.read_length_avg;
+    summary.pair_distance.pair_orientation = required_orientation;
 
     //
     // Step 1: re-read the candidate regions CSV.
@@ -649,9 +730,28 @@ namespace breseq {
     {
       ifstream in(settings.pd_candidate_regions_file_name.c_str());
       string line;
-      getline(in, line); // header
+      bool past_header = false;
       while (getline(in, line)) {
         if (line.empty()) continue;
+        // Calibration measured during the pileup, written as `#key=value` ahead of the CSV header.
+        // See identify_mutations_pileup::write_pd_candidate_regions.
+        if (line[0] == '#') {
+          size_t eq = line.find('=');
+          if (eq == string::npos) continue;
+          string key = line.substr(1, eq - 1);
+          string value = line.substr(eq + 1);
+          if (key == "mean_covering_gap")          summary.pair_distance.mean_covering_gap = from_string<double>(value);
+          else if (key == "n_effective_tests")     summary.pair_distance.n_effective_tests = from_string<double>(value);
+          else if (key == "seed_z")                summary.pair_distance.seed_z_used = from_string<double>(value);
+          else if (key == "z_iqr_inflation")       summary.pair_distance.z_iqr_inflation = from_string<double>(value);
+          else if (key == "region_tail_fit_ok")    summary.pair_distance.region_tail_fit_ok = (from_string<int32_t>(value) != 0);
+          else if (key == "region_tail_log_intercept") summary.pair_distance.region_tail_log_intercept = from_string<double>(value);
+          else if (key == "region_tail_sigma")     summary.pair_distance.region_tail_sigma = from_string<double>(value);
+          else if (key == "region_tail_fit_lo")    summary.pair_distance.region_tail_fit_lo = from_string<double>(value);
+          else if (key == "region_tail_fit_hi")    summary.pair_distance.region_tail_fit_hi = from_string<double>(value);
+          continue;
+        }
+        if (!past_header) { past_header = true; continue; }   // the CSV column header
         vector<string> f = split(line, ",");
         if (f.size() < 9) continue;
         pd_region_row r;
@@ -666,6 +766,8 @@ namespace breseq {
         regions.push_back(r);
       }
     }
+
+    summary.pair_distance.regions_seeded = regions.size();
 
     if (regions.empty()
         || !file_exists(settings.reference_bam_file_name.c_str())
@@ -712,7 +814,8 @@ namespace breseq {
     pd_load_passing_jcs(settings.jc_genome_diff_file_name, jcs);
 
     pd_pair_scanner* scanner =
-      new pd_pair_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name, max_span);
+      new pd_pair_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name,
+                          max_span, required_orientation);
 
     //
     // Step 2: rescan, estimate, localize.
@@ -741,9 +844,9 @@ namespace breseq {
       if (covering.empty()) continue;
 
       int32_t delta = 0, delta_lower = 0, delta_upper = 0;
-      double f_hat = 0.0, logL = 0.0;
-      if (!pd_estimate_shift(covering, null, r.direction, max_span,
-                             delta, f_hat, logL, delta_lower, delta_upper)) continue;
+      double f_hat = 0.0, logL_hat = 0.0;
+      if (!pd_estimate_shift(covering, null, r.direction,
+                             delta, f_hat, logL_hat, delta_lower, delta_upper)) continue;
 
       // Localize over the WHOLE window, not the covering subset: see pd_feasible_interval for why
       // restricting to pairs that cover a starting guess pins the answer to that guess.
@@ -821,6 +924,7 @@ namespace breseq {
       c.distinct = distinct;
       c.candidate_covering = r.peak_covering;
       c.seed_z = r.peak_z;
+      c.score = 0.0;
       c.snapped = snapped;
       c.inconsistent = inconsistent;
       // Within about one fragment length of the end of a LINEAR sequence the covering population is
@@ -833,6 +937,60 @@ namespace breseq {
     }
 
     delete scanner;
+
+    //
+    // Step 2b: score every candidate as a genome-wide e-value.
+    //
+    // This is what replaces a hard cutoff:
+    //
+    //     e-value = expected number of regions anywhere in this reference whose seed statistic
+    //               reaches |z| by chance,   read off R(t) as measured during the pileup
+    //     score   = -log10(e-value)
+    //
+    // so 0 means "expected once per genome" and the familiar +3 means "once per thousand genomes".
+    // It needs no tuned constant and adapts to genome size, depth and library geometry, because the
+    // ladder R(t) it comes from is a direct count on this run (see pd_fit_region_tail).
+    //
+    // The reference is EXACTLY the right one, which is the point. A region exists above threshold t
+    // precisely when its peak |z| reaches t, so R(t) is the null distribution of the very quantity
+    // being scored, and it is measured over every column of the reference -- no selection.
+    //
+    // The tempting alternative is to score the profile likelihood ratio of the fitted event against
+    // no event, and calibrate THAT on the candidate regions. It was tried and it does not work, for
+    // two reasons worth recording so it is not tried again. The candidates are a SELECTED sample --
+    // they are the regions that already cleared the seed -- so a background estimated from them is
+    // biased upwards and over-penalizes real events, which is the one thing a calibration must not
+    // do. And the ratio is a sum over covering pairs, so it is not comparable between regions of
+    // different depth: used raw, a deeply covered stretch wins on depth alone (on a mate-pair library
+    // it ranged over thousands and the fitted tail went flat, rejecting everything), while dividing
+    // it by the pair count over-corrects and ranks the shallowest regions highest.
+    {
+      const PairDistanceSummary& cal = summary.pair_distance;
+      bool have_fit = cal.region_tail_fit_ok && (cal.region_tail_sigma > 0.0);
+
+      double n_tests = static_cast<double>(calls.size());
+      if (n_tests < 1.0) n_tests = 1.0;
+      for (size_t i = 0; i < calls.size(); i++) {
+        double z = fabs(calls[i].seed_z);
+        double e_value = have_fit
+          ? cal.expected_regions(z)
+          // No usable ladder fit (a reference too small to produce one). Fall back to the analytic
+          // form the same quantity would take under a unit-normal null with the measured effective
+          // test count: two-sided tail x tests.
+          : (cal.n_effective_tests > 0.0
+               ? 2.0 * cal.n_effective_tests * 0.5 * erfc(z / sqrt(2.0))
+               : n_tests * 0.5 * erfc(z / sqrt(2.0)));
+        if (!(e_value > 0.0) || !isfinite(e_value)) e_value = 1e-300;
+        calls[i].score = -log10(e_value);
+      }
+
+      cerr << "  PD scored " << calls.size() << " candidate regions against "
+           << (have_fit ? "the measured seed null" : "an analytic seed null");
+      if (have_fit)
+        cerr << " (sigma " << std::fixed << std::setprecision(2) << cal.region_tail_sigma << ")";
+      cerr << "." << endl;
+      cerr.unsetf(std::ios::fixed);
+    }
 
     //
     // Step 3: local non-maximum suppression, in the same order-independent form MP uses.
@@ -897,9 +1055,21 @@ namespace breseq {
     //
     // Step 4: emit.
     //
+    summary.pair_distance.score_cutoff = settings.pair_distance_log10_e_value_cutoff;
+
     for (size_t i = 0; i < calls.size(); i++) {
       if (!emit[i]) continue;
       const pd_call& c = calls[i];
+      summary.pair_distance.items_tested++;
+
+      // A negative score means this region is expected to arise by chance somewhere in this genome.
+      // Keeping it would not be conservative, it would be noise: on the library that exposed this
+      // defect, dozens of such regions were being reported, and they would swamp the marginal
+      // evidence table exactly as they swamped the accepted one. Mirrors the early-out SC does.
+      if ((settings.pair_distance_log10_e_value_cutoff > 0.0) && (c.score < 0.0)) {
+        summary.pair_distance.items_dropped_score++;
+        continue;
+      }
 
       // The two sides bracket the reference bases the event removed, so they are separated by
       // max(size_shift, 0) -- and are adjacent when nothing was removed.
@@ -933,6 +1103,7 @@ namespace breseq {
       pd[PD_TOTAL_COUNT] = to_string(c.supporting + c.against + c.ambiguous);
       pd[PD_CANDIDATE_COUNT] = to_string(c.candidate_covering);
       pd[PD_SEED_Z] = to_string(formatted_double(c.seed_z, 2));
+      pd[PD_SCORE] = to_string(formatted_double(c.score, 1));
       if (c.snapped) pd["snapped_to_junction"] = "1";
 
       pd["side_1_annotate_key"] = "gene";
@@ -971,6 +1142,17 @@ namespace breseq {
         pd.add_reject_reason("PAIR_DISTANCE_SIZE");
       if ((settings.pair_distance_frequency_cutoff > 0.0) && (freq_lower < settings.pair_distance_frequency_cutoff))
         pd.add_reject_reason("PAIR_DISTANCE_FREQUENCY");
+      // The genome-wide gate. Everything above is a local sanity check on one region; this is the
+      // only test that asks how often a region this good turns up by chance across the whole
+      // reference, so it is the one that decides.
+      bool rejected_by_score = (settings.pair_distance_log10_e_value_cutoff > 0.0)
+                            && (c.score < settings.pair_distance_log10_e_value_cutoff);
+      if (rejected_by_score)
+        pd.add_reject_reason("PAIR_DISTANCE_SCORE");
+
+      if (!pd.entry_exists("reject")) summary.pair_distance.items_accepted++;
+      else if (rejected_by_score)     summary.pair_distance.items_rejected_score++;
+      else                            summary.pair_distance.items_rejected_other++;
 
       pd_gd.add(pd);
     }
@@ -1002,8 +1184,8 @@ namespace breseq {
   //  the mate is by construction inside it.
   class pd_plot_gatherer : public pileup_base {
   public:
-    pd_plot_gatherer(const string& bam, const string& fasta)
-      : pileup_base(bam, fasta), m_max_span(0) { set_print_progress(false); }
+    pd_plot_gatherer(const string& bam, const string& fasta, const string& orientation)
+      : pileup_base(bam, fasta), m_max_span(0), m_orientation(orientation) { set_print_progress(false); }
 
     int32_t tid_for_seq_id(const string& seq_id) const {
       for (uint32_t t = 0; t < num_targets(); t++)
@@ -1038,7 +1220,8 @@ namespace breseq {
       if (a.flag() & BAM_FMUNMAP) return;
       if (a.mate_reference_target_id() != a.reference_target_id()) return;
       if (a.insert_size() <= 0) return;
-      if (a.reversed() == ((a.flag() & BAM_FMREVERSE) != 0)) return;
+      // Same orientation gate as the rescan, so the plot draws the population the counts came from.
+      if (!pd_orientation_matches(m_orientation, a)) return;
       if (a.redundancy() > 1) return;
 
       pd_draw_pair p;
@@ -1071,6 +1254,7 @@ namespace breseq {
 
   private:
     int32_t m_max_span;
+    string m_orientation;
     vector<pd_draw_pair> m_lefts;
     map<int32_t, int32_t> m_ends;
   };
@@ -1291,9 +1475,17 @@ namespace breseq {
                        read_length, 5, null_max_distance)) return;
 
     if (max_span <= null.trunc) max_span = null.max_distance();
+    null.build_shift_range(max_span, kPDMinSupportingMass);
+
+    string required_orientation;
+    {
+      PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(base);
+      if (it != pmdd.end()) required_orientation = it->second.majority_orientation;
+    }
 
     create_path(settings.evidence_path);
-    pd_plot_gatherer g(settings.reference_bam_file_name, settings.reference_fasta_file_name);
+    pd_plot_gatherer g(settings.reference_bam_file_name, settings.reference_fasta_file_name,
+                       required_orientation);
 
     for (diff_entry_list_t::iterator it = pd_list.begin(); it != pd_list.end(); it++) {
       cDiffEntry& pd = **it;
@@ -1311,7 +1503,7 @@ namespace breseq {
       // Classify with the same likelihood ratio and the same geometric requirement the counts used,
       // and keep only the pairs that reach the breakpoint at all -- exactly the set behind the
       // frequency in the table.
-      double H = null.total_supporting(delta);
+      double H = null.H(delta);
       vector<pd_draw_pair> keep;
       for (size_t i = 0; i < drawn.size(); i++) {
         if ((drawn[i].read_end > side_1) || (side_1 > drawn[i].mate_start - 1)) continue;

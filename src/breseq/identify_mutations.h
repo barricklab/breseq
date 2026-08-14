@@ -294,6 +294,16 @@ namespace breseq {
       //! than the CDF) because the distance is discrete, and E[CDF] of a discrete variable exceeds
       //! 1/2, which would bias every column toward the LONG bin.
       vector<int64_t> pd_cdf;
+      //! PD's required pair orientation ("FR" / "RF"), from this group's paired-mapping distance fit.
+      //! Empty means the fit produced no majority call, in which case orientation is not filtered on.
+      //!
+      //! This must be an EXACT match, not merely "one of FR/RF". The histogram the null is built from
+      //! contains the majority orientation only (see coverage_distribution.cpp), so admitting the
+      //! minority orientation scores observations against a null that does not contain them. Minority
+      //! pairs also cluster -- they are the signature of a tandem duplication, which is DP's business
+      //! -- and their apparent distances are systematically long, so a local handful of them
+      //! fabricates exactly the collective shift PD is looking for.
+      string          pd_orientation;
     };
     //! A completed candidate region: discordant read pairs of a single focal strand and orientation.
     struct dp_candidate_region {
@@ -333,6 +343,21 @@ namespace breseq {
     static const int   kPDzHistBins    = 2 * kPDzHistLimit * kPDzHistPerUnit + 1;
     //! Columns shallower than this contribute a z too lumpy to be worth binning.
     static const int32_t kPDzHistMinCovering = 4;
+
+    //! Ladder of seed thresholds at which the number of INDEPENDENT candidate regions is counted, so
+    //! that PD's multiple-testing correction is measured on this genome rather than assumed.
+    //!
+    //! What a genome-wide false-positive rate needs is the number of independent opportunities to
+    //! seed, and neither an analytic formula nor a per-column count gives it: adjacent columns share
+    //! nearly all their covering pairs, so columns are massively correlated, while the correlation
+    //! length itself depends on the library's gap-length distribution. Counting completed REGIONS at
+    //! each of a range of thresholds measures the quantity directly -- one count per excursion,
+    //! whatever the correlation structure -- and costs 2 * kPDLadderSteps comparisons per column.
+    //!
+    //! R(t) over the noise-dominated part of the ladder is then fit and extrapolated; see
+    //! pd_fit_region_tail(). Steps are 0.25 apart starting at 1.0, i.e. t in [1.0, 6.0].
+    static const int kPDLadderSteps = 21;
+    static double pd_ladder_z(int i) { return 1.0 + 0.25 * static_cast<double>(i); }
     //! A completed PD candidate region: one run of columns seeding in a single shift direction.
     struct pd_candidate_region {
       string   seq_id;
@@ -400,7 +425,13 @@ namespace breseq {
     void write_mp_candidate_regions(const string& filename);
 
     //! Write the accumulated PD candidate regions to a CSV (one operation, after the pileup).
+    //! The calibration measured during the pileup is written as `#key=value` lines ahead of the
+    //! header, because it is the only channel stage 08 has to the later PD prediction step and it is
+    //! not recoverable from the regions themselves.
     void write_pd_candidate_regions(const string& filename);
+
+    //! Fill in the parts of the PD summary that only the pileup can measure.
+    void fill_pd_summary(PairDistanceSummary& s) const;
 
     //! How much wider the seed z actually runs than the unit normal its threshold assumes.
     //
@@ -419,6 +450,27 @@ namespace breseq {
     //  under-dispersed statistic is not evidence that the threshold should be relaxed.
     double pd_z_inflation() const;
 
+    /*! Fit the genome-wide tail of the seed's excursion count: log R(t) = a - t^2 / (2 sigma^2).
+
+      R(t) is the number of INDEPENDENT candidate regions the whole reference produced at seed
+      threshold t, counted directly on the ladder rather than derived from a per-column p-value and
+      an assumed correlation length. Extrapolating the fit gives the expected number of noise regions
+      at any threshold -- a genome-wide false-positive count, measured on this run.
+
+      Why not read it off pd_z_inflation(): that estimator is an interquartile range, a property of
+      the BULK of the z distribution, and it is blind to a heavy tail. On a 3.6 Mb Acinetobacter
+      library it reported 1.04x while the tail was in fact about 2.5x too heavy for a normal -- 113
+      regions seeded at |z| >= 3 where a normal null with the correct effective test count predicts
+      about 44. The excess is real (GC-dependent fragment length, PCR duplicates making covering pairs
+      non-independent, and Irwin-Hall discreteness at the handful of pairs that cover a point), so it
+      has to be measured where it acts.
+
+      The fit window is the noise-dominated part of the ladder: rungs with enough regions that real
+      events cannot be an appreciable fraction of them. Returns false when no such window exists, in
+      which case the caller falls back to the analytic correction.
+     */
+    bool pd_fit_region_tail(double& out_log_intercept, double& out_sigma,
+                            double& out_fit_lo, double& out_fit_hi) const;
 
 	protected:
 		//! Helper method to track deletions.
@@ -573,6 +625,14 @@ namespace breseq {
 		double _pd_region_peak_z[kPDnBins];                 //!< signed z at that column
 		vector<pd_candidate_region> _pd_candidate_regions;  //!< all completed regions (written once after the pileup)
 		vector<uint64_t> _pd_z_hist;                        //!< seed z over every scored column, for pd_z_inflation()
+		//! Length-biased mean gap of the pairs able to cover a point, E[(d-trunc)^2]/E[(d-trunc)]. This
+		//! is the correlation length of the seed statistic, so the reference length divided by it is the
+		//! effective number of independent tests. 0 if no group had a usable null.
+		double _pd_mean_covering_gap;
+		//! Ladder of independent-region counts, [bin][step]; see kPDLadderSteps. `open` mirrors the
+		//! single-threshold region tracking above, one flag per rung, so each excursion is counted once.
+		bool _pd_ladder_open[kPDnBins][kPDLadderSteps];
+		uint64_t _pd_ladder_count[kPDnBins][kPDLadderSteps];
 	};
 
   

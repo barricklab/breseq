@@ -177,6 +177,7 @@ namespace breseq {
   extern const char* PD_TOTAL_COUNT;
   extern const char* PD_CANDIDATE_COUNT;
   extern const char* PD_SEED_Z;
+  extern const char* PD_SCORE;
 
   //For SC
   extern const char* SC_READ_COUNT;

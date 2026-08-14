@@ -437,6 +437,73 @@ namespace breseq{
     {}
   };
 
+  // Everything that decided which pair-distance (PD) calls were kept. PD's criterion is a genome-wide
+  // e-value calibrated FROM THIS RUN rather than a fixed cutoff, so none of it is recoverable from the
+  // command line or from the evidence .gd -- it has to be recorded here to be explicable at all.
+  class PairDistanceSummary : public JSONStorable<PairDistanceSummary>
+  {
+  public:
+    // Library shape. mean_covering_gap is the length-biased mean gap of the pairs that can cover a
+    // point, E[(d-trunc)^2]/E[(d-trunc)], which is the correlation length of the seed statistic and
+    // therefore what sets the effective number of independent tests. It is NOT median - 2*read_length,
+    // which goes negative whenever fragments are shorter than two reads and silently disabled the
+    // genome-wide correction entirely.
+    double   read_length_avg;
+    double   pair_distance_median;
+    string   pair_orientation;                  // majority orientation; pairs of any other are ignored
+    double   mean_covering_gap;
+    double   n_effective_tests;                 // reference length / mean_covering_gap
+
+    // Seed stage: the loose sensitivity filter, and the empirical excursion multiplicity measured
+    // over the whole reference at a ladder of thresholds.
+    double   seed_z_used;
+    double   z_iqr_inflation;                   // diagnostic only: the old bulk (IQR) spread estimate
+    bool     region_tail_fit_ok;
+    double   region_tail_log_intercept;         // log R(t) = a - t^2 / (2 sigma^2)
+    double   region_tail_sigma;
+    double   region_tail_fit_lo;                // fitting window in t ...
+    double   region_tail_fit_hi;                // ... over which real events are negligible
+    uint64_t regions_seeded;
+
+    // Accept stage.
+    double   score_cutoff;                      // --pair-distance-score-cutoff in force
+
+    // Outcome.
+    uint64_t items_tested;
+    uint64_t items_dropped_score;               // score < 0: expected by chance genome-wide, never emitted
+    uint64_t items_accepted;
+    uint64_t items_rejected_score;
+    uint64_t items_rejected_other;              // count, frequency, duplicates, size, suppression, ...
+
+    PairDistanceSummary()
+    : read_length_avg(0.0)
+    , pair_distance_median(0.0)
+    , mean_covering_gap(0.0)
+    , n_effective_tests(0.0)
+    , seed_z_used(0.0)
+    , z_iqr_inflation(1.0)
+    , region_tail_fit_ok(false)
+    , region_tail_log_intercept(0.0)
+    , region_tail_sigma(1.0)
+    , region_tail_fit_lo(0.0)
+    , region_tail_fit_hi(0.0)
+    , regions_seeded(0)
+    , score_cutoff(0.0)
+    , items_tested(0)
+    , items_dropped_score(0)
+    , items_accepted(0)
+    , items_rejected_score(0)
+    , items_rejected_other(0)
+    {}
+
+    //! Expected number of independent noise regions genome-wide at seed threshold t.
+    double expected_regions(double t) const
+    {
+      if (!region_tail_fit_ok || !(region_tail_sigma > 0.0)) return 0.0;
+      return exp(region_tail_log_intercept - (t * t) / (2.0 * region_tail_sigma * region_tail_sigma));
+    }
+  };
+
   // How CNery's copy number analysis of one reference sequence went: the replication bias it fit and
   // divided out, and how much flatter each successive correction actually made the coverage.
   //
@@ -512,6 +579,7 @@ namespace breseq{
     ErrorCountSummaries preprocess_error_count;
     SoftClippingSummary soft_clipping;
     DiscordantPairSummary discordant_pair;
+    PairDistanceSummary pair_distance;
     // Per reference sequence, and only under --predict-copy-number.
     CopyNumberSummaries copy_number;
     // Stage-03 preprocessing fit (median/upper-MAD/cutoff/orientation + preprocessing-tabulated counts).
@@ -585,6 +653,10 @@ namespace breseq{
   // DiscordantPairSummary
   void to_json(json& j, const DiscordantPairSummary& s);
   void from_json(const json& j, DiscordantPairSummary& s);
+
+  // PairDistanceSummary
+  void to_json(json& j, const PairDistanceSummary& s);
+  void from_json(const json& j, PairDistanceSummary& s);
 
   // CopyNumberSummary
   void to_json(json& j, const CopyNumberSummary& s);
@@ -828,6 +900,7 @@ namespace breseq{
     PublicOptionsSummary options;
     SoftClippingSummary soft_clipping;
     DiscordantPairSummary discordant_pair;
+    PairDistanceSummary pair_distance;
     CopyNumberSummaries copy_number;
     PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
     PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;

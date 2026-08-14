@@ -64,6 +64,38 @@ namespace breseq {
   bool pd_load_weighted_histogram(const string& file_name, int32_t trunc, int32_t max_distance,
                                   vector<double>& weighted, double& total);
 
+  //! Does a pair read this way round match the orientation PD's null was built from?
+  //
+  //  `required` is the library's majority orientation ("FR" / "RF"); empty means the paired-mapping
+  //  fit produced no majority call, in which case there is nothing to match against and any pair with
+  //  a sane arrangement is allowed. `reversed` / `mate_reversed` are the strand flags of the LEFTMOST
+  //  mate, which is the only one PD ever looks at.
+  //
+  //  This has to be an exact match, and getting it wrong is not a small error. The histogram the null
+  //  comes from holds the majority orientation only (coverage_distribution.cpp keeps just those rows),
+  //  so a minority-orientation pair is being scored against a distribution it was never part of.
+  //  Worse, minority pairs are not scattered: they mark tandem duplications and mismapping hotspots,
+  //  which is DP's subject, and their apparent distances are systematically long. A local handful is
+  //  therefore indistinguishable, to PD, from the collective shift a deletion produces. On one
+  //  3.6 Mb library the single highest-scoring PD call in the run -- a 453 bp "deletion" at 6.75
+  //  sigma -- was thirteen RF pairs in an FR library and nothing else.
+  //
+  //  Shared by the seeding pass in identify_mutations.cpp and the rescan and plot passes here, so all
+  //  three see the same population.
+  inline bool pd_orientation_matches(const string& required, bool reversed, bool mate_reversed)
+  {
+    if (reversed == mate_reversed) return false;      // FF or RR: not a pair PD can read at all
+    if (required.empty()) return true;
+    return required == (reversed ? "RF" : "FR");
+  }
+
+  //! Overload for anything with reversed() and flag() -- alignment_wrapper and the pileup's iterator.
+  template <class TAlignment>
+  inline bool pd_orientation_matches(const string& required, const TAlignment& a)
+  {
+    return pd_orientation_matches(required, a.reversed(), (a.flag() & BAM_FMREVERSE) != 0);
+  }
+
   //! Predict Pair Distance (PD) evidence.
   //
   //  PD finds the events that are invisible to DP because no single read pair is anomalous. A

@@ -2534,12 +2534,19 @@ int breseq_default_action(int argc, char* argv[])
     if (settings.do_step(settings.pair_distance_done_file_name, "Examining pair distance evidence")) {
 
       predict_pair_distances(settings, summary, ref_seq_info);
+      summary.pair_distance.store(settings.pair_distance_summary_file_name);
       // As for MP: written in stage 08, consumed only here, so keyed to THIS step's done-file.
       settings.track_intermediate_file(settings.pair_distance_done_file_name,
                                        settings.pd_candidate_regions_file_name);
 
       settings.done_step(settings.pair_distance_done_file_name);
     }
+    // Restore on a restart that skipped the step above, as DP does: the calibration behind every PD
+    // decision is reported in summary.html and summary.json and is not recoverable from the .gd.
+    // Guarded because JSONStorable::retrieve asserts on a missing file, and this one is absent for
+    // any run made before PD reporting existed.
+    if (file_exists(settings.pair_distance_summary_file_name.c_str()))
+      summary.pair_distance.retrieve(settings.pair_distance_summary_file_name);
   }
 
     /*
