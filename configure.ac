@@ -28,8 +28,6 @@ AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
 AC_CONFIG_SRCDIR([])
 
-AC_PREFIX_DEFAULT([$prefix])
-
 LT_INIT
 AM_INIT_AUTOMAKE([subdir-objects -Wno-portability])
 
