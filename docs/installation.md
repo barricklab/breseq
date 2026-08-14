@@ -73,6 +73,14 @@ In addition to the normal dependencies, you must also have a C++ compiler instal
 If you have admin privileges and want to install in a standard location accessible to all users of a computer, then see `installing-in-a-system-wide-location`. If you do not have admin
 privileges on your computer, then see `installing-in-the-source-directory` or `installing-in-a-custom-location`.
 
+!!! note "Where `configure` looks for zlib, miniz and htslib"
+    `--prefix` sets both where _breseq_ is installed and the directory `configure` searches for the
+    zlib, miniz and htslib libraries it links against (it also becomes the runtime library search
+    path of the installed binaries). The recipes below assume those libraries are installed in a
+    standard system location, where your compiler finds them without help. If instead they come from
+    a conda environment, configure with `--prefix=$CONDA_PREFIX` so that _breseq_ is built against
+    that environment — and installed into it.
+
 ### Installing in a system-wide location
 
 This method requires that you have admin privileges on your machine. After installation, all users of the machine will be able to run _breseq_.

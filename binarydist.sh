@@ -183,9 +183,9 @@ if [ "$BINARYPLATFORM" == "Darwin" ]; then
 
 	# Point the build at our just-(re)built static-universal prerequisites
 	# instead of whatever libz/miniz/htslib the active conda environment (or
-	# system) provides — configure.ac always emits -I${prefix}/include and
-	# -lz/-lminiz/-lhts (it no longer has --with-static-* options); putting
-	# our -I/-L paths first makes those resolve to our universal .a files
+	# system) provides — configure.ac emits -lz/-lminiz/-lhts unconditionally
+	# (it no longer has --with-static-* options); putting our -I/-L paths first
+	# makes those resolve to our universal .a files
 	# (each of these lib/ dirs holds only a .a, no .dylib, so -lfoo can't
 	# pick up a wrong-architecture dynamic library by mistake). bzip2/xz
 	# are purely a transitive CRAM-codec dependency of htslib with no
@@ -207,6 +207,11 @@ BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 
 BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYNAME}
 BINARYDIR=${PWD}/${BINARYLOCALDIR}
+# Removing this before ./configure runs also keeps the conda environment out of
+# this build: configure.ac adds -I${prefix}/include -L${prefix}/lib (and an
+# -rpath) only when those directories already exist, and ${BINARYDIR} is created
+# later by 'make install'. The static universal prerequisites are supplied
+# explicitly through CPPFLAGS/LDFLAGS/CRAM_CODEC_LIBS below instead.
 rm -rf ${BINARYDIR} ${BINARYDIR}.tar.gz ${BINARYDIR}.tgz
 
 echo "${BINARYLOCALDIR}"

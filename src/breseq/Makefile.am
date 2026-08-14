@@ -22,9 +22,15 @@
 BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
 BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
 
-# $(STATIC_LIBZ_INC) and $(MINIZ_INC) add include paths for static builds.
 # -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES prevents miniz aliases clashing with libz.
-AM_CPPFLAGS = -O3 $(STATIC_LIBZ_INC) $(MINIZ_INC) $(HTSLIB_INC) -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES \
+# Include paths for zlib/miniz/htslib are deliberately NOT listed here:
+# configure puts them in CPPFLAGS (see "Where to find zlib, miniz and htslib" in
+# configure.ac), which automake appends after $(AM_CPPFLAGS) -- so the same -I
+# configure tested with is the one used to compile, and breseq's own
+# -I$(top_srcdir)/aux_build still takes precedence. The empty
+# $(STATIC_LIBZ_INC)/$(MINIZ_INC)/$(HTSLIB_INC) hooks that used to be here were
+# what disguised the fact that the configure checks used different flags.
+AM_CPPFLAGS = -O3 -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES \
               -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
 
 AM_CXXFLAGS = -std=c++11

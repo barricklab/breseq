@@ -19,8 +19,21 @@ whenever the autoconf configuration files have changed, for example when a new s
 added to the project.
 
 $ ./bootstrap.sh
-$ ./configure
+$ ./configure --prefix=$CONDA_PREFIX
 $ make
+
+--prefix is where breseq gets installed AND where ./configure looks for the zlib, miniz and htslib
+that it links against, so it must point at the conda environment holding them. Passing it also bakes
+that directory in as a runtime library search path (-rpath), so the binaries you build run without
+the environment activated. A bare ./configure may appear to work inside an activated environment --
+conda's compiler-activation scripts export the same include/library paths of their own accord -- but
+that is exactly what silently broke the GitHub Actions build when conda-forge moved to gcc 15, so do
+not rely on it.
+
+NOTE: 'make install' with this --prefix installs breseq into the conda environment itself. That is
+      usually what you want for a development environment, but be aware it is shared: installing
+      from one git worktree overwrites the breseq/gdtools that every other worktree's environment
+      provides. Building and testing in place ('make', 'make test') never installs anything.
 
 === Consistency Test Instructions ===
 

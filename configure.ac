@@ -42,6 +42,58 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
 
+
+#### Where to find zlib, miniz and htslib
+#
+# ${prefix} doubles as the search root for the third-party libraries breseq
+# links against. Configure with --prefix=$CONDA_PREFIX when they come from a
+# conda environment.
+#
+# These paths are added to the *global* CPPFLAGS/LDFLAGS once, here, ahead of
+# every check below -- so what configure tests is exactly what 'make' later
+# compiles and links against. They used to be added and then restored around
+# each individual check, which proved a header existed under one set of flags
+# and then compiled with another. That only worked while an activated conda
+# environment happened to export the same paths itself; when conda-forge's
+# compiler-activation scripts stopped taking effect, configure failed with
+# "miniz/miniz.h not found at NONE/include" ($prefix is the literal string NONE
+# inside configure when no --prefix was given, so these paths were never real).
+#
+# Guarded on the directory actually existing, so that --prefix=$PWD (the
+# source-directory install in docs/installation.md) and binarydist.sh's
+# --prefix="${BINARYDIR}" -- neither of which holds any libraries at configure
+# time -- fall back to the compiler's default search paths instead of baking a
+# useless -I/-L and an -rpath into the binaries.
+deps_prefix=
+AS_IF([test "x$prefix" != xNONE],
+  [AS_IF([test -d "$prefix/include"],
+     [CPPFLAGS="$CPPFLAGS -I$prefix/include"
+      deps_prefix=$prefix])
+   AS_IF([test -d "$prefix/lib"],
+     [LDFLAGS="$LDFLAGS -L$prefix/lib"
+      deps_prefix=$prefix
+      dnl Runtime search path, so breseq/gdtools find libhts/libminiz/libz
+      dnl without the conda environment activated and without LD_LIBRARY_PATH.
+      dnl '-Wl,-rpath,DIR' is the portable spelling: libtool splits it into
+      dnl '-Wl,-rpath -Wl,DIR', which GNU ld and Apple's ld64 both accept. (Not
+      dnl '-Wl,-rpath=DIR', which is GNU-only; not libtool's own '-R DIR', which
+      dnl configure's compiler-driven link tests below would reject.) Skipped
+      dnl when already present -- conda's compiler activation adds this exact
+      dnl flag, and ld64 warns on duplicate -rpath entries.
+      AS_CASE([" $LDFLAGS "],
+        [*" -Wl,-rpath,$prefix/lib "*], [],
+        [LDFLAGS="$LDFLAGS -Wl,-rpath,$prefix/lib"])])])
+
+dnl $deps_where names the searched location in the not-found errors below, so
+dnl they can never again print a path as unhelpful as "NONE/include".
+AC_MSG_CHECKING([where to look for zlib, miniz and htslib])
+AS_IF([test -n "$deps_prefix"],
+  [AC_MSG_RESULT([$deps_prefix and the compiler's default paths])
+   deps_where="in $deps_prefix or on the compiler's default search path"],
+  [AC_MSG_RESULT([the compiler's default paths])
+   deps_where="on the compiler's default search path"])
+
+
 AX_COMPUTE_RELATIVE_PATHS([bindir:datadir:bin_to_data])
 AC_MSG_NOTICE([Local path from bin to data...])
 AC_MSG_NOTICE([$bin_to_data])
@@ -75,38 +127,35 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is re
 
 #### libz
 
-# Dynamic linking to libz (bioconda install) — verify at ${prefix}/lib and set
-# LIBZ_LINK/STATIC_LIBZ_INC. (binarydist.sh links statically against its own
-# universal build of zlib by passing -I/-L paths and LIBS directly to
-# ./configure, ahead of these -lfoo flags resolving against ${prefix}/lib.)
+# Dynamic linking to libz (bioconda install) — searched for under the
+# dependency search paths added above, and linked with LIBZ_LINK.
+# (binarydist.sh links statically against its own universal build of zlib by
+# passing -I/-L paths and LIBS directly to ./configure, ahead of these -lfoo
+# flags.)
+#
+# Note the empty action-if-found argument does NOT suppress AC_CHECK_LIB's
+# default of prepending -lz to LIBS (autoconf's m4_default treats an empty
+# argument as absent), so -lz and -lminiz do land in LIBS and appear on every
+# link, including libbreseq.la's. -lhts does not, because the htslib block below
+# restores LIBS afterwards. What actually puts all three on the breseq/gdtools
+# links, in a defined order, is LIBZ_LINK/MINIZ_LINK/HTSLIB_LINK via
+# breseq_LDADD/gdtools_LDADD (see src/breseq/Makefile.am); the duplicate -lz
+# -lminiz that LIBS adds is harmless. Long-standing behaviour, noted here only
+# so the next reader does not mistake the empty argument for an opt-out.
 
-save_LDFLAGS="$LDFLAGS"
-LDFLAGS="$LDFLAGS -L${prefix}/lib"
 AC_CHECK_LIB([z], [deflateSetHeader], [],
-  [AC_MSG_ERROR([libz >=1.2.2.1 not found at ${prefix}/lib. Install zlib or set --prefix=\$CONDA_PREFIX])])
-LDFLAGS="$save_LDFLAGS"
+  [AC_MSG_ERROR([libz >=1.2.2.1 not found $deps_where. Install zlib (conda install -c conda-forge zlib) and configure with --prefix=\$CONDA_PREFIX])])
 AC_SUBST([LIBZ_LINK], ["-lz"])
-AC_SUBST([STATIC_LIBZ_INC], [""])
 
 
 #### miniz (required for --zip-html evidence ZIP archive support)
 
-# Dynamic linking to libminiz (bioconda install) — verify at ${prefix} and set
-# MINIZ_LINK/MINIZ_INC. (binarydist.sh links statically against its own
-# universal build of miniz by passing -I/-L paths and LIBS directly to
-# ./configure, ahead of these -lfoo flags resolving against ${prefix}/lib.)
+# Dynamic linking to libminiz (bioconda install) — as for libz above.
 
-save_CPPFLAGS="$CPPFLAGS"
-save_LDFLAGS="$LDFLAGS"
-CPPFLAGS="$CPPFLAGS -I${prefix}/include"
-LDFLAGS="$LDFLAGS -L${prefix}/lib"
 AC_CHECK_HEADER([miniz/miniz.h], [],
-  [AC_MSG_ERROR([miniz/miniz.h not found at ${prefix}/include. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
+  [AC_MSG_ERROR([miniz/miniz.h not found $deps_where. Install miniz (conda install -c conda-forge miniz) and configure with --prefix=\$CONDA_PREFIX])])
 AC_CHECK_LIB([miniz], [mz_zip_writer_init_file], [],
-  [AC_MSG_ERROR([libminiz not found at ${prefix}/lib. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
-CPPFLAGS="$save_CPPFLAGS"
-LDFLAGS="$save_LDFLAGS"
-AC_SUBST([MINIZ_INC],  [""])
+  [AC_MSG_ERROR([libminiz not found $deps_where. Install miniz (conda install -c conda-forge miniz) and configure with --prefix=\$CONDA_PREFIX])])
 AC_SUBST([MINIZ_LINK], ["-lminiz"])
 
 
@@ -120,16 +169,9 @@ AC_SEARCH_LIBS([dladdr], [dl], [], [AC_MSG_ERROR(["libdl is required."])])
 
 #### htslib (required for BAM/SAM reading and pileup)
 
-# Dynamic linking to libhts (bioconda install) — verify at ${prefix} and set
-# HTSLIB_LINK/HTSLIB_INC. (binarydist.sh links statically against its own
-# universal build of htslib by passing -I/-L paths and LIBS directly to
-# ./configure, ahead of these -lfoo flags resolving against ${prefix}/lib.)
+# Dynamic linking to libhts (bioconda install) — as for libz/miniz above.
 
-save_CPPFLAGS="$CPPFLAGS"
-save_LDFLAGS="$LDFLAGS"
 save_LIBS="$LIBS"
-CPPFLAGS="$CPPFLAGS -I${prefix}/include"
-LDFLAGS="$LDFLAGS -L${prefix}/lib"
 # $CRAM_CODEC_LIBS (set by binarydist.sh to full .a paths for bzip2/xz) must be
 # present for this link check when statically linking: libhts.a has undefined
 # CRAM-codec symbols that only those archives resolve, and AC_CHECK_LIB's probe
@@ -137,17 +179,14 @@ LDFLAGS="$LDFLAGS -L${prefix}/lib"
 # unset, so this is a no-op there (libhts.so resolves its own dependencies).
 LIBS="$LIBS $CRAM_CODEC_LIBS"
 AC_CHECK_HEADER([htslib/sam.h], [],
-  [AC_MSG_ERROR([htslib/sam.h not found at ${prefix}/include. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
+  [AC_MSG_ERROR([htslib/sam.h not found $deps_where. Install htslib (conda install -c bioconda htslib) and configure with --prefix=\$CONDA_PREFIX])])
 AC_CHECK_LIB([hts], [hts_open], [],
-  [AC_MSG_ERROR([libhts not found at ${prefix}/lib. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
+  [AC_MSG_ERROR([libhts not found $deps_where. Install htslib (conda install -c bioconda htslib) and configure with --prefix=\$CONDA_PREFIX])])
 # Check whether this htslib version has sam_hdr_destroy (added in 1.10)
 LIBS="$LIBS -lhts"
 AC_CHECK_FUNC([sam_hdr_destroy],
   [AC_DEFINE([HAVE_SAM_HDR_DESTROY], [1], [htslib has sam_hdr_destroy (>= 1.10)])])
-CPPFLAGS="$save_CPPFLAGS"
-LDFLAGS="$save_LDFLAGS"
 LIBS="$save_LIBS"
-AC_SUBST([HTSLIB_INC],  [""])
 AC_SUBST([HTSLIB_LINK], ["-lhts"])
 
 # Lets binarydist.sh hand the final breseq/gdtools program links full .a paths

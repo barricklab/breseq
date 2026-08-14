@@ -28,10 +28,19 @@ jobs:
           activate-environment: breseq-dev
           auto-activate: false
 
+      # zlib/miniz/htslib come from the conda environment, and configure.ac
+      # searches ${prefix} for them -- hence --prefix=$CONDA_PREFIX. Do not drop
+      # it back to a bare ./configure: that only ever worked because conda's
+      # compiler-activation scripts happened to export -isystem
+      # $CONDA_PREFIX/include, which stopped taking effect when conda-forge
+      # moved to gcc 15 and broke this job with "miniz/miniz.h not found".
       - name: Build
         run: |
+          # Fail here with a clear message if the environment is not activated,
+          # rather than deep inside configure's header checks.
+          test -n "$CONDA_PREFIX" || { echo "::error::conda env not activated (CONDA_PREFIX unset)"; exit 1; }
           ./bootstrap.sh
-          ./configure
+          ./configure --prefix="$CONDA_PREFIX"
           make -j$(getconf _NPROCESSORS_ONLN)
 
       # Offline and instant: parses tests/test_data_manifest.tsv, checks the

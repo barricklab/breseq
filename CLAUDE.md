@@ -14,27 +14,39 @@ fails with "No targets specified and no makefile found".** This bites us repeate
 
 ```bash
 # REQUIRED first build in any new checkout/worktree (generates configure + Makefile):
-./bootstrap.sh          # regenerates ./configure (also re-run after adding a .cpp source file)
-./configure             # generates Makefile / config.h from configure.ac + *.am
+./bootstrap.sh                        # regenerates ./configure (also re-run after adding a .cpp source file)
+./configure --prefix=$CONDA_PREFIX    # generates Makefile / config.h from configure.ac + *.am
 
 # Normal rebuild (only works AFTER bootstrap + configure have been run once):
 make
 
-# Install:
+# Install (rarely wanted — see the warning below):
 make install
 ```
 
 Quick check before building: if `./configure` or `Makefile` is missing (`ls configure Makefile`),
 you still need the bootstrap + configure step above.
 
+**`--prefix` is not optional.** It is both where breseq installs *and* where `./configure` looks for
+the zlib, miniz and htslib it links against, so it must point at the conda env holding them; it also
+becomes the binaries' runtime library search path (`-rpath`), which is what lets a freshly built
+`breseq` run without the env activated. A bare `./configure` can appear to work inside an activated
+env — conda's compiler-activation scripts export the same paths on their own — but that is precisely
+what silently broke CI when conda-forge moved to gcc 15 (`miniz/miniz.h not found at NONE/include`).
+Do not rely on it. Note `make install` with this prefix installs into the *shared* conda env, so it
+overwrites the `breseq`/`gdtools` every other worktree sees; building and testing in place (`make`,
+`make test`) never installs anything.
+
 **Dependencies for building and running tests** (use conda with `dev-environment.yml`):
 
 When working in a worktree, reuse the pre-built conda env in the main repo (`breseq/env`, which is at `../../../env` relative to a worktree). Use `conda run` to invoke commands inside it without activating:
 ```bash
 conda run -p ../../../env ./bootstrap.sh
-conda run -p ../../../env ./configure
+conda run -p ../../../env sh -c './configure --prefix="$CONDA_PREFIX"'
 conda run -p ../../../env make
 ```
+(`conda run -p` sets `CONDA_PREFIX` inside the command it runs, but not in your shell — hence the
+`sh -c` wrapper, which keeps the env's absolute path out of the `--prefix` you have to type.)
 
 If that env doesn't exist yet (e.g., fresh clone or working directly in the main repo), create it first as described in `DEVELOPER`:
 ```bash
@@ -44,7 +56,8 @@ conda env create -f dev-environment.yml --prefix=$PWD/env
 
 Runtime dependencies: `bowtie2`, `gnuplot`, optionally `phylip`.
 
-When adding a new `.cpp` source file, re-run `./bootstrap.sh` so autotools picks it up, then `./configure && make`.
+When adding a new `.cpp` source file, re-run `./bootstrap.sh` so autotools picks it up, then
+`./configure --prefix=$CONDA_PREFIX && make`.
 
 ## Testing
 
