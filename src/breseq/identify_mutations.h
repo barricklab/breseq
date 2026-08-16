@@ -474,7 +474,10 @@ namespace breseq {
 
 	protected:
 		//! Helper method to track deletions.
-		void check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, double e_value_call);
+		void check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, const vector<position_coverage>& this_position_coverage_by_rg, double e_value_call);
+
+		//! Append one coverage_column_names() group of values to the coverage table.
+		void write_coverage_columns(const position_coverage& pc);
 
 		//! Helper method to track discordant-pair candidate regions (called once per column).
 		void check_discordant_completion(uint32_t seq_id, uint32_t position);
@@ -540,6 +543,7 @@ namespace breseq {
 		
 		// this is used to output detailed coverage data:
 		bool _print_coverage_data; //!< whether or not to print
+		bool _print_read_group_coverage; //!< whether to repeat the coverage columns per read group
 		ofstream _coverage_data;
 
 		// these are state variables used by the deletion-prediction method.

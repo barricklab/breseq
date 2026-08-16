@@ -1554,7 +1554,6 @@ namespace breseq
 
 		this->error_rates_file_name = this->error_calibration_path + "/error_rates.tab";
 		this->error_counts_done_file_name = this->error_calibration_path + "/error_counts.done";
-		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
 		this->soft_clipping_counts_file_name = this->error_calibration_path + "/soft_clipping_counts.tab";
@@ -1567,7 +1566,7 @@ namespace breseq
 
     this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
 		this->mutation_identification_per_position_file_name = this->mutation_identification_path + "/per_position_file.tab";
-		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
+		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tsv";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 		this->dp_candidate_regions_file_name = this->mutation_identification_path + "/DP_candidate_regions.csv";
 		this->discordant_pair_done_file_name = this->mutation_identification_path + "/discordant_pair.done";

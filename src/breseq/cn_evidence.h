@@ -84,7 +84,7 @@ namespace breseq {
       double  ratio;         // origin_cov / terminus_cov -- the magnitude of the bias
     };
 
-    static void run_cnery(Settings& settings, Summary& summary, const string& cnery_output_prefix);
+    static void run_cnery(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const string& cnery_output_prefix);
 
     // Reads CNery's <prefix><seq_id>_otr_results.json. Returns false (leaving otr.detected false)
     // if the file is missing/unparseable or CNery reported no ori-ter bias.

@@ -25,10 +25,22 @@
 #include "reference_sequence.h"
 #include "stats.h"
 #include "pd_evidence.h"
+#include "coverage_output.h"
 
 using namespace std;
 
 namespace breseq {
+
+//! Coverage columns of the table written for CNery, in emission order.
+/*! Shared by the header, the per-read-group repeats and the rows, so the three cannot drift apart.
+    These are the names 'bam2cov --total-only' writes (coverage_output.cpp), which is the schema
+    CNery expects; keeping them identical is what lets it read either table with one code path.
+ */
+static const vector<string>& coverage_column_names()
+{
+  static const vector<string> names = make_vector<string>("unique_cov")("redundant_cov")("total_cov");
+  return names;
+}
 
 /*! Convenience wrapper around the identify_mutations_pileup class.
  */
@@ -841,7 +853,14 @@ identify_mutations_pileup::identify_mutations_pileup(
   
   // are we printing detailed coverage information? (only needed when --predict_copy_number reads it back)
   _print_coverage_data = _settings.predict_copy_number;
-  
+
+  // ...and does splitting that coverage by read group tell CNery anything? Unlike
+  // 'bam2cov --per-read-group', which always writes at least an RG-0 set, this table gets the extra
+  // columns only when the BAM declares two or more read groups. With one group they would be exact
+  // duplicates of the aggregate columns -- pure width, no information -- so the whole per-group
+  // accumulator is skipped in the (usual) single-group case.
+  _print_read_group_coverage = _print_coverage_data && (read_groups().size() > 1);
+
   // load the error table file and convert back to probabilities
   _error_table.read_log10_prob_table(settings.error_rates_file_name);
   _error_table.log10_prob_to_prob();
@@ -1336,7 +1355,13 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//## keep track of coverage for deletion prediction
 		position_coverage this_position_coverage;
 		bool this_position_unique_only_coverage=true;
-		
+
+    //## the same, split by read group, for the coverage table CNery reads. Kept separate from the
+    //## aggregate above rather than summed out of it, so the numbers every other consumer sees are
+    //## unchanged. Empty (and never touched) unless there is more than one read group.
+    vector<position_coverage> this_position_coverage_by_rg;
+    if (_print_read_group_coverage) this_position_coverage_by_rg.resize(read_groups().size());
+
 		//## polymorphism prediction data
 		vector<polymorphism_data> pdata;
 
@@ -1542,22 +1567,31 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       //##### update coverage if this is not a deletion in read relative to reference
       //### note that we count trimmed reads here, but not when looking for short indel mutations...	
       
+      position_coverage* this_position_coverage_rg = NULL;
+      if (!this_position_coverage_by_rg.empty())
+        this_position_coverage_rg = &this_position_coverage_by_rg[p.read_group_index(*i)];
+
       if(redundancy == 1) {
-        //## keep track of unique coverage	
+        //## keep track of unique coverage
         ++this_position_coverage.unique[1+strand];
-        
+        if (this_position_coverage_rg) ++this_position_coverage_rg->unique[1+strand];
+
         //## we don't continue to consider further insertions relative
-        //## to the reference unless uniquely aligned reads have them 
+        //## to the reference unless uniquely aligned reads have them
         if(indel > insert_count)
           next_insert_count_exists = true;
-        
-      } else {		
+
+      } else {
         //## mark that this position has some non-unique coverage
         this_position_unique_only_coverage = false;
         //## keep track of redundant coverage
         this_position_coverage.redundant[1+strand] += 1.0/redundancy;
         ++this_position_coverage.raw_redundant[1+strand];
-        
+        if (this_position_coverage_rg) {
+          this_position_coverage_rg->redundant[1+strand] += 1.0/redundancy;
+          ++this_position_coverage_rg->raw_redundant[1+strand];
+        }
+
         if (!trimmed) 
           ++redundant_pos_info[basebam2char(read_base_bam)][1+strand];
       }
@@ -1611,9 +1645,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//## PER POSITION/INSERT COUNT
     //#############################
     
-		//#sum up coverage observations	
+		//#sum up coverage observations
 		this_position_coverage.sum();
-				
+    for (size_t g = 0; g < this_position_coverage_by_rg.size(); g++)
+      this_position_coverage_by_rg[g].sum();
+
 		//#we are trying to find the base with the most support
     cSNPCall snp_call = pure_genotype_call(log10_pr_sum, static_cast<uint32_t>(pdata.size()));
     
@@ -1685,7 +1721,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//###
 		
     if(!_settings.skip_missing_coverage_prediction && (insert_count == 0))
-      check_deletion_completion(p.target(), position, ref_base_char, this_position_coverage, consensus_bonferroni_score);
+      check_deletion_completion(p.target(), position, ref_base_char, this_position_coverage, this_position_coverage_by_rg, consensus_bonferroni_score);
 
 		//###
 		//## DISCORDANT PAIR DISCORDANT PAIR DISCORDANT PAIR
@@ -1971,14 +2007,22 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 		string filename = _settings.file_name(_settings.complete_coverage_text_file_name, "@", target_name(tid));
 		_coverage_data.open(filename.c_str());
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
+
+    // The same schema 'bam2cov --total-only' writes, so CNery reads this table with exactly the
+    // code path it uses for one it generated itself. Strand-split counts would only be summed
+    // again on the way in, so they are not written; nothing else reads this file.
     _coverage_data << "position" << "\t";
-    _coverage_data << "ref_base" << "\t";
-    _coverage_data << "unique_top_cov" << "\t";
-    _coverage_data << "unique_bot_cov" << "\t";
-    _coverage_data << "redundant_top_cov" << "\t";
-    _coverage_data << "redundant_bot_cov" << "\t";
-    _coverage_data << "raw_redundant_top_cov" << "\t";
-    _coverage_data << "raw_redundant_bot_cov" << endl;
+    _coverage_data << "ref_base";
+    for (size_t c = 0; c < coverage_column_names().size(); c++)
+      _coverage_data << "\t" << coverage_column_names()[c];
+
+    // Group-major, after the aggregate columns, as in coverage_output::table().
+    if (_print_read_group_coverage) {
+      for (size_t g = 0; g < read_groups().size(); g++)
+        for (size_t c = 0; c < coverage_column_names().size(); c++)
+          _coverage_data << "\t" << coverage_output::read_group_column_prefix(g) << coverage_column_names()[c];
+    }
+    _coverage_data << endl;
 	}
   
   // Reset the Missing Coverage evidence variables
@@ -2048,7 +2092,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" Missing Coverahge and Unknown intervals
   if (!_settings.skip_missing_coverage_prediction) {
-    check_deletion_completion(tid, target_length(tid)+1, '.', position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
+    check_deletion_completion(tid, target_length(tid)+1, '.', position_coverage(numeric_limits<double>::quiet_NaN()), vector<position_coverage>(), numeric_limits<double>::quiet_NaN());
   }
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
@@ -2094,6 +2138,20 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 }
 
 
+/*! Write the unique/redundant/total triple of one coverage tally, in coverage_column_names() order.
+
+    'total_cov' is the plain sum rather than position_coverage::total, which sum() rounds each strand
+    tally before adding. bam2cov's column of the same name is the unrounded sum, and this table has
+    to mean what that one means.
+ */
+void identify_mutations_pileup::write_coverage_columns(const position_coverage& pc)
+{
+  _coverage_data << "\t" << pc.unique[1];
+  _coverage_data << "\t" << pc.redundant[1];
+  _coverage_data << "\t" << (pc.unique[1] + pc.redundant[1]);
+}
+
+
 /*! Helper method to track information about putative deleted regions.
  
  Used at each pileup iteration and at the end.
@@ -2103,7 +2161,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
  @JEB This function expects 1-indexed positions!!!
  
  */
-void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, double e_value_call) {
+void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, const vector<position_coverage>& this_position_coverage_by_rg, double e_value_call) {
 
 	//cerr << position << " " << e_value_call << endl;
 	
@@ -2114,13 +2172,11 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint3
   // print to optional output file
   if (!std::isnan(this_position_coverage.unique[1]) && _coverage_data.is_open()) {
     _coverage_data << position << "\t";
-    _coverage_data << ref_base_char << "\t";
-    _coverage_data << this_position_coverage.unique[2] << "\t"; // top
-    _coverage_data << this_position_coverage.unique[0] << "\t"; // bottom
-    _coverage_data << this_position_coverage.redundant[2] << "\t"; // top
-    _coverage_data << this_position_coverage.redundant[0] << "\t"; // bottom
-    _coverage_data << this_position_coverage.raw_redundant[2] << "\t"; // top
-    _coverage_data  << this_position_coverage.raw_redundant[0] << endl; // bottom
+    _coverage_data << ref_base_char;
+    write_coverage_columns(this_position_coverage);
+    for (size_t g = 0; g < this_position_coverage_by_rg.size(); g++)
+      write_coverage_columns(this_position_coverage_by_rg[g]);
+    _coverage_data << endl;
   }
   
   

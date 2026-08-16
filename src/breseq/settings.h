@@ -655,7 +655,6 @@ namespace breseq
     
 		string error_counts_file_name;
 		string error_rates_file_name;
-		string coverage_file_name;
 		string unique_only_coverage_distribution_file_name;
 		string error_rates_summary_file_name;
 		string error_rates_base_qual_error_prob_file_name;

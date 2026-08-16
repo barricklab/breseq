@@ -35,13 +35,15 @@ dependencies:
 # CNery, run by breseq for --predict-copy-number.
 #  => Need to lock the version for consistency, and more sharply than the others: CN evidence feeds
 #     deletion and amplification prediction, so a change in how CNery places a copy-number boundary
-#     moves the coordinates breseq reports. Installing from git HEAD instead is what left the CN test
-#     (tests/lambda_mixed_pop_cn_evidence_disabled) unreproducible and disabled.
+#     moves the coordinates breseq reports. Installing from git HEAD instead is what once left the
+#     CN test (tests/lambda_mixed_pop_cn_evidence) unreproducible and disabled.
 #
-#     The build string is the CNery git commit. ga50689f is the version every CN result in the tree
-#     was produced and checked against. Moving to a newer build is a deliberate step, not a refresh:
-#     gba1ead5 changes the median-filter window used to smooth coverage at deletion/amplification
-#     boundaries, which is exactly what sets the CN coordinates.
+#     The version string ends in the CNery git commit, so the pin needs no separate build string.
+#     This is the version every CN result in the tree was produced and checked against, and it is
+#     the first one whose only input is breseq's coverage tables -- it no longer takes a breseq
+#     output folder or a reference FASTA, and no longer calls back into 'breseq bam2cov'. Moving to
+#     a newer build is a deliberate step, not a refresh: how CNery masks windows and places a
+#     copy-number boundary is exactly what sets the CN coordinates.
 #
 #     This package pins pandas itself (>=2.2.0,<3), which the previous pip install could not do --
 #     pip resolved pandas 3.x, which dropped the private DataFrame._append that CNery's HMM calls.

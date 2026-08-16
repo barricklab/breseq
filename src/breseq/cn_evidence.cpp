@@ -34,7 +34,7 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
           "See https://github.com/barricklab/CNery");
   }
 
-  run_cnery(settings, summary, settings.cnery_output_path);
+  run_cnery(settings, summary, ref_seq_info, settings.cnery_output_path);
 
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
 
@@ -58,7 +58,11 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
   }
 }
 
-void CNEvidence::run_cnery(Settings& settings, Summary& summary, const string& cnery_output_prefix)
+// CNery takes coverage tables and nothing else: no BAM, no reference FASTA, no breseq output folder.
+// It reads the reference sequence out of the table's own ref_base column, and derives each sequence
+// id from the table's file name (basename minus ".coverage.tsv") -- which is what makes its output
+// land at the cnery_<seq_id>_* paths Settings already expects.
+void CNEvidence::run_cnery(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const string& cnery_output_prefix)
 {
   (void)summary;
   // Example of how to use read length as the fragment length – but this is not appropriate
@@ -73,15 +77,19 @@ void CNEvidence::run_cnery(Settings& settings, Summary& summary, const string& c
   //  total_reads += static_cast<double>(s.num_reads);
   //}
   //fragment_length = trunc(total_bases/total_reads);
-  
-  // Prepend breseq's own directory to PATH so CNery can call "breseq bam2cov"
-  string command = "PATH=" + double_quote(Settings::get_bin_path() + ":$PATH") + " ";
-  command += double_quote(settings.installed["cnery"]);
-  command += " -i " + double_quote(settings.base_output_path.size() ? settings.base_output_path : string("."));
-  command += " -ref " + double_quote(settings.reference_fasta_file_name);
+
+  string command = double_quote(settings.installed["cnery"]);
+
+  // Name every table explicitly rather than handing over 08_mutation_identification/. A directory
+  // argument would make the input set whatever happens to match CNery's file endings in there;
+  // listing the files means a missing one is an error instead of a silently smaller analysis.
+  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
+    command += " " + double_quote(settings.file_name(settings.complete_coverage_text_file_name, "@", it->m_seq_id));
+  }
+
   command += " -o " + double_quote(cnery_output_prefix);
-  //command += " -f " + to_string<uint32_t>(fragment_length);
-  
+  //command += " --frag-size " + to_string<uint32_t>(fragment_length);
+
   SYSTEM(command, false, false, false);
 }
 
