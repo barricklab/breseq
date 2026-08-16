@@ -45,7 +45,7 @@ dependencies:
 #
 #     This package pins pandas itself (>=2.2.0,<3), which the previous pip install could not do --
 #     pip resolved pandas 3.x, which dropped the private DataFrame._append that CNery's HMM calls.
-  - cnery-prerelease=0.0.0=ga50689f
+  - cnery-prerelease=0.1.0.dev82+g008e985c
 # What CNery computes with.
 #  => Need to lock the versions for consistency, because pinning CNery's own build string is not
 #     enough. CNery fits the ori-ter and GC corrections with scipy.optimize.minimize, scipy.stats,
