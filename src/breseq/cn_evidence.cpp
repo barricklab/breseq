@@ -36,9 +36,15 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
 
   run_cnery(settings, summary, ref_seq_info, settings.cnery_output_path);
 
+  const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
+
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
 
     cAnnotatedSequence& seq = *it;
+
+    // Junction-only references are never pileup'd, so they have no coverage table and CNery was
+    // never given one for them. See run_cnery().
+    if (analyzed_seq_ids.count(seq.m_seq_id) == 0) continue;
 
     string cnv_file_name = settings.file_name(settings.cnery_cnv_csv_file_name, "@", seq.m_seq_id);
     string break_pts_file_name = settings.file_name(settings.cnery_break_points_file_name, "@", seq.m_seq_id);
@@ -83,7 +89,15 @@ void CNEvidence::run_cnery(Settings& settings, Summary& summary, cReferenceSeque
   // Name every table explicitly rather than handing over 08_mutation_identification/. A directory
   // argument would make the input set whatever happens to match CNery's file endings in there;
   // listing the files means a missing one is an error instead of a silently smaller analysis.
+  //
+  // The set is the one stage 08 pileups, NOT every reference sequence: a junction-only reference
+  // (-s/--junction-only-reference) is deliberately excluded from mutation calling, so no coverage
+  // table is written for it. Naming one anyway made CNery raise FileNotFoundError before it read a
+  // single table, and SYSTEM() below does not ignore errors -- one junction-only reference took the
+  // whole run down. Copy number on a reference used only to call junctions means nothing anyway.
+  const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
+    if (analyzed_seq_ids.count(it->m_seq_id) == 0) continue;
     command += " " + double_quote(settings.file_name(settings.complete_coverage_text_file_name, "@", it->m_seq_id));
   }
 
@@ -164,15 +178,26 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
   return true;
 }
 
+// The headline ratio's key. CNery spelled it "Termius" from the day it was introduced until its
+// 1.1.0 release (its commit 98aa6ba), and kept the misspelling on purpose because this reader looks
+// the key up by name -- correcting it there would have silently cost breseq all of its ori-ter
+// reporting. It is now spelled correctly, so read that first and fall back to the old spelling: a
+// user with an older CNery on $PATH still gets their bias reported rather than a silent "none".
+static const char* kOTRRatioKey       = "Origin-to-Terminus/Bias Ratio";
+static const char* kOTRRatioLegacyKey = "Origin-to-Termius/Bias Ratio";
+
 // CNery's <prefix><seq_id>_otr_results.json records the origin and terminus of replication it fit,
 // which is what its ori-ter coverage correction is built from.
 //
 // Two traps in that file. The keys are named "Origin window"/"Terminus window" but hold 1-based
-// GENOMIC COORDINATES, not window indices -- CNery converts them with
-// `df["win_st"].iloc[ori_idx]` before writing (core.py, otr_correction). And when it detects no
-// ori-ter bias it still writes both keys, filled with the first and last coordinate of the sequence
-// and a "Not detected" string for the ratio; those placeholders must not be drawn as if they were a
-// real ori/ter, which is what the ratio's type is used to distinguish here.
+// GENOMIC COORDINATES, not window indices -- CNery converts them with `df["win_st"].iloc[ori_idx]`
+// before writing (core.py, apply_otr_correction). And when it fits no ramp it still writes both
+// keys -- with the first and last coordinate of the sequence, or 0 when the sequence has no windows
+// at all -- plus a "Not detected" string for the ratio; those placeholders must not be drawn as if
+// they were a real ori/ter, which is what the ratio's type is used to distinguish here.
+//
+// Returns false when there is no fit, but the diagnostic fields are filled in BEFORE that: they are
+// exactly what says why there is none, and both callers keep the record either way.
 bool CNEvidence::read_cnery_otr(const string& otr_file_name, cnery_otr& otr)
 {
   otr.detected = false;
@@ -181,6 +206,10 @@ bool CNEvidence::read_cnery_otr(const string& otr_file_name, cnery_otr& otr)
   otr.origin_cov = 0.0;
   otr.terminus_cov = 0.0;
   otr.ratio = 0.0;
+  otr.relative_copy_number = 0.0;
+  otr.correction_type = "";
+  otr.breakpoint_source = "";
+  otr.no_coverage_reason = "";
 
   ifstream otr_file(otr_file_name.c_str());
   if (!otr_file.good()) return false;
@@ -193,15 +222,30 @@ bool CNEvidence::read_cnery_otr(const string& otr_file_name, cnery_otr& otr)
     return false;
   }
 
+  // Every one of these can be JSON null -- CNery maps its own non-finite values that way so the file
+  // stays strict RFC JSON -- so each is guarded on actually having the type it is read as.
+  if (j.count("Relative copy number") && j["Relative copy number"].is_number())
+    otr.relative_copy_number = j["Relative copy number"].get<double>();
+  if (j.count("Correction type") && j["Correction type"].is_string())
+    otr.correction_type = j["Correction type"].get<string>();
+  if (j.count("Breakpoint source") && j["Breakpoint source"].is_string())
+    otr.breakpoint_source = j["Breakpoint source"].get<string>();
+  // Written on every record as of CNery 1.1.0, null on a healthy one, so a reader never has to tell
+  // "this sequence had coverage" from "this CNery predates the key".
+  if (j.count("No usable coverage reason") && j["No usable coverage reason"].is_string())
+    otr.no_coverage_reason = j["No usable coverage reason"].get<string>();
+
   if (!j.count("Origin window") || !j.count("Terminus window")) return false;
 
-  // "Not detected" (a string) rather than a number means CNery found no bias to correct.
-  if (!j.count("Origin-to-Termius/Bias Ratio") || !j["Origin-to-Termius/Bias Ratio"].is_number())
-    return false;
+  // "Not detected" (a string) rather than a number means CNery found no bias to correct. A null is
+  // possible too, when the terminus anchor came back at zero and CNery declined to invent a ratio.
+  const char* ratio_key = j.count(kOTRRatioKey) ? kOTRRatioKey
+                        : (j.count(kOTRRatioLegacyKey) ? kOTRRatioLegacyKey : NULL);
+  if ((ratio_key == NULL) || !j[ratio_key].is_number()) return false;
 
   otr.origin = j["Origin window"].get<int32_t>();
   otr.terminus = j["Terminus window"].get<int32_t>();
-  otr.ratio = j["Origin-to-Termius/Bias Ratio"].get<double>();
+  otr.ratio = j[ratio_key].get<double>();
 
   // The two ends of the fitted ramp. NaN in CNery becomes JSON null, so these are only usable when
   // they really are numbers -- the markers that use them are guarded on that separately.
@@ -321,6 +365,10 @@ void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& win
   cns.origin_coverage = otr.origin_cov;
   cns.terminus_coverage = otr.terminus_cov;
   cns.otr_ratio = otr.ratio;
+  cns.relative_copy_number = otr.relative_copy_number;
+  cns.correction_type = otr.correction_type;
+  cns.breakpoint_source = otr.breakpoint_source;
+  cns.no_coverage_reason = otr.no_coverage_reason;
 
   if (windows.empty()) return;
 
@@ -522,8 +570,9 @@ void CNEvidence::render_cn_plot(
     if (n_drawn && (w.start > previous_end)) tab << endl;
     previous_end = w.end;
 
-    // Windows overlap (default 200 bp wide on a 100 bp step), so each one is plotted at its
-    // midpoint rather than at either edge.
+    // Plotted at its midpoint rather than at either edge. CNery's default is a 100 bp window on a
+    // 100 bp step, i.e. non-overlapping, but -w and -s are independent and a wider window on the
+    // same step is a supported configuration, so this does not assume the two are equal.
     int32_t midpoint = w.start + (w.end - w.start) / 2;
     tab << midpoint << "\t" << w.raw_cov << "\t" << w.corrected_cov << "\t";
     if (w.otr_fit_cov > 0) {
@@ -817,9 +866,15 @@ void CNEvidence::draw_evidence_plots(
 
   diff_entry_list_t cn_items = gd.show_list(make_vector<gd_entry_type>(CN));
 
+  // Same set predict() ingested: a junction-only reference was never analyzed, so skipping it here
+  // is not a missing plot, and warning about one would be noise on every run that uses -s.
+  const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
+
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
 
     cAnnotatedSequence& seq = *it;
+    if (analyzed_seq_ids.count(seq.m_seq_id) == 0) continue;
+
     string cnv_file_name = settings.file_name(settings.cnery_cnv_csv_file_name, "@", seq.m_seq_id);
 
     vector<cnery_window> windows;

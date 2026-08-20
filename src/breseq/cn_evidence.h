@@ -75,6 +75,9 @@ namespace breseq {
     };
 
     // The origin and terminus of replication CNery inferred, and used to build its OTR correction.
+    //
+    // The four fields below the fit are read even when there is no fit -- they are what says WHY
+    // there is none, which "detected == false" on its own does not.
     struct cnery_otr {
       bool    detected;      // false => CNery found no ori-ter bias; the coordinates are meaningless
       int32_t origin;        // 1-based reference coordinate
@@ -82,6 +85,20 @@ namespace breseq {
       double  origin_cov;    // the fitted ramp's value at the origin ...
       double  terminus_cov;  // ... and at the terminus: the two ends of the straight line
       double  ratio;         // origin_cov / terminus_cov -- the magnitude of the bias
+
+      // This sequence's coverage relative to the LONGEST sequence of the run, which reads exactly
+      // 1.0. Deliberately non-integral -- a plasmid at 2.96x is a measurement, and rounding it to 3
+      // would throw away the precision that makes it worth reporting. 0 => CNery did not report it.
+      double  relative_copy_number;
+      // How the ori/ter above were arrived at ("Ori-ter coordinates fit by coverage", the GC-skew
+      // method string, "No usable coverage", or "No OTR correction (--bias gc|none)") ...
+      string  correction_type;
+      // ... and which arm supplied them: "coverage fit", "GC skew" or "not corrected".
+      string  breakpoint_source;
+      // Non-empty => the sequence had nothing to measure at all, and says which way: no position
+      // rows in the coverage table, or every window at zero coverage. That is a different statement
+      // from "no ori-ter bias", which is what an empty value here leaves it as.
+      string  no_coverage_reason;
     };
 
     static void run_cnery(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const string& cnery_output_prefix);

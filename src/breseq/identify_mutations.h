@@ -474,10 +474,26 @@ namespace breseq {
 
 	protected:
 		//! Helper method to track deletions.
-		void check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, const vector<position_coverage>& this_position_coverage_by_rg, double e_value_call);
+		void check_deletion_completion(uint32_t seq_id, uint32_t position, const position_coverage& this_position_coverage, double e_value_call);
 
 		//! Append one coverage_column_names() group of values to the coverage table.
 		void write_coverage_columns(const position_coverage& pc);
+
+		//! Write one position's row of the coverage table CNery reads, if that table is open.
+		/*! Deliberately NOT part of check_deletion_completion(), which is gated on missing-coverage
+		    prediction being enabled and on this reference's coverage fit having succeeded. The table
+		    is CNery's only input and it must exist, with a row per position, for every reference
+		    sequence breseq analyzed -- including ones with no coverage at all.
+		 */
+		void write_coverage_row(uint32_t position, char ref_base_char, const position_coverage& pc, const vector<position_coverage>& pc_by_rg);
+
+		//! Tally unique/redundant coverage at one position, for the coverage table alone.
+		/*! Only used for references whose pileup_callback() returns before the ordinary tally is
+		    built (a failed coverage-distribution fit). Counts exactly what the main loop counts at
+		    insert_count 0: every aligned read that is not a deletion here and whose base carries a
+		    quality, split by strand, with redundant reads weighted 1/redundancy.
+		 */
+		void tabulate_position_coverage(const pileup& p, position_coverage& pc, vector<position_coverage>& pc_by_rg);
 
 		//! Helper method to track discordant-pair candidate regions (called once per column).
 		void check_discordant_completion(uint32_t seq_id, uint32_t position);

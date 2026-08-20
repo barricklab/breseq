@@ -3328,6 +3328,23 @@ namespace breseq {
     return best;
   }
 
+  // Orientation, in reference coordinates, of the NEW element copy a junction reports. This is the
+  // same quantity a MOB's "strand" field carries and the same one cFeatureLocation::get_strand()
+  // gives for an annotated copy, so all three are directly comparable.
+  //
+  // Both prefixes carry their trailing underscore ("side_1_"). The triple product is not obvious:
+  // the element's own strand says which way the copy the junction READ THROUGH sits, and the two
+  // junction side strands then carry that over to where the new copy landed. predictMCplusJCtoDEL's
+  // two-junction case fills a MOB's strand with exactly this, and so do both callers below, so an
+  // orientation test and the MOB it is tested against cannot disagree about which way round the
+  // element sits.
+  static int32_t new_repeat_copy_strand(cDiffEntry& j, const string& unique_side, const string& is_side)
+  {
+    return -( n(j[is_side + "strand"])
+            * n(j["_" + is_side + "is_strand"])
+            * n(j[unique_side + "strand"]) );
+  }
+
   // Build the MOB implied by a single IS junction, with the target-site duplication left undetermined.
   //
   // One junction fixes where the element landed and which way round it is, but the duplication size
@@ -3344,9 +3361,7 @@ namespace breseq {
     const string& is_side     = j["_is_interval"];
     const string& unique_side = j["_unique_interval"];
 
-    int32_t is_strand = -( n(j[is_side + "_strand"])
-                         * n(j["_" + is_side + "_is_strand"])
-                         * n(j[unique_side + "_strand"]) );
+    int32_t is_strand = new_repeat_copy_strand(j, unique_side + "_", is_side + "_");
 
     mob._type = MOB;
     mob._evidence.push_back(j._id);
@@ -3362,29 +3377,55 @@ namespace breseq {
     return true;
   }
 
-  // Nearest annotated copy of one repeat family to `position`. direction -1 wants a copy lying at or
-  // before it, +1 at or after; a position inside a copy counts as distance zero. Filtering by family
-  // is the point: the closest element to a boundary is often not the family the junction names (at
-  // one real boundary an IS150 sits 423 bp away and the IS186 actually involved 2104 bp away).
+  // Nearest annotated copy of one repeat family to `position`, or NULL if none is within `slop`.
+  // Filtering by family is the point: the closest element to a boundary is often not the family the
+  // junction names (at one real boundary an IS150 sits 423 bp away and the IS186 actually involved
+  // 2104 bp away).
+  //
+  // `direction` -- -1 for a copy expected at or before `position`, +1 at or after -- is a PREFERENCE
+  // that breaks ties, not a filter. It used to reject every copy on the far side outright, which
+  // contradicts the reason `slop` exists at all: `position` here is a CN boundary, and the HMM places
+  // those only to within a few of its own tiles, so the element that really bounds the amplified unit
+  // can land either side of where the boundary was drawn. That is not hypothetical -- when CNery
+  // halved its default window (200 bp overlapping -> 100 bp non-overlapping) one LTEE clone's CN
+  // boundary moved 1.7 kb short of the IS copy bounding it, well inside `slop`, and the hard test
+  // silently dropped a 26.6 kb amplification that had been called for years.
+  //
+  // Distance is measured to the element itself rather than to one chosen edge, so a copy on the far
+  // side is not penalized by its own length: measuring a downstream element from its far edge added
+  // up to a full element's width to the distance and could push a genuine match past `slop`.
+  //
+  // `required_strand` (+1/-1, or 0 to accept either) is the orientation the caller needs. Filtering
+  // HERE rather than rejecting the answer afterwards is deliberate: it returns the nearest copy that
+  // could actually have produced the event, instead of returning the nearest copy and then refusing
+  // an event a slightly more distant copy explains.
   static cFeatureLocation* closest_repeat_of_family(cAnnotatedSequence& seq, const string& family,
-                                                    int32_t position, int32_t direction, int32_t slop)
+                                                    int32_t position, int32_t direction, int32_t slop,
+                                                    int32_t required_strand = 0)
   {
     cFeatureLocation* best = NULL;
     int32_t best_d = slop + 1;
+    bool best_preferred = false;
+
     for (cFeatureLocationList::iterator it = seq.m_repeat_locations.begin(); it != seq.m_repeat_locations.end(); it++) {
       cFeatureLocation& r = *it;
       if ((*r.get_feature())["name"] != family) continue;
+      if (required_strand && (r.get_strand() != required_strand)) continue;
 
+      // Distance from the point to the interval; zero when the point is inside the element.
       int32_t d;
-      if ((r.get_start_1() <= position) && (position <= r.get_end_1())) {
-        d = 0;
-      } else {
-        int32_t edge = (direction < 0) ? r.get_end_1() : r.get_start_1();
-        if ((direction < 0) && (edge > position)) continue;
-        if ((direction > 0) && (edge < position)) continue;
-        d = abs(edge - position);
+      if (position < r.get_start_1())    d = r.get_start_1() - position;
+      else if (position > r.get_end_1()) d = position - r.get_end_1();
+      else                               d = 0;
+      if (d > slop) continue;
+
+      bool preferred = (d == 0)
+                    || ((direction < 0) ? (r.get_end_1() <= position) : (r.get_start_1() >= position));
+
+      // Nearest wins; a copy on the expected side breaks a tie.
+      if ((d < best_d) || ((d == best_d) && preferred && !best_preferred)) {
+        best_d = d; best = &r; best_preferred = preferred;
       }
-      if (d < best_d) { best_d = d; best = &r; }
     }
     return best;
   }
@@ -3504,6 +3545,11 @@ namespace breseq {
         // that anchor, not the nearest annotation, which says WHICH family recombined.
         bool mob_anchor = false;
         int32_t anchor_position = 0;
+        // Which way round the NEW copy sits, in reference coordinates. An amplification arises by
+        // recombination between two copies of the element, and only DIRECT repeats -- copies in the
+        // same orientation -- give a tandem duplication; inverted copies give an inversion instead.
+        // So this is what the copy at the other end has to match.
+        int32_t anchor_strand = 0;
         string anchor_id, family;
         cDiffEntry* anchor_jc = NULL;
         diff_entry_ptr_t anchor_mob_ptr;
@@ -3514,6 +3560,7 @@ namespace breseq {
           int32_t p = from_string<int32_t>(m[POSITION]);
           if (abs(p - anchor_at) > kAnchorSlop) continue;
           mob_anchor = true; anchor_position = p; anchor_id = m._id; family = m[REPEAT_NAME];
+          anchor_strand = from_string<int32_t>(m[STRAND]);
           anchor_mob_ptr = *mi;
           break;
         }
@@ -3534,6 +3581,8 @@ namespace breseq {
               if (!j.entry_exists("_" + other + "is")) continue;
               if (j["_" + other + "is_name"].empty()) continue;
               anchor_position = p; anchor_id = j._id; family = j["_" + other + "is_name"];
+              // `me` is the unique side (it sits at the CN boundary), `other` the repeat side.
+              anchor_strand = new_repeat_copy_strand(j, me, other);
               anchor_jc = &j;
               break;
             }
@@ -3542,15 +3591,19 @@ namespace breseq {
         }
         if (anchor_id.empty() || family.empty()) continue;
 
-        // The other end. Usually a pre-existing copy of the same family, annotated in the reference.
+        // The other end. Usually a pre-existing copy of the same family, annotated in the reference,
+        // and required to be in the SAME orientation as the new copy -- see anchor_strand above.
         cFeatureLocation* rep = closest_repeat_of_family(seq, family, annotated_at,
                                                          (end_choice == 0) ? -1 : 1,
-                                                         kRepeatBoundarySlop);
+                                                         kRepeatBoundarySlop, anchor_strand);
 
         // ...but both ends can be NEW copies, when a transposition dropped one element and the
         // amplification then recombined it against a second new copy. Nothing in the reference marks
         // either end, so the far end has to be anchored the same way this one was.
-        cDiffEntry far_mob;
+        //
+        // NOTE: the MOB minted for that far end below is used only to establish that the junction
+        // really does place an element there, and to read its orientation. It is never added to the
+        // genome diff -- the insertion itself is reported (or not) by the ordinary MOB paths.
         bool far_mob_is_new = false;
         int32_t far_position = 0;
         string far_id;
@@ -3562,6 +3615,8 @@ namespace breseq {
             cDiffEntry& m = **mi;
             if (m[SEQ_ID] != seq_id) continue;
             if (m[REPEAT_NAME] != family) continue;
+            // Direct repeats only, as at the annotated end.
+            if (anchor_strand && (from_string<int32_t>(m[STRAND]) != anchor_strand)) continue;
             int32_t p = from_string<int32_t>(m[POSITION]);
             if (abs(p - annotated_at) > kAnchorSlop) continue;
             far_position = p; far_id = m._id; far_mob_ptr = *mi;
@@ -3583,7 +3638,13 @@ namespace breseq {
                 if (abs(p - annotated_at) > kAnchorSlop) continue;
                 if (!j2.entry_exists("_" + other + "is")) continue;
                 if (j2["_" + other + "is_name"] != family) continue;
-                if (!mob_from_single_IS_junction(j2, settings.polymorphism_prediction, far_mob)) continue;
+                // A fresh entry each time: the minting appends to _evidence, so a candidate rejected
+                // below would leave its junction id behind for the next one to inherit.
+                cDiffEntry candidate;
+                if (!mob_from_single_IS_junction(j2, settings.polymorphism_prediction, candidate)) continue;
+                // Direct repeats only. The minted strand comes from the same triple product
+                // anchor_strand does, so the two are on one scale and comparable.
+                if (anchor_strand && (from_string<int32_t>(candidate[STRAND]) != anchor_strand)) continue;
                 far_position = p; far_mob_is_new = true; far_jc = &j2;
                 break;
               }

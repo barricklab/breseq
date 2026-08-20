@@ -520,6 +520,10 @@ void to_json(json& j, const CopyNumberSummary& s)
     {"origin_coverage", s.origin_coverage},
     {"terminus_coverage", s.terminus_coverage},
     {"otr_ratio", s.otr_ratio},
+    {"relative_copy_number", s.relative_copy_number},
+    {"correction_type", s.correction_type},
+    {"breakpoint_source", s.breakpoint_source},
+    {"no_coverage_reason", s.no_coverage_reason},
     {"window_size", s.window_size},
     {"window_step", s.window_step},
     {"gc_correction_min", s.gc_correction_min},
@@ -541,6 +545,10 @@ void from_json(const json& j, CopyNumberSummary& s)
   s.origin_coverage = get_double_or_default(j, "origin_coverage");
   s.terminus_coverage = get_double_or_default(j, "terminus_coverage");
   s.otr_ratio = get_double_or_default(j, "otr_ratio");
+  s.relative_copy_number = get_double_or_default(j, "relative_copy_number");
+  s.correction_type = j.count("correction_type") ? j.at("correction_type").get<string>() : "";
+  s.breakpoint_source = j.count("breakpoint_source") ? j.at("breakpoint_source").get<string>() : "";
+  s.no_coverage_reason = j.count("no_coverage_reason") ? j.at("no_coverage_reason").get<string>() : "";
   s.window_size = static_cast<int32_t>(get_double_or_default(j, "window_size"));
   s.window_step = static_cast<int32_t>(get_double_or_default(j, "window_step"));
   s.gc_correction_min = get_double_or_default(j, "gc_correction_min");

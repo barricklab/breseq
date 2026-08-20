@@ -2935,15 +2935,19 @@ string html_copy_number_string(const Settings& settings, Summary& summary, cRefe
   ////
 
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
-  ss << tr(th("colspan=\"8\" align=\"left\" class=\"discordant_pair_header_row\"",
+  ss << tr(th("colspan=\"10\" align=\"left\" class=\"discordant_pair_header_row\"",
               "Ori-ter replication bias fit")) << endl;
   ss << "<tr>" << th() << th() << th(ALIGN_LEFT, "reference sequence")
+     << th(ALIGN_CENTER, nonbreaking("relative copy number"))
      << th(ALIGN_CENTER, "origin") << th(ALIGN_CENTER, "terminus")
      << th(ALIGN_CENTER, nonbreaking("coverage at ori")) << th(ALIGN_CENTER, nonbreaking("coverage at ter"))
-     << th(ALIGN_CENTER, nonbreaking("peak-to-trough")) << "</tr>" << endl;
+     << th(ALIGN_CENTER, nonbreaking("peak-to-trough"))
+     << th(ALIGN_CENTER, nonbreaking("ori-ter from")) << "</tr>" << endl;
 
   bool one_no_bias = false;
   bool one_all_windows = false;
+  bool one_no_coverage = false;
+  bool one_relative_copy_number = false;
 
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
 
@@ -2964,17 +2968,43 @@ string html_copy_number_string(const Settings& settings, Summary& summary, cRefe
 
     ss << td(it->m_seq_id);
 
+    // Coverage relative to the longest reference sequence, which reads exactly 1.0 by construction.
+    // This is where a multi-copy plasmid shows up as one: CNery reports it un-rounded, so a plasmid
+    // at 2.96x reads 2.96 rather than being called copy number 3.
+    if (cn.relative_copy_number > 0.0) {
+      ss << td(ALIGN_CENTER, to_string(cn.relative_copy_number, 2, false) + "&times;");
+      one_relative_copy_number = true;
+    } else {
+      ss << td(ALIGN_CENTER, "NA");
+    }
+
     if (cn.otr_detected) {
       ss << td(ALIGN_RIGHT, commify(to_string(cn.origin)));
       ss << td(ALIGN_RIGHT, commify(to_string(cn.terminus)));
       ss << td(ALIGN_CENTER, to_string(cn.origin_coverage, 3, false));
       ss << td(ALIGN_CENTER, to_string(cn.terminus_coverage, 3, false));
       ss << td(ALIGN_CENTER, to_string(cn.otr_ratio, 2, false) + "&times;");
+      // Which of CNery's two candidate breakpoint sources won. A ramp hinged on the reference's own
+      // GC skew is a different kind of claim from one fit to this sample's coverage, and the
+      // coordinates alone do not say which you are looking at.
+      ss << td(ALIGN_CENTER, cn.breakpoint_source.size() ? nonbreaking(cn.breakpoint_source) : "NA");
     } else {
-      // CNery still writes coordinates in this case -- the first and last position of the sequence
-      // -- but they are placeholders, not a fit, so printing them would invent a result.
-      ss << td("colspan=\"5\" align=\"center\"", nonbreaking("no ori-ter bias detected"));
-      one_no_bias = true;
+      // CNery still writes coordinates in this case -- the first and last position of the sequence,
+      // or 0 when it had no windows at all -- but they are placeholders, not a fit, so printing them
+      // would invent a result. What DID happen goes in their place, because "no bias" and "no reads
+      // landed here" are entirely different findings and used to render identically.
+      string why;
+      if (cn.no_coverage_reason.size()) {
+        why = "no usable coverage: " + cn.no_coverage_reason;
+        one_no_coverage = true;
+      } else if (cn.correction_type.compare(0, 17, "No OTR correction") == 0) {
+        // Names the --bias mode that skipped the fit, so this does not read as a rejected one.
+        why = cn.correction_type;
+      } else {
+        why = "no ori-ter bias detected";
+        one_no_bias = true;
+      }
+      ss << td("colspan=\"6\" align=\"center\"", nonbreaking(why));
     }
 
     ss << end_tr();
@@ -3038,10 +3068,23 @@ string html_copy_number_string(const Settings& settings, Summary& summary, cRefe
        << "sequence above there were too few single-copy windows to do that, and all windows were "
        << "used instead." << endl;
   }
+  if (one_relative_copy_number) {
+    ss << "<p>" << b("Relative copy number") << " is each reference sequence's median coverage "
+       << "against that of the longest one, which therefore reads exactly 1.0&times;. It is "
+       << "measured before the ori-ter correction, so it is comparable across sequences, and it is "
+       << "deliberately not rounded to a whole number: a plasmid at 2.96&times; is a measurement, "
+       << "and calling it copy number 3 would discard what makes it worth reporting." << endl;
+  }
   if (one_no_bias) {
     ss << "<p>" << b("No ori-ter bias detected") << " CNery found no replication-associated coverage "
        << "gradient to correct for this reference sequence, so it divided out a constant instead of "
        << "a ramp. This is expected for plasmids and for cultures sequenced at stationary phase." << endl;
+  }
+  if (one_no_coverage) {
+    ss << "<p>" << b("No usable coverage") << " is a different finding from the one above: there "
+       << "was nothing to fit at all, because no reads mapped to that reference sequence. No copy "
+       << "number is called along it -- there is no coverage to call one from -- so it appears in "
+       << "the missing coverage evidence rather than here." << endl;
   }
 
   return ss.str();

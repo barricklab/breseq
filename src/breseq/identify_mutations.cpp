@@ -1316,8 +1316,25 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
   _this_deletion_seed_cutoff = _deletion_seed_cutoffs[p.target()];
   
   // if the propagation cutoff is zero then the coverage distribution failed
-  if (_this_deletion_propagation_cutoff < 0.0) return;
-  
+  if (_this_deletion_propagation_cutoff < 0.0) {
+
+    // ...which is exactly what a reference sequence with no reads mapped to it looks like, and that
+    // reference still needs its coverage table. CNery is handed the table paths and raises on a
+    // missing one, and its own "this reference had nothing to measure" reporting needs a file it can
+    // open; a header row with nothing under it used to be all it got. Tallied separately here
+    // because the ordinary tally is built further down, past the DP/MP/PD accumulators that this
+    // return is what keeps out of a reference breseq is not calling mutations on.
+    if (_print_coverage_data && _coverage_data.is_open()) {
+      position_coverage pc;
+      vector<position_coverage> pc_by_rg;
+      if (_print_read_group_coverage) pc_by_rg.resize(read_groups().size());
+      tabulate_position_coverage(p, pc, pc_by_rg);
+      write_coverage_row(p.position_1(), p.reference_base_char_1(p.position_1()), pc, pc_by_rg);
+    }
+
+    return;
+  }
+
   uint32_t position = p.position_1();
   
 	int32_t insert_count=-1;
@@ -1720,8 +1737,17 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//## DELETION DELETION DELETION
 		//###
 		
-    if(!_settings.skip_missing_coverage_prediction && (insert_count == 0))
-      check_deletion_completion(p.target(), position, ref_base_char, this_position_coverage, this_position_coverage_by_rg, consensus_bonferroni_score);
+    if (insert_count == 0) {
+
+      // The coverage table is written whatever happens to missing-coverage prediction. It used to be
+      // written from inside check_deletion_completion(), so --skip-MC-prediction and
+      // --targeted-sequencing (which forces it on) left CNery a header row and no data for every
+      // reference sequence, however well covered.
+      write_coverage_row(position, ref_base_char, this_position_coverage, this_position_coverage_by_rg);
+
+      if(!_settings.skip_missing_coverage_prediction)
+        check_deletion_completion(p.target(), position, this_position_coverage, consensus_bonferroni_score);
+    }
 
 		//###
 		//## DISCORDANT PAIR DISCORDANT PAIR DISCORDANT PAIR
@@ -2092,7 +2118,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" Missing Coverahge and Unknown intervals
   if (!_settings.skip_missing_coverage_prediction) {
-    check_deletion_completion(tid, target_length(tid)+1, '.', position_coverage(numeric_limits<double>::quiet_NaN()), vector<position_coverage>(), numeric_limits<double>::quiet_NaN());
+    check_deletion_completion(tid, target_length(tid)+1, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   }
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
@@ -2152,6 +2178,78 @@ void identify_mutations_pileup::write_coverage_columns(const position_coverage& 
 }
 
 
+/*! Write one position's row of the coverage table CNery reads.
+
+    Moved out of check_deletion_completion(), where it used to live, because that call is gated on
+    --skip-MC-prediction being off AND on this reference's coverage-distribution fit having
+    succeeded. Neither has anything to do with the table, and both silently emptied it: a reference
+    with no coverage gets propagation cutoff -1, every position returns from pileup_callback() before
+    reaching here, and CNery was handed a file holding nothing but its header row.
+
+    The isnan() guard is what used to keep the once-per-fragment end call (position = length+1, with
+    an undefined position_coverage) from writing a row past the end of the sequence. Nothing reaches
+    here from there any more, but the guard is kept: it costs one comparison, and it is the only
+    thing standing between an uninitialized tally and a row of NaNs in CNery's input.
+ */
+void identify_mutations_pileup::write_coverage_row(uint32_t position, char ref_base_char, const position_coverage& pc, const vector<position_coverage>& pc_by_rg)
+{
+  if (std::isnan(pc.unique[1]) || !_coverage_data.is_open()) return;
+
+  _coverage_data << position << "\t";
+  _coverage_data << ref_base_char;
+  write_coverage_columns(pc);
+  for (size_t g = 0; g < pc_by_rg.size(); g++)
+    write_coverage_columns(pc_by_rg[g]);
+  _coverage_data << endl;
+}
+
+
+/*! Tally coverage at one position for the coverage table alone.
+
+    Only reached for a reference whose coverage-distribution fit failed, where pileup_callback()
+    returns before building its own tally. Counting here rather than reusing that tally costs an
+    extra pass over the pileup, so it is deliberately confined to those references: on every other
+    one this is never called and the ordinary tally is used.
+
+    Mirrors what the main loop counts at insert_count 0 -- every aligned read that is not a deletion
+    at this position and whose base carries a quality, split by strand, redundant reads weighted
+    1/redundancy -- so a low-coverage reference reports its real depth rather than zeros.
+ */
+void identify_mutations_pileup::tabulate_position_coverage(const pileup& p, position_coverage& pc, vector<position_coverage>& pc_by_rg)
+{
+  for (pileup::const_iterator i = p.begin(); i != p.end(); ++i) {
+
+    // insert_count is 0 here, so the only reads without a base at this position are deletions.
+    if (i->is_del()) continue;
+
+    // Don't count bases without qualities -- not safe to even count them for coverage.
+    base_bam read_base_bam = i->read_base_bam_0(i->query_position_0());
+    if (_base_bam_is_N(read_base_bam)) continue;
+
+    int32_t redundancy = i->redundancy();
+    int strand = i->strand();
+
+    position_coverage* pc_rg = NULL;
+    if (!pc_by_rg.empty()) pc_rg = &pc_by_rg[p.read_group_index(*i)];
+
+    if (redundancy == 1) {
+      ++pc.unique[1+strand];
+      if (pc_rg) ++pc_rg->unique[1+strand];
+    } else {
+      pc.redundant[1+strand] += 1.0/redundancy;
+      ++pc.raw_redundant[1+strand];
+      if (pc_rg) {
+        pc_rg->redundant[1+strand] += 1.0/redundancy;
+        ++pc_rg->raw_redundant[1+strand];
+      }
+    }
+  }
+
+  pc.sum();
+  for (size_t g = 0; g < pc_by_rg.size(); g++) pc_by_rg[g].sum();
+}
+
+
 /*! Helper method to track information about putative deleted regions.
  
  Used at each pileup iteration and at the end.
@@ -2161,24 +2259,13 @@ void identify_mutations_pileup::write_coverage_columns(const position_coverage& 
  @JEB This function expects 1-indexed positions!!!
  
  */
-void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, const vector<position_coverage>& this_position_coverage_by_rg, double e_value_call) {
+void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint32_t position, const position_coverage& this_position_coverage, double e_value_call) {
 
 	//cerr << position << " " << e_value_call << endl;
 	
   // special case = beginning of new seq_id
   if (position == 1) 
     _last_position_coverage = position_coverage(numeric_limits<double>::quiet_NaN());
-  
-  // print to optional output file
-  if (!std::isnan(this_position_coverage.unique[1]) && _coverage_data.is_open()) {
-    _coverage_data << position << "\t";
-    _coverage_data << ref_base_char;
-    write_coverage_columns(this_position_coverage);
-    for (size_t g = 0; g < this_position_coverage_by_rg.size(); g++)
-      write_coverage_columns(this_position_coverage_by_rg[g]);
-    _coverage_data << endl;
-  }
-  
   
   //## UNIQUE COVERAGE
   //#start a new possible deletion if we fall below the propagation cutoff

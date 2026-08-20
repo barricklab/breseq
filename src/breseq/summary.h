@@ -523,6 +523,21 @@ namespace breseq{
     double   terminus_coverage;   // ... and at the terminus
     double   otr_ratio;           // origin_coverage / terminus_coverage: the peak-to-trough ratio
 
+    // Reported whether or not a ramp was fit, because these are what say WHY one was not.
+    //
+    // relative_copy_number is this sequence's coverage against the LONGEST sequence of the run,
+    // which reads exactly 1.0 -- the number that says a plasmid sits at 2.96x. Non-integral on
+    // purpose: it is a measurement, and rounding it would discard what makes it worth reporting.
+    // 0.0 => CNery did not report one.
+    double   relative_copy_number;
+    // How the coordinates above were arrived at, and which arm supplied them ("coverage fit",
+    // "GC skew", "not corrected"). Empty => this CNery did not report it.
+    string   correction_type;
+    string   breakpoint_source;
+    // Non-empty => the sequence had nothing to measure at all, and says which way. Distinct from
+    // "no ori-ter bias detected": one means the fit was rejected, the other that no reads landed.
+    string   no_coverage_reason;
+
     // Resolution the analysis was run at.
     int32_t  window_size;
     int32_t  window_step;
@@ -549,6 +564,7 @@ namespace breseq{
     , origin_coverage(0.0)
     , terminus_coverage(0.0)
     , otr_ratio(0.0)
+    , relative_copy_number(0.0)
     , window_size(0)
     , window_step(0)
     , gc_correction_min(0.0)

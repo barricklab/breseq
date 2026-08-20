@@ -67,7 +67,11 @@ tests/lambda_mixed_pop_cl_tabulate/contingency_loci.csv
 ## and tests/fetch_test_data.sh. Both patterns are needed explicitly:
 ## 'tests/*/data' above is the wrong depth, and while the repo-wide '*.gz' would
 ## incidentally hide the FASTQ files it would not hide the .md5ok sidecars.
-tests/data/downloads/
+## No trailing slash: that form matches a directory only, and the cache is routinely a SYMLINK to
+## one shared between worktrees (which is what keeps the committed goldens repo-relative, where
+## BRESEQ_TEST_DATA_DIR would bake in an absolute path). With the slash the symlink showed up as an
+## untracked file, one 'git add -A' away from being committed.
+tests/data/downloads
 tests/.test_data_stamps/
 tests/*-local*/
 tests/data/*-local*/

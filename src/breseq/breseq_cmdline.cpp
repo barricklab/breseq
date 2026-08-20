@@ -2636,10 +2636,14 @@ int breseq_default_action(int argc, char* argv[])
       }
 
 
-      // there is a copy number genome diff for each sequence separately
+      // there is a copy number genome diff for each sequence separately -- except the junction-only
+      // ones, which are never pileup'd, so they have no coverage table, were never handed to CNery,
+      // and have no copy number to merge. Same set CNEvidence::predict() wrote.
       if (settings.predict_copy_number) {
+        const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
         for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
           cAnnotatedSequence& seq = *it;
+          if (analyzed_seq_ids.count(seq.m_seq_id) == 0) continue;
           string this_copy_number_evidence_genome_diff_file_name = settings.file_name(settings.copy_number_evidence_genome_diff_file_name, "@", seq.m_seq_id);
           cGenomeDiff cn_gd(this_copy_number_evidence_genome_diff_file_name);
           evidence_gd.merge_preserving_duplicates(cn_gd);
