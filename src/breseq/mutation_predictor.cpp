@@ -3353,6 +3353,15 @@ namespace breseq {
   // before prediction. Same situation predictMCplusJCtoDEL's two-junction IS case is in, and the same
   // answer: emit duplication_size 0 flagged indeterminate rather than invent a number.
   //
+  // THE RESULT IS A PROBE, NOT A MUTATION. Its only caller -- predictCNplusRepeatToAMP's far end --
+  // reads it to learn that the junction really does place an element there and which way round, then
+  // discards it. It must NOT be added to the genome diff: the element at that end is reported by the
+  // amplification's own mediated= field, and gdtools APPLY lays one copy down per extra copy of the
+  // block (genome_diff.cpp, the AMP case). Emitting a MOB beside it would insert the element twice
+  // and shift every downstream coordinate. Verified on long_ltee_ara_m3_38k_se36, whose applied
+  // genome carries exactly 9 IS186 copies: 5 from the reference, 3 from its IS186 MOBs, and 1 from
+  // this amplification's mediated=.
+  //
   // Returns false if the junction was never annotated with an IS interval.
   static bool mob_from_single_IS_junction(cDiffEntry& j, bool polymorphism_prediction, cDiffEntry& mob)
   {
@@ -3601,9 +3610,11 @@ namespace breseq {
         // amplification then recombined it against a second new copy. Nothing in the reference marks
         // either end, so the far end has to be anchored the same way this one was.
         //
-        // NOTE: the MOB minted for that far end below is used only to establish that the junction
-        // really does place an element there, and to read its orientation. It is never added to the
-        // genome diff -- the insertion itself is reported (or not) by the ordinary MOB paths.
+        // The MOB minted for that far end below is read for two things -- that the junction really
+        // does place an element there, and which way round it sits -- and then deliberately dropped.
+        // See mob_from_single_IS_junction(): the element is reported by this amplification's
+        // mediated= field, which APPLY expands into one copy per extra copy of the block, so adding
+        // a MOB for it as well would lay the element down twice.
         bool far_mob_is_new = false;
         int32_t far_position = 0;
         string far_id;
