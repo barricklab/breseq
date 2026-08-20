@@ -3032,8 +3032,14 @@ string html_copy_number_string(const Settings& settings, Summary& summary, cRefe
 
     ss << start_tr();
     ss << td(it->m_seq_id);
+    // One number when the windows tile without overlapping, which is what CNery does by default and
+    // what everything downstream now assumes -- printing "100 bp / 100 bp step" says the same thing
+    // twice. The two-number form is kept for a run whose windows really do overlap, where the step
+    // and the width are genuinely different facts.
     ss << td(ALIGN_CENTER, cn.window_size
-             ? nonbreaking(to_string(cn.window_size) + " bp / " + to_string(cn.window_step) + " bp step")
+             ? nonbreaking(cn.window_step && (cn.window_step != cn.window_size)
+                           ? to_string(cn.window_size) + " bp / " + to_string(cn.window_step) + " bp step"
+                           : to_string(cn.window_size) + " bp")
              : "NA");
 
     // The span of the factor divided out. A range hugging 1.0 means there was almost no GC bias, so

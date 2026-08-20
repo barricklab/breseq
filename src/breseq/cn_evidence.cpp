@@ -259,12 +259,44 @@ bool CNEvidence::read_cnery_otr(const string& otr_file_name, cnery_otr& otr)
   return true;
 }
 
-// Its sibling <prefix><seq_id>_break_pts.csv already merges contiguous runs
-// of the same predicted copy number into ranges for us
-// (Startpos,State,Segment_Size), so we don't need to re-implement that
-// merging here -- we just convert each merged range into a CN evidence
-// entry, using the per-window file only to compute a representative
-// relative coverage value to display for that range.
+// CNery's <prefix><seq_id>_break_pts.csv already merges contiguous runs of the same predicted copy
+// number into ranges for us (Startpos,State,Segment_Size), so nothing here has to re-implement that.
+//
+// Read positionally rather than by column name, unlike the per-window CSV: this file has exactly
+// three columns and a fourth would mean CNery changed something we need to look at, so the assert is
+// deliberately fatal. Returns false only when the file cannot be opened at all -- what that means
+// differs by caller, so it is theirs to decide.
+bool CNEvidence::read_cnery_segments(const string& break_pts_file_name, vector<cnery_segment>& segments)
+{
+  segments.clear();
+
+  ifstream break_pts_file(break_pts_file_name.c_str());
+  if (!break_pts_file.good()) return false;
+
+  string line;
+  getline(break_pts_file, line); // discard header
+
+  while (getline(break_pts_file, line)) {
+    if (line.size() == 0) continue;
+    vector<string> fields = split(line, ",");
+    ASSERT(fields.size() == 3, "Unexpected number of columns in CNery output file: " + break_pts_file_name);
+
+    cnery_segment s;
+    // Startpos is where the segment opens and Segment_Size is its length, so the last base it covers
+    // is one before the next segment's start. See cnery_segment for the one place this is not simply
+    // a 1-based coordinate: the first segment of a sequence opens at 0.
+    s.start = from_string<int32_t>(fields[0]);
+    s.copy_number = from_string<int32_t>(fields[1]);
+    s.end = s.start + from_string<int32_t>(fields[2]) - 1;
+    segments.push_back(s);
+  }
+  break_pts_file.close();
+
+  return true;
+}
+
+// Turn each merged range into a CN evidence entry, using the per-window file only to compute a
+// representative relative coverage value to display for that range.
 void CNEvidence::ingest_csv_for_seq_id(
                                        const string& seq_id,
                                        const vector<cnery_window>& windows,
@@ -274,23 +306,16 @@ void CNEvidence::ingest_csv_for_seq_id(
 {
   uint32_t window_size = windows.size() ? static_cast<uint32_t>(windows[0].length) : 0;
 
-  ifstream break_pts_file(break_pts_file_name.c_str());
-  ASSERT(break_pts_file.good(), "Could not open CNery output file: " + break_pts_file_name);
-  string line;
-  getline(break_pts_file, line); // discard header
+  vector<cnery_segment> segments;
+  ASSERT(read_cnery_segments(break_pts_file_name, segments),
+         "Could not open CNery output file: " + break_pts_file_name);
 
   cGenomeDiff gd;
 
-  while (getline(break_pts_file, line)) {
-    if (line.size() == 0) continue;
-    vector<string> fields = split(line, ",");
-    ASSERT(fields.size() == 3, "Unexpected number of columns in CNery output file: " + break_pts_file_name);
-
-    // CNery reports a 1-based start position for each merged segment.
-    int32_t start_pos = from_string<int32_t>(fields[0]);
-    int32_t copy_number = from_string<int32_t>(fields[1]);
-    int32_t segment_size = from_string<int32_t>(fields[2]);
-    int32_t end_pos = start_pos + segment_size - 1;
+  for (size_t seg_i = 0; seg_i < segments.size(); seg_i++) {
+    int32_t start_pos = segments[seg_i].start;
+    int32_t end_pos = segments[seg_i].end;
+    int32_t copy_number = segments[seg_i].copy_number;
 
     // Copy number 1 is the baseline (haploid, single-copy) state -- only
     // regions CNery calls as different from that are evidence-worthy.
@@ -327,7 +352,6 @@ void CNEvidence::ingest_csv_for_seq_id(
 
     gd.add(item);
   }
-  break_pts_file.close();
 
   gd.write(gd_file_name);
 }
@@ -486,9 +510,14 @@ double CNEvidence::otr_ramp_at(const cnery_otr& otr, int32_t position, int32_t s
   return yhi + (ylo - yhi) * static_cast<double>(along) / static_cast<double>(span);
 }
 
-// Coverage is averaged over each bin, but the copy number kept is the one FURTHEST FROM 1 -- taking
-// a max would hide deletions and taking a mean would smear every narrow event into the baseline,
-// and it is exactly the narrow events an overview is scanned for.
+// Reduce a window list to at most max_points bins, averaging the coverage over each.
+//
+// Coverage only. A bin spans many windows and so has no single HMM state, and the copy-number line
+// is no longer drawn from windows at all -- it comes from CNery's merged segments, at full precision
+// whether or not the coverage under it was binned. This used to carry the copy number FURTHEST FROM
+// 1 through each bin so that narrow events stayed visible on a whole-genome overview, which cost
+// every event up to a bin of false width on each side; a segment drawn at its true extent is still
+// visible, as the two vertical transitions of a spike.
 vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cnery_window>& in,
                                                                size_t max_points)
 {
@@ -508,7 +537,6 @@ vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cner
 
     double raw_sum = 0, corrected_sum = 0, otr_fit_sum = 0;
     double gc_percent_sum = 0, gc_corrected_sum = 0, gc_fit_sum = 0;
-    int32_t extreme_cn = in[lo].copy_number;
     for (size_t i = lo; i < hi; i++) {
       raw_sum += in[i].raw_cov;
       corrected_sum += in[i].corrected_cov;
@@ -516,7 +544,6 @@ vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cner
       gc_percent_sum += in[i].gc_percent;
       gc_corrected_sum += in[i].gc_corrected_cov;
       gc_fit_sum += in[i].gc_corr_fact;
-      if (labs(in[i].copy_number - 1) > labs(extreme_cn - 1)) extreme_cn = in[i].copy_number;
     }
     w.raw_cov = raw_sum / static_cast<double>(hi - lo);
     w.corrected_cov = corrected_sum / static_cast<double>(hi - lo);
@@ -528,7 +555,9 @@ vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cner
     // The ramp is piecewise linear, so a bin mean is its value at the bin centre -- averaging does
     // not distort it the way it smooths the coverage traces.
     w.otr_fit_cov = otr_fit_sum / static_cast<double>(hi - lo);
-    w.copy_number = extreme_cn;
+    // The struct's "no call" sentinel: a bin spans many windows and has no one HMM state, and
+    // nothing reads a binned copy number now.
+    w.copy_number = -1;
 
     out.push_back(w);
   }
@@ -540,6 +569,7 @@ void CNEvidence::render_cn_plot(
                                 const string& output_svg,
                                 const string& seq_id,
                                 const vector<cnery_window>& windows,
+                                const vector<cnery_segment>& segments,
                                 int32_t plot_start,
                                 int32_t plot_end,
                                 int32_t shaded_start,
@@ -554,10 +584,9 @@ void CNEvidence::render_cn_plot(
   string tab_file_name = output_svg + ".tab";
   ofstream tab(tab_file_name.c_str());
   ASSERT(tab.good(), "Could not write file: " + tab_file_name);
-  tab << "position\traw\tcorrected\tcopy_number" << endl;
+  tab << "position\traw\tcorrected" << endl;
 
   double max_y = 0;
-  bool have_copy_number = false;
   double otr_fit_sum = 0;
   size_t otr_fit_n = 0;
   size_t n_drawn = 0;
@@ -570,11 +599,17 @@ void CNEvidence::render_cn_plot(
     if (n_drawn && (w.start > previous_end)) tab << endl;
     previous_end = w.end;
 
-    // Plotted at its midpoint rather than at either edge. CNery's default is a 100 bp window on a
-    // 100 bp step, i.e. non-overlapping, but -w and -s are independent and a wider window on the
-    // same step is a supported configuration, so this does not assume the two are equal.
-    int32_t midpoint = w.start + (w.end - w.start) / 2;
-    tab << midpoint << "\t" << w.raw_cov << "\t" << w.corrected_cov << "\t";
+    // Both corners of the window, at the same height, so the coverage traces draw as the step
+    // functions they are. A window's coverage is ONE statistic over the whole window, not a sample
+    // at a point: joining consecutive midpoints slopes between two windows where the data says a
+    // step, and puts values on the plot at positions nothing was measured at. CNery tiles without
+    // overlapping, so w.end is exactly where the next window opens (win_len is win_end - win_st,
+    // which makes w.end exclusive) and every join lands on a real window boundary.
+    //
+    // The copy-number line does NOT come from here -- see the segment file below.
+    tab << w.start << "\t" << w.raw_cov << "\t" << w.corrected_cov << endl;
+    tab << w.end   << "\t" << w.raw_cov << "\t" << w.corrected_cov << endl;
+
     if (w.otr_fit_cov > 0) {
       // Only kept to set the axis and to place a flat line when there is no ori-ter bias; the ramp
       // itself is drawn from its endpoints, not from these per-window values.
@@ -582,14 +617,6 @@ void CNEvidence::render_cn_plot(
       otr_fit_n++;
       if (w.otr_fit_cov > max_y) max_y = w.otr_fit_cov;
     }
-    if (w.copy_number >= 0) {
-      tab << w.copy_number;
-      have_copy_number = true;
-      if (w.copy_number > max_y) max_y = w.copy_number;
-    } else {
-      tab << "NaN";
-    }
-    tab << endl;
 
     if (w.raw_cov > max_y) max_y = w.raw_cov;
     if (w.corrected_cov > max_y) max_y = w.corrected_cov;
@@ -600,6 +627,45 @@ void CNEvidence::render_cn_plot(
   if (n_drawn == 0) {
     remove(tab_file_name.c_str());
     return;
+  }
+
+  // The copy-number calls, as their own file of explicit corner vertices.
+  //
+  // Drawn from CNery's merged segments rather than from the per-window HMM column, and with lines
+  // rather than with steps. Both of those are deliberate. gnuplot's `steps` holds each y from its
+  // own x to the NEXT point's x, so a series plotted at window centres -- which is where a coverage
+  // measurement belongs -- puts every transition half a window late; on lambda a region called
+  // 21701-27700 drew its edges at 21751 and 27751. `steps` also draws no horizontal at all for the
+  // last point of a block, so the level before every dropped window went missing. Emitting both
+  // corners of each segment and joining them with straight lines has neither problem, and it is the
+  // same reasoning the ori-ter ramp file below is written on.
+  //
+  // The segments tile the sequence, so segment i's closing vertex and segment i+1's opening vertex
+  // share an x: the connecting line is exactly vertical and lands exactly on the boundary CNery
+  // called -- the same boundary the CN evidence entry reports and the shading above is drawn at.
+  string cn_file_name = output_svg + ".cn.tab";
+  bool have_copy_number = false;
+  {
+    ofstream cn(cn_file_name.c_str());
+    ASSERT(cn.good(), "Could not write file: " + cn_file_name);
+    cn << "position\tcopy_number" << endl;
+
+    for (size_t i = 0; i < segments.size(); i++) {
+      const cnery_segment& s = segments[i];
+      if ((s.end < plot_start) || (s.start > plot_end)) continue;
+
+      // Clipped to the plotted range. The closing vertex is one past the segment's last base, which
+      // is where the next segment opens.
+      int32_t from = max(s.start, plot_start);
+      int32_t to   = min(s.end + 1, plot_end);
+      if (to <= from) continue;
+
+      cn << from << "\t" << s.copy_number << endl;
+      cn << to   << "\t" << s.copy_number << endl;
+      have_copy_number = true;
+      if (s.copy_number > max_y) max_y = s.copy_number;
+    }
+    cn.close();
   }
 
   // The ori-ter ramp, as its own file with no gaps in it. Only the vertices are written -- the ends
@@ -722,8 +788,9 @@ void CNEvidence::render_cn_plot(
     clauses.push_back(double_quote(fit_file_name) + " using \"position\":\"otr_fit\" with lines lc rgb 'black' lw 3 title 'ori-ter bias fit (divided out)'");
   }
   if (have_copy_number) {
-    // Piecewise-constant by nature (one HMM state per window), hence steps rather than lines.
-    clauses.push_back(quoted_tab + " using \"position\":\"copy_number\" with steps lc rgb 'red' lw 4 title 'copy number (HMM)'");
+    // Piecewise-constant by nature, and drawn as the exact corners of each called segment -- see
+    // where the file is written for why this is not `with steps`.
+    clauses.push_back(double_quote(cn_file_name) + " using \"position\":\"copy_number\" with lines lc rgb 'red' lw 4 title 'copy number (HMM)'");
   }
   s << "plot " << join(clauses, string(", \\\n     ")) << endl;
 
@@ -735,6 +802,7 @@ void CNEvidence::render_cn_plot(
 
   remove(tab_file_name.c_str());
   remove(fit_file_name.c_str());
+  remove(cn_file_name.c_str());
   remove(log_name.c_str());
 }
 
@@ -889,12 +957,24 @@ void CNEvidence::draw_evidence_plots(
     cnery_otr otr;
     read_cnery_otr(settings.file_name(settings.cnery_otr_results_file_name, "@", seq.m_seq_id), otr);
 
+    // The copy-number calls as CNery merged them. Drawn instead of the per-window HMM column, whose
+    // boundaries are only known to a window and which goes missing wherever CNery dropped one.
+    // Absent is survivable -- the plot then simply carries no copy-number line.
+    vector<cnery_segment> segments;
+    string break_pts_file_name = settings.file_name(settings.cnery_break_points_file_name, "@", seq.m_seq_id);
+    if (!read_cnery_segments(break_pts_file_name, segments)) {
+      WARN("Omitting the copy number line from the plots for " + seq.m_seq_id +
+           ": could not read CNery output file " + break_pts_file_name);
+    }
+
     // Whole-reference overview. Drawn even under --brief-html-mode, matching how draw_coverage
     // always produces its own per-reference overviews.
     {
       string overview_svg = settings.file_name(settings.cn_overview_coverage_plot_file_name, "@", seq.m_seq_id);
+      // Only the coverage traces are binned; the copy-number line is drawn from the segments at full
+      // precision, so a narrow event stays at its true width instead of being painted a bin wide.
       vector<cnery_window> overview_windows = bin_cnery_windows(windows, 4000);
-      render_cn_plot(overview_svg, seq.m_seq_id, overview_windows,
+      render_cn_plot(overview_svg, seq.m_seq_id, overview_windows, segments,
                      1, static_cast<int32_t>(seq.m_length),
                      1, static_cast<int32_t>(seq.m_length), otr,
                      static_cast<int32_t>(seq.m_length));
@@ -921,7 +1001,7 @@ void CNEvidence::draw_evidence_plots(
       int32_t plot_end = min(static_cast<int32_t>(seq.m_length), end + flanking);
 
       string svg = settings.evidence_path + "/CN_" + item._id + ".svg";
-      render_cn_plot(svg, seq.m_seq_id, windows, plot_start, plot_end, start, end, otr,
+      render_cn_plot(svg, seq.m_seq_id, windows, segments, plot_start, plot_end, start, end, otr,
                      static_cast<int32_t>(seq.m_length));
 
       if (file_exists(svg.c_str()))

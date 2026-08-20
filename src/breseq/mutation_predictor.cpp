@@ -3751,7 +3751,7 @@ namespace breseq {
   // than inside predict(), so the joined MC is what gets written to evidence.gd and shown in the
   // HTML. Doing it later would leave the on-disk evidence and the report disagreeing with the
   // deletion that was predicted from it.
-  void merge_MC_fragments_spanned_by_CN(cGenomeDiff& gd, uint32_t max_island)
+  void merge_MC_fragments_spanned_by_CN(cGenomeDiff& gd, uint32_t fallback_max_island)
   {
     diff_entry_list_t cn_list = gd.get_list(make_vector<gd_entry_type>(CN));
     if (cn_list.empty()) return;
@@ -3770,6 +3770,12 @@ namespace breseq {
       const string& seq_id = cn[SEQ_ID];
       int32_t cn_start = from_string<int32_t>(cn[START]);
       int32_t cn_end   = from_string<int32_t>(cn[END]);
+
+      // One of CNery's own tiles, read from this region rather than compiled in, so the bound tracks
+      // whatever resolution CNery was actually run at -- it halved from 200 bp to 100 bp in CNery
+      // 1.1.0, and a literal would have silently stayed twice as permissive as the argument for it.
+      uint32_t this_max_island = cn.entry_exists("tile_size")
+                               ? from_string<uint32_t>(cn["tile_size"]) : fallback_max_island;
 
       // Fragments that are mostly inside this CN region. Overlap rather than containment: a fragment
       // routinely runs past the CN boundary, because the HMM only resolves to its tile size while the
@@ -3802,7 +3808,7 @@ namespace breseq {
         if (i < frags.size()) {
           int32_t island = from_string<int32_t>((*frags[i])[START])
                          - from_string<int32_t>((*frags[i - 1])[END]) - 1;
-          breaks_run = (island > static_cast<int32_t>(max_island));
+          breaks_run = (island > static_cast<int32_t>(this_max_island));
         }
         if (!breaks_run) continue;
 

@@ -34,10 +34,15 @@ using namespace std;
 
 namespace breseq {
 
-  //! Largest run of coverage that a CN copy-number-0 region is allowed to bridge when joining
-  //! missing-coverage fragments (see merge_MC_fragments_spanned_by_CN). One CNery tile: the HMM
-  //! decides copy number over 200 bp windows, so an island it called deleted through is smaller
-  //! than that by construction. Real cases observed are 21 and 31 bp.
+  //! FALLBACK largest run of coverage that a CN copy-number-0 region is allowed to bridge when
+  //! joining missing-coverage fragments (see merge_MC_fragments_spanned_by_CN).
+  //!
+  //! The bound is really one CNery tile -- the HMM decides copy number over a whole window, so an
+  //! island it called deleted through is narrower than one window by construction -- and
+  //! merge_MC_fragments_spanned_by_CN reads that width per region from the CN entry's tile_size.
+  //! This literal is only what it falls back to for a CN entry that carries no tile_size, i.e. one
+  //! read back from a hand-made genome diff. It is deliberately generous: real islands measure
+  //! 21-62 bp, and being wrong here costs a merge that should have happened, not a false one.
   const uint32_t kMaxMCMergeIslandBases = 200;
 
   //! Join missing-coverage fragments that a single CN copy-number-0 region spans into one MC.
@@ -48,9 +53,9 @@ namespace breseq {
   //! with its own (too short) extent, and every fragment misses. A CN region called at copy number
   //! zero across the whole span is independent evidence that the island is not real coverage.
   //!
-  //! Extents come from the MC fragments, never from the CN region: CN boundaries are tiled at 200 bp
-  //! while MC boundaries are per-base, and the deletion callers want the precise ones.
-  void merge_MC_fragments_spanned_by_CN(cGenomeDiff& gd, uint32_t max_island = kMaxMCMergeIslandBases);
+  //! Extents come from the MC fragments, never from the CN region: CN boundaries land on CNery's
+  //! tiling while MC boundaries are per-base, and the deletion callers want the precise ones.
+  void merge_MC_fragments_spanned_by_CN(cGenomeDiff& gd, uint32_t fallback_max_island = kMaxMCMergeIslandBases);
 
 	class MutationPredictor
 	{

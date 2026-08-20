@@ -74,6 +74,21 @@ namespace breseq {
       int32_t copy_number;       // prob_copy_number      (HMM Viterbi state)
     };
 
+    // One merged run of equal copy number, from CNery's <prefix><seq_id>_break_pts.csv. CNery has
+    // already collapsed contiguous windows of the same HMM state, so these are the copy-number
+    // segments in genomic coordinates -- real boundaries, with no window granularity left to
+    // resolve and no gap where CNery dropped a window. Both the CN evidence entries and the step
+    // line on the CN plots are built from these, which is what keeps the two agreeing.
+    // Inclusive on both ends. Reference coordinates are 1-based and every boundary CNery calls lands
+    // on a window start -- except the very first segment, which opens at 0 rather than 1 (its
+    // Startpos is literally "0" in the file). Nothing needs a special case for that: the evidence
+    // ingest only keeps segments away from copy number 1, and the plot clamps to its own range.
+    struct cnery_segment {
+      int32_t start;
+      int32_t end;           // Startpos + Segment_Size - 1
+      int32_t copy_number;   // CNery's State
+    };
+
     // The origin and terminus of replication CNery inferred, and used to build its OTR correction.
     //
     // The four fields below the fit are read even when there is no fit -- they are what says WHY
@@ -112,6 +127,12 @@ namespace breseq {
     // Optional fields get a neutral value when their column is absent -- see the definition.
     static bool read_cnery_windows(const string& cnv_file_name, vector<cnery_window>& windows);
 
+    // Parses CNery's <prefix><seq_id>_break_pts.csv (Startpos,State,Segment_Size), positionally --
+    // unlike the per-window CSV this file has exactly three columns and the assert is fatal.
+    // Returns false if the file cannot be opened, so each caller can decide: ingesting the evidence
+    // treats that as fatal, drawing the plots treats it as a reason to leave the line off.
+    static bool read_cnery_segments(const string& break_pts_file_name, vector<cnery_segment>& segments);
+
     // Reduces a long window list to at most max_points entries, so a whole-genome overview does not
     // become a multi-megabyte SVG.
     static vector<cnery_window> bin_cnery_windows(const vector<cnery_window>& in, size_t max_points);
@@ -139,10 +160,14 @@ namespace breseq {
     // A shaded_start/shaded_end narrower than the plot range greys out the flanks around it.
     // The ori/ter markers are drawn only where they fall inside the plotted range. seq_length is the
     // whole sequence, needed because the ori-ter ramp wraps around its end.
+    // `segments` drives the copy-number step line and `windows` the coverage traces. They are kept
+    // separate on purpose: the coverage is a per-window measurement, while the copy number is a
+    // piecewise-constant call whose boundaries CNery already resolved to a base.
     static void render_cn_plot(
                                const string& output_svg,
                                const string& seq_id,
                                const vector<cnery_window>& windows,
+                               const vector<cnery_segment>& segments,
                                int32_t plot_start,
                                int32_t plot_end,
                                int32_t shaded_start,
