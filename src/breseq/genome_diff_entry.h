@@ -164,6 +164,8 @@ namespace breseq {
   extern const char* MP_CONCORDANT_COUNT;
   extern const char* MP_TOTAL_COUNT;
   extern const char* MP_CANDIDATE_COUNT;
+  extern const char* MP_WINDOW_COUNT;
+  extern const char* MP_SCORE;
 
   //For PD
   extern const char* PD_SIZE_SHIFT;

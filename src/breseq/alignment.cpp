@@ -29,6 +29,12 @@ namespace breseq {
 
 const char alignment_wrapper::op_to_char[10] = "MIDNSHP=X";
 
+bool mate_never_aligned(const alignment_wrapper& a)
+{
+  uint32_t v;
+  return a.aux_get_i(kBreseqMateNeverAlignedBAMTag, v) && (v != 0);
+}
+
 string alignment_wrapper::read_char_stranded_sequence_1(uint32_t start_1, uint32_t end_1) const { 
   ASSERT(start_1 <= end_1, "Start (" + to_string(start_1) + ") must be less than end (" + to_string(end_1) + ").");
   
@@ -959,6 +965,14 @@ void bam_file::write_alignments(
     }
     if (a.aux_get_i(kBreseqOtherHypothesisLogLikelihoodBAMTag, other_log_likelihood)) {
       aux_tags_ss << "\t" << kBreseqOtherHypothesisLogLikelihoodBAMTag << ":i:" << static_cast<int32_t>(other_log_likelihood);
+    }
+
+    // "This read's mate produced no alignment at all", stamped by mark_mate_unmapped during
+    // alignment resolution. This function rebuilds the aux field from scratch, so a tag not
+    // re-emitted here never reaches reference.bam -- which is where MP reads it.
+    uint32_t mate_no_alignment;
+    if (a.aux_get_i(kBreseqMateNeverAlignedBAMTag, mate_no_alignment) && mate_no_alignment) {
+      aux_tags_ss << "\t" << kBreseqMateNeverAlignedBAMTag << ":i:1";
     }
 
     string aux_tags = aux_tags_ss.str();

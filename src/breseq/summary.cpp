@@ -511,6 +511,57 @@ void from_json(const json& j, PairDistanceSummary& s)
   s.items_rejected_other = get_uint64_or_default(j, "items_rejected_other");
 }
 
+void to_json(json& j, const MissingPairSummary& s)
+{
+  j = json{
+    {"pair_distance_median", s.pair_distance_median},
+    {"window_width", s.window_width},
+    {"n_effective_tests", s.n_effective_tests},
+    {"null_rate", s.null_rate},
+    {"null_rate_raw", s.null_rate_raw},
+    {"dispersion", s.dispersion},
+    {"dispersion_raw", s.dispersion_raw},
+    {"pearson_phi", s.pearson_phi},
+    {"tested_columns", s.tested_columns},
+    {"trimmed_columns", s.trimmed_columns},
+    {"mean_tested_reads", s.mean_tested_reads},
+    {"seed_fraction_used", s.seed_fraction_used},
+    {"regions_seeded", s.regions_seeded},
+    {"score_cutoff", s.score_cutoff},
+    {"items_tested", s.items_tested},
+    {"items_dropped_score", s.items_dropped_score},
+    {"items_dropped_unplaced", s.items_dropped_unplaced},
+    {"items_accepted", s.items_accepted},
+    {"items_rejected_score", s.items_rejected_score},
+    {"items_rejected_other", s.items_rejected_other},
+  };
+}
+
+void from_json(const json& j, MissingPairSummary& s)
+{
+  // All defaulted: a summary written before MP reporting existed must still load.
+  s.pair_distance_median = get_double_or_default(j, "pair_distance_median");
+  s.window_width = get_double_or_default(j, "window_width");
+  s.n_effective_tests = get_double_or_default(j, "n_effective_tests");
+  s.null_rate = get_double_or_default(j, "null_rate");
+  s.null_rate_raw = get_double_or_default(j, "null_rate_raw");
+  s.dispersion = get_double_or_default(j, "dispersion");
+  s.dispersion_raw = get_double_or_default(j, "dispersion_raw");
+  s.pearson_phi = get_double_or_default(j, "pearson_phi");
+  s.tested_columns = get_uint64_or_default(j, "tested_columns");
+  s.trimmed_columns = get_uint64_or_default(j, "trimmed_columns");
+  s.mean_tested_reads = get_double_or_default(j, "mean_tested_reads");
+  s.seed_fraction_used = get_double_or_default(j, "seed_fraction_used");
+  s.regions_seeded = get_uint64_or_default(j, "regions_seeded");
+  s.score_cutoff = get_double_or_default(j, "score_cutoff");
+  s.items_tested = get_uint64_or_default(j, "items_tested");
+  s.items_dropped_score = get_uint64_or_default(j, "items_dropped_score");
+  s.items_dropped_unplaced = get_uint64_or_default(j, "items_dropped_unplaced");
+  s.items_accepted = get_uint64_or_default(j, "items_accepted");
+  s.items_rejected_score = get_uint64_or_default(j, "items_rejected_score");
+  s.items_rejected_other = get_uint64_or_default(j, "items_rejected_other");
+}
+
 void to_json(json& j, const CopyNumberSummary& s)
 {
   j = json{
@@ -587,6 +638,7 @@ void to_json(json& j, const Summary& s)
     {"soft_clipping", s.soft_clipping},
     {"discordant_pair", s.discordant_pair},
     {"pair_distance", s.pair_distance},
+    {"missing_pair", s.missing_pair},
     {"copy_number", s.copy_number},
     {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
@@ -608,6 +660,8 @@ void from_json(const json& j, Summary& s)
     s.discordant_pair = j.at("discordant_pair").get<DiscordantPairSummary>();
   if (j.count("pair_distance"))
     s.pair_distance = j.at("pair_distance").get<PairDistanceSummary>();
+  if (j.count("missing_pair"))
+    s.missing_pair = j.at("missing_pair").get<MissingPairSummary>();
   if (j.count("copy_number"))
     s.copy_number = j.at("copy_number").get<CopyNumberSummaries>();
   if (j.count("preliminary_paired_mapping_distance_distribution"))
@@ -834,6 +888,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   , soft_clipping(s.soft_clipping)
   , discordant_pair(s.discordant_pair)
   , pair_distance(s.pair_distance)
+  , missing_pair(s.missing_pair)
   , copy_number(s.copy_number)
   , preliminary_paired_mapping_distance_distribution(s.preliminary_paired_mapping_distance_distribution)
   , paired_mapping_distance_distribution(s.paired_mapping_distance_distribution)
@@ -1180,6 +1235,7 @@ void to_json(json& j, const PublicSummary& s)
     {"soft_clipping", s.soft_clipping},
     {"discordant_pair", s.discordant_pair},
     {"pair_distance", s.pair_distance},
+    {"missing_pair", s.missing_pair},
     {"copy_number", s.copy_number},
     {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
@@ -1198,6 +1254,8 @@ void from_json(const json& j, PublicSummary& s)
     s.discordant_pair = j.at("discordant_pair").get<DiscordantPairSummary>();
   if (j.count("pair_distance"))
     s.pair_distance = j.at("pair_distance").get<PairDistanceSummary>();
+  if (j.count("missing_pair"))
+    s.missing_pair = j.at("missing_pair").get<MissingPairSummary>();
   if (j.count("copy_number"))
     s.copy_number = j.at("copy_number").get<CopyNumberSummaries>();
   if (j.count("preliminary_paired_mapping_distance_distribution"))

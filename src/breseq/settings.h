@@ -37,6 +37,7 @@ namespace breseq
   extern const char* kBreseqBestAlignmentScoreBAMTag;
   extern const char* kBreseqOtherHypothesisLogLikelihoodBAMTag;
   extern const char* kBreseqOwnHypothesisLogLikelihoodBAMTag;
+  extern const char* kBreseqMateNeverAlignedBAMTag;
 
 	class ExecutionTime : public Storable {
   public:
@@ -422,6 +423,10 @@ namespace breseq
     double missing_pair_seed_fraction;                    // Default = 0.25;      COMMAND-LINE OPTION
     int32_t missing_pair_minimum_reads;                   // Default = 3;         COMMAND-LINE OPTION
     int32_t missing_pair_minimum_distinct;                // Default = 2;         COMMAND-LINE OPTION
+    double missing_pair_log10_e_value_cutoff;             // Default = 3.0;       COMMAND-LINE OPTION (--missing-pair-score-cutoff)
+    double missing_pair_minimum_rate;                     // Default = 1e-4;      COMMAND-LINE OPTION
+    double missing_pair_dispersion_trim_frequency;        // Default = 0.25;      COMMAND-LINE OPTION
+    double missing_pair_maximum_dispersion;               // Default = 0.05;      COMMAND-LINE OPTION
     double missing_pair_frequency_cutoff;                 // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
 
     //! Settings: Pair Distance (PD) Evidence
@@ -676,6 +681,7 @@ namespace breseq
     string discordant_pair_summary_file_name;
     string mp_candidate_regions_file_name;
     string missing_pair_done_file_name;
+    string missing_pair_summary_file_name;
     string mp_genome_diff_file_name;
     string pd_candidate_regions_file_name;
     string pair_distance_done_file_name;

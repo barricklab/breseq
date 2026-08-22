@@ -504,6 +504,73 @@ namespace breseq{
     }
   };
 
+  // Everything that decided which missing-pair (MP) calls were kept. Like PD's, MP's criterion is a
+  // genome-wide e-value calibrated FROM THIS RUN, so none of it can be read off the command line or
+  // the evidence .gd -- without this record a user cannot tell why a run predicted few or many.
+  //
+  // The null it records is the rate at which a mapped read's mate produced no alignment at all.
+  // Nothing about that rate is a constant of nature: it depends on the library, the read length and
+  // the aligner, and it is spread very unevenly along a genome. Measuring it per run, rather than
+  // assuming it is negligible, is the difference between MP evidence and a list of the noisiest
+  // windows in the sample.
+  class MissingPairSummary : public JSONStorable<MissingPairSummary>
+  {
+  public:
+    // Library / window geometry. window_width is the width BOTH the seed statistic and the score's
+    // denominator are counted over; the null below is only meaningful at that width.
+    double   pair_distance_median;
+    double   window_width;
+    double   n_effective_tests;                 // 2 * reference length / window_width
+
+    // The null, measured over every reference column during the stage-08 pileup.
+    double   null_rate;                         // p0 in force (after the minimum-rate floor)
+    double   null_rate_raw;                     // before the floor
+    double   dispersion;                        // rho in force; 0 => plain binomial
+    double   dispersion_raw;                    // before clamping
+    double   pearson_phi;                       // chi2 / (N-1) over the fitted columns
+    uint64_t tested_columns;                    // columns entering the dispersion fit
+    uint64_t trimmed_columns;                   // columns excluded by the trim frequency
+    double   mean_tested_reads;                 // mean n over the fitted columns
+
+    // Seed: a sensitivity filter only. What decides a call is score_cutoff.
+    double   seed_fraction_used;
+    uint64_t regions_seeded;
+
+    // Accept stage.
+    double   score_cutoff;                      // --missing-pair-score-cutoff in force
+
+    // Outcome.
+    uint64_t items_tested;
+    uint64_t items_dropped_score;               // score < 0: expected by chance genome-wide, never emitted
+    uint64_t items_dropped_unplaced;            // no supporting read survived the rescan window
+    uint64_t items_accepted;
+    uint64_t items_rejected_score;
+    uint64_t items_rejected_other;              // count, frequency, duplicates, suppression, ...
+
+    MissingPairSummary()
+    : pair_distance_median(0.0)
+    , window_width(0.0)
+    , n_effective_tests(0.0)
+    , null_rate(0.0)
+    , null_rate_raw(0.0)
+    , dispersion(0.0)
+    , dispersion_raw(0.0)
+    , pearson_phi(0.0)
+    , tested_columns(0)
+    , trimmed_columns(0)
+    , mean_tested_reads(0.0)
+    , seed_fraction_used(0.0)
+    , regions_seeded(0)
+    , score_cutoff(0.0)
+    , items_tested(0)
+    , items_dropped_score(0)
+    , items_dropped_unplaced(0)
+    , items_accepted(0)
+    , items_rejected_score(0)
+    , items_rejected_other(0)
+    {}
+  };
+
   // How CNery's copy number analysis of one reference sequence went: the replication bias it fit and
   // divided out, and how much flatter each successive correction actually made the coverage.
   //
@@ -596,6 +663,7 @@ namespace breseq{
     SoftClippingSummary soft_clipping;
     DiscordantPairSummary discordant_pair;
     PairDistanceSummary pair_distance;
+    MissingPairSummary missing_pair;
     // Per reference sequence, and only under --predict-copy-number.
     CopyNumberSummaries copy_number;
     // Stage-03 preprocessing fit (median/upper-MAD/cutoff/orientation + preprocessing-tabulated counts).
@@ -673,6 +741,10 @@ namespace breseq{
   // PairDistanceSummary
   void to_json(json& j, const PairDistanceSummary& s);
   void from_json(const json& j, PairDistanceSummary& s);
+
+  // MissingPairSummary
+  void to_json(json& j, const MissingPairSummary& s);
+  void from_json(const json& j, MissingPairSummary& s);
 
   // CopyNumberSummary
   void to_json(json& j, const CopyNumberSummary& s);
@@ -917,6 +989,7 @@ namespace breseq{
     SoftClippingSummary soft_clipping;
     DiscordantPairSummary discordant_pair;
     PairDistanceSummary pair_distance;
+    MissingPairSummary missing_pair;
     CopyNumberSummaries copy_number;
     PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
     PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;

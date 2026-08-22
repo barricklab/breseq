@@ -561,6 +561,81 @@ in the ranges \[start, start+start_range\] \[end-end_range, end\].
     Number of bases that the two sides of the new junction have in
     common.
 
+### MP: Missing pair evidence
+
+A point where a *novel* sequence &mdash; one present in neither the reference nor any candidate
+junction &mdash; has been inserted. A fragment spanning such a point puts one mate in reference
+sequence, where it maps, and the other in the insert, where it maps nowhere. The mapped mates
+therefore pile up facing the insertion point. This is precisely the case neither `JC` nor `DP` can
+see: `JC` needs a read split across the breakpoint with both halves mapping, `DP` needs both mates
+mapped. `MP` is the only evidence type that can see sequence absent from the reference entirely.
+
+`MP` is **one-sided**: it marks where the insert begins, not what it is or how long. A real insertion
+normally produces two `MP` items, one per shoulder, on opposite strands.
+
+A read supports an `MP` call only when its mate produced *no alignment at all*. A mate that aligns
+over part of its length is a partially-aligning read &mdash; the signal `SC` reports &mdash; not
+evidence that its sequence is missing from the reference.
+
+Predicted only when `--predict-missing-pairs` is given. This functionality is experimental.
+
+Line specification:
+
+1.  **type** *\<string>*
+
+    type of the entry. Always `MP` for missing pair evidence.
+
+2.  **id or evidence-id** *\<uint32>*
+
+    unique identifier for this entry.
+
+3.  **parent-ids** *\<uint32>*
+
+    ids of evidence that support this mutation. May be set to `.` or empty.
+
+4.  **seq_id** *\<string>*
+
+    id of the reference sequence fragment containing the insertion point.
+
+5.  **position** *\<uint32>*
+
+    last retained reference base on the flank the supporting reads sit on.
+
+6.  **strand** *\<1/-1>*
+
+    `-1` when the retained flank is at or below **position** and the insert lies to its right;
+    `+1` for the mirror image.
+
+Notable name=value pairs:
+
+*   **score** *\<float>* — minus the log10 of the expected number of positions anywhere in the
+    reference where this many of the reads on one strand would lose their mates by chance, given the
+    genome-wide rate at which mates fail to align and how unevenly that rate is spread. A score of 0
+    means one such position is expected per genome, 3 means one per thousand genomes. **This is the
+    test that decides an `MP` call**; every other field below is a local sanity check. The null it is
+    measured against is fitted to the run itself and reported in the "Missing pair (MP) evidence
+    gates" table of `summary.html`.
+*   **unpaired_read_count** — supporting reads: mapped, on the crossing strand, with the flank on the
+    kept side, and with a mate that aligned nowhere.
+*   **window_read_count** — *every* crossing-strand read on the kept flank within the counting
+    window. This is the denominator **score** uses, and the one the genome-wide null is measured
+    over.
+*   **spanning_pair_count** — pairs whose mate aligns *past* the insertion point, into the sequence
+    the insert would occupy. Those molecules demonstrably carry reference sequence there, so they are
+    evidence against the call.
+*   **total_read_count** — `unpaired_read_count + spanning_pair_count`. This is the denominator
+    **frequency** uses, and it is deliberately *not* `window_read_count`: a pair whose mate never
+    reached the insertion point cannot speak to the call either way.
+*   **frequency**, **frequency_lower**, **frequency_upper** — of the molecules that could have
+    contradicted this call, the fraction that instead lost their mate, with 95% confidence bounds.
+    This says how much of the sample carries the insertion; it does *not* say whether the insertion
+    is there, which is **score**'s job.
+*   **distinct_read_count** — distinct outer coordinates among the supporting reads, so that PCR
+    duplicates of one molecule cannot carry a prediction.
+*   **candidate_unpaired_count** — peak in-window count while the candidate region was open. A seed
+    diagnostic; nothing is gated on it.
+*   **redundant** — present when a majority of the supporting reads mapped to more than one place.
+
 ### PD: Pair distance evidence
 
 A point where the read pairs whose unsequenced middle gap spans it map at a systematically different

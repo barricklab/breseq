@@ -147,6 +147,13 @@ namespace breseq {
   const char* MP_CONCORDANT_COUNT = "spanning_pair_count";
   const char* MP_TOTAL_COUNT = "total_read_count";
   const char* MP_CANDIDATE_COUNT = "candidate_unpaired_count";
+  // The TEST denominator: every crossing-strand read on the kept flank inside the counting window.
+  // Distinct from MP_TOTAL_COUNT, which is the FREQUENCY denominator (supporting + spanning). The
+  // null the score tests against is tabulated over this one, so they cannot be interchanged.
+  const char* MP_WINDOW_COUNT = "window_read_count";
+  // Same name and meaning as PD_SCORE and the SC score: minus log10 of the expected number of
+  // items this good anywhere in the reference by chance.
+  const char* MP_SCORE = "score";
 
   //For PD
   const char* PD_SIZE_SHIFT = "size_shift";

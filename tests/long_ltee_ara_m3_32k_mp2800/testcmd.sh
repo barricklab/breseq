@@ -40,13 +40,36 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 #
 # EXPERIMENTAL PAIR EVIDENCE: this test runs the three PAIR predictors, and it is
 # the only place any of them see a kilobase-scale span. What they currently produce
-# here is MP 98, PD 6 and DP 0 -- the zero is expected and worth pinning: the
-# distance distribution is unimodal about 2837 with a discordance cutoff of ~5381,
-# so essentially no pair is an outlier INDIVIDUALLY, which is precisely the regime
-# PD exists for and DP cannot see. If a change ever makes DP fire in bulk here, it
-# is calling library structure, not variants. The golden will move whenever the
-# DP/MP/PD code changes; that is the point, so rebuild it and review the diff
-# rather than treating the failure as a surprise.
+# here is MP 0, PD 30 (25 accepted) and DP 0 -- the zeros are expected and worth
+# pinning.
+#
+# MP was 98 (73 accepted) until MP started counting only reads whose mate produced NO
+# ALIGNMENT AT ALL, rather than every read flagged BAM_FMUNMAP. Those are very
+# different populations here: this library is 2x35, so --require-match-fraction 0.9
+# demands 32 of 35 bases align, and 1,171,383 of the reads in reference.bam carry
+# BAM_FMUNMAP while only 7,525 -- 0.64% -- have a mate bowtie2 truly placed nowhere.
+# The other 99.36% were mates the aligner DID place and breseq then rejected, i.e.
+# partially-aligning reads, which is SC's signal and not evidence that a mate's
+# sequence is missing from the reference. Shorter reads make this worse, which is why
+# this test had 98 MP entries and the 2x101/2x150 paired tests had 1-2.
+#
+# 0 is the right answer, not a loss of sensitivity. The 3 calls here that used to look
+# real (2121958, 3901476, 4561292; frequency 1.0000, spanning_pair_count=0) have only
+# 2, 17 and 4 genuinely-unplaced mates within 3 kb, against ~10 expected at the
+# genome-wide rate. A real clonal insertion costs essentially every spanning fragment
+# its mate -- some 2,900 reads in a window that size -- so these were positions where
+# every crossing mate happened to be rejected, which is exactly what a frequency of
+# 1.0 with zero opposing pairs looks like when the numerator is an artifact. The seed
+# now never fires at all here (0 candidate regions), so the score gate is not even
+# reached. The fitted null is p0 = 0.00073 with Pearson phi 1.35 -- near-binomial.
+#
+# The DP zero has a different cause: the distance distribution is unimodal about
+# 2837 with a discordance cutoff of ~5381, so essentially no pair is an outlier
+# INDIVIDUALLY, which is precisely the regime PD exists for and DP cannot see. If a
+# change ever makes DP fire in bulk here, it is calling library structure, not
+# variants. The golden will move whenever the DP/MP/PD code changes; that is the
+# point, so rebuild it and review the diff rather than treating the failure as a
+# surprise.
 #
 # SOFT CLIPPING IS DELIBERATELY OFF HERE, unlike the other three paired long tests.
 # On a mate-pair library SC does not measure the genome, it measures the library

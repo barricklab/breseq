@@ -2514,6 +2514,7 @@ int breseq_default_action(int argc, char* argv[])
     if (settings.do_step(settings.missing_pair_done_file_name, "Examining missing pair evidence")) {
 
       predict_missing_pairs(settings, summary, ref_seq_info);
+      summary.missing_pair.store(settings.missing_pair_summary_file_name);
       // The candidate-region CSV is written in stage 08 but consumed only here, so it is keyed to
       // THIS step's done-file -- cleanup happens when its last consumer finishes.
       settings.track_intermediate_file(settings.missing_pair_done_file_name,
@@ -2521,6 +2522,12 @@ int breseq_default_action(int argc, char* argv[])
 
       settings.done_step(settings.missing_pair_done_file_name);
     }
+    // Restore on a restart that skipped the step above, as DP and PD do: Output reports the null and
+    // the gates in summary.html and summary.json, and none of it is recoverable from the evidence
+    // .gd. Guarded because JSONStorable::retrieve asserts on a missing file, and this one is absent
+    // for any run made before MP reporting existed.
+    if (file_exists(settings.missing_pair_summary_file_name.c_str()))
+      summary.missing_pair.retrieve(settings.missing_pair_summary_file_name);
   }
 
     //

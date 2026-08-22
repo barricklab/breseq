@@ -1011,6 +1011,15 @@ static void _stamp_hypothesis_log_likelihoods(alignment_list& alignments,
 struct MateResolution
 {
   bool mapped_anywhere = false;
+  // Did bowtie2 place this read ANYWHERE, before breseq applied its own acceptance criteria?
+  //
+  // mapped_anywhere is false whenever eligible_read_alignments() empties both lists, which lumps
+  // together two very different reads: one bowtie2 could not place at all, and one it placed fine
+  // but that breseq then rejected in test_read_alignment_requirements (short effective match,
+  // low mapping quality, too many mismatches). Only the first means the read's sequence is absent
+  // from the reference and the junction candidates, which is what MP evidence claims. See
+  // kBreseqMateNeverAlignedBAMTag.
+  bool aligned_before_filtering = false;
   alignment_list this_reference_alignments;
   alignment_list this_junction_alignments;
   uint32_t best_reference_score = 0;
@@ -1043,12 +1052,23 @@ static MateResolution resolve_one_mate(
   // cheap because the list holds counted pointers.
   alignment_list all_reference_alignments, all_junction_alignments;
 
+  // Did the aligner place this read at all? Tested on the RAW lists, before any of breseq's
+  // acceptance criteria are applied, and skipping the unmapped placeholder records bowtie2 emits
+  // for a read it could not align (eligible_read_alignments erases those first). See
+  // MateResolution::aligned_before_filtering.
+  auto any_mapped = [](const alignment_list& l) {
+    for (alignment_list::const_iterator it = l.begin(); it != l.end(); it++)
+      if (!it->get()->unmapped()) return true;
+    return false;
+  };
+
   // Does this read have eligible reference sequence matches?
   if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
   {
     m.this_reference_alignments = reference_alignments;
     reference_tam.read_alignments(reference_alignments, false);
     all_reference_alignments = m.this_reference_alignments;
+    if (any_mapped(all_reference_alignments)) m.aligned_before_filtering = true;
     m.best_reference_score = eligible_read_alignments(settings, ref_seq_info, m.this_reference_alignments);
   }
 
@@ -1057,6 +1077,9 @@ static MateResolution resolve_one_mate(
   {
     m.this_junction_alignments = junction_alignments;
     junction_tam->read_alignments(junction_alignments, false);
+    // Before the overlap filter below: a junction alignment that does not overlap its junction is
+    // still an alignment, so the read's sequence is not absent from the candidates.
+    if (any_mapped(m.this_junction_alignments)) m.aligned_before_filtering = true;
 
     ///
     // Matches to candidate junctions MUST overlap the junction.
@@ -1288,10 +1311,14 @@ static void mark_pair_info(bam_alignment* a1, bam_alignment* a2, bool same_tid,
 // Every alignment in the list is marked, not just the first: write_alignments emits all of them, and
 // mate-unmapped is a property of the READ, not of which copy it was placed at.
 //
-// This is what Missing Pair (MP) evidence keys on: a mate that maps only across a candidate junction
-// still has mapped_anywhere == true, so a marked singleton means the mate's sequence is absent from
-// the reference AND from every candidate junction -- i.e. genuinely novel.
-static void mark_mate_unmapped(alignment_list& alignments)
+// mate_produced_no_alignment additionally stamps kBreseqMateNeverAlignedBAMTag, which is what
+// Missing Pair (MP) evidence keys on -- NOT this flag. The flag is set whenever the mate had no
+// ELIGIBLE alignment, which also covers a mate the aligner placed and breseq then rejected on
+// --require-match-fraction, mapping quality or mismatches. Only the tag means the mate's sequence is
+// absent from the reference AND from every candidate junction, i.e. genuinely novel; the flag on its
+// own made MP's numerator track alignment stringency. (A mate that maps only ACROSS a candidate
+// junction is not a singleton at all -- it has mapped_anywhere == true and is never marked here.)
+static void mark_mate_unmapped(alignment_list& alignments, bool mate_produced_no_alignment)
 {
   for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
   {
@@ -1300,6 +1327,13 @@ static void mark_mate_unmapped(alignment_list& alignments)
     a->core.mtid  = a->core.tid;
     a->core.mpos  = a->core.pos;
     a->core.isize = 0;
+    // Only when the aligner placed the mate NOWHERE, as opposed to breseq rejecting what it did
+    // place. MP keys on this narrower tag; see kBreseqMateNeverAlignedBAMTag for why the two cases
+    // must not be conflated, and alignment.cpp's write_alignments for where it is re-emitted.
+    if (mate_produced_no_alignment) {
+      uint32_t one = 1;
+      a->aux_set(kBreseqMateNeverAlignedBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&one);
+    }
   }
 }
 
@@ -1999,8 +2033,8 @@ void load_junction_alignments(
         // (fix_flags strips only 0x100; 0x80 is then set from the read group). A junction-best
         // mate is never marked here, so the
         // flags can never reach write_moved_alignment's RNEXT/PNEXT handling.
-        if (m1_singleton_reference) mark_mate_unmapped(m1.this_reference_alignments);
-        if (m2_singleton_reference) mark_mate_unmapped(m2.this_reference_alignments);
+        if (m1_singleton_reference) mark_mate_unmapped(m1.this_reference_alignments, !m2.aligned_before_filtering);
+        if (m2_singleton_reference) mark_mate_unmapped(m2.this_reference_alignments, !m1.aligned_before_filtering);
 
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_1, rg_1, seq1.m_name, m1, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, rg_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);

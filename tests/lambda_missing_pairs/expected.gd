@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	11:08:22 08 Aug 2026
-#=PROGRAM	breseq 0.50.0 revision 9365b7ce37ec
+#=CREATED	11:47:07 22 Aug 2026
+#=PROGRAM	breseq 0.50.0 revision 77916ce0087c
 #=COMMAND	./src/breseq/breseq -j 4 --predict-missing-pairs -o ./tests/lambda_missing_pairs -r ./tests/lambda_missing_pairs/../data/lambda/lambda.gbk ./tests/lambda_missing_pairs/output.simulated_1.fastq ./tests/lambda_missing_pairs/output.simulated_2.fastq
 #=REFSEQ	./tests/lambda_missing_pairs/../data/lambda/lambda.gbk
 #=READSEQ	./tests/lambda_missing_pairs/output.simulated_1.fastq
@@ -21,5 +21,5 @@ UN	7	.	NC_001416	20661	20661
 UN	8	.	NC_001416	23987	24002
 UN	9	.	NC_001416	47317	47317
 UN	10	.	NC_001416	48484	48502
-MP	11	.	NC_001416	24000	-1	annotate_key=gene	candidate_unpaired_count=49	distinct_read_count=44	frequency=1.0000	frequency_lower=0.9407	frequency_upper=1.0000	gene_name=ea47/ea31	gene_position=intergenic (-82/+509)	gene_product=ea47/ea31	gene_strand=</<	locus_tag=lambdap80/lambdap81	spanning_pair_count=0	total_read_count=49	unpaired_read_count=49
-MP	12	.	NC_001416	24002	1	annotate_key=gene	candidate_unpaired_count=42	distinct_read_count=40	frequency=1.0000	frequency_lower=0.9312	frequency_upper=1.0000	gene_name=ea47/ea31	gene_position=intergenic (-84/+507)	gene_product=ea47/ea31	gene_strand=</<	locus_tag=lambdap80/lambdap81	spanning_pair_count=0	total_read_count=42	unpaired_read_count=42
+MP	11	.	NC_001416	24001	-1	annotate_key=gene	candidate_unpaired_count=38	distinct_read_count=33	frequency=0.9048	frequency_lower=0.7952	frequency_upper=0.9668	gene_name=ea47/ea31	gene_position=intergenic (-83/+508)	gene_product=ea47/ea31	gene_strand=</<	locus_tag=lambdap80/lambdap81	score=30.1	spanning_pair_count=4	total_read_count=42	unpaired_read_count=38	window_read_count=57
+MP	12	.	NC_001416	24002	1	annotate_key=gene	candidate_unpaired_count=36	distinct_read_count=34	frequency=1.0000	frequency_lower=0.9202	frequency_upper=1.0000	gene_name=ea47/ea31	gene_position=intergenic (-84/+507)	gene_product=ea47/ea31	gene_strand=</<	locus_tag=lambdap80/lambdap81	score=32.4	spanning_pair_count=0	total_read_count=36	unpaired_read_count=36	window_read_count=47

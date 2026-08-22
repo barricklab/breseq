@@ -146,7 +146,8 @@ namespace breseq {
   public:
     mp_side_scanner(const string& bam, const string& fasta)
       : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_fwd(true),
-        m_collect(false), m_ext(NULL), m_supporting(0), m_spanning(0), m_have_inner(false), m_inner_edge(0)
+        m_window(0.0), m_collect(false), m_ext(NULL), m_supporting(0), m_spanning(0), m_window_total(0),
+        m_have_inner(false), m_inner_edge(0)
       { set_print_progress(false); }
 
     //! Exact mate extents for the position about to be scanned. Not owned; must outlive the scan.
@@ -174,7 +175,7 @@ namespace breseq {
     bool supporting_outer_median(const string& seq_id, int32_t p, int32_t s, bool cross_fwd, double D,
                                  int32_t& median_outer, int32_t& inner_edge)
     {
-      set_ctx(p, s, cross_fwd);
+      set_ctx(p, s, cross_fwd, 0.0);
       m_outside.clear();
       m_have_inner = false; m_inner_edge = 0;
       m_collect = true;
@@ -193,23 +194,27 @@ namespace breseq {
     //  number of DISTINCT outer coordinates among the supporting reads -- the MP analogue of JC's
     //  pos_hash_score, so PCR duplicates of one molecule cannot carry a prediction. Counted here, in
     //  the SAME pass as m_supporting, so the two numbers always describe the same set of reads.
-    void scan(const string& seq_id, int32_t p, int32_t s, bool cross_fwd, double D)
+    //  W is the counting window: both the fetch half-width AND the bound on how far a read's outer
+    //  end may lie from p. It must be the width the null was tabulated at -- see classify().
+    void scan(const string& seq_id, int32_t p, int32_t s, bool cross_fwd, double W)
     {
-      set_ctx(p, s, cross_fwd);
-      m_supporting = 0; m_spanning = 0;
+      set_ctx(p, s, cross_fwd, W);
+      m_supporting = 0; m_spanning = 0; m_window_total = 0;
       m_distinct.clear();
       m_collect = false;
-      fetch_side_window(seq_id, p, s, D);
+      fetch_side_window(seq_id, p, s, W);
     }
 
     int supporting() const { return m_supporting; }
     int spanning() const { return m_spanning; }
+    int window_total() const { return m_window_total; }
     size_t distinct() const { return m_distinct.size(); }
 
     void fetch_callback(const alignment_wrapper& a)
     {
       int32_t outer = 0, inner = 0;
       int cat = classify(a, outer, inner);
+      if (cat == 0) return;
       if (m_collect) {
         if (cat == 1) {
           m_outside.push_back(outer);
@@ -219,12 +224,18 @@ namespace breseq {
         }
         return;
       }
+      // Every read that reached here is on the crossing strand with its body on the kept flank
+      // inside the window: the opportunity set. The numerator is a subset of it by construction,
+      // and the genome-wide null is tabulated over exactly this definition in the stage-08 pileup,
+      // so k/m_window_total is the quantity the score's null describes.
+      m_window_total++;
       if      (cat == 1) { m_supporting++; m_distinct.insert(outer); }
       else if (cat == 2) m_spanning++;
     }
 
   private:
-    void set_ctx(int32_t p, int32_t s, bool cross_fwd) { m_p = p; m_s = s; m_cross_fwd = cross_fwd; }
+    void set_ctx(int32_t p, int32_t s, bool cross_fwd, double window)
+    { m_p = p; m_s = s; m_cross_fwd = cross_fwd; m_window = window; }
 
     // One-sided fetch window [lo, hi]: the kept flank, out to D.
     void fetch_side_window(const string& seq_id, int32_t p, int32_t s, double D)
@@ -257,8 +268,29 @@ namespace breseq {
       if (m_s == -1) { if (rs > m_p) return 0; outer = rs; inner = re; }
       else           { if (re < m_p) return 0; outer = re; inner = rs; }
 
-      // Supporting: paired, mapped, mate unmapped anywhere (mark_mate_unmapped).
-      if (a.is_paired() && (a.flag() & BAM_FMUNMAP)) return 1;
+      // ...and its OUTER end must lie within one window of the placed position. Two reasons, and
+      // they agree:
+      //
+      //  - Geometrically, the outer end is what separates this read from the breakpoint. A read
+      //    further out than one fragment length has no mate that could have reached p, so it says
+      //    nothing about an insertion there either way.
+      //  - Statistically, this is what makes the opportunity set exactly m_window wide. do_fetch
+      //    returns everything OVERLAPPING the window, so without this the set spans
+      //    m_window + read_length in outer-end coordinates while the null was tabulated over a
+      //    sliding window of exactly m_window. Calibrating on one width and testing on another
+      //    misstates n, and rho's variance inflation (1 + (n-1)*rho) depends on n.
+      if (m_window > 0.0 && abs(outer - m_p) > m_window) { outer = 0; inner = 0; return 0; }
+
+      // Supporting: paired, mapped, and the mate produced NO alignment at all.
+      //
+      // Both conditions are needed. BAM_FMUNMAP is also set for a mate the aligner placed but that
+      // breseq then rejected in test_read_alignment_requirements -- most often for falling short of
+      // --require-match-fraction, which --predict-soft-clipping silently lowers from 0.9 to 0.5.
+      // Counting those made this numerator a measure of alignment stringency: the same sample
+      // called an order of magnitude more MP evidence with soft clipping off than on, and the extra
+      // calls were partially-aligning mates (SC's signal), not sequence missing from the reference.
+      // A mate that lands wholly inside a novel insert aligns 0% of its length, not 50-90%.
+      if (a.is_paired() && (a.flag() & BAM_FMUNMAP) && mate_never_aligned(a)) return 1;
 
       // Denominator: ONLY a pair whose mate actually maps past the breakpoint, into the region the
       // insertion would occupy. That molecule demonstrably carries reference sequence where this
@@ -282,9 +314,12 @@ namespace breseq {
     int32_t m_p;
     int32_t m_s;
     bool    m_cross_fwd;
+    //! Half-width of the opportunity set, in outer-end coordinates. 0 disables the bound, which is
+    //! what the placement pass wants: it scans out to D looking for ANY supporting read to place on.
+    double  m_window;
     bool    m_collect;
     const mp_extent_index* m_ext;
-    int     m_supporting, m_spanning;
+    int     m_supporting, m_spanning, m_window_total;
     set<int32_t> m_distinct;
     vector<int32_t> m_outside;
     bool    m_have_inner;
@@ -312,7 +347,8 @@ namespace breseq {
   class mp_plot_gatherer : public pileup_base {
   public:
     mp_plot_gatherer(const string& bam, const string& fasta)
-      : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_fwd(true), m_ext(NULL) { set_print_progress(false); }
+      : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_fwd(true), m_window(0.0), m_ext(NULL)
+      { set_print_progress(false); }
 
     //! Exact mate extents for the position about to be gathered. Not owned; must outlive the gather.
     void set_extent_index(const mp_extent_index* ext) { m_ext = ext; }
@@ -325,7 +361,7 @@ namespace breseq {
 
     void gather(const string& seq_id, int32_t p, int32_t s, bool cross_fwd, double W)
     {
-      m_p = p; m_s = s; m_cross_fwd = cross_fwd;
+      m_p = p; m_s = s; m_cross_fwd = cross_fwd; m_window = W;
       m_reads.clear();
       int32_t tid = tid_for_seq_id(seq_id);
       if (tid < 0) return;
@@ -349,6 +385,11 @@ namespace breseq {
       int32_t re = static_cast<int32_t>(a.reference_end_1());
       if (m_s == -1) { if (rs > m_p) return; } else { if (re < m_p) return; }
 
+      // Same outer-end bound mp_side_scanner::classify applies, so the plot does not show reads that
+      // were outside the counting window and therefore counted nowhere.
+      int32_t outer = (m_s == -1) ? rs : re;
+      if (m_window > 0.0 && abs(outer - m_p) > m_window) return;
+
       mp_draw_read r;
       r.read_start = rs;
       r.read_end = re;
@@ -360,7 +401,7 @@ namespace breseq {
       r.name = a.read_name();
 
       // Same three-way split as mp_side_scanner::classify, so the plot shows exactly what was counted.
-      bool mate_unmapped = a.is_paired() && ((a.flag() & BAM_FMUNMAP) != 0);
+      bool mate_unmapped = a.is_paired() && ((a.flag() & BAM_FMUNMAP) != 0) && mate_never_aligned(a);
       if (mate_unmapped) {
         r.category = 1;
       } else if (!a.is_paired() || !a.proper_pair() ||
@@ -389,6 +430,7 @@ namespace breseq {
     int32_t m_p;
     int32_t m_s;
     bool    m_cross_fwd;
+    double  m_window;
     const mp_extent_index* m_ext;
     vector<mp_draw_read> m_reads;
   };
@@ -636,9 +678,13 @@ namespace breseq {
       int32_t strand = from_string<int32_t>(mp[STRAND]);
       bool cross_fwd = (inner3p == (strand == -1));
 
-      // Draw over the same one-fragment-length window the counts were taken in, with the same exact
-      // mate extents, so the plot and the table agree on which reads are involved and how each counts.
-      double W = max(1.0, pair_median);
+      // Draw over the same window the counts were taken in, with the same exact mate extents, so the
+      // plot and the table agree on which reads are involved and how each counts. The width comes
+      // from the same place the scorer's did -- the null carried on the candidate-region CSV, which
+      // predict_missing_pairs left in summary.missing_pair -- rather than from pair_median directly,
+      // so the two cannot drift apart.
+      double W = (summary.missing_pair.window_width > 0.0)
+               ? summary.missing_pair.window_width : max(1.0, pair_median);
       indexer.build(seq_id, static_cast<int32_t>(pos - 2 * W), static_cast<int32_t>(pos + 2 * W), ext);
       g.set_extent_index(&ext);
       g.gather(seq_id, pos, strand, cross_fwd, W);
@@ -666,11 +712,27 @@ namespace breseq {
     size_t   supporting;
     size_t   distinct;
     int      spanning;        // pairs whose mate maps past the breakpoint (evidence against)
+    int      window_total;    // every crossing-strand read on the kept flank -- the TEST denominator
+    double   score;           // -log10 of the genome-wide e-value
     uint32_t candidate_count;
     bool     redundant;
     bool     contig_end;
     bool     suppressed;
   };
+
+  // Upper tail of the MP null: the chance that k or more of n reads lose their mates when the
+  // genome-wide rate is p0 and the background is over-dispersed by rho. Identical in form to
+  // add_sc_evidence (identify_mutations.cpp), including the fall back to a plain binomial at rho == 0.
+  static double mp_tail_p_value(double k, double n, double p0, double rho)
+  {
+    if (!(n > 0.0) || !(k > 0.0)) return 1.0;
+    if ((rho > 0.0) && (rho < 1.0)) {
+      double alpha = p0 * (1.0 - rho) / rho;
+      double beta  = (1.0 - p0) * (1.0 - rho) / rho;
+      if ((alpha > 0.0) && (beta > 0.0)) return beta_binomial_sf(k, n, alpha, beta);
+    }
+    return bdtrc(k - 1.0, n, p0);
+  }
 
   // ---------------------------------------------------------------------------------------------
 
@@ -705,12 +767,37 @@ namespace breseq {
     }
 
     vector<mp_region_row> regions;
+    bool have_format = false;
     {
       ifstream in(settings.mp_candidate_regions_file_name.c_str());
       string line;
-      getline(in, line); // header
+      bool past_header = false;
       while (getline(in, line)) {
         if (line.empty()) continue;
+        // Calibration measured during the stage-08 pileup, written as `#key=value` lines ahead of
+        // the CSV header. See identify_mutations_pileup::write_mp_candidate_regions -- the null is
+        // measured over the columns where nothing was seeded, so it cannot be re-derived from the
+        // regions below.
+        if (line[0] == '#') {
+          size_t eq = line.find('=');
+          if (eq == string::npos) continue;
+          string key = line.substr(1, eq - 1);
+          string value = line.substr(eq + 1);
+          if      (key == "mp_format")         have_format = true;
+          else if (key == "window_width")      summary.missing_pair.window_width = from_string<double>(value);
+          else if (key == "n_effective_tests") summary.missing_pair.n_effective_tests = from_string<double>(value);
+          else if (key == "null_rate")         summary.missing_pair.null_rate = from_string<double>(value);
+          else if (key == "null_rate_raw")     summary.missing_pair.null_rate_raw = from_string<double>(value);
+          else if (key == "dispersion")        summary.missing_pair.dispersion = from_string<double>(value);
+          else if (key == "dispersion_raw")    summary.missing_pair.dispersion_raw = from_string<double>(value);
+          else if (key == "pearson_phi")       summary.missing_pair.pearson_phi = from_string<double>(value);
+          else if (key == "tested_columns")    summary.missing_pair.tested_columns = from_string<uint64_t>(value);
+          else if (key == "trimmed_columns")   summary.missing_pair.trimmed_columns = from_string<uint64_t>(value);
+          else if (key == "mean_tested_reads") summary.missing_pair.mean_tested_reads = from_string<double>(value);
+          else if (key == "seed_fraction")     summary.missing_pair.seed_fraction_used = from_string<double>(value);
+          continue;
+        }
+        if (!past_header) { past_header = true; continue; }   // the CSV column header
         vector<string> f = split(line, ",");
         if (f.size() < 8) continue;
 
@@ -745,6 +832,27 @@ namespace breseq {
       }
     }
 
+    ASSERT(have_format,
+           "Missing pair candidate region file is missing its calibration header and is probably "
+           "from an older run:\n  " + settings.mp_candidate_regions_file_name +
+           "\nDelete 08_mutation_identification/mutation_identification.done and "
+           "08_mutation_identification/missing_pair.done and re-run to regenerate it.");
+    // A zero null rate is reachable without a stale file: --missing-pair-minimum-rate 0 removes the
+    // floor, and a sample in which no mate ever failed to align then measures exactly zero. Refuse
+    // rather than proceed, because every p-value against a zero rate is zero and every score is
+    // infinite -- the failure mode would be to accept everything, silently.
+    if (!(summary.missing_pair.null_rate > 0.0)) {
+      WARN("The genome-wide rate at which a read's mate fails to align measured as zero, so there is "
+           "no null for missing pair (MP) evidence to be tested against and no MP evidence will be "
+           "predicted. Raise --missing-pair-minimum-rate above 0 to set a floor.");
+      mp_gd.write(settings.mp_genome_diff_file_name);
+      return;
+    }
+
+    summary.missing_pair.pair_distance_median = pair_median;
+    summary.missing_pair.score_cutoff = settings.missing_pair_log10_e_value_cutoff;
+    summary.missing_pair.regions_seeded = regions.size();
+
     if (regions.empty()) {
       mp_gd.write(settings.mp_genome_diff_file_name);
       return;
@@ -763,6 +871,17 @@ namespace breseq {
     // Step 2: place and count each candidate.
     //
     int32_t H = static_cast<int32_t>(pair_median / 2.0 + 0.5);
+
+    // The counting window, and the null the counts are judged against. Both come from the header the
+    // pileup wrote: calibrating at one width and testing at another misstates the variance by the
+    // ratio of the two. A header from a run whose read groups produced no usable width falls back to
+    // the library median, which is what that width is.
+    double W_null = (summary.missing_pair.window_width > 0.0)
+                  ? summary.missing_pair.window_width : max(1.0, pair_median);
+    double p0  = summary.missing_pair.null_rate;
+    double rho = summary.missing_pair.dispersion;
+    double log10_n_tests = log10(max(1.0, summary.missing_pair.n_effective_tests));
+
     vector<mp_call> calls;
 
     // Declared OUTSIDE the loop, and deliberately so: the scanner holds a POINTER to it for the whole
@@ -813,6 +932,7 @@ namespace breseq {
       } else {
         // No supporting read in the rescan window -- the seed came from reads the window no longer
         // reaches. Nothing to place or count; drop the candidate rather than emit an unsupported item.
+        summary.missing_pair.items_dropped_unplaced++;
         continue;
       }
 
@@ -820,7 +940,12 @@ namespace breseq {
       // from the breakpoint has no mate that could have reached past it, so it carries no information
       // about whether the insertion is there -- including it would only dilute the frequency by the
       // arbitrary ratio D/pair_median (here about 3x) and make the gate depend on the rescan width.
-      double W = max(1.0, pair_median);
+      //
+      // The width comes from the CSV header, not from pair_median directly, because the null the
+      // score tests against was tabulated at exactly that width during the pileup and rho's meaning
+      // depends on n. They are the same number for a single read group; taking it from the header is
+      // what keeps them the same number when they would otherwise drift apart.
+      double W = max(1.0, W_null);
       // Rebuild around the PLACED position, which the pass above may have moved: index exact mate
       // extents a couple of fragment lengths either side, so every counted read's mate is present (a
       // proper pair's mate is within one fragment length by definition).
@@ -835,8 +960,26 @@ namespace breseq {
       c.supporting = static_cast<size_t>(scanner->supporting());
       c.distinct = scanner->distinct();
       c.spanning = scanner->spanning();
+      c.window_total = scanner->window_total();
       c.candidate_count = r.max_count;
       c.redundant = r.redundant;
+
+      // The genome-wide test. Everything else about a candidate is a local sanity check; this is the
+      // only thing that asks how often a pile this good arises by chance anywhere in the reference.
+      //
+      // Note which denominator it uses: window_total, every crossing-strand read on the kept flank,
+      // NOT supporting + spanning. That is the quantity the pileup tabulated the null over, and it
+      // is the only one whose null is known. supporting + spanning answers a different question --
+      // of the molecules that COULD have contradicted this call, how many did not -- which is a
+      // frequency, and it stays below as exactly that.
+      {
+        double kk = static_cast<double>(c.supporting);
+        double nn = static_cast<double>(c.window_total);
+        double pv = mp_tail_p_value(kk, nn, p0, rho);
+        if (!(pv > 0.0) || !std::isfinite(pv)) pv = 1e-300;
+        c.score = -(log10(pv) + log10_n_tests);
+      }
+      summary.missing_pair.items_tested++;
       // Within about one fragment length of the end of a LINEAR sequence, the mate of a flank-facing
       // read legitimately runs off the end and is unmapped, so every such end produces a maximal pile
       // that has nothing to do with an insertion. Marked IGNORE (not rejected): it is an artifact of
@@ -844,6 +987,15 @@ namespace breseq {
       c.contig_end = !ref_seq_info.is_circular(r.seq_id) &&
                      ((p <= static_cast<int32_t>(pair_median)) || (p >= seqlen - static_cast<int32_t>(pair_median)));
       c.suppressed = false;
+
+      // Expected to turn up by chance somewhere in the reference: hopeless, and keeping these would
+      // swamp the marginal evidence table with the noisiest windows in the sample. Mirrors the
+      // early-out in add_sc_evidence and in pd_evidence.
+      if ((settings.missing_pair_log10_e_value_cutoff > 0.0) && (c.score < 0.0)) {
+        summary.missing_pair.items_dropped_score++;
+        continue;
+      }
+
       calls.push_back(c);
     }
 
@@ -853,8 +1005,12 @@ namespace breseq {
     // Step 3: local non-maximum suppression. The sliding window smears one insertion point across
     // several columns, which can close and reopen a region as reads age in and out, so one event can
     // yield several candidates that place within a fragment length of each other. Keep the
-    // best-supported one per (seq_id, strand) neighbourhood. (Same motivation as the SC suppression
+    // best-SCORING one per (seq_id, strand) neighbourhood. (Same motivation as the SC suppression
     // in identify_mutations.)
+    //
+    // Ranked by score rather than by raw supporting count: at unequal depth the raw count prefers
+    // whichever neighbour happens to sit in more coverage, which is not the same as the one better
+    // supported relative to its own background.
     //
     {
       int32_t win = max(1, static_cast<int32_t>(pair_median));
@@ -869,8 +1025,8 @@ namespace breseq {
           // outcome depend on the order candidates happen to be visited in. "Is there a better
           // neighbour" is order-independent, at the cost of the usual non-maximum-suppression chain
           // behaviour (a weak call next to a middling call next to a strong one is dropped).
-          bool j_better = (calls[j].supporting > calls[i].supporting) ||
-                          ((calls[j].supporting == calls[i].supporting) && (j < i));
+          bool j_better = (calls[j].score > calls[i].score) ||
+                          ((calls[j].score == calls[i].score) && (j < i));
           if (j_better) { calls[i].suppressed = true; break; }
         }
       }
@@ -889,8 +1045,8 @@ namespace breseq {
     // case suppression cannot break, since neither is nearer than the other.
     //
     // Keep exactly one call per emitted identity: the one suppression already chose, falling back to
-    // more supporting reads and then to the earlier call. Every tie-break is order-independent, so
-    // which call survives does not depend on the order candidates were visited in.
+    // the better score and then to the earlier call. Every tie-break is order-independent, so which
+    // call survives does not depend on the order candidates were visited in.
     //
     vector<bool> emit(calls.size(), true);
     {
@@ -906,7 +1062,7 @@ namespace breseq {
         size_t j = it->second;
         bool i_better = (calls[j].suppressed && !calls[i].suppressed) ||
                         ((calls[i].suppressed == calls[j].suppressed) &&
-                         (calls[i].supporting > calls[j].supporting));
+                         (calls[i].score > calls[j].score));
         if (i_better) {
           emit[j] = false;
           it->second = i;
@@ -937,13 +1093,20 @@ namespace breseq {
       mp[MP_DISTINCT_COUNT] = to_string(c.distinct);
       mp[MP_CONCORDANT_COUNT] = to_string(c.spanning);
       mp[MP_TOTAL_COUNT] = to_string(static_cast<uint32_t>(n));
+      mp[MP_WINDOW_COUNT] = to_string(c.window_total);
       mp[MP_CANDIDATE_COUNT] = to_string(c.candidate_count);
+      mp[MP_SCORE] = to_string(formatted_double(c.score, 1));
 
-      // The local variant frequency: of the molecules sampled at this point on this strand, what
-      // fraction lost their mate. This is the gate that separates a real insertion (most crossing
-      // fragments lose their mate, so the fraction approaches the variant frequency) from the
-      // genome-wide background of reads whose mates simply failed to align, which runs at a few
-      // percent and is roughly constant along the genome.
+      // The local variant frequency: of the molecules that could have CONTRADICTED this call --
+      // pairs whose mate maps past the placed position, carrying reference sequence where the
+      // insertion is claimed to be -- what fraction instead lost their mate.
+      //
+      // This says how much of the sample carries the insertion. It does NOT say whether the
+      // insertion is there: that is what MP_SCORE tests, against the measured genome-wide rate at
+      // which mates fail to align. The two used to be conflated, with a fixed frequency cutoff
+      // standing in for a null of "the background is zero" -- which holds in a clean simulation and
+      // in nothing else. On a real 2x150 bacterial library the background is about 2%, and it is
+      // spread unevenly enough that 4% of all windows in the genome sit above 10%.
       double freq_lower = 0.0;
       if (n > 0.0) {
         freq_lower = binomial_frequency_lower_bound(k, n, kMPFrequencyAlpha);
@@ -957,7 +1120,11 @@ namespace breseq {
       mp["annotate_key"] = c.redundant ? "repeat" : "gene";
       if (c.redundant) mp["redundant"] = "1";
 
-      // Gates.
+      // Gates. The score is the one that decides; the rest are local sanity checks.
+      bool rejected_by_score = (settings.missing_pair_log10_e_value_cutoff > 0.0)
+                            && (c.score < settings.missing_pair_log10_e_value_cutoff);
+      if (rejected_by_score)
+        mp.add_reject_reason("MISSING_PAIR_SCORE");
       if (c.suppressed)
         mp.add_reject_reason("NEARBY_BETTER_MISSING_PAIR");
       if (static_cast<int32_t>(c.supporting) < settings.missing_pair_minimum_reads)
@@ -966,6 +1133,10 @@ namespace breseq {
         mp.add_reject_reason("MISSING_PAIR_DUPLICATES");
       if ((settings.missing_pair_frequency_cutoff > 0.0) && (freq_lower < settings.missing_pair_frequency_cutoff))
         mp.add_reject_reason("MISSING_PAIR_FREQUENCY");
+
+      if (!mp.entry_exists(REJECT))          summary.missing_pair.items_accepted++;
+      else if (rejected_by_score)            summary.missing_pair.items_rejected_score++;
+      else                                   summary.missing_pair.items_rejected_other++;
 
       mp_gd.add(mp);
     }

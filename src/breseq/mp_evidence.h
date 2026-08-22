@@ -38,11 +38,37 @@ namespace breseq {
   //  precisely the case neither JC nor DP can see -- JC needs a split read whose two halves both map,
   //  DP needs both mates mapped.
   //
+  //  A supporting read is one whose mate produced NO alignment at all -- not merely one flagged
+  //  BAM_FMUNMAP, which also covers mates the aligner placed and breseq then rejected for falling
+  //  short of --require-match-fraction. See kBreseqMateNeverAlignedBAMTag: conflating the two made
+  //  the numerator a measure of alignment stringency, and on a real bacterial library 86% of the
+  //  mates it counted turn out to align to the reference perfectly well.
+  //
   //  Re-reads the MP candidate-region CSV written during identify_mutations
   //  (settings.mp_candidate_regions_file_name), refines each region's boundary with the same
-  //  half-median-pair-distance statistics DP uses, applies the acceptance gates, and emits one
-  //  one-sided MP GenomeDiff evidence item per surviving region. Writes
-  //  settings.mp_genome_diff_file_name.
+  //  half-median-pair-distance statistics DP uses, scores each against the null carried on that
+  //  CSV's `#key=value` header, applies the acceptance gates, and emits one one-sided MP GenomeDiff
+  //  evidence item per surviving region. Writes settings.mp_genome_diff_file_name.
+  //
+  //  WHAT DECIDES A CALL is the score: minus log10 of the expected number of positions anywhere in
+  //  the reference where this many of the reads on one strand would lose their mates by chance,
+  //  given the genome-wide rate at which mates fail to align and how unevenly that rate is spread
+  //  (a beta-binomial upper tail, times the number of independent windows). Everything else -- the
+  //  read count, the distinct-start count, the local frequency -- is a local sanity check.
+  //
+  //  It has to be a measured null rather than an assumed one. The frequency gate this replaced was
+  //  a Clopper-Pearson lower bound against a fixed 0.10, which is a precision bound, not a
+  //  significance test: it controls sampling error only, so at large n it collapses onto the point
+  //  estimate and more coverage makes a false positive MORE confident. Its implicit null was "the
+  //  background is zero", true in a clean simulation and in nothing else. Measured on a 2x150
+  //  E. coli library the background is 2.2% with Pearson dispersion phi = 4.8, and 3.9% of all
+  //  windows in the genome already exceed 0.10 -- so the old cutoff sat below the 96th percentile
+  //  of pure noise, and the run accepted 182 items of which essentially none were real.
+  //
+  //  Note the two denominators, which are deliberately different. MP_WINDOW_COUNT (every
+  //  crossing-strand read on the kept flank) is what the score tests, because that is what the null
+  //  was tabulated over. MP_TOTAL_COUNT (supporting + spanning) is what FREQUENCY reports, because
+  //  "how much of the sample carries this" is a different question from "is it there at all".
   //
   //  Unlike DP there is no snapping step: with no mate coordinates there is nothing to snap onto.
   //

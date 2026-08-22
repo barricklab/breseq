@@ -270,6 +270,13 @@ namespace breseq {
     //! of one breakpoint spread, which is what both are looking for.
     struct dp_group {
       double          window_width;
+      //! MP's own window width, deliberately narrower than DP's: one median fragment length, not
+      //! median + 2.42*MAD. A read further than one fragment from a breakpoint has no mate that
+      //! could have reached past it, so it carries no information about an insertion there. This
+      //! must equal the width mp_evidence counts over, because the null (p0 and the over-dispersion
+      //! rho) is tabulated at THIS width and rho's meaning depends on n -- calibrating at one width
+      //! and testing at another misstates the variance by the ratio of the two.
+      double          mp_window_width;
       //! The `<n>:` prefix each mate's read name was given during 01_sequence_conversion, used to
       //! rebuild a pair's two read names for display. Derived from cReadFile::m_id + 1, matching
       //! dp_evidence/mp_evidence. This is deliberately NOT the read group index: the read-name
@@ -422,7 +429,13 @@ namespace breseq {
     void write_dp_candidate_regions(const string& filename);
 
     //! Write the accumulated MP candidate regions to a CSV (one operation, after the pileup).
+    //! As for PD, the null measured during the pileup is written as `#key=value` lines ahead of the
+    //! header: it is the only channel stage 08 has to the later MP prediction step, and the columns
+    //! where nothing was seeded -- which is where the background lives -- are not in the file.
     void write_mp_candidate_regions(const string& filename);
+
+    //! Turn the accumulated sliding-window sufficient statistics into the MP null (p0, rho).
+    void fill_mp_summary(MissingPairSummary& s) const;
 
     //! Write the accumulated PD candidate regions to a CSV (one operation, after the pileup).
     //! The calibration measured during the pileup is written as `#key=value` lines ahead of the
@@ -612,6 +625,20 @@ namespace breseq {
 		vector<string> _mp_region_descriptors[kMPnBins];    //!< read extents for the open region, per bin
 		uint32_t _mp_region_redundant_count[kMPnBins];      //!< how many of the open region's reads mapped redundantly
 		vector<mp_candidate_region> _mp_candidate_regions;  //!< all completed regions (written once after the pileup)
+
+		// Sufficient statistics for the MP null, accumulated over EVERY reference column of every bin
+		// -- including the ones no region ever opens on, which are the whole point: they are where the
+		// background lives, and the candidate-region CSV cannot see them. Same single-pass Pearson
+		// chi-square expansion soft_clipping.cpp uses, so p0 can be substituted at the end rather than
+		// being needed up front. NOT reset per reference sequence: the null is a property of the run.
+		double   _mp_S_k;                //!< sum of k_i over untrimmed columns
+		double   _mp_S_k2_over_n;        //!< sum of k_i^2 / n_i over untrimmed columns
+		double   _mp_S_n;                //!< sum of n_i over ALL columns with n_i > 0
+		double   _mp_S_n_trimmed;        //!< sum of n_i over trimmed columns
+		uint64_t _mp_total_k;            //!< sum of k_i over ALL columns with n_i > 0 (the p0 numerator)
+		uint64_t _mp_columns;            //!< columns with n_i > 0
+		uint64_t _mp_columns_trimmed;    //!< columns excluded from the dispersion fit by the trim
+		double   _mp_window_width;       //!< the width the statistics above were tabulated over
 
 		// these are state variables used by the pair-distance (PD) region method.
 		// The read groups are shared with DP/MP above; only the null distribution (dp_group::pd_cdf)

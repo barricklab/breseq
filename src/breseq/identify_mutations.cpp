@@ -783,6 +783,14 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _mp_enabled(false)
 , _mp_seed(settings.missing_pair_seed)
 , _mp_seed_fraction(settings.missing_pair_seed_fraction)
+, _mp_S_k(0.0)
+, _mp_S_k2_over_n(0.0)
+, _mp_S_n(0.0)
+, _mp_S_n_trimmed(0.0)
+, _mp_total_k(0)
+, _mp_columns(0)
+, _mp_columns_trimmed(0)
+, _mp_window_width(0.0)
 , _pd_enabled(false)
 , _pd_seed(settings.pair_distance_seed)
 , _pd_z_seed(0.0)
@@ -900,6 +908,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 
     dp_group g;
     g.window_width = it->second.median + 2.42 * it->second.mad;
+    g.mp_window_width = it->second.median;   // see dp_group::mp_window_width
     g.r1_read_name_prefix = rfs.m_files[0].m_id + 1;  // see dp_group for why this is m_id-derived
     g.r2_read_name_prefix = rfs.m_files[1].m_id + 1;
     int group_index = static_cast<int>(_dp_groups.size());
@@ -911,6 +920,11 @@ identify_mutations_pileup::identify_mutations_pileup(
   // DP -- whose seeding is always on -- MP seeding is gated by its option, so a run without
   // --predict-missing-pairs pays exactly one predictable branch per read in the pileup loop.
   _mp_enabled = _settings.predict_missing_pairs && !_dp_groups.empty();
+
+  // The width the MP null is tabulated at, and therefore the width mp_evidence must count over.
+  // Taking the max across groups matches paired_library_params' convention for pair_median.
+  for (vector<dp_group>::const_iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++)
+    if (g->mp_window_width > _mp_window_width) _mp_window_width = g->mp_window_width;
 
   // Set up pair-distance (PD) candidate-region detection. Same read groups again, and the same
   // option gating as MP: without --predict-pair-distance the pileup pays one predictable branch per
@@ -1474,7 +1488,12 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             _dp_groups[gi].mp_all_reads[bin].push_back(position);
             ++_mp_total_metric[bin];
 
-            if (i->is_paired() && (i->flag() & BAM_FMUNMAP)) {
+            // BAM_FMUNMAP alone is not enough: it is also set for a mate the aligner placed but
+            // breseq rejected on --require-match-fraction / mapping quality / mismatches. Such a
+            // mate is a partially-aligning read (SC's business), not sequence missing from the
+            // reference. Requiring the narrower tag is what keeps this count from tracking
+            // alignment stringency -- see mate_never_aligned() and kBreseqMateNeverAlignedBAMTag.
+            if (i->is_paired() && (i->flag() & BAM_FMUNMAP) && mate_never_aligned(*i)) {
               mp_read mr;
               mr.start_pos = position;
               mr.end_pos = i->reference_end_1();
@@ -2448,25 +2467,64 @@ void identify_mutations_pileup::check_missing_pair_completion(uint32_t seq_id, u
     // mate-unmapped reads and the same-strand denominator.
     for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
       while (!g->mp_reads[bin].empty() &&
-             (static_cast<double>(position) - static_cast<double>(g->mp_reads[bin].front().start_pos) >= g->window_width)) {
+             (static_cast<double>(position) - static_cast<double>(g->mp_reads[bin].front().start_pos) >= g->mp_window_width)) {
         g->mp_reads[bin].pop_front();
         --_mp_metric[bin];
       }
       while (!g->mp_all_reads[bin].empty() &&
-             (static_cast<double>(position) - static_cast<double>(g->mp_all_reads[bin].front()) >= g->window_width)) {
+             (static_cast<double>(position) - static_cast<double>(g->mp_all_reads[bin].front()) >= g->mp_window_width)) {
         g->mp_all_reads[bin].pop_front();
         --_mp_total_metric[bin];
       }
     }
 
-    // A region opens only where mate-unmapped reads are ENRICHED, not merely present. The fraction of
-    // reads whose mate failed to align is roughly constant along a genome (it is a property of the
-    // library and the aligner, not of the locus), so an absolute count alone clears any fixed
-    // threshold at every position once coverage is decent, and the entire covered region becomes a
-    // single candidate. Requiring the local fraction to exceed --missing-pair-seed-fraction is what
-    // makes a real insertion -- where most fragments crossing the point lose their mate -- stand out
-    // from that background. The absolute floor is kept as well, so a handful of reads at very low
-    // coverage cannot clear the ratio by chance.
+    // Accumulate the null BEFORE the seed test, and over every column -- seeded or not. The quiet
+    // columns are the whole sample: they are what says how often a read's mate fails to align here
+    // and how unevenly that is spread, and they never appear in the candidate-region CSV.
+    //
+    // Each read is counted once per column it is in-window for, about W times over. That
+    // multiplicity is uniform, so it cancels in p0 = S_k / S_n. It does NOT cancel in the column
+    // count, so _mp_columns is a redundant sample size, not an independent one -- see fill_mp_summary.
+    if (position <= target_length(seq_id)) {
+      int32_t k = _mp_metric[bin];
+      int32_t n = _mp_total_metric[bin];
+      if (n > 0) {
+        _mp_columns++;
+        _mp_S_n += static_cast<double>(n);
+        _mp_total_k += static_cast<uint64_t>(k);
+        double f = static_cast<double>(k) / static_cast<double>(n);
+        // A real insertion must not define the background it is judged against. Measured on real
+        // data this matters a lot -- the same point soft_clipping.cpp makes about its own trim.
+        if ((_settings.missing_pair_dispersion_trim_frequency > 0.0) &&
+            (f >= _settings.missing_pair_dispersion_trim_frequency)) {
+          _mp_columns_trimmed++;
+          _mp_S_n_trimmed += static_cast<double>(n);
+        } else {
+          _mp_S_k += static_cast<double>(k);
+          _mp_S_k2_over_n += static_cast<double>(k) * static_cast<double>(k) / static_cast<double>(n);
+        }
+      }
+    }
+
+    // A region opens only where mate-unmapped reads are ENRICHED, not merely present: an absolute
+    // count alone clears any fixed threshold at every position once coverage is decent, and the
+    // entire covered region becomes one candidate.
+    //
+    // This test is a SENSITIVITY FILTER and nothing more. What decides an MP call is the genome-wide
+    // score computed in mp_evidence against the null accumulated just above.
+    //
+    // This comment used to claim the mate-unmapped fraction is "roughly constant along a genome --
+    // a property of the library and the aligner, not of the locus", and the whole model rested on
+    // it. It is not true, and it is not even the same number from run to run. Two 2x150 E. coli
+    // libraries off one flowcell measure 0.72% and 1.00% by the definition used here (a mate the
+    // aligner placed nowhere), with Pearson dispersion phi of 1.8 and 1.6. Under the older, wider
+    // definition -- any mate without an ELIGIBLE alignment -- the same libraries read 2.2%, phi 4.8,
+    // with 3.9% of all windows above a local fraction of 0.10.
+    //
+    // So a fixed fraction like the 0.25 here has no fixed relationship to the background, and the
+    // fixed ACCEPTANCE cutoff of 0.10 this model used to rely on sat below the 96th percentile of
+    // pure noise. Keep the seed loose and cheap; let the score, which knows what the background
+    // actually is, do the deciding.
     //
     // Never "above" once past the end of the sequence: closes an open region at the flush sentinel
     // and prevents opening a spurious region that would never close.
@@ -2520,9 +2578,80 @@ void identify_mutations_pileup::check_missing_pair_completion(uint32_t seq_id, u
 }
 
 
+/*! Turn the accumulated sliding-window sufficient statistics into the MP null.
+
+ Same estimator as soft_clipping.cpp's, for the same reason: the quantity being tested is a count out
+ of a local total, its genome-wide rate is not zero, and that rate is spread far too unevenly along a
+ real genome for a plain binomial to describe. p0 is the pooled rate; rho is the intra-class
+ correlation implied by a Pearson chi-square, which inflates the variance by (1 + (n-1)*rho).
+
+ One difference from SC worth knowing. SC's fit has one observation per reference position and they
+ are very nearly independent. MP's columns overlap almost completely -- adjacent columns share all
+ but a couple of reads -- so tested_columns counts roughly W-fold redundant observations, and the
+ effective sample size behind rho is nearer reference length / W. phi is still a consistent estimator
+ (correlation inflates its variance, not its expectation), but it is noisier than the column count
+ suggests, which is why --missing-pair-maximum-dispersion exists and must be honoured. Do not read
+ tested_columns as a sample size.
+*/
+void identify_mutations_pileup::fill_mp_summary(MissingPairSummary& s) const
+{
+  s.window_width = _mp_window_width;
+  s.seed_fraction_used = _mp_seed_fraction;
+  s.regions_seeded = _mp_candidate_regions.size();
+  s.score_cutoff = _settings.missing_pair_log10_e_value_cutoff;
+
+  double p0_raw = (_mp_S_n > 0.0) ? (static_cast<double>(_mp_total_k) / _mp_S_n) : 0.0;
+  double p0 = p0_raw;
+  if ((_settings.missing_pair_minimum_rate > 0.0) && (p0 < _settings.missing_pair_minimum_rate))
+    p0 = _settings.missing_pair_minimum_rate;
+
+  uint64_t N_prime = (_mp_columns > _mp_columns_trimmed) ? (_mp_columns - _mp_columns_trimmed) : 0;
+  double S_n_prime = _mp_S_n - _mp_S_n_trimmed;
+  double mean_n_prime = (N_prime > 0) ? (S_n_prime / static_cast<double>(N_prime)) : 0.0;
+
+  double phi = 0.0;
+  double rho = 0.0;
+  if ((N_prime > 1) && (mean_n_prime > 1.0) && (p0 > 0.0) && (p0 < 1.0)) {
+    double chi2 = (_mp_S_k2_over_n - 2.0 * p0 * _mp_S_k + p0 * p0 * S_n_prime) / (p0 * (1.0 - p0));
+    phi = chi2 / static_cast<double>(N_prime - 1);
+    rho = (phi - 1.0) / (mean_n_prime - 1.0);
+  }
+  double rho_raw = rho;
+  if (!std::isfinite(rho) || (rho < 0.0)) rho = 0.0;          // degenerate -> plain binomial
+  if ((_settings.missing_pair_maximum_dispersion > 0.0) &&
+      (rho > _settings.missing_pair_maximum_dispersion))
+    rho = _settings.missing_pair_maximum_dispersion;
+  if (rho < 1e-6) rho = 0.0;                                  // numerically identical to binomial
+
+  s.null_rate = p0;
+  s.null_rate_raw = p0_raw;
+  s.dispersion = rho;
+  s.dispersion_raw = rho_raw;
+  s.pearson_phi = phi;
+  s.tested_columns = N_prime;
+  s.trimmed_columns = _mp_columns_trimmed;
+  s.mean_tested_reads = mean_n_prime;
+
+  // The MP statistic is a sliding window of width W, so adjacent columns share nearly all of their
+  // reads and the window only turns over completely every W bases: the reference offers about
+  // length/W independent chances per strand, not one per base. Using 2 * genome length -- SC's
+  // count, which is right for SC because its statistic really is per-base -- would over-correct by
+  // log10(W), enough on a kilobase-scale library to reject the real calls along with the noise.
+  // Same reasoning as PD's n_effective_tests = reference length / mean covering gap.
+  uint64_t total_length = 0;
+  for (uint32_t i = 0; i < num_targets(); i++) total_length += target_length(i);
+  s.n_effective_tests = (_mp_window_width > 0.0)
+    ? (2.0 * static_cast<double>(total_length) / _mp_window_width) : 1.0;
+  if (s.n_effective_tests < 1.0) s.n_effective_tests = 1.0;
+}
+
+
 /*! Write all accumulated MP candidate regions to a CSV in one pass (after the pileup completes). */
 void identify_mutations_pileup::write_mp_candidate_regions(const string& filename)
 {
+  MissingPairSummary calibration;
+  fill_mp_summary(calibration);
+
   // Sort by (seq_id, start, strand) so the two shoulders of one breakpoint appear adjacent.
   sort(_mp_candidate_regions.begin(), _mp_candidate_regions.end(),
        [](const mp_candidate_region& a, const mp_candidate_region& b) {
@@ -2533,6 +2662,28 @@ void identify_mutations_pileup::write_mp_candidate_regions(const string& filenam
 
   ofstream out(filename.c_str());
   ASSERT(!out.fail(), "Could not open output file: " + filename);
+
+  // Calibration first, as `#key=value` lines, exactly as write_pd_candidate_regions does. This CSV
+  // is the only channel from the pileup to the MP prediction step, and the null is not recoverable
+  // from the regions alone -- it is measured over the columns where nothing was seeded.
+  //
+  // The leading format token exists so a CSV written by an older binary fails loudly rather than
+  // being silently reinterpreted. Bump it whenever the meaning of a column or of the null changes.
+  out << std::fixed << std::setprecision(8);
+  out << "#mp_format=1" << endl;
+  out << "#window_width=" << calibration.window_width << endl;
+  out << "#n_effective_tests=" << calibration.n_effective_tests << endl;
+  out << "#null_rate=" << calibration.null_rate << endl;
+  out << "#null_rate_raw=" << calibration.null_rate_raw << endl;
+  out << "#dispersion=" << calibration.dispersion << endl;
+  out << "#dispersion_raw=" << calibration.dispersion_raw << endl;
+  out << "#pearson_phi=" << calibration.pearson_phi << endl;
+  out << "#tested_columns=" << calibration.tested_columns << endl;
+  out << "#trimmed_columns=" << calibration.trimmed_columns << endl;
+  out << "#mean_tested_reads=" << calibration.mean_tested_reads << endl;
+  out << "#seed_fraction=" << calibration.seed_fraction_used << endl;
+  out.unsetf(std::ios::fixed);
+
   // 'unpaired_reads' must stay last: it is ';'-joined and parsed as the final field by mp_evidence.
   // Each entry is <read_start>__<read_end> (see mp_descriptor). 'redundant' is 1 when a majority of
   // this region's reads mapped redundantly.
@@ -2543,6 +2694,16 @@ void identify_mutations_pileup::write_mp_candidate_regions(const string& filenam
         << (r->redundant ? 1 : 0) << "," << r->unpaired_reads << endl;
   }
   out.close();
+
+  cerr << "  MP seeded " << _mp_candidate_regions.size() << " candidate regions"
+       << " (mate-unmapped rate " << std::scientific << std::setprecision(3) << calibration.null_rate;
+  if (calibration.null_rate != calibration.null_rate_raw)
+    cerr << ", raised from " << calibration.null_rate_raw << " by --missing-pair-minimum-rate";
+  cerr << std::fixed << std::setprecision(5) << ", dispersion " << calibration.dispersion;
+  if (calibration.dispersion != calibration.dispersion_raw)
+    cerr << " (clamped from " << calibration.dispersion_raw << ")";
+  cerr << std::setprecision(0) << ", " << calibration.n_effective_tests << " effective tests)." << endl;
+  cerr.unsetf(std::ios::fixed | std::ios::scientific);
 }
 
 

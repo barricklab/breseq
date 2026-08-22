@@ -324,7 +324,18 @@ class alignment_wrapper {
   protected:
     const bam1_t* _a;             //!< Alignment.
 };
-  
+
+//! Did this read's mate produce NO alignment at all -- placed by the aligner on neither the
+//  reference nor any candidate junction?
+//
+//  Strictly narrower than BAM_FMUNMAP, which is also set for a mate the aligner DID place but that
+//  breseq subsequently rejected in test_read_alignment_requirements (short effective match against
+//  --require-match-fraction, low mapping quality, too many mismatches). Only this predicate means
+//  the mate's sequence is absent from the reference, which is what Missing Pair (MP) evidence
+//  claims; the wider flag makes MP's numerator track alignment stringency instead.
+//  Stamped by mark_mate_unmapped (resolve_alignments.cpp), re-emitted by write_alignments.
+bool mate_never_aligned(const alignment_wrapper& a);
+
 /*! class pileup_alignment
  @abstract Represents a single alignment within a pileup.
  Inherits all methods of alignment, and adds additional ones that get information about pileup position.

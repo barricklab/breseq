@@ -835,7 +835,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   vector<gd_entry_type> mp_types = make_vector<gd_entry_type>(MP);
   diff_entry_list_t mp_list = gd.filter_used_as_evidence(gd.get_list(mp_types));
   mp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
-  mp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(MP_READ_COUNT)));
+  mp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(MP_SCORE)));
   mark_gd_entries_in_list_no_show(mp_list, settings.max_rejected_missing_pair_evidence_to_show);
 
   /////
@@ -987,8 +987,8 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
 
   string marginal_mp_title = "Marginal missing pair evidence";
   if (mp_list.size() > 0) {
-    mp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(MP_READ_COUNT)));
-    marginal_mp_title += " (sorted from high to low supporting read count)";
+    mp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(MP_SCORE)));
+    marginal_mp_title += " (sorted from high to low score)";
   }
 
   /////////////////////////
@@ -1317,6 +1317,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     // alone do not tell a user why a run predicted few or many DP items.
     HTML << html_discordant_pair_gates_string(settings, summary);
     HTML << html_pair_distance_gates_string(settings, summary);
+    HTML << html_missing_pair_gates_string(settings, summary);
   }
 
   ////
@@ -2899,6 +2900,89 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
   return ss.str();
 }
 
+string html_missing_pair_gates_string(const Settings& settings, Summary& summary)
+{
+  const MissingPairSummary& d = summary.missing_pair;
+  if (!settings.predict_missing_pairs) return "";
+  if ((d.regions_seeded == 0) && (d.items_tested == 0)) return "";
+
+  stringstream ss;
+  ss << "<p>" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"3\" align=\"left\" class=\"missing_pair_header_row\"",
+              "Missing pair (MP) evidence gates")) << endl;
+  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+
+  ss << tr(td("counting window")
+           + td(to_string(d.window_width, 0, false) + " bases")
+           + td("one median fragment length &mdash; beyond that a read has no mate that could have"
+                " reached the breakpoint, so it says nothing about it either way")) << endl;
+
+  // The load-bearing number, and the one that did not exist before: what fraction of reads lose
+  // their mate ANYWHERE in this sample. Every MP decision is relative to it.
+  {
+    string basis = "measured over every reference column, not assumed";
+    if (d.null_rate != d.null_rate_raw)
+      basis += "; raised from " + to_string(d.null_rate_raw, 6, false)
+             + " by --missing-pair-minimum-rate";
+    ss << tr(td("mate-unmapped background")
+             + td(to_string(100.0 * d.null_rate, 3, false) + "%")
+             + td(basis)) << endl;
+  }
+
+  {
+    string basis = "Pearson &phi; = " + to_string(d.pearson_phi, 2, false)
+                 + " over " + to_string(d.tested_columns) + " columns (mean "
+                 + to_string(d.mean_tested_reads, 0, false) + " reads), "
+                 + to_string(d.trimmed_columns) + " trimmed at a local fraction of "
+                 + to_string(settings.missing_pair_dispersion_trim_frequency, 2, false)
+                 + " or above so that real insertions cannot define their own background";
+    if (d.dispersion != d.dispersion_raw)
+      basis += "; clamped from " + to_string(d.dispersion_raw, 5, false)
+             + " by --missing-pair-maximum-dispersion";
+    basis += ". Columns overlap, so the column count is not an independent sample size.";
+    ss << tr(td("background unevenness")
+             + td(d.dispersion > 0.0 ? "&rho; = " + to_string(d.dispersion, 5, false)
+                                     : string("none (binomial)"))
+             + td(basis)) << endl;
+  }
+
+  ss << tr(td("effective tests")
+           + td(to_string(d.n_effective_tests, 0, false))
+           + td("2 strands x reference length / counting window &mdash; the window turns over"
+                " completely every " + to_string(d.window_width, 0, false)
+                + " bases, so that is how many independent chances the reference offers, not one per base")) << endl;
+
+  ss << tr(td("candidate seed")
+           + td("fraction &ge; " + to_string(d.seed_fraction_used, 2, false))
+           + td(to_string(d.regions_seeded) + " regions seeded &mdash; a sensitivity filter only."
+                " A fixed fraction has no fixed relationship to the background measured above,"
+                " which is why it no longer decides anything.")) << endl;
+
+  ss << tr(td("score cutoff")
+           + td(d.score_cutoff > 0.0 ? to_string(d.score_cutoff, 1, false) : string("OFF"))
+           + td(string("&minus;log10 of the expected number of positions in this reference where this"
+                " many reads would lose their mates by chance, given the background rate and its"
+                " unevenness; a score of 0 means one such position is expected per genome. This is"
+                " the test that decides a call &mdash; every other gate is a local sanity check."))) << endl;
+
+  string tally = to_string(d.items_accepted) + " accepted";
+  if (d.items_rejected_score) tally += ", " + to_string(d.items_rejected_score) + " rejected (score)";
+  if (d.items_rejected_other) tally += ", " + to_string(d.items_rejected_other) + " rejected (other gates)";
+  if (d.items_dropped_score)
+    tally += ", " + to_string(d.items_dropped_score)
+           + " dropped as expected by chance somewhere in this genome";
+  if (d.items_dropped_unplaced)
+    tally += ", " + to_string(d.items_dropped_unplaced)
+           + " dropped with no supporting read left in the rescan window";
+  ss << tr(td("outcome")
+           + td(to_string(d.items_tested) + " examined")
+           + td(tally)) << endl;
+
+  ss << "</table>" << endl;
+  return ss.str();
+}
+
 // The zip-aware href every plot link in summary.html is built from: inside the evidence archive the
 // pages are addressed by fragment, outside it by relative path.
 static string cn_plot_href(const Settings& settings, const string& plot_file_name)
@@ -3469,7 +3553,7 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
 
   ss << "<div id=\"missing_pair_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 12 : 11;
+  size_t total_cols = link ? 14 : 13;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -3485,8 +3569,10 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
   ss << th("distinct") << endl;
   ss << th("spanning") << endl;
   ss << th("total") << endl;
+  ss << th("window") << endl;
   ss << th("freq") << endl;
   ss << th("range") << endl;
+  ss << th("score") << endl;
   ss << th("gene") << endl;
   ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
@@ -3514,11 +3600,15 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
     ss << td(ALIGN_RIGHT, nonbreaking(c[MP_DISTINCT_COUNT])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[MP_CONCORDANT_COUNT])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[MP_TOTAL_COUNT])) << endl;
+    // "window" column: the denominator the SCORE uses -- every crossing-strand read on the kept
+    // flank. "total" above is the denominator the FREQUENCY uses, and they are not the same set.
+    ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(MP_WINDOW_COUNT) ? c[MP_WINDOW_COUNT] : "&nbsp;")) << endl;
     ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
     // "range" column: the confidence limits the frequency cutoff is actually applied to, which is
     // why an item here can be rejected at a frequency that reads as above the cutoff.
     ss << td(ALIGN_RIGHT,
              Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(MP_SCORE) ? c[MP_SCORE] : "&nbsp;")) << endl;
 
     if (c.entry_exists(GENE_NAME))
       ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c[GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));
@@ -3683,9 +3773,13 @@ string decode_reject_reason(const string& reject)
   {
     return "Missing pair local frequency below cutoff.";
   }
+  else if (reject == "MISSING_PAIR_SCORE")
+  {
+    return "Missing pair score below the genome-wide false-positive cutoff.";
+  }
   else if (reject == "NEARBY_BETTER_MISSING_PAIR")
   {
-    return "A better-supported missing pair prediction lies within one paired-mapping distance.";
+    return "A better-scoring missing pair prediction lies within one paired-mapping distance.";
   }
   else if (reject == "PAIR_DISTANCE_COUNT")
   {

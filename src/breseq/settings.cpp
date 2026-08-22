@@ -54,6 +54,27 @@ namespace breseq
   const char* kBreseqOtherHypothesisLogLikelihoodBAMTag = "X7";
   const char* kBreseqOwnHypothesisLogLikelihoodBAMTag = "X8";
 
+  // Set to 1 on a mapped read whose mate produced NO alignment at all -- bowtie2 placed the mate
+  // nowhere, on neither the reference nor any candidate junction.
+  //
+  // This is strictly narrower than BAM_FMUNMAP, and the difference is the whole point. A mate is
+  // flagged BAM_FMUNMAP whenever eligible_read_alignments() empties both of its lists
+  // (resolve_alignments.cpp), which includes mates bowtie2 aligned perfectly well but that breseq
+  // then rejected in test_read_alignment_requirements -- for falling short of --require-match-fraction,
+  // for mapping quality, or for mismatches. Those are partially-aligning reads: SC's business, not
+  // evidence that the mate's sequence is missing from the reference.
+  //
+  // Missing Pair (MP) evidence keys on THIS tag, not on BAM_FMUNMAP, because MP's claim is that the
+  // mate landed in sequence present nowhere in the reference or the junction candidates. Without the
+  // distinction MP's numerator tracks --require-match-fraction, which --predict-soft-clipping lowers
+  // from 0.9 to 0.5 as a side effect -- so the same sample called an order of magnitude more MP
+  // evidence with soft clipping off than on.
+  //
+  // BAM_FMUNMAP itself is deliberately left alone: DP, PD and pair marking read it, and clearing it
+  // while the mate really is absent from the BAM would have them believe in a mate record that does
+  // not exist.
+  const char* kBreseqMateNeverAlignedBAMTag = "X9";
+
   string Settings::global_bin_path;
   string Settings::global_program_data_path;
 
@@ -378,9 +399,12 @@ namespace breseq
     ("discordant-pair-minimum-pairs", "Minimum number of read pairs shared by two DP candidate regions for the junction between them to be examined at all. (DEFAULT = 2)", 2, NORMAL_OPTION)
     ("discordant-pair-frequency-cutoff", "Only accept DP evidence when the lower confidence bound on its local variant frequency -- discordant pairs divided by discordant plus concordant pairs spanning the breakpoint -- is above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ("discordant-pair-minimum-crossing", "Only apply the DP skew test when at least this many concordant pairs are expected to span a normal position at the breakpoint's local coverage. Below this the skew test has no power (short paired-mapping distance distributions leave almost no concordant pair spanning any position) and is not used to reject. 0 = always apply. (DEFAULT = 10.0)", 10.0, NORMAL_OPTION)
-    // NOTE: pass sub-0.1 defaults as STRINGS. AnyOption stringifies a numeric default with
-    // to_string(double), whose default precision is 1 decimal place, so a 0.05 passed as a double
-    // silently becomes "0.1".
+    // NOTE: pass any default needing more than ONE decimal place as a STRING. AnyOption stringifies
+    // a numeric default with to_string(double) (common.h), whose default precision is 1 decimal
+    // place -- so 0.05 passed as a double silently becomes "0.1", and 0.25 silently becomes "0.2".
+    // This is not limited to sub-0.1 values, and it fails silently: the option's real default is
+    // whatever the rounded string parses back to. --missing-pair-seed-fraction shipped as 0.2 for
+    // this reason.
     ("discordant-pair-background-e-value-cutoff", "Reject DP evidence whose number of supporting read pairs is expected to arise this many times or more across all candidate junctions by chance, given the genome-wide background of spurious discordant pairs. 0 = OFF. (DEFAULT = 0.05)", "0.05", NORMAL_OPTION)
     ;
 
@@ -389,12 +413,18 @@ namespace breseq
     options
     ("predict-missing-pairs", "Predict missing read-pair (MP) evidence: places where reads pile up whose mates did not map anywhere, the signature of a novel sequence inserted into the genome. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("missing-pair-seed", "Minimum number of reads with unmapped mates within a paired-mapping-distance window required to seed an MP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
-    ("missing-pair-seed-fraction", "Minimum fraction of the reads on one strand within a paired-mapping-distance window whose mates did not map, required to seed an MP candidate region. This is what distinguishes a real insertion from the roughly constant genome-wide background of reads whose mates failed to align -- without it a fixed count seeds continuously at any decent coverage and the whole covered region becomes one candidate. (DEFAULT = 0.25)", 0.25, NORMAL_OPTION)
+    ("missing-pair-seed-fraction", "Minimum fraction of the reads on one strand within a paired-mapping-distance window whose mates did not map, required to seed an MP candidate region. This is a sensitivity filter that keeps a fixed count from seeding continuously at any decent coverage; what DECIDES an MP call is --missing-pair-score-cutoff. (DEFAULT = 0.25)", "0.25", NORMAL_OPTION)
     ("missing-pair-minimum-reads", "Only accept MP evidence supported by at least this many reads with unmapped mates. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("missing-pair-minimum-distinct", "Only accept MP evidence whose supporting reads start at at least this many distinct positions, so that PCR duplicates of one molecule cannot carry a prediction. (DEFAULT = 2)", 2, NORMAL_OPTION)
-    // NOTE: pass sub-0.1 defaults as STRINGS -- see the note in the DP block above. Here the default is
-    // mode-dependent, so it is registered empty and only read back when the user actually supplied it.
-    ("missing-pair-frequency-cutoff", "Only accept MP evidence when the lower 95% confidence bound on its local variant frequency -- reads with unmapped mates divided by those plus the read pairs spanning the same position -- is at or above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff, which tests the same kind of bound on the same kind of frequency, and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("missing-pair-score-cutoff", "Only accept MP evidence whose score is at or above this value. The score is minus the log10 of the expected number of positions anywhere in the reference where this many of the reads on one strand would lose their mates by chance, given the genome-wide rate at which mates fail to align and how unevenly that rate is spread. A score of 0 means one such position is expected per genome, 3 means one per thousand genomes. 0 = OFF. (DEFAULT = 3)", 3, NORMAL_OPTION)
+    // NOTE: defaults needing more than one decimal place must be STRINGS -- see the DP block above.
+    ("missing-pair-minimum-rate", "Floor on the genome-wide rate at which a read's mate fails to align, used as the null the MP score tests against. Only binds on a library so clean that the measured rate is essentially zero, where it keeps the test from becoming infinitely sensitive. (DEFAULT = 0.0001)", "0.0001", NORMAL_OPTION)
+    ("missing-pair-dispersion-trim-frequency", "Exclude windows at or above this local mate-unmapped fraction when measuring how unevenly the background is spread. A real insertion must not be allowed to define the background it is judged against. 0 = OFF. (DEFAULT = 0.25)", "0.25", NORMAL_OPTION)
+    ("missing-pair-maximum-dispersion", "Cap on the fitted over-dispersion of the mate-unmapped background. Guards against a degenerate fit on a small or unusual reference. 0 = OFF. (DEFAULT = 0.05)", "0.05", NORMAL_OPTION)
+    // NOTE: defaults needing more than one decimal place must be STRINGS -- see the DP block
+    // above. Here the default is mode-dependent, so it is registered empty and only read back
+    // when the user actually supplied it.
+    ("missing-pair-frequency-cutoff", "Only accept MP evidence when the lower 95% confidence bound on its local variant frequency -- reads with unmapped mates divided by those plus the read pairs spanning the same position -- is at or above this value. This is a secondary check on how much of the sample carries the insertion, not a test of whether it is there: that is --missing-pair-score-cutoff. 0 = OFF. Defaults to --polymorphism-frequency-cutoff and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ;
 
     options.addUsage("", NORMAL_OPTION);
@@ -407,8 +437,9 @@ namespace breseq
     ("pair-distance-minimum-pairs", "Only accept PD evidence supported by at least this many shifted read pairs. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("pair-distance-minimum-distinct", "Only accept PD evidence whose supporting pairs start at at least this many distinct positions, so that PCR duplicates of one molecule cannot carry a prediction. (DEFAULT = 2)", 2, NORMAL_OPTION)
     ("pair-distance-minimum-shift", "Only accept PD evidence whose estimated size shift is at least this many bases. 0 = derive from the width of the paired-mapping distance distribution. (DEFAULT = 0, derived)", 0, NORMAL_OPTION)
-    // NOTE: pass sub-0.1 defaults as STRINGS -- see the note in the DP block above. Here the default is
-    // mode-dependent, so it is registered empty and only read back when the user actually supplied it.
+    // NOTE: defaults needing more than one decimal place must be STRINGS -- see the DP block
+    // above. Here the default is mode-dependent, so it is registered empty and only read back
+    // when the user actually supplied it.
     ("pair-distance-tail-quantile", "Quantile of the paired-mapping distance distribution defining its tails, for the PD seed's counting test. (DEFAULT = 0.05)", "0.05", NORMAL_OPTION)
     ("pair-distance-score-cutoff", "Log10 E-value cutoff for pair distance (PD) evidence (DEFAULT = 3). 0 = OFF. The E-value is the expected number of PD regions anywhere in the reference that would score at least this well by chance, measured against a null fitted to this run's own candidate regions rather than assumed -- so it adapts to genome size, coverage and library geometry instead of needing a tuned threshold. A score below 0 means the region is expected to occur by chance somewhere in the genome and it is discarded outright; a score below the cutoff is kept as marginal evidence.", 3.0, NORMAL_OPTION)
     ("pair-distance-frequency-cutoff", "Only accept PD evidence when the lower 95% confidence bound on its local variant frequency -- shifted read pairs divided by those plus the normal-distance pairs covering the same point -- is at or above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff, which tests the same kind of bound on the same kind of frequency, and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
@@ -736,6 +767,17 @@ namespace breseq
     ASSERT(this->missing_pair_minimum_reads >= 0, "Argument --missing-pair-minimum-reads must be >= 0")
     this->missing_pair_minimum_distinct = from_string<int32_t>(options["missing-pair-minimum-distinct"]);
     ASSERT(this->missing_pair_minimum_distinct >= 0, "Argument --missing-pair-minimum-distinct must be >= 0")
+    this->missing_pair_log10_e_value_cutoff = from_string<double>(options["missing-pair-score-cutoff"]);
+    ASSERT(this->missing_pair_log10_e_value_cutoff >= 0, "Argument --missing-pair-score-cutoff must be >= 0")
+    this->missing_pair_minimum_rate = from_string<double>(options["missing-pair-minimum-rate"]);
+    ASSERT((this->missing_pair_minimum_rate >= 0) && (this->missing_pair_minimum_rate < 1),
+           "Argument --missing-pair-minimum-rate must be in the range [0,1)")
+    this->missing_pair_dispersion_trim_frequency = from_string<double>(options["missing-pair-dispersion-trim-frequency"]);
+    ASSERT((this->missing_pair_dispersion_trim_frequency >= 0) && (this->missing_pair_dispersion_trim_frequency <= 1),
+           "Argument --missing-pair-dispersion-trim-frequency must be in the range [0,1]")
+    this->missing_pair_maximum_dispersion = from_string<double>(options["missing-pair-maximum-dispersion"]);
+    ASSERT((this->missing_pair_maximum_dispersion >= 0) && (this->missing_pair_maximum_dispersion < 1),
+           "Argument --missing-pair-maximum-dispersion must be in the range [0,1)")
 
     this->pair_distance_seed = from_string<int32_t>(options["pair-distance-seed"]);
     ASSERT(this->pair_distance_seed >= 0, "Argument --pair-distance-seed must be >= 0")
@@ -1351,6 +1393,14 @@ namespace breseq
     this->missing_pair_seed_fraction = 0.25;
     this->missing_pair_minimum_reads = 3;
     this->missing_pair_minimum_distinct = 2;
+    this->missing_pair_log10_e_value_cutoff = 3.0;
+    this->missing_pair_minimum_rate = 1e-4;
+    this->missing_pair_dispersion_trim_frequency = 0.25;
+    // Deliberately looser than --soft-clipping-maximum-dispersion (0.005). MP's unit of clustering
+    // is a whole fragment rather than a base, and the fit has roughly reference length / window
+    // width independent observations rather than one per base, so the honest value is an order of
+    // magnitude larger: measured rho on a 2x150 E. coli library is 0.031.
+    this->missing_pair_maximum_dispersion = 0.05;
     // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
     this->missing_pair_frequency_cutoff = 0.1;
 
@@ -1574,6 +1624,7 @@ namespace breseq
 		this->discordant_pair_summary_file_name = this->mutation_identification_path + "/discordant_pair_summary.json";
 		this->mp_candidate_regions_file_name = this->mutation_identification_path + "/MP_candidate_regions.csv";
 		this->missing_pair_done_file_name = this->mutation_identification_path + "/missing_pair.done";
+		this->missing_pair_summary_file_name = this->mutation_identification_path + "/missing_pair_summary.json";
 		this->mp_genome_diff_file_name = this->mutation_identification_path + "/mp_evidence.gd";
 		this->pd_candidate_regions_file_name = this->mutation_identification_path + "/PD_candidate_regions.csv";
 		this->pair_distance_done_file_name = this->mutation_identification_path + "/pair_distance.done";

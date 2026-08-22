@@ -293,6 +293,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& dp,
 // library/background values they were derived from, and the resulting accept/reject tally.
 string html_discordant_pair_gates_string(const Settings& settings, Summary& summary);
 string html_pair_distance_gates_string(const Settings& settings, Summary& summary);
+string html_missing_pair_gates_string(const Settings& settings, Summary& summary);
 
 // summary.html block reporting how CNery's copy number analysis went for each reference sequence:
 // the replication bias it fit and divided out, how much flatter each correction stage made the

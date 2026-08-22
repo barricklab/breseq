@@ -285,6 +285,15 @@ pairs that are individually unremarkable but collectively shifted in mapping dis
 and insertions of a few hundred bases the other two cannot see. Where a PD and a DP describe the same
 breakpoint the DP is removed, since PD uses the whole pair population where DP uses only its tail.
 
+`MP` counts only reads whose mate produced **no alignment at all** — not merely reads flagged
+`BAM_FMUNMAP`, which also covers mates the aligner placed and breseq then rejected on
+`--require-match-fraction` (see `kBreseqMateNeverAlignedBAMTag`). `SC`, `MP` and `PD` are each
+decided by a genome-wide `score` (`--soft-clipping-score-cutoff`, `--missing-pair-score-cutoff`,
+`--pair-distance-score-cutoff`, all defaulting to 3) computed against a null **fitted to the run**,
+not against a fixed cutoff; each reports that null in a gates table in `summary.html`. A fixed
+frequency cutoff cannot substitute: it implicitly assumes a zero background, which holds in a
+simulation and in nothing else.
+
 Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PFGE`, `NOTE`, `MASK`
 
 ### Key modules

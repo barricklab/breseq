@@ -384,8 +384,9 @@ This is the interval the frequency cutoffs are applied to — not the
 point estimate in `freq`. An item can therefore be rejected at a
 frequency that reads as comfortably above its cutoff, because it is the
 bound that falls below. The same column appears on new junction (`JC`),
-soft clipping (`SC`), and discordant pair (`DP`) evidence, where the
-limits are exact (Clopper-Pearson) bounds on the underlying read counts.
+soft clipping (`SC`), discordant pair (`DP`), missing pair (`MP`), and
+pair distance (`PD`) evidence, where the limits are exact
+(Clopper-Pearson) bounds on the underlying read counts.
 
 `score`\
 The base-10 logarithm ratio of the posterior probability that this
@@ -393,6 +394,16 @@ position in the sample is the called base to the probability that it is
 any other base, minus the base-10 logarithm of the total number of
 positions in all reference sequences. The higher the score, the more
 evidence for the mutation.
+
+Soft clipping (`SC`), missing pair (`MP`), and pair distance (`PD`)
+evidence each carry a `score` of the same *form* &mdash; minus the log10
+of the number of items this good expected anywhere in the reference by
+chance, so that 0 means "expected once per genome" and 3 means "once per
+thousand genomes" &mdash; but the statistic underneath differs by type,
+and in each case the null it is measured against is fitted to the run
+rather than assumed. The `summary.html` gates table for each type reports
+the fitted null, so a run that predicts unusually few or many can be
+explained.
 
 `cov`\
 The number of reads overlapping the mutation. Note that portions of
