@@ -335,6 +335,11 @@ namespace breseq {
       // minority orientation was scoring one population against another population's distribution.
       if (!pd_orientation_matches(m_orientation, a)) return;
       if (a.redundancy() > 1) return;                                     // arbitrary placement
+      // ...and the same for the mate, which redundancy() cannot see: see
+      // kBreseqAmbiguousPairPlacementBAMTag. Must match the seed gate in identify_mutations.cpp and
+      // the plot gate below exactly, or the region a call is found under and the null it is judged
+      // under stop describing the same set of pairs.
+      if (ambiguous_pair_placement(a)) return;
 
       pd_pair p;
       p.read_start = static_cast<int32_t>(a.reference_start_1());
@@ -743,6 +748,8 @@ namespace breseq {
           if (key == "mean_covering_gap")          summary.pair_distance.mean_covering_gap = from_string<double>(value);
           else if (key == "n_effective_tests")     summary.pair_distance.n_effective_tests = from_string<double>(value);
           else if (key == "seed_z")                summary.pair_distance.seed_z_used = from_string<double>(value);
+          else if (key == "pairs_considered")      summary.pair_distance.pairs_considered = from_string<uint64_t>(value);
+          else if (key == "pairs_ambiguous_placement") summary.pair_distance.pairs_ambiguous_placement = from_string<uint64_t>(value);
           else if (key == "z_iqr_inflation")       summary.pair_distance.z_iqr_inflation = from_string<double>(value);
           else if (key == "region_tail_fit_ok")    summary.pair_distance.region_tail_fit_ok = (from_string<int32_t>(value) != 0);
           else if (key == "region_tail_log_intercept") summary.pair_distance.region_tail_log_intercept = from_string<double>(value);
@@ -1223,6 +1230,7 @@ namespace breseq {
       // Same orientation gate as the rescan, so the plot draws the population the counts came from.
       if (!pd_orientation_matches(m_orientation, a)) return;
       if (a.redundancy() > 1) return;
+      if (ambiguous_pair_placement(a)) return;   // same set of pairs the counts were taken over
 
       pd_draw_pair p;
       p.category = 0;

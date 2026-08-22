@@ -653,6 +653,10 @@ namespace breseq {
 		// longer than the ring would alias a live slot.
 		bool _pd_enabled;                                   //!< --predict-pair-distance AND >=1 group with a null
 		int32_t _pd_seed;                                   //!< --pair-distance-seed tail-count threshold
+		//! Intake tally, reported so the cost of refusing chosen-placement pairs is visible per run
+		//! rather than inferred. Counted over pairs that passed every OTHER intake test.
+		uint64_t _pd_pairs_considered;
+		uint64_t _pd_pairs_ambiguous_placement;
 		double _pd_z_seed;                                  //!< |z| threshold, already resolved if derived
 		int32_t _pd_max_span;                               //!< longest pair distance considered, already resolved
 		int32_t _pd_ring_w;                                 //!< _pd_max_span + 2

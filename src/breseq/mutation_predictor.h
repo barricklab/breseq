@@ -128,6 +128,10 @@ namespace breseq {
     // match a JC that already supports that mutation.
     void add_matching_PD_evidence(cGenomeDiff& gd);
 
+    //! Name the mobile element a pair-distance (PD) insertion is consistent with, where the data
+    //! supports naming one. Annotation only -- no mutation is created and no gate changes.
+    void annotate_PD_with_repeat_family(cGenomeDiff& gd);
+
     // Attach a copy number (CN) evidence item as evidence for a DEL mutation that already explains
     // it. Never used to predict a deletion -- only to stop a copy-number-zero region describing a
     // deletion breseq already called from being reported a second time as unassigned evidence.

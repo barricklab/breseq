@@ -3056,6 +3056,10 @@ namespace breseq {
     // Same for pair-distance (PD) evidence.
     add_matching_PD_evidence(gd);
 
+    // Name the mobile element each PD insertion is consistent with, where the data supports naming
+    // one. Annotation only -- see the function for why this stops short of predicting a MOB.
+    annotate_PD_with_repeat_family(gd);
+
     // Same for copy number (CN) evidence, matched by span against a deletion rather than by
     // breakpoint against a junction.
     add_matching_CN_evidence(gd);
@@ -3172,10 +3176,167 @@ namespace breseq {
     }
   }
 
-  // Attach a pair-distance (PD) evidence item as ALSO supporting a mutation when it describes the
-  // same breakpoint as a JC that already supports it -- the direct analogue of add_matching_DP_evidence
-  // above, and it matters most for the case PD snapped onto that very junction, where the two agree
-  // to the base.
+  // Attach a pair-distance (PD) evidence item as ALSO supporting a mutation that describes the same
+  // event, so an observation the run already accounted for is not reported a second time under
+  // "unassigned pair distance evidence".
+  //
+  // Two passes, because one key does not reach every mutation:
+  //
+  //   by junction  The PD describes the same breakpoint as a JC the mutation already cites. The
+  //                direct analogue of add_matching_DP_evidence, and it is exact when PD snapped onto
+  //                that junction.
+  //   by position  The mutation itself, matched on coordinates. Needed because the junction key
+  //                cannot reach a MOB at all -- its junctions each have one side on the IS copy and
+  //                one on the unique flank, while a PD insertion has two ADJACENT unique-flank sides,
+  //                so the keys never agree -- nor a deletion predicted from MC+CN or from RA, which
+  //                cites no junction. On a mate-pair library this left PD sitting 0 to 7 bases from a
+  //                MOB reported as though nothing accounted for it.
+  //
+  // Attachment only. PD never moves a boundary and never creates a mutation: it cannot resolve either
+  // to the base, which is what a mutation's coordinates require. See annotate_PD_with_repeat_family.
+  /*! Name the mobile element a pair-distance insertion is consistent with.
+
+   PD measures the SIZE and POSITION of an insertion but never its identity, so on a library where
+   junction detection is weak a real mobile-element insertion is reported as a bare "N bases were
+   added here" and reads like noise. On a 2x35 bp mate-pair run that is the normal case, not an edge
+   case: a 35 bp read cannot carry a split-read junction with usable anchors on both sides, so the
+   two junctions predictJCplusJCtoMOB needs are simply not in the data, and twenty-odd real IS
+   insertions arrive with no mutation attached to any of them.
+
+   This ANNOTATES; it does not predict, and it never will. Nothing here creates a mutation, removes
+   evidence, changes a gate or touches a positional field.
+
+   The reason is not caution, it is resolution. A MOB states where an element landed to the BASE, and
+   PD cannot do that: its position_range is tens of bases wide, and its size estimates scatter by
+   4-72 bases against a known element length. Pairing a lone IS junction with a PD call to mint a MOB
+   -- which looks tempting on a library where junctions are scarce -- would produce a mutation whose
+   coordinates are not determined by the evidence behind it. Two further things would have to be
+   guessed rather than measured: whether the junction is an insertion at all (a lone IS junction is
+   equally the far end of an IS-mediated deletion), and the target-site duplication, which is not
+   even constant within a family -- measured across one clone, IS150 uses 0, 3 and 4; IS186 uses 6
+   and 8; IS1 uses 9.
+
+   So an insertion PD can see but JC cannot resolve stays PD evidence, carrying the name of the
+   family it is consistent with. That is the whole of what the data supports.
+
+   Two modes, in order of authority:
+
+     junction  A junction whose other side lands in a repeat family, at this insertion point. The
+               family is then known rather than inferred, and the size is only a consistency check.
+     size      No such junction, so the size is all there is. This can only ever produce a CANDIDATE
+               SET, and the code says so rather than pretending otherwise: across one clone the
+               estimates deviate from the true element length by 4-72 bases while PD's own reported
+               interval is 0-46 wide, and IS150 (1443) and IS186 (1343) are only 100 apart. So
+               repeat_name is set only when exactly one family matches; otherwise the candidates are
+               listed and the reader decides.
+  */
+  void MutationPredictor::annotate_PD_with_repeat_family(cGenomeDiff& gd)
+  {
+    diff_entry_list_t pd_list = gd.get_list(make_vector<gd_entry_type>(PD));
+    if (pd_list.empty()) return;
+
+    // Every annotated repeat family with at least two copies, and its consensus length. One copy is
+    // not a mobile element for this purpose -- there is nothing for it to have copied from -- and a
+    // reference with no repeat annotation at all yields an empty map, which makes mode "size" a
+    // no-op and this whole function inert.
+    map<string, uint32_t> family_length;
+    {
+      map<string, uint32_t> family_copies;
+      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+        cAnnotatedSequence& seq = ref_seq_info[i];
+        for (cFeatureLocationList::iterator it = seq.m_repeat_locations.begin(); it != seq.m_repeat_locations.end(); it++) {
+          const string& name = (*it->get_feature())["name"];
+          if (name.empty()) continue;
+          family_copies[name]++;
+        }
+      }
+      for (map<string, uint32_t>::iterator it = family_copies.begin(); it != family_copies.end(); it++) {
+        if (it->second < 2) continue;
+        string consensus = ref_seq_info.repeat_family_sequence(it->first, 1, NULL, NULL, NULL, false);
+        if (!consensus.empty()) family_length[it->first] = static_cast<uint32_t>(consensus.size());
+      }
+    }
+
+    diff_entry_list_t jc_list = gd.get_list(make_vector<gd_entry_type>(JC));
+
+    for (diff_entry_list_t::iterator it = pd_list.begin(); it != pd_list.end(); it++) {
+      cDiffEntry& pd = **it;
+      if (pd.entry_exists(REJECT)) continue;
+      if (!pd.entry_exists("size_shift")) continue;
+
+      // Insertions only. A positive shift means reference bases are MISSING from the sample, which
+      // an inserted element cannot explain.
+      int32_t shift = from_string<int32_t>(pd["size_shift"]);
+      if (shift >= 0) continue;
+      int32_t inserted = -shift;
+
+      string  seq_id = pd[SIDE_1_SEQ_ID];
+      int32_t p1 = from_string<int32_t>(pd[SIDE_1_POSITION]);
+      int32_t p2 = from_string<int32_t>(pd[SIDE_2_POSITION]);
+      // PD's own stated localization uncertainty, floored at the slop that
+      // combine_DP_with_MOB_by_unique_side already uses for the same kind of match.
+      int32_t w = 20;
+      if (pd.entry_exists("position_range"))
+        w = max(w, from_string<int32_t>(pd["position_range"]));
+
+      //// Mode 1: a junction at this point whose other side is in a repeat family.
+      string matched_family;
+      for (diff_entry_list_t::iterator jt = jc_list.begin(); jt != jc_list.end(); jt++) {
+        cDiffEntry& jc = **jt;
+        if (jc.is_rejected_and_not_user_defined()) continue;
+        if (!jc.entry_exists("_is_interval")) continue;
+        if (!jc.entry_exists("_unique_interval_seq_id")) continue;
+        if (jc["_unique_interval_seq_id"] != seq_id) continue;
+        int32_t up = from_string<int32_t>(jc["_unique_interval_position"]);
+        if ((up < p1 - w) || (up > p2 + w)) continue;
+
+        string name = jc["_" + jc["_is_interval"] + "_is_name"];
+        if (name.empty()) continue;
+        if (matched_family.empty()) { matched_family = name; continue; }
+        if (matched_family == name) continue;
+        // More than one family can have a junction here (a neighbouring event, or both ends of
+        // different elements). Prefer the one whose length the measured insertion actually matches.
+        map<string, uint32_t>::const_iterator a = family_length.find(matched_family);
+        map<string, uint32_t>::const_iterator b = family_length.find(name);
+        if (b == family_length.end()) continue;
+        if ((a == family_length.end()) ||
+            (abs(inserted - static_cast<int32_t>(b->second)) < abs(inserted - static_cast<int32_t>(a->second))))
+          matched_family = name;
+      }
+
+      if (!matched_family.empty()) {
+        pd["repeat_name"] = matched_family;
+        pd["repeat_name_evidence"] = "junction";
+        map<string, uint32_t>::const_iterator f = family_length.find(matched_family);
+        if (f != family_length.end())
+          pd["repeat_size_difference"] = to_string(inserted - static_cast<int32_t>(f->second));
+        continue;
+      }
+
+      //// Mode 2: no junction, so the size is all there is.
+      //
+      // 10% rather than something tighter because the observed deviations already run to 5% of the
+      // element length and their physical sources are not bounded in principle: breseq's own MOB
+      // model carries del_start/del_end, so an insertion with an adjacent deletion legitimately
+      // shifts by less than the element does. Discrimination is the uniqueness rule below, not the
+      // tolerance.
+      vector<string> candidates;
+      for (map<string, uint32_t>::const_iterator f = family_length.begin(); f != family_length.end(); f++) {
+        if (abs(inserted - static_cast<int32_t>(f->second)) <= 0.10 * static_cast<double>(f->second))
+          candidates.push_back(f->first);
+      }
+      if (candidates.empty()) continue;
+
+      pd["repeat_size_candidates"] = join(candidates, ",");
+      if (candidates.size() == 1) {
+        pd["repeat_name"] = candidates[0];
+        pd["repeat_name_evidence"] = "size";
+        pd["repeat_size_difference"] =
+          to_string(inserted - static_cast<int32_t>(family_length[candidates[0]]));
+      }
+    }
+  }
+
   void MutationPredictor::add_matching_PD_evidence(cGenomeDiff& gd)
   {
     map<string, vector<string> > pd_by_key;
@@ -3202,6 +3363,90 @@ namespace breseq {
         for (vector<string>::const_iterator pdid = m->second.begin(); pdid != m->second.end(); pdid++) {
           if (find(mut._evidence.begin(), mut._evidence.end(), *pdid) == mut._evidence.end())
             mut._evidence.push_back(*pdid);
+        }
+      }
+    }
+
+    // Second pass: match the MUTATION directly, by position.
+    //
+    // The junction-keyed pass above can only reach a PD through a JC the mutation already cites, and
+    // for a MOB the keys can never agree: the MOB's junctions each have one side on the IS copy and
+    // one on the unique flank, while a PD insertion has two ADJACENT unique-flank sides. So a PD
+    // sitting on top of a MOB -- measured 0 to 7 bases away on the mate-pair library -- was reported
+    // as unassigned evidence, as though nothing accounted for it. A deletion predicted from MC+CN or
+    // from RA cites no junction at all and was unreachable for the same reason.
+    //
+    // This attaches only. The mutation's coordinates continue to come entirely from the evidence that
+    // placed it; PD is never allowed to move a boundary or to create a mutation, because it cannot
+    // resolve either to the base. See annotate_PD_with_repeat_family.
+    {
+      const int32_t kSlop = 20;   // as combine_DP_with_MOB_by_unique_side uses for the same kind of match
+
+      // MOB and AMP take a NEGATIVE shift (the sample gained bases); DEL takes a positive one. Every
+      // other mutation type is either too small for PD to resolve or has no length PD could confirm.
+      for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+        cDiffEntry& mut = **it;
+        if ((mut._type != MOB) && (mut._type != DEL) && (mut._type != AMP)) continue;
+
+        for (vector<diff_entry_ptr_t>::iterator pd_it = pds.begin(); pd_it != pds.end(); pd_it++) {
+          cDiffEntry& pd = **pd_it;
+          if (pd[SIDE_1_SEQ_ID] != mut[SEQ_ID]) continue;
+          if (!pd.entry_exists("size_shift")) continue;
+
+          int32_t shift = from_string<int32_t>(pd["size_shift"]);
+          int32_t p1 = from_string<int32_t>(pd[SIDE_1_POSITION]);
+          int32_t p2 = from_string<int32_t>(pd[SIDE_2_POSITION]);
+          // PD's own stated localization uncertainty, floored at the shared slop.
+          int32_t w = kSlop;
+          if (pd.entry_exists("position_range"))
+            w = max(w, from_string<int32_t>(pd["position_range"]));
+
+          bool match = false;
+          if (mut._type == MOB) {
+            // An element was INSERTED, so only a negative shift can describe it, and the insertion
+            // point has to be where the PD put it.
+            int32_t mob_pos = from_string<int32_t>(mut[POSITION]);
+            match = (shift < 0) && (mob_pos >= p1 - w) && (mob_pos <= p2 + w);
+          } else if (mut._type == DEL) {
+            // Reference bases are MISSING, so only a positive shift, and the PD's two sides have to
+            // bracket the same span the deletion does. Requiring BOTH ends keeps a PD describing a
+            // neighbouring event from being hung on a large deletion that merely contains it.
+            int32_t del_start = from_string<int32_t>(mut[POSITION]);
+            int32_t del_end   = del_start + from_string<int32_t>(mut[SIZE]) - 1;
+            match = (shift > 0)
+                 && (abs(p1 - del_start) <= w)
+                 && (abs(p2 - (del_end + 1)) <= w);
+          } else {
+            // AMP. A tandem amplification reads to PD exactly as an insertion does, and for the same
+            // reason: a fragment spanning the amplified segment carries the extra copies, which the
+            // reference does not, so the pair maps SHORTER by the amplified amount. The sign is
+            // therefore negative, like a MOB, and what distinguishes the two is the SIZE -- an
+            // amplification has a predicted one, size * (new_copy_number - 1), where an insertion of
+            // foreign sequence has none.
+            //
+            // The size test is required here rather than optional. PD cannot say where inside the
+            // span the extra copy sits, so position alone would attach a PD to any amplification it
+            // happened to land in; agreement on the amount is what makes it the same event. The
+            // tolerance is the larger of 20% and the localization window, which covers both the
+            // estimator's own scatter (4-72 bases against a known length) and an amplification whose
+            // boundaries the copy-number tiling only resolves approximately.
+            int32_t amp_start = from_string<int32_t>(mut[POSITION]);
+            int32_t amp_size  = from_string<int32_t>(mut[SIZE]);
+            int32_t copies    = mut.entry_exists(NEW_COPY_NUMBER)
+                              ? from_string<int32_t>(mut[NEW_COPY_NUMBER]) : 0;
+            if ((copies > 1) && (amp_size > 0)) {
+              int32_t expected = amp_size * (copies - 1);
+              int32_t tol = max(w, static_cast<int32_t>(0.20 * expected));
+              match = (shift < 0)
+                   && (abs(-shift - expected) <= tol)
+                   && (p2 >= amp_start - w)
+                   && (p1 <= amp_start + amp_size + w);
+            }
+          }
+          if (!match) continue;
+
+          if (find(mut._evidence.begin(), mut._evidence.end(), pd._id) == mut._evidence.end())
+            mut._evidence.push_back(pd._id);
         }
       }
     }

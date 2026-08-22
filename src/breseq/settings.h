@@ -38,6 +38,7 @@ namespace breseq
   extern const char* kBreseqOtherHypothesisLogLikelihoodBAMTag;
   extern const char* kBreseqOwnHypothesisLogLikelihoodBAMTag;
   extern const char* kBreseqMateNeverAlignedBAMTag;
+  extern const char* kBreseqAmbiguousPairPlacementBAMTag;
 
 	class ExecutionTime : public Storable {
   public:

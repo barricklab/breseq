@@ -336,6 +336,18 @@ class alignment_wrapper {
 //  Stamped by mark_mate_unmapped (resolve_alignments.cpp), re-emitted by write_alignments.
 bool mate_never_aligned(const alignment_wrapper& a);
 
+//! Did this pair's placement require a CHOICE -- did either mate have more than one reference
+//  alignment when the pair was classified, so that the distance between them was selected rather
+//  than measured?
+//
+//  Not answerable from redundancy()/X1, which is recomputed at write time from the alignments that
+//  survived downselection: a read with several placements, one of which happened to make its pair
+//  look concordant, is written X1 = 1. Pair distance (PD) evidence keys on this because a chosen
+//  distance is not merely noisy -- the choice is made per locus by a cluster vote, so the error is
+//  coherent across every pair there and looks exactly like a real collective shift.
+//  Stamped by mark_pair_info (resolve_alignments.cpp), re-emitted by write_alignments.
+bool ambiguous_pair_placement(const alignment_wrapper& a);
+
 /*! class pileup_alignment
  @abstract Represents a single alignment within a pileup.
  Inherits all methods of alignment, and adds additional ones that get information about pileup position.

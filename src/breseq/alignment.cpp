@@ -35,6 +35,12 @@ bool mate_never_aligned(const alignment_wrapper& a)
   return a.aux_get_i(kBreseqMateNeverAlignedBAMTag, v) && (v != 0);
 }
 
+bool ambiguous_pair_placement(const alignment_wrapper& a)
+{
+  uint32_t v;
+  return a.aux_get_i(kBreseqAmbiguousPairPlacementBAMTag, v) && (v != 0);
+}
+
 string alignment_wrapper::read_char_stranded_sequence_1(uint32_t start_1, uint32_t end_1) const { 
   ASSERT(start_1 <= end_1, "Start (" + to_string(start_1) + ") must be less than end (" + to_string(end_1) + ").");
   
@@ -973,6 +979,14 @@ void bam_file::write_alignments(
     uint32_t mate_no_alignment;
     if (a.aux_get_i(kBreseqMateNeverAlignedBAMTag, mate_no_alignment) && mate_no_alignment) {
       aux_tags_ss << "\t" << kBreseqMateNeverAlignedBAMTag << ":i:1";
+    }
+
+    // "This pair's placement required a choice", stamped by mark_pair_info. Same rebuild caveat as
+    // above; PD reads it. It cannot be reconstructed from X1 below, which is computed from the
+    // alignments that SURVIVED downselection.
+    uint32_t ambiguous_placement;
+    if (a.aux_get_i(kBreseqAmbiguousPairPlacementBAMTag, ambiguous_placement) && ambiguous_placement) {
+      aux_tags_ss << "\t" << kBreseqAmbiguousPairPlacementBAMTag << ":i:1";
     }
 
     string aux_tags = aux_tags_ss.str();

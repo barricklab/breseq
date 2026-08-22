@@ -2861,6 +2861,19 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
                 + to_string(d.mean_covering_gap, 0, false)
                 + " bases), which is the distance over which the set of pairs covering a position turns over")) << endl;
 
+  // How much the chosen-placement filter actually costs on THIS library. The argument that refusing
+  // those pairs is free rests on this being a small fraction, so it is stated rather than assumed.
+  if (d.pairs_considered) {
+    ss << tr(td("chosen placements refused")
+             + td(to_string(100.0 * static_cast<double>(d.pairs_ambiguous_placement)
+                            / static_cast<double>(d.pairs_considered), 2, false) + "%")
+             + td(to_string(d.pairs_ambiguous_placement) + " of " + to_string(d.pairs_considered)
+                  + " pairs had at least one mate with more than one placement when the pair was"
+                  " classified, so their distance was selected rather than measured &mdash; a choice"
+                  " made once per locus, which makes the error coherent across every pair there"
+                  " rather than averaging out")) << endl;
+  }
+
   // The seed is deliberately loose; say so, so nobody reads it as the acceptance threshold.
   ss << tr(td("candidate seed")
            + td("|z| &ge; " + to_string(d.seed_z_used, 2, false))

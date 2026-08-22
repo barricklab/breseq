@@ -1275,10 +1275,17 @@ static OrientationDistance compute_orientation_and_distance(bam_alignment* a, ba
 // BAM_FMREVERSE) on both mates of an unambiguously-resolved pair, plus BAM_FPROPER_PAIR when
 // breseq called the pair concordant (readable back later via that flag -- no separate custom
 // concordance tag needed) and an XO:Z: orientation tag (no standard-field equivalent).
+// a1_placements / a2_placements are how many reference alignments each mate had WHEN THE PAIR WAS
+// CLASSIFIED -- i.e. before downselect_to_kept pruned them. When either exceeds one, the distance
+// below was selected rather than measured, and both records are stamped
+// kBreseqAmbiguousPairPlacementBAMTag. See that constant for why X1 cannot answer this and which
+// evidence type cares.
 static void mark_pair_info(bam_alignment* a1, bam_alignment* a2, bool same_tid,
-                            const string& orientation, int64_t distance, bool is_concordant)
+                            const string& orientation, int64_t distance, bool is_concordant,
+                            size_t a1_placements, size_t a2_placements)
 {
   bam_alignment* mates[2] = {a1, a2};
+  bool ambiguous_placement = (a1_placements > 1) || (a2_placements > 1);
   for (int i = 0; i < 2; i++)
   {
     bam_alignment* self = mates[i];
@@ -1293,6 +1300,14 @@ static void mark_pair_info(bam_alignment* a1, bam_alignment* a2, bool same_tid,
     self->core.isize = same_tid ? (self_is_leftmost ? distance : -distance) : 0; // 0: undefined across references
 
     self->aux_set("XP", 'Z', orientation.size() + 1, (void*)orientation.c_str()); // 'Z' length includes null terminator; XO is already used by bowtie2 (gap opens)
+
+    // Stamped on BOTH mates, and only when true, so an unambiguous pair costs nothing. Marking one
+    // mate would not do: PD reads whichever record holds the positive TLEN, and which one that is
+    // has nothing to do with which mate was ambiguous.
+    if (ambiguous_placement) {
+      uint32_t one = 1;
+      self->aux_set(kBreseqAmbiguousPairPlacementBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&one);
+    }
   }
 }
 
@@ -1884,6 +1899,13 @@ void load_junction_alignments(
         ConcordancePairing pairing = classify_pair(m1.this_reference_alignments, m2.this_reference_alignments,
                                                     majority_orientation, distance_cutoff);
 
+        // Captured BEFORE downselection, which is the whole point: downselect_to_kept resolves a
+        // multi-placement mate toward whichever copy makes the pair look concordant, and X1 is then
+        // written from the survivors -- so after this the fact that a choice was made is gone. See
+        // kBreseqAmbiguousPairPlacementBAMTag.
+        size_t m1_placements = m1.this_reference_alignments.size();
+        size_t m2_placements = m2.this_reference_alignments.size();
+
         if (pairing.any_concordant_combo_exists)
         {
           // Concordant: downselect each mate's alignments to just the ones participating in a
@@ -1937,7 +1959,8 @@ void load_junction_alignments(
           bam_alignment* a2 = m2.this_reference_alignments.front().get();
           bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
           OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
-          mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, pairing.any_concordant_combo_exists);
+          mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, pairing.any_concordant_combo_exists,
+                         m1_placements, m2_placements);
 
           // Count this flag-assigned pair for the final summary (concordant vs discordant).
           ++mapped_pairs;
@@ -1991,7 +2014,10 @@ void load_junction_alignments(
             bam_alignment* a2 = pick_lowest_alignment(m2.this_reference_alignments);
             bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
             OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
-            mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, /*is_concordant=*/false);
+            // Both mates redundant, and the copy is picked arbitrarily (pick_lowest_alignment), so
+            // this pair's distance is selected by construction.
+            mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, /*is_concordant=*/false,
+                           m1.this_reference_alignments.size(), m2.this_reference_alignments.size());
           }
         }
 
@@ -2366,7 +2392,13 @@ void write_held_discordant_pairs(Settings& settings, Summary& summary, cReferenc
 
       bool same_tid = (ua->reference_target_id() == chosen->reference_target_id());
       OrientationDistance od = same_tid ? compute_orientation_and_distance(ua, chosen) : OrientationDistance{"NA", 0};
-      mark_pair_info(ua, chosen, same_tid, od.orientation, od.distance, /*is_concordant=*/false);
+      // The redundant mate's coordinate here is not measured, it is the CLUSTER VOTE's chosen_copy --
+      // so every held pair at this locus gets the same copy and any error is coherent across all of
+      // them, in one direction. That is precisely the shape PD's region seeder is built to detect,
+      // which is why these must be marked. The unique mate is written X1 = 1, so nothing else in the
+      // BAM records that a choice was made.
+      mark_pair_info(ua, chosen, same_tid, od.orientation, od.distance, /*is_concordant=*/false,
+                     h.unique_alignments.size(), h.redundant_alignments.size());
 
       _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.unique_alignments, resolved_reference_tam, h.unique_rg);
       _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.redundant_alignments, resolved_reference_tam, h.redundant_rg);

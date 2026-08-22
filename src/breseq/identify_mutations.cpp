@@ -793,6 +793,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _mp_window_width(0.0)
 , _pd_enabled(false)
 , _pd_seed(settings.pair_distance_seed)
+, _pd_pairs_considered(0)
+, _pd_pairs_ambiguous_placement(0)
 , _pd_z_seed(0.0)
 , _pd_max_span(0)
 , _pd_ring_w(0)
@@ -1548,7 +1550,20 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             // redundancy as evidence that a side sits on a multicopy element.
             && (i->redundancy() <= 1)) {
 
-          int gi = dp_group_for(p, *i);
+          // ...and the same for the MATE, which redundancy() cannot see. Only the leftmost mate of a
+          // pair reaches here (insert_size() > 0), so the test above covers whichever mate that
+          // happens to be and leaves the other unexamined -- half the affected pairs, chosen by a
+          // coin flip. Worse, X1 is written from the alignments that SURVIVED downselection, so a
+          // mate whose copy was picked to make the pair look concordant reads back as unique.
+          // kBreseqAmbiguousPairPlacementBAMTag records the choice at the point it was made.
+          //
+          // Tested here rather than in the chain above so the two outcomes can be tallied: the claim
+          // that refusing these pairs is free has to be checkable on every run.
+          _pd_pairs_considered++;
+          bool chosen_placement = ambiguous_pair_placement(*i);
+          if (chosen_placement) _pd_pairs_ambiguous_placement++;
+
+          int gi = chosen_placement ? -1 : dp_group_for(p, *i);
           if (gi >= 0 && pd_orientation_matches(_dp_groups[gi].pd_orientation, *i)) {
             const vector<int64_t>& cdf = _dp_groups[gi].pd_cdf;
             int32_t d = i->insert_size();
@@ -3018,6 +3033,8 @@ void identify_mutations_pileup::fill_pd_summary(PairDistanceSummary& s) const
   s.seed_z_used = _pd_z_seed;
   s.z_iqr_inflation = pd_z_inflation();
   s.regions_seeded = _pd_candidate_regions.size();
+  s.pairs_considered = _pd_pairs_considered;
+  s.pairs_ambiguous_placement = _pd_pairs_ambiguous_placement;
   s.region_tail_fit_ok = pd_fit_region_tail(s.region_tail_log_intercept, s.region_tail_sigma,
                                             s.region_tail_fit_lo, s.region_tail_fit_hi);
 }
@@ -3089,6 +3106,8 @@ void identify_mutations_pileup::write_pd_candidate_regions(const string& filenam
   out << "#mean_covering_gap=" << calibration.mean_covering_gap << endl;
   out << "#n_effective_tests=" << calibration.n_effective_tests << endl;
   out << "#seed_z=" << calibration.seed_z_used << endl;
+  out << "#pairs_considered=" << calibration.pairs_considered << endl;
+  out << "#pairs_ambiguous_placement=" << calibration.pairs_ambiguous_placement << endl;
   out << "#z_iqr_inflation=" << calibration.z_iqr_inflation << endl;
   out << "#region_tail_fit_ok=" << (calibration.region_tail_fit_ok ? 1 : 0) << endl;
   out << "#region_tail_log_intercept=" << calibration.region_tail_log_intercept << endl;

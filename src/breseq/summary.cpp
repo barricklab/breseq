@@ -478,6 +478,8 @@ void to_json(json& j, const PairDistanceSummary& s)
     {"region_tail_fit_lo", s.region_tail_fit_lo},
     {"region_tail_fit_hi", s.region_tail_fit_hi},
     {"regions_seeded", s.regions_seeded},
+    {"pairs_considered", s.pairs_considered},
+    {"pairs_ambiguous_placement", s.pairs_ambiguous_placement},
     {"score_cutoff", s.score_cutoff},
     {"items_tested", s.items_tested},
     {"items_dropped_score", s.items_dropped_score},
@@ -503,6 +505,8 @@ void from_json(const json& j, PairDistanceSummary& s)
   s.region_tail_fit_lo = get_double_or_default(j, "region_tail_fit_lo");
   s.region_tail_fit_hi = get_double_or_default(j, "region_tail_fit_hi");
   s.regions_seeded = get_uint64_or_default(j, "regions_seeded");
+  s.pairs_considered = get_uint64_or_default(j, "pairs_considered");
+  s.pairs_ambiguous_placement = get_uint64_or_default(j, "pairs_ambiguous_placement");
   s.score_cutoff = get_double_or_default(j, "score_cutoff");
   s.items_tested = get_uint64_or_default(j, "items_tested");
   s.items_dropped_score = get_uint64_or_default(j, "items_dropped_score");

@@ -75,6 +75,32 @@ namespace breseq
   // not exist.
   const char* kBreseqMateNeverAlignedBAMTag = "X9";
 
+  // Set to 1 on BOTH mates of a pair whose placement required a CHOICE: at least one mate had more
+  // than one reference alignment when the pair was classified, so the distance between them was
+  // selected rather than measured.
+  //
+  // This is a property of the PAIR, not of a record, which is why it cannot be read off X1. X1 is
+  // recomputed at write time from the alignments that SURVIVE (alignment.cpp), and
+  // downselect_to_kept runs first -- so a read with seven placements, one of which happened to make
+  // its pair look concordant, is written X1 = 1. Two consequences, and pair distance (PD) evidence
+  // is exposed to both:
+  //
+  //   * write_held_discordant_pairs resolves a unique/redundant pair by a per-locus cluster VOTE,
+  //     giving every held pair at that locus the same chosen copy. The resulting distance error is
+  //     coherent and one-directional -- which is exactly the signature PD's region seeder exists to
+  //     find, so it produces confident calls out of nothing.
+  //   * downselection itself resolves ties toward concordance, and the concordance window is the
+  //     discordant cutoff (roughly twice the median), so a wrong-copy rescue can shift a distance by
+  //     hundreds of bases without ever setting X1 > 1.
+  //
+  // PD keys on this tag in addition to redundancy(), because its existing filter reads only the
+  // leftmost mate's X1 and therefore implements its own stated intent -- "a tie-broken multi-mapping
+  // placement has an arbitrary distance" -- for only half of the affected pairs.
+  //
+  // DP and MP deliberately do NOT read it: DP uses redundancy as evidence that a side sits on a
+  // multicopy element, and MP only records it.
+  const char* kBreseqAmbiguousPairPlacementBAMTag = "X4";
+
   string Settings::global_bin_path;
   string Settings::global_program_data_path;
 

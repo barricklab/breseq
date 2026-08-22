@@ -12,7 +12,21 @@ CURRENT_OUTPUTS[0]="${SELF}/data/annotated.gd"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 
 # LTEE clone ZDB30: population Ara-3, generation 32,000 (Blount et al. 2012).
-# Paired-end Illumina Genome Analyzer II, 2x35 bp, 25,400,140 read pairs.
+# Paired-end Illumina Genome Analyzer II, 25,400,140 read pairs.
+#
+# READ LENGTHS ARE 36 AND 34, NOT 2x35, and the ENA record looks like an off-by-one:
+# R1 is 36 bp, R2 is 34, and they sum to the 70 a 2x35 run would give. R1's 36th base
+# is 95% T at an ordinary Q32.2 -- not a dead cycle, so --quality-score-trim will
+# never remove it and breseq has no fixed-end trim. R2's last cycle is normal. Both
+# 5' ends are T-skewed as well (R1 cycle 1 is 80% T, cycle 2 66%).
+#
+# It costs R1 about 1.1 points of alignment rate (88.62% against R2's 92.52%; a
+# direct bowtie2 comparison recovers 224 of 20,000 reads by trimming that one base).
+# Do NOT trim it here: a run on reads trimmed one base at each end gives FEWER
+# junctions, not more (JC 10 -> 7, still no MOB), because the shorter reads cost more
+# than the bad base does. It is also not a meaningful contributor to MP evidence --
+# if it were, the ~58,000 R1 reads it costs would show up as mate-never-aligned, and
+# the whole run carries 7,525.
 #
 # WHY THIS DATA SET: insert size, and nothing else comes close. ENA records
 # nominal_length 2834 for this library, so with 2x35 reads each pair spans about
@@ -29,7 +43,7 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # MOB-heavy with no AMP, that one is AMP-heavy.
 #
 # COVERAGE CAP: as served this run is ~384x, far above the 40-80x band the rest
-# of these tests were chosen for, and at 2x35 bp that is 50 million reads. '-l 80'
+# of these tests were chosen for, and at ~35 bp per read that is 50 million reads. '-l 80'
 # caps what breseq PARSES at roughly 80-fold. The limit is applied inside
 # normalize_fastq_paired (see read_file_base_limit in breseq_cmdline.cpp), so it
 # truncates within the paired set -- it takes the head of the files in order and
@@ -40,8 +54,55 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 #
 # EXPERIMENTAL PAIR EVIDENCE: this test runs the three PAIR predictors, and it is
 # the only place any of them see a kilobase-scale span. What they currently produce
-# here is MP 0, PD 30 (25 accepted) and DP 0 -- the zeros are expected and worth
+# here is MP 0, PD 28 (25 accepted) and DP 0 -- the zeros are expected and worth
 # pinning.
+#
+# THE PD ENTRIES ARE NOT OVER-PREDICTION, which is the natural first reading of 25
+# calls against 2 to 7 on the short-insert paired tests. Every accepted one has
+# independent corroboration:
+#
+#   * 21 have a NEGATIVE size_shift matching an annotated IS element's length, i.e.
+#     an insertion. 12 carry a repeat_name (6 of those anchored on a junction whose
+#     other side is in the element, the rest named by size where exactly one family
+#     fits); the other 9 carry an honest repeat_size_candidates list because IS150
+#     (1443) and IS186 (1343) are closer together than the estimator's scatter.
+#     13 of the 21 match a MOB in long_ltee_ara_m3_38k_se36 -- the same Ara-3
+#     population 6,000 generations later -- to within a few bases and the right
+#     family.
+#   * 4 have a POSITIVE shift and all four sit on a missing-coverage region, i.e.
+#     they are deletions. Two are multi-kilobase (MC 1609173-1615472 and
+#     MC 3894999-3901455) and PD did not see them at all before.
+#
+# WHY '--junction-alignment-pair-limit 2000000' IS PASSED HERE. At the stock 100000
+# this run examines 4.7% of the junction evidence it has: the reference offers
+# 2,139,024 passed alignment pairs and the cap stops at 100,000. The cost is severe
+# and specific to this library -- JC 10 instead of 37 and MOB 0 instead of 4 -- and
+# it is not a read-length problem, which is what it looks like at first. Mate-pair
+# circularization junctions are the cause: soft clipping finds 2,610 clipped tails
+# matching back 2.4-3.3 kb (a 1305x enrichment, see below), and each is a ONE-OFF
+# molecule, so each yields a candidate with position-hash 1 that the >=2 threshold
+# discards. They flood the budget and dilute the real IS junctions -- which do have
+# many reads sharing one breakpoint -- below the threshold. Raising the cap costs
+# nothing measurable in runtime (12 min against 14 at the default) and the curve is
+# flat past 2M: unlimited gives only JC 37 / MOB 4 against 36 / 3.
+#
+# Even with every junction, only 4 of the 25 IS insertion sites that HAVE a junction
+# get a second one, so predictJCplusJCtoMOB fires 4 times while PD sees 21. That gap
+# is not going to be closed by pairing a lone junction with a PD call: a MOB has to
+# be placed to base-pair resolution and PD cannot do that -- its position_range is
+# tens of bases and its size estimates scatter by 4-72 against a known element
+# length. So the remaining insertions stay PD evidence, annotated with the family
+# they are consistent with, and are not promoted to mutations.
+#
+# PD was 6 here until 6a303834 loosened the seed in favour of a genome-wide e-value;
+# the 24 it gained were overwhelmingly these real events. It then went 30 -> 28 when
+# PD stopped counting pairs whose placement was CHOSEN rather than measured
+# (kBreseqAmbiguousPairPlacementBAMTag). That removed 8 artifacts -- 5 of them in
+# rRNA operons, where a mate's copy is picked by a per-locus cluster vote so the
+# distance error is coherent across every pair there and looks exactly like a real
+# collective shift -- and, by sharpening the statistic, revealed 5 real events
+# including the two multi-kilobase deletions above. 3.66% of pairs are refused here,
+# which is the worst case in the tree: a repeat-rich reference and a 2.8 kb insert.
 #
 # MP was 98 (73 accepted) until MP started counting only reads whose mate produced NO
 # ALIGNMENT AT ALL, rather than every read flagged BAM_FMUNMAP. Those are very
@@ -124,6 +185,7 @@ TESTCMD="\
     -o ${SELF} \
     ${REFERENCE_ARG} \
     -l 80 \
+    --junction-alignment-pair-limit 2000000 \
     --predict-copy-number \
     --predict-discordant-pairs \
     --predict-missing-pairs \

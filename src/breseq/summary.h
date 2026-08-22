@@ -465,6 +465,13 @@ namespace breseq{
     double   region_tail_fit_hi;                // ... over which real events are negligible
     uint64_t regions_seeded;
 
+    // How many pairs the intake examined, and how many it refused because their placement was
+    // CHOSEN rather than measured (kBreseqAmbiguousPairPlacementBAMTag). Reported because the whole
+    // claim that refusing them is free rests on this ratio being small on ordinary data -- so it
+    // should be visible on every run rather than inferred.
+    uint64_t pairs_considered;
+    uint64_t pairs_ambiguous_placement;
+
     // Accept stage.
     double   score_cutoff;                      // --pair-distance-score-cutoff in force
 
@@ -488,6 +495,8 @@ namespace breseq{
     , region_tail_fit_lo(0.0)
     , region_tail_fit_hi(0.0)
     , regions_seeded(0)
+    , pairs_considered(0)
+    , pairs_ambiguous_placement(0)
     , score_cutoff(0.0)
     , items_tested(0)
     , items_dropped_score(0)
