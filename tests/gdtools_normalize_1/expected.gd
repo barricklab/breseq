@@ -1,0 +1,6 @@
+#=GENOME_DIFF	1.0
+#=TITLE	input
+#=REFSEQ	REL606.fragment.gbk
+MOB	1	.	REL606-5	20000	IS1	1	9	repeat_size=768
+DEL	2	.	REL606-5	20032	500
+SNP	3	.	REL606-5	20300	A	within=1

@@ -1517,7 +1517,7 @@ int do_normalize_gd(int argc, char* argv[])
 	options("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT);
 	options("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT);
-	options("dont-check-apply,x" , "skip step that checks consistency of normalize using APPLY.", TAKES_NO_ARGUMENT);
+	options("dont-check-apply,x" , "skip both the check that the input is valid against the reference sequences and the step that checks consistency of normalize using APPLY.", TAKES_NO_ARGUMENT);
 
 	const int32_t kDistanceToRepeat = 20;
 	
@@ -1581,7 +1581,16 @@ int do_normalize_gd(int argc, char* argv[])
   ref_seq_info.LoadFiles(reference_file_names);
 
   cGenomeDiff gd(input);
-	
+
+	// Normalizing an ambiguous Genome Diff is not meaningful: when one mutation overlaps bases
+	// another one deletes or duplicates, the two can be applied in either order to different
+	// results, and normalization has to pick one. APPLY rejects these outright, so NORMALIZE
+	// does too rather than silently shifting coordinates based on a reading APPLY will not share.
+	// '--dont-check-apply' skips this along with the sequence check below.
+	if (!options.count("dont-check-apply")) {
+		gd.valid_with_reference_sequences(ref_seq_info);
+	}
+
   Settings settings;
 	cReferenceSequences new_ref_seq_info;
 
@@ -1629,27 +1638,43 @@ int do_normalize_gd(int argc, char* argv[])
 		gd.reassign_unique_ids();
 	}
 	
+	uout("Writing output Genome Diff file", options["output"]);
+	gd.write(options["output"]);
+
 	bool apply_test_failed = false;
 	if (!options.count("dont-check-apply")) {
 		uout("Using APPLY to check that normalization didn't change the mutated sequence.");
 		cReferenceSequences	verify_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
-		cGenomeDiff verify_gd(input); // must load new copy or positions will be shifted by apply_to_sequences
-		verify_gd.apply_to_sequences(ref_seq_info, verify_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 
-		vector<string> seq_ids = verify_ref_seq_info.seq_ids();
-		vector<string> new_seq_ids = new_ref_seq_info.seq_ids();
+		// Read back what we just wrote rather than reusing 'gd': apply_to_sequences shifts
+		// positions in place, and cGenomeDiff holds its entries by shared_ptr so copying it would
+		// alias them. Loading the output file also means the check covers exactly the bytes the
+		// caller gets. Note this must be the NORMALIZED diff -- applying 'input' here compares
+		// the input against itself, which is a tautology that can never fail.
+		cGenomeDiff verify_gd(options["output"]);
 
-		for (vector<string>::const_iterator it = seq_ids.begin(); it != seq_ids.end(); it++)
-		{
-			if (new_ref_seq_info[*it].m_fasta_sequence.get_sequence() != verify_ref_seq_info[*it].m_fasta_sequence.get_sequence()) {
-				WARN("Failed APPLY test. Discrepancies between sequences produced before and after NORMALIZE. Check ordering of mutations.");
-				apply_test_failed = true;
+		// The shift can move a mutation onto bases another mutation deletes or duplicates, which
+		// makes the output ambiguous even when the two applied sequences still agree. The input
+		// was already checked for this above, so any such error is one normalization introduced.
+		cFileParseErrors verify_parse_errors = verify_gd.valid_with_reference_sequences(verify_ref_seq_info, true);
+		if (verify_parse_errors._errors.size()) {
+			WARN("Failed APPLY test. NORMALIZE produced a Genome Diff that is no longer valid against the reference sequences.");
+			verify_parse_errors.print_errors(false);
+			apply_test_failed = true;
+		} else {
+			verify_gd.apply_to_sequences(ref_seq_info, verify_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
+
+			vector<string> seq_ids = verify_ref_seq_info.seq_ids();
+
+			for (vector<string>::const_iterator it = seq_ids.begin(); it != seq_ids.end(); it++)
+			{
+				if (new_ref_seq_info[*it].m_fasta_sequence.get_sequence() != verify_ref_seq_info[*it].m_fasta_sequence.get_sequence()) {
+					WARN("Failed APPLY test. Discrepancies between sequences produced before and after NORMALIZE. Check ordering of mutations.");
+					apply_test_failed = true;
+				}
 			}
 		}
 	}
-
-	uout("Writing output Genome Diff file", options["output"]);
-	gd.write(options["output"]);
 
 	// A failed self-consistency check means NORMALIZE altered the mutated sequence, so the
 	// output cannot be trusted. Return non-zero even though output was written (the caller

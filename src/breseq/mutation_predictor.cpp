@@ -2593,9 +2593,16 @@ namespace breseq {
       // We are still potentially in danger of doing the wrong thing here,
       // because a mutation could be applied only after one with the 'before' tag, making the shift
       // incorrect. So, setting 'no_normalize' is an out that can be used.
-      
-      if (mut.entry_exists("within") || mut.entry_exists("no_normalize") ) goto next_mutation;
-      
+
+      // A 'within' mutation is skipped entirely -- it is not shifted, and it does not become
+      // 'last_mut'. Its POSITION is not a reference coordinate: for 'within=<MOB id>' it is the
+      // MOB's position plus an offset into the newly inserted element, so it names bases that do
+      // not exist in the reference and cannot legitimately bound a neighbor's shift. The mutation
+      // it is within is itself in this list and provides the real barrier at its real coordinates.
+      if (mut.entry_exists("within")) continue;
+
+      if (mut.entry_exists("no_normalize")) goto next_mutation;
+
       if (mut._type == INS) {
         
         int32_t size = mut["new_seq"].size();
@@ -2621,7 +2628,13 @@ namespace breseq {
           
           // Did we get shifted into the position of the next mutation? Then back off
           // Note: We don't do this with converted AMPs as this creates problems (an insertion within them can shift their position)
-          if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start()) && !mut.entry_exists("_was_AMP")) {
+          // As in the DEL case below, only back off when the shift is what created the overlap --
+          // an insertion that already sat at or past last_mut in the input is not ours to move.
+          bool ins_overlap_existed_before_shift =
+              last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID))
+              && (cReferenceCoordinate(position, insert_position) >= last_mut->get_reference_coordinate_start());
+
+          if (last_mut && !ins_overlap_existed_before_shift && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start()) && !mut.entry_exists("_was_AMP")) {
             // The position of this insert mutation should be one before the mutation, unless it is another INS,
             // In the INS case, we need to properly update all of the insert positions
             
@@ -2703,10 +2716,25 @@ namespace breseq {
         // Begin consensus mode shifting of coordinates ---->
         if (!settings.polymorphism_prediction) {
         
+          // Remember where the author put it, so we can tell a shift-induced overlap from one
+          // that was already in the input.
+          int32_t position_before_shift = position;
+
           normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
-          
+
           // Did we get shifted into the position of the next mutation? Then back off.
-          if (last_mut && !gd.applied_before_id(last_mut->_id, mut._id) && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+          // Only if the shift is what created the overlap: a deletion that already covered
+          // last_mut in the input is not ours to move. Backing off from that pushes the deletion
+          // LEFT of where the author put it, onto bases it was never equivalent to, and the
+          // distance moved tracks last_mut's coordinate -- so the same authored deletion lands
+          // somewhere different in every sample that happens to carry a mutation inside it.
+          // Requiring the original interval to end before last_mut also bounds the result from
+          // below: position_before_shift <= last_mut position - size whenever this fires.
+          bool overlap_existed_before_shift =
+              last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID))
+              && (cReferenceCoordinate(position_before_shift + size - 1) >= last_mut->get_reference_coordinate_start());
+
+          if (last_mut && !overlap_existed_before_shift && !gd.applied_before_id(last_mut->_id, mut._id) && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
             // The position of this insert mutation should be as many bases as the
             // deletion is long before the next mutation
             mut["position"] = s(n(last_mut->get("position")) - size);
