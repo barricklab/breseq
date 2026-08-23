@@ -2,9 +2,9 @@
 #=TITLE	gd
 #=TP|FN|FP	43|16|4
 DEL	1	.	NC_001416-0	139	1	compare=FP	frequency=1
-INS	2	.	NC_001416-1	4566	G	compare=TP	frequency=1	insert_position=0
+INS	2	.	NC_001416-1	4566	G	compare=TP	frequency=1
 SNP	3	.	NC_001416-2	1261	G	compare=TP	frequency=1
-INS	4	.	NC_001416-2	1435	C	compare=TP	frequency=1	insert_position=0
+INS	4	.	NC_001416-2	1435	C	compare=TP	frequency=1
 SNP	5	.	NC_001416-2	2314	A	compare=TP	frequency=1
 DEL	6	.	NC_001416-2	2338	5996	compare=FP	frequency=1
 SNP	7	.	NC_001416-2	2789	C	compare=FN	frequency=1
@@ -32,10 +32,10 @@ SNP	28	.	NC_001416-4	7918	T	compare=TP	frequency=0.0680
 SNP	29	.	NC_001416-4	7919	T	compare=TP	frequency=0.0660
 SNP	30	.	NC_001416-4	8134	T	compare=TP	frequency=0.0700
 SNP	31	.	NC_001416-4	8141	G	compare=TP	frequency=0.1440
-INS	32	.	NC_001416-4	8151	C	compare=TP	frequency=0.1500	insert_position=0
+INS	32	.	NC_001416-4	8151	C	compare=TP	frequency=0.1500
 SNP	33	.	NC_001416-4	8152	A	compare=TP	frequency=0.1640
-INS	34	.	NC_001416-4	8156	A	compare=TP	frequency=0.7930	insert_position=0
-INS	35	.	NC_001416-4	8156	G	compare=FP	frequency=0.2	insert_position=1
+INS	34	.	NC_001416-4	8156	A	compare=TP	frequency=0.7930
+INS	35	.	NC_001416-4	8156	G	compare=FP	frequency=0.2	insert_position=2
 SNP	36	.	NC_001416-4	8184	T	compare=TP	frequency=1
 SNP	37	.	NC_001416-4	8191	T	compare=TP	frequency=1
 SNP	38	.	NC_001416-4	8203	A	compare=FN	frequency=1
@@ -51,7 +51,7 @@ SNP	47	.	NC_001416-4	8774	A	compare=TP	frequency=1
 SNP	48	.	NC_001416-4	8868	C	compare=TP	frequency=1
 SNP	49	.	NC_001416-4	9077	G	compare=TP	frequency=1
 SNP	50	.	NC_001416-4	9172	C	compare=TP	frequency=1
-INS	51	.	NC_001416-4	9176	AC	compare=FP	frequency=1	insert_position=0
+INS	51	.	NC_001416-4	9176	AC	compare=FP	frequency=1
 SUB	52	.	NC_001416-4	9176	2	AC	compare=FN	frequency=1
 SNP	53	.	NC_001416-4	9314	A	compare=TP	frequency=0.0570
 SNP	54	.	NC_001416-4	9323	C	compare=TP	frequency=0.0610

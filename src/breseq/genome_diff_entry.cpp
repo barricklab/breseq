@@ -262,7 +262,15 @@ namespace breseq {
   (DEL_END, kDiffEntryFieldVariableType_PositiveInteger)
   (INS_START, kDiffEntryFieldVariableType_BaseSequence)
   (INS_END, kDiffEntryFieldVariableType_BaseSequence)
-  (INSERT_POSITION, kDiffEntryFieldVariableType_Integer)
+  // Zero is a real value, so the floor is zero rather than one. RA numbers the pileup columns at
+  // a position: 0 is the reference base itself (which is why valid_with_reference_sequences only
+  // looks up a reference base when insert_position is 0) and 1 is the first inserted base after
+  // it. An INS has no reference-base column of its own, so its own floor is 1 -- that stricter
+  // bound is applied at load through diff_entry_load_field_variable_types below.
+  // This entry must stay a *signed* type, because it is also what compare() sorts on:
+  // PositiveInteger compares as uint32_t, which would reorder the negative values an INV puts
+  // here transiently (see cGenomeDiff::renumber_inverted_insert_positions).
+  (INSERT_POSITION, kDiffEntryFieldVariableType_NonNegativeInteger)
   (MEDIATED_STRAND, kDiffEntryFieldVariableType_Strand)
   //JC item
   (SIDE_1_POSITION, kDiffEntryFieldVariableType_PositiveInteger)
@@ -272,7 +280,20 @@ namespace breseq {
   (OVERLAP, kDiffEntryFieldVariableType_Integer)
   (UNIQUE_READ_SEQUENCE, kDiffEntryFieldVariableType_BaseSequence)
   ;
-  
+
+  // Stricter types applied only while loading a file, for fields whose valid range depends on
+  // which entry type carries them. An entry here overrides diff_entry_field_variable_types for
+  // that one type; every other type keeps the shared entry, and so does compare(), which needs a
+  // single ordering for a field regardless of how narrowly any one type is allowed to use it.
+  map<gd_entry_type, map<string, diff_entry_field_variable_t> > diff_entry_load_field_variable_types =
+  make_map<gd_entry_type, map<string, diff_entry_field_variable_t> >
+  // Only RA needs insert_position 0, for the reference base at the position. An INS is the
+  // inserted bases themselves and has no such column, so it counts from 1 -- which is also what
+  // a blank insert_position is filled in with on load.
+  (INS, make_map<string, diff_entry_field_variable_t>
+        (INSERT_POSITION, kDiffEntryFieldVariableType_PositiveInteger))
+  ;
+
   const vector<string>gd_entry_type_lookup_table =
   make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("SC")("DP")("MP")("PD")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
   
@@ -518,8 +539,19 @@ namespace breseq {
       field_count++;
       string key = it->first;
       if (diff_entry_field_variable_types.count(key) == 0) continue;
-      
+
       diff_entry_field_variable_t variable_type = diff_entry_field_variable_types[key];
+
+      // A field whose valid range depends on the entry type carrying it is narrowed here.
+      map<gd_entry_type, map<string, diff_entry_field_variable_t> >::const_iterator it_load_type
+        = diff_entry_load_field_variable_types.find(this->_type);
+      if (it_load_type != diff_entry_load_field_variable_types.end()) {
+        map<string, diff_entry_field_variable_t>::const_iterator it_load_field
+          = it_load_type->second.find(key);
+        if (it_load_field != it_load_type->second.end())
+          variable_type = it_load_field->second;
+      }
+
       string value = it->second;
       
       if (variable_type == kDiffEntryFieldVariableType_BaseSequence) {
@@ -1354,8 +1386,14 @@ namespace breseq {
       
     }
     
-    // Remove insert_position is it was added
-    if ( (cp._type == INS) && (cp.entry_exists("_dont_print_insert_position" )) ) {
+    // Remove insert_position if we supplied it implicitly at parse time -- but only while it
+    // still holds the implicit value. '_dont_print_insert_position' records that the input line
+    // omitted the field, not that the field is unwanted forever: NORMALIZE's INS back-off
+    // renumbers insert_position when insertions are shifted onto a shared position, and dropping
+    // a renumbered value here would write out entries that are byte-identical except for their
+    // id, silently merging two insertions into one.
+    if ( (cp._type == INS) && (cp.entry_exists("_dont_print_insert_position" ))
+        && (cp.entry_exists(INSERT_POSITION)) && (cp.get(INSERT_POSITION) == "1") ) {
       cp.erase(INSERT_POSITION);
     }
     

@@ -1,8 +1,8 @@
 #=GENOME_DIFF	1.0
 #=TITLE	gd
-INS	2	74	NC_001416-1	4566	G	frequency=1	insert_position=0
+INS	2	74	NC_001416-1	4566	G	frequency=1
 SNP	3	75	NC_001416-2	1261	G	frequency=1
-INS	4	76	NC_001416-2	1435	C	frequency=1	insert_position=0
+INS	4	76	NC_001416-2	1435	C	frequency=1
 SNP	5	77	NC_001416-2	2314	A	frequency=1
 SNP	205	77	NC_001416-2	2789	C	frequency=1
 SNP	7	94	NC_001416-3	1915	C	frequency=1	label=remove_me
@@ -25,9 +25,9 @@ SNP	27	117	NC_001416-4	7918	T	frequency=0.0680
 SNP	28	118	NC_001416-4	7919	T	frequency=0.0660
 SNP	29	121	NC_001416-4	8134	T	frequency=0.0700
 SNP	30	122	NC_001416-4	8141	G	frequency=0.1440
-INS	31	123	NC_001416-4	8151	C	frequency=0.1500	insert_position=0
+INS	31	123	NC_001416-4	8151	C	frequency=0.1500
 SNP	32	124	NC_001416-4	8152	A	frequency=0.1640
-INS	33	125	NC_001416-4	8156	A	frequency=0.7930	insert_position=0
+INS	33	125	NC_001416-4	8156	A	frequency=0.7930
 SNP	34	127	NC_001416-4	8184	T	frequency=1
 SNP	35	128	NC_001416-4	8191	T	frequency=1
 SNP	36	129	NC_001416-4	8203	A	frequency=1

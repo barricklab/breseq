@@ -255,6 +255,10 @@ public:
   // Helper function for apply_to_sequences
   void shift_positions(cDiffEntry& item, cReferenceSequences& ref_seq_info, bool verbose=false);
 
+  // Restores positive insert_position values after an INV has been applied.
+  // Call immediately after the re-sort that follows an inversion.
+  void renumber_inverted_insert_positions();
+
   // For constructing the sequence a MOB replaces things with
   string mob_replace_sequence(cReferenceSequences& ref_seq_info, 
                               cDiffEntry& mut, 

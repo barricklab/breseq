@@ -2564,6 +2564,54 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
   }
 }
 
+// Restore positive insert_position values after an inversion.
+//
+// cDiffEntry::mutation_invert_position_sequence negates insert_position for insertions carried
+// through an INV, because chained insertions at one position come out in the opposite order when
+// the region is read in reverse, and negating is what makes the sort produce that order (the field
+// sorts as a signed integer). The negative is a sort key, not a coordinate: an insertion "-1 bases
+// after" a position describes nothing, and it must not survive into the output, where it would
+// misorder against any positive insert_position later placed alongside it.
+//
+// So once the sort has consumed it, renumber each affected group back to 1..n in the order the
+// sort just established, which reproduces the same applied sequence. Groups that never held a
+// negative are left alone -- an insertion the inversion did not touch keeps the number its author
+// gave it. An entry that came in without the field and returns to 1 also returns to being written
+// without it, since '_dont_print_insert_position' only suppresses the implicit value.
+void cGenomeDiff::renumber_inverted_insert_positions() {
+
+  // Group by the position the insertions share; entries carrying 'before'/'within' have been
+  // moved to the end of the list by sort_apply_order, so group by key rather than by adjacency.
+  map<string, vector<cDiffEntry*> > ins_groups;
+
+  diff_entry_list_t muts = this->mutation_list();
+  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+    cDiffEntry& mut = **it;
+    if (mut._type != INS) continue;
+    if (!mut.entry_exists(INSERT_POSITION)) continue;
+    ins_groups[mut[SEQ_ID] + "\t" + mut[POSITION]].push_back(&mut);
+  }
+
+  for (map<string, vector<cDiffEntry*> >::iterator it = ins_groups.begin(); it != ins_groups.end(); it++) {
+    vector<cDiffEntry*>& group = it->second;
+
+    bool has_negative = false;
+    for (vector<cDiffEntry*>::iterator it_ins = group.begin(); it_ins != group.end(); it_ins++) {
+      if (from_string<int32_t>((**it_ins)[INSERT_POSITION]) < 0) has_negative = true;
+    }
+    if (!has_negative) continue;
+
+    std::stable_sort(group.begin(), group.end(), [](cDiffEntry* a, cDiffEntry* b) {
+      return from_string<int32_t>((*a)[INSERT_POSITION]) < from_string<int32_t>((*b)[INSERT_POSITION]);
+    });
+
+    int32_t assign_insert_position = 0;
+    for (vector<cDiffEntry*>::iterator it_ins = group.begin(); it_ins != group.end(); it_ins++) {
+      (**it_ins)[INSERT_POSITION] = to_string<int32_t>(++assign_insert_position);
+    }
+  }
+}
+
 // The return sequence includes just the MOB part to be inserted
 // It DOES include any deleted/inserted bases at the end of the MOB.
 // It DOES NOT include any target site duplication. 
@@ -3267,6 +3315,13 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     // Re-sort ... invalidates the iterator
     if (mut._type == INV) {
       // Sort the list into apply order ('within' and 'before' tags)
+      cGenomeDiff::sort_apply_order();
+      // The sort has now consumed the negated insert_position values the inversion used to put
+      // chained insertions in reverse order, so put them back on a 1..n footing. Sort once more
+      // afterwards so the list order still agrees with the numbers we just assigned -- the two
+      // can only disagree if an inverted insertion landed on the same position as one the
+      // inversion did not touch, but then the file would contradict itself.
+      cGenomeDiff::renumber_inverted_insert_positions();
       cGenomeDiff::sort_apply_order();
     }
     

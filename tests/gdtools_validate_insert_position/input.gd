@@ -1,0 +1,4 @@
+#=GENOME_DIFF	1.0
+INS	1	.	REL606-5	1498	TGCCAT	insert_position=-1
+INS	2	.	REL606-5	1600	A	insert_position=0
+RA	3	.	REL606-5	1700	0	G	A

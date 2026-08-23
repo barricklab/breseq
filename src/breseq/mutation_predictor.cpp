@@ -2645,20 +2645,24 @@ namespace breseq {
               new_position = n(last_mut->get(POSITION));
               new_insert_position = assign_insert_position;
               
+              // Walk back over the mutations already processed this pass, bumping each INS that
+              // now shares this position. We came from rbegin() via ++, so -- walks back toward
+              // rbegin() and the bound has to be rbegin(), tested BEFORE each decrement: -- moves
+              // away from rend(), so a test against rend() can never fire, and stepping past
+              // rbegin() is undefined -- reachable whenever the two highest-coordinate mutations
+              // are both INS that back off onto the same position. The first decrement is safe
+              // without a test because last_mut is non-NULL, which means at least one mutation
+              // has already been processed.
               diff_entry_list_t::reverse_iterator it_ins = it;
-              it_ins--;
-              cDiffEntry* ins_mut = (*it_ins).get();
-              while (   (ins_mut->_type == INS)
-                     && (n((*ins_mut)["position"]) == new_position)
-                    )
-              {
+              while (it_ins != test_muts.rbegin()) {
+                it_ins--;
+                cDiffEntry* ins_mut = (*it_ins).get();
+                if ((ins_mut->_type != INS) || (n((*ins_mut)["position"]) != new_position))
+                  break;
                 assign_insert_position++;
                 (*ins_mut)["insert_position"] = s(assign_insert_position);
-                it_ins--;
-                if (it_ins == test_muts.rend()) break;
-                ins_mut = (*it_ins).get();
               }
-              
+
             } else {
               new_position = n(last_mut->get(POSITION)) - 1;
             }
