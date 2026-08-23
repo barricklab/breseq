@@ -176,6 +176,10 @@ namespace breseq {
   const char* SC_AGREE_COUNT = "agree_read_count";
   const char* SC_CONSENSUS_FRACTION = "consensus_fraction";
   const char* SC_CONSENSUS_TAIL = "clipped_sequence";
+  const char* SC_AGREE_COUNT_FORWARD = "agree_read_count_forward";
+  const char* SC_AGREE_COUNT_REVERSE = "agree_read_count_reverse";
+  const char* SC_SPANNING_COUNT_FORWARD = "spanning_read_count_forward";
+  const char* SC_SPANNING_COUNT_REVERSE = "spanning_read_count_reverse";
 
   //For CN
   const char* COPY_NUMBER = "copy_number";

@@ -180,7 +180,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd);
   
 void html_marginal_predictions(const string& file_name, const Settings& settings, Summary& summary,
                                cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
-void html_summary(const string& file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);
+void html_summary(const string& file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
   
 void html_compare(
                   const Settings& settings,
@@ -294,6 +294,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& dp,
 string html_discordant_pair_gates_string(const Settings& settings, Summary& summary);
 string html_pair_distance_gates_string(const Settings& settings, Summary& summary);
 string html_missing_pair_gates_string(const Settings& settings, Summary& summary);
+string html_soft_clipping_gates_string(const Settings& settings, Summary& summary, cGenomeDiff& gd);
 
 // summary.html block reporting how CNery's copy number analysis went for each reference sequence:
 // the replication bias it fit and divided out, how much flatter each correction stage made the

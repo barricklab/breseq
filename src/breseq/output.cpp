@@ -1159,7 +1159,7 @@ void html_compare(
 }
   
 
-void html_summary(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
+void html_summary(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
@@ -1319,6 +1319,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << html_pair_distance_gates_string(settings, summary);
     HTML << html_missing_pair_gates_string(settings, summary);
   }
+
+  // Same reasoning for SC, and more so: its null is fitted to the run, so identical command lines
+  // give wildly different SC counts on different libraries. See the function for what the rows mean.
+  HTML << html_soft_clipping_gates_string(settings, summary, gd);
 
   ////
   // Write reference sequence information
@@ -2913,6 +2917,139 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
   return ss.str();
 }
 
+/* The SC counterpart of the DP/PD/MP gates tables.
+ *
+ * SC needs one more than they do. Its null is fitted to the run, so the same command line gives
+ * wildly different SC counts on different libraries -- across 29 clones of one LTEE population the
+ * accepted count ranged from 5 to 1708 with no visible reason. The reason is almost always the
+ * strand-purity row below: an end-of-read artifact (dark-cycle poly-G, adapter read-through) is
+ * always the read's 3' end, so for a given clip direction it comes from exactly one strand. A run
+ * whose clip population is mostly strand-pure is a run whose SC evidence is mostly artifact, and
+ * that is not otherwise visible anywhere in the report.
+ *
+ * The outcome tally is counted from the genome diff rather than carried in the summary, because
+ * add_sc_evidence() runs against a const Summary and this cannot then drift from what the tables
+ * on the other pages actually show.
+ */
+string html_soft_clipping_gates_string(const Settings& settings, Summary& summary, cGenomeDiff& gd)
+{
+  const SoftClippingSummary& d = summary.soft_clipping;
+  if (!settings.predict_soft_clipping) return "";
+  if ((d.total_clipped_read_ends == 0) && (d.total_spanning_read_bases == 0)) return "";
+
+  uint32_t accepted = 0, rejected_score = 0, rejected_strand = 0,
+           rejected_low_complexity = 0, rejected_other = 0;
+  // get_list, not show_list: the point of this tally is to say how many were rejected, and
+  // show_list has already dropped the rejected ones.
+  diff_entry_list_t sc_list = gd.get_list(make_vector<gd_entry_type>(SC));
+  for (diff_entry_list_t::iterator it = sc_list.begin(); it != sc_list.end(); it++) {
+    cDiffEntry& e = **it;
+    if (!e.entry_exists(REJECT)) { accepted++; continue; }
+    vector<string> reasons = e.get_reject_reasons();
+    bool score = false, strand = false, low_complexity = false, other = false;
+    for (vector<string>::const_iterator r = reasons.begin(); r != reasons.end(); r++) {
+      if      (*r == "SCORE_CUTOFF")        score = true;
+      else if (*r == "FISHER_STRAND")       strand = true;
+      else if (*r == "LOW_COMPLEXITY_TAIL") low_complexity = true;
+      else                                  other = true;
+    }
+    // An item can fail several gates at once; count it under the most specific one so the
+    // columns add up to the number of rejected items.
+    if      (strand)         rejected_strand++;
+    else if (low_complexity) rejected_low_complexity++;
+    else if (score)          rejected_score++;
+    else if (other)          rejected_other++;
+  }
+
+  stringstream ss;
+  ss << "<p>" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"3\" align=\"left\" class=\"soft_clipping_header_row\"",
+              "Soft clipping (SC) evidence gates")) << endl;
+  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+
+  ss << tr(td("clipped bases required")
+           + td(to_string(settings.soft_clipping_minimum_bases) + " bases")
+           + td("also how much aligned reference a read must have on BOTH sides of a position to"
+                " count as reading through it")) << endl;
+
+  {
+    string basis = "agreeing clip events over read opportunities, measured across the whole"
+                   " reference rather than assumed";
+    ss << tr(td("clipping background")
+             + td(to_string(100.0 * d.soft_clipping_null_rate, 4, false) + "%")
+             + td(basis)) << endl;
+  }
+
+  {
+    string basis = "Pearson &phi; = " + to_string(d.soft_clipping_pearson_phi, 2, false)
+                 + " over " + to_string(d.soft_clipping_tested_positions) + " (position, direction)"
+                 + " pairs (mean " + to_string(d.soft_clipping_mean_tested_reads, 0, false)
+                 + " reads), " + to_string(d.soft_clipping_trimmed_positions)
+                 + " trimmed at a clipped fraction of "
+                 + to_string(settings.soft_clipping_dispersion_trim_frequency, 2, false)
+                 + " or above so that real breakpoints cannot define their own background";
+    ss << tr(td("background unevenness")
+             + td(d.soft_clipping_dispersion > 0.0
+                    ? "&rho; = " + to_string(d.soft_clipping_dispersion, 5, false)
+                    : string("none (binomial)"))
+             + td(basis)) << endl;
+  }
+
+  // The row that explains an artifact-dominated run.
+  if (d.total_agreeing_clipped_read_ends > 0) {
+    double pure_fraction = static_cast<double>(d.total_strand_pure_agreeing_clipped_read_ends)
+                         / static_cast<double>(d.total_agreeing_clipped_read_ends);
+    ss << tr(td("one-strand clip events")
+             + td(to_string(100.0 * pure_fraction, 1, false) + "%")
+             + td(to_string(d.total_strand_pure_agreeing_clipped_read_ends) + " of "
+                  + to_string(d.total_agreeing_clipped_read_ends) + " agreeing clip events sit at"
+                  " positions that saw only one read strand. Reads clipped at a real breakpoint"
+                  " come from both strands; an end-of-read artifact (dark-cycle poly-G, adapter"
+                  " read-through) can only come from one. A high value here means most of this"
+                  " run's clipping is artifact &mdash; the strand gate below is what removes it.")) << endl;
+  }
+
+  ss << tr(td("strand gate")
+           + td(settings.soft_clipping_fisher_strand_p_value_cutoff > 0.0
+                  ? "p &ge; " + to_string(settings.soft_clipping_fisher_strand_p_value_cutoff, 3, false)
+                  : string("OFF"))
+           + td("Fisher's exact test of the clipped reads' strand split against the strand split"
+                " of the reads that read through the same position, so a genuinely strand-skewed"
+                " pileup is not mistaken for a strand-skewed clip")) << endl;
+
+  ss << tr(td("clipped tail complexity")
+           + td(settings.soft_clipping_maximum_tail_homopolymer_fraction > 0.0
+                  ? "run &lt; " + to_string(settings.soft_clipping_maximum_tail_homopolymer_fraction, 3, false)
+                    + ", one base &lt; " + to_string(settings.soft_clipping_maximum_tail_base_fraction, 2, false)
+                  : string("OFF"))
+           + td("as fractions of the compared clipped bases. Homopolymer tails agree with each"
+                " other perfectly, so the consensus test cannot see them.")) << endl;
+
+  ss << tr(td("score cutoff")
+           + td(settings.soft_clipping_log10_e_value_cutoff > 0.0
+                  ? to_string(settings.soft_clipping_log10_e_value_cutoff, 1, false)
+                  : string("OFF"))
+           + td("&minus;log10 of the expected number of positions in this reference where this many"
+                " reads would be clipped with the same tail by chance, given the background rate"
+                " and its unevenness")) << endl;
+
+  {
+    string tally = to_string(accepted) + " accepted";
+    if (rejected_strand) tally += ", " + to_string(rejected_strand) + " rejected (strand)";
+    if (rejected_low_complexity)
+      tally += ", " + to_string(rejected_low_complexity) + " rejected (clipped tail complexity)";
+    if (rejected_score) tally += ", " + to_string(rejected_score) + " rejected (score)";
+    if (rejected_other) tally += ", " + to_string(rejected_other) + " rejected (other gates)";
+    ss << tr(td("outcome")
+             + td(to_string(sc_list.size()) + " reported")
+             + td(tally)) << endl;
+  }
+
+  ss << "</table>" << endl;
+  return ss.str();
+}
+
 string html_missing_pair_gates_string(const Settings& settings, Summary& summary)
 {
   const MissingPairSummary& d = summary.missing_pair;
@@ -3467,7 +3604,7 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
 
   ss << "<div id=\"soft_clipping_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 14 : 13;
+  size_t total_cols = link ? 16 : 15;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -3481,10 +3618,15 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
   ss << th("direction") << endl;
   ss << th("clipped") << endl;
   ss << th("agree") << endl;
+  // Strand split of the agreeing clipped reads. An end-of-read artifact (dark-cycle poly-G,
+  // adapter read-through) can only produce one of these for a given direction, so a zero here
+  // is the fastest way to spot one by eye.
+  ss << th(nonbreaking("agree +/-")) << endl;
   ss << th("total") << endl;
   ss << th("freq") << endl;
   ss << th("range") << endl;
   ss << th("score") << endl;
+  ss << th(nonbreaking("strand p")) << endl;
   ss << th(nonbreaking("clipped seq")) << endl;
   ss << th("annotation") << endl;
   ss << th("gene") << endl;
@@ -3510,6 +3652,10 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
 
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_READ_COUNT])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(SC_AGREE_COUNT) ? c[SC_AGREE_COUNT] : "&nbsp;")) << endl;
+    if (c.entry_exists(SC_AGREE_COUNT_FORWARD) && c.entry_exists(SC_AGREE_COUNT_REVERSE))
+      ss << td(ALIGN_CENTER, nonbreaking(c[SC_AGREE_COUNT_FORWARD] + "/" + c[SC_AGREE_COUNT_REVERSE])) << endl;
+    else
+      ss << td("&nbsp;") << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_TOTAL_COUNT])) << endl;
     ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
     // "range" column: the confidence limits the frequency cutoff is actually applied to, which is
@@ -3517,6 +3663,14 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
     ss << td(ALIGN_RIGHT,
              Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_LOG10_E_VALUE])) << endl;
+    // Fisher's exact p for the clipped reads' strand split against the read-through population's.
+    if (c.entry_exists(FISHER_STRAND_P_VALUE)) {
+      stringstream ssf;
+      ssf << scientific << setprecision(1) << from_string<double>(c[FISHER_STRAND_P_VALUE]);
+      ss << td(ALIGN_RIGHT, nonbreaking(ssf.str())) << endl;
+    } else {
+      ss << td("&nbsp;") << endl;
+    }
     // The consensus of the clipped read tails: the sequence that would have continued
     // the reference here. Always stored reference-forward regardless of clip direction.
     if (c.entry_exists(SC_CONSENSUS_TAIL))
@@ -3887,6 +4041,10 @@ string decode_reject_reason(const string& reject)
   else if (reject == "NEARBY_BETTER_SOFT_CLIPPING")
   {
     return "Stronger soft-clipping evidence in the same direction within a few bases; probably the same breakpoint.";
+  }
+  else if (reject == "LOW_COMPLEXITY_TAIL")
+  {
+    return "Clipped read tails are a homopolymer or nearly one base; typical of dark-cycle (poly-G) or adapter read-through, not of donor sequence.";
   }
 
   return "Unknown rejection reason.";

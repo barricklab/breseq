@@ -521,6 +521,9 @@ namespace breseq
     ("soft-clipping-minimum-read-count", "Minimum number of consensus-supporting clipped reads required for a position to be reported at all (DEFAULT = 3). 0 = OFF.", 3, NORMAL_OPTION)
     ("soft-clipping-frequency-cutoff", "Minimum fraction of reads that must be clipped at a position for the evidence to be accepted rather than rejected. Defaults to --polymorphism-frequency-cutoff, the same frequency used for predicting mutations, and follows it if you change it (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05). 0 = OFF.", "", NORMAL_OPTION)
     ("soft-clipping-consensus-fraction-cutoff", "Minimum fraction of the clipped reads at a position that must agree on the consensus clipped sequence for the evidence to be accepted rather than rejected (DEFAULT = 0.5). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-fisher-strand-p-value-cutoff", "Reject soft-clipping evidence whose clipped reads are distributed across the two read strands differently from the reads that read through the position, at this Fisher's exact test p-value. Reads clipped at a real breakpoint come from both strands; the common artifacts (dark-cycle poly-G tails, adapter read-through) are always the 3' end of the read and so appear on only one strand for a given clip direction (DEFAULT = 0.05). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-maximum-tail-homopolymer-fraction", "Reject soft-clipping evidence whose consensus clipped sequence contains a single-base run at least this fraction of its length. Catches dark-cycle poly-G/poly-C tails, which agree with each other perfectly and so pass the consensus test (DEFAULT = 0.66, which rejects a run of 8 or more of the 12 bases compared at the default --soft-clipping-minimum-bases). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-maximum-tail-base-fraction", "Reject soft-clipping evidence whose consensus clipped sequence is at least this fraction a single base, even when that base is not in one run (DEFAULT = 0.75). 0 = OFF.", "", NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -855,6 +858,18 @@ namespace breseq
       this->soft_clipping_consensus_fraction_cutoff = from_string<double>(options["soft-clipping-consensus-fraction-cutoff"]);
     ASSERT((this->soft_clipping_consensus_fraction_cutoff >= 0) && (this->soft_clipping_consensus_fraction_cutoff <= 1),
            "Argument --soft-clipping-consensus-fraction-cutoff must be in the range [0,1]")
+    if (options.count("soft-clipping-fisher-strand-p-value-cutoff"))
+      this->soft_clipping_fisher_strand_p_value_cutoff = from_string<double>(options["soft-clipping-fisher-strand-p-value-cutoff"]);
+    ASSERT((this->soft_clipping_fisher_strand_p_value_cutoff >= 0) && (this->soft_clipping_fisher_strand_p_value_cutoff <= 1),
+           "Argument --soft-clipping-fisher-strand-p-value-cutoff must be in the range [0,1]")
+    if (options.count("soft-clipping-maximum-tail-homopolymer-fraction"))
+      this->soft_clipping_maximum_tail_homopolymer_fraction = from_string<double>(options["soft-clipping-maximum-tail-homopolymer-fraction"]);
+    ASSERT((this->soft_clipping_maximum_tail_homopolymer_fraction >= 0) && (this->soft_clipping_maximum_tail_homopolymer_fraction <= 1),
+           "Argument --soft-clipping-maximum-tail-homopolymer-fraction must be in the range [0,1]")
+    if (options.count("soft-clipping-maximum-tail-base-fraction"))
+      this->soft_clipping_maximum_tail_base_fraction = from_string<double>(options["soft-clipping-maximum-tail-base-fraction"]);
+    ASSERT((this->soft_clipping_maximum_tail_base_fraction >= 0) && (this->soft_clipping_maximum_tail_base_fraction <= 1),
+           "Argument --soft-clipping-maximum-tail-base-fraction must be in the range [0,1]")
 
     // Soft-clipping evidence needs partially-aligned reads to be kept so their clipped
     // ends are visible for tabulation, so loosen the match-fraction requirement when
@@ -1452,6 +1467,13 @@ namespace breseq
     // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
     this->soft_clipping_frequency_cutoff = 0.1;
     this->soft_clipping_consensus_fraction_cutoff = 0.5;
+    // Same cutoff as polymorphism_fisher_strand_p_value_cutoff, and the same test: the clipped
+    // reads play the minor allele and the reads that read through play the major one.
+    this->soft_clipping_fisher_strand_p_value_cutoff = 0.05;
+    // 0.66 lands between 7/12 and 8/12, so at the default --soft-clipping-minimum-bases this
+    // rejects a run of 8 or more of the 12 compared bases and keeps a run of 7.
+    this->soft_clipping_maximum_tail_homopolymer_fraction = 0.66;
+    this->soft_clipping_maximum_tail_base_fraction = 0.75;
 
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
