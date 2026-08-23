@@ -294,6 +294,18 @@ not against a fixed cutoff; each reports that null in a gates table in `summary.
 frequency cutoff cannot substitute: it implicitly assumes a zero background, which holds in a
 simulation and in nothing else.
 
+For `SC` the score is not what does most of the work on real data — the **strand** test is
+(`--soft-clipping-fisher-strand-p-value-cutoff`, reject `FISHER_STRAND`). The dominant SC false
+positive is a dark-cycle poly-G read tail, which is always the read's 3' end and therefore appears
+on exactly one strand for a given clip direction, whereas reads clipped at a real breakpoint come
+from both. Measured over 29 LTEE clones, 95% of accepted SC calls had every clipped read on one
+strand. The tail-consensus test cannot see this at all, because poly-G tails agree with each other
+perfectly; the companion `LOW_COMPLEXITY_TAIL` gate
+(`--soft-clipping-maximum-tail-homopolymer-fraction`) catches the low-count positions where the
+strand test has no power. The SC gates table in `summary.html` reports what fraction of the run's
+clip events were one-strand — a value near 100% means the run's clipping is artifact, and it is the
+first thing to check when a library predicts implausibly many SC items.
+
 Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PFGE`, `NOTE`, `MASK`
 
 ### Key modules

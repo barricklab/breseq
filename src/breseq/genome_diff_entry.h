@@ -188,6 +188,10 @@ namespace breseq {
   extern const char* SC_AGREE_COUNT;
   extern const char* SC_CONSENSUS_FRACTION;
   extern const char* SC_CONSENSUS_TAIL;
+  extern const char* SC_AGREE_COUNT_FORWARD;
+  extern const char* SC_AGREE_COUNT_REVERSE;
+  extern const char* SC_SPANNING_COUNT_FORWARD;
+  extern const char* SC_SPANNING_COUNT_REVERSE;
 
   //For CN
   extern const char* COPY_NUMBER;

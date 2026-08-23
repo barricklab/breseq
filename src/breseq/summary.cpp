@@ -370,9 +370,12 @@ void to_json(json& j, const SoftClippingSummary& s)
 {
   j = json{
     {"total_spanning_read_bases", s.total_spanning_read_bases},
+    {"total_spanning_read_bases_forward", s.total_spanning_read_bases_forward},
+    {"total_spanning_read_bases_reverse", s.total_spanning_read_bases_reverse},
     {"total_clipped_read_ends", s.total_clipped_read_ends},
     {"soft_clipping_rate", s.soft_clipping_rate},
     {"total_agreeing_clipped_read_ends", s.total_agreeing_clipped_read_ends},
+    {"total_strand_pure_agreeing_clipped_read_ends", s.total_strand_pure_agreeing_clipped_read_ends},
     {"soft_clipping_null_rate", s.soft_clipping_null_rate},
     {"soft_clipping_dispersion", s.soft_clipping_dispersion},
     {"soft_clipping_pearson_phi", s.soft_clipping_pearson_phi},
@@ -388,7 +391,10 @@ void from_json(const json& j, SoftClippingSummary& s)
   s.total_clipped_read_ends = j.at("total_clipped_read_ends").get<uint64_t>();
   s.soft_clipping_rate = get_double_or_default(j, "soft_clipping_rate");
   // Defaulted: a summary written before these fields existed must still load.
+  s.total_spanning_read_bases_forward = get_uint64_or_default(j, "total_spanning_read_bases_forward");
+  s.total_spanning_read_bases_reverse = get_uint64_or_default(j, "total_spanning_read_bases_reverse");
   s.total_agreeing_clipped_read_ends = get_uint64_or_default(j, "total_agreeing_clipped_read_ends");
+  s.total_strand_pure_agreeing_clipped_read_ends = get_uint64_or_default(j, "total_strand_pure_agreeing_clipped_read_ends");
   s.soft_clipping_null_rate = get_double_or_default(j, "soft_clipping_null_rate");
   s.soft_clipping_dispersion = get_double_or_default(j, "soft_clipping_dispersion");
   s.soft_clipping_pearson_phi = get_double_or_default(j, "soft_clipping_pearson_phi");
