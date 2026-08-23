@@ -328,11 +328,34 @@ breseq writes to `-o <output_dir>` (default: current directory):
 - **Work in the current worktree** — all edits and builds happen here. Do not modify files in the main repository except:
   1. When running inside a git worktree, use the shared conda env at `../../../env` (i.e., `breseq/env` in the main repo) via `conda run -p ../../../env <command>`. If that env is absent, fall back to creating one locally as described in `DEVELOPER`.
   2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
+- **To land a worktree branch on `master`, push it into the repo from the worktree** — a session running
+  in a worktree is refused any git command that redirects at the shared checkout (`git -C
+  /Users/jbarrick/src/breseq ...`, `--git-dir`, `cd` into it), and that refusal applies to `!`-prefixed
+  commands too, so `git -C <main repo> merge <branch>` is not available. This is:
+
+  ```bash
+  git push . HEAD:master          # from the worktree root, no -C
+  ```
+
+  It moves the `master` ref *and* updates the main checkout's working files in one step, because the
+  repo sets `receive.denyCurrentBranch = updateInstead` (in the shared `.git/config`; note
+  `extensions.worktreeConfig` is on, so never set this with `--worktree` or the main checkout won't see
+  it). Without that setting the push is refused outright, which is the safe default — the dangerous
+  values are `warn`/`ignore`, which move the ref while leaving the main checkout's files stale so every
+  merged change shows up there as an uncommitted deletion.
+
+  Two limits: it only fast-forwards, so a branch that has diverged still needs a real `git merge` run
+  from a shell in the main checkout; and it refuses (`Working directory has unstaged changes`) if the
+  main checkout is dirty, leaving the ref untouched. Both failures are safe — nothing moves.
 - **NEVER edit files under `/Users/jbarrick/src/breseq/src/...` when working in a worktree — that is the MAIN repo, not your worktree.** This mistake has happened repeatedly and is silent: the edit "succeeds," but you built and tested the *unmodified* worktree copy, so nothing changes and the diff hides in the main repo. Concrete rules to prevent it:
   - Your worktree root is the `Primary working directory` in the environment block (e.g. `.../breseq/.claude/worktrees/<name>/`). **Every file you Read, Edit, or Write must have that worktree root as a prefix.** A path that starts with `/Users/jbarrick/src/breseq/src/` or `/Users/jbarrick/src/breseq/tests/` (i.e. the repo root *without* the `.claude/worktrees/<name>/` segment) is the wrong copy — do not edit it.
   - **Explore/Plan/general-purpose subagents report absolute paths in the MAIN repo** (they resolve symlinks / run from the repo root). Treat every `file:line` a subagent returns as main-repo-relative and **translate it to the worktree path before editing** — strip the `/Users/jbarrick/src/breseq/` prefix and re-root it under your worktree directory. The line numbers still apply; only the path prefix changes.
   - Before your first Edit in a session, sanity-check with `git rev-parse --show-toplevel` (or confirm the path against the `Primary working directory`) so you know which tree you're touching.
-  - If you discover edits landed in the main repo, revert them there (`git -C /Users/jbarrick/src/breseq checkout -- <files>`) and re-apply under the worktree.
+  - If you discover edits landed in the main repo, re-apply them under the worktree, then get them
+    reverted in the main repo. A worktree session cannot do that itself — `git -C
+    /Users/jbarrick/src/breseq checkout -- <files>` is refused by the same isolation guard described
+    above, `!`-prefixed included — so name the files and ask for `git checkout -- <files>` to be run
+    from a shell in the main checkout.
 - **Run `make test` as part of the development cycle** — run the full test suite before considering a feature or fix complete.
 - **Run tests from the worktree root** — `./tests/test.sh <action> <name>` (single test) and `make test` (full suite) must be invoked from the top of the worktree (not from a subdirectory). `make` auto-generates this worktree's `tests/test.config` as part of `all-local` and points `TESTBINPREFIX` at this worktree's `src/breseq` — you don't create or edit it by hand. (It also exports `BRESEQ_DATA_PATH=./src/share/breseq`, but that export is redundant for in-tree runs: a binary built at `src/breseq/` already finds its data at the sibling `src/share/breseq/` on its own — see the next bullet — so `BRESEQ_DATA_PATH` only actually matters if the executable is moved away from that sibling.)
 - **A freshly built `breseq`/`gdtools` runs standalone with no env vars needed** — the runtime data files (`breseq_icon.png`, `jszip.min.js`, etc.) live in `src/share/breseq/`, a sibling of `src/breseq/` where the binaries are built, matching the relative `bin/`↔`share/<pkg>/` layout autotools already computes between `--bindir`/`--datadir`. `BRESEQ_DATA_PATH` is only needed to override this (e.g. a relocated/custom install).
