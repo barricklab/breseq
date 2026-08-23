@@ -464,6 +464,9 @@ namespace breseq
     uint32_t soft_clipping_minimum_read_count;            // Default = 3         COMMAND-LINE OPTION  0 = OFF
     double   soft_clipping_frequency_cutoff;              // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION  0 = OFF
     double   soft_clipping_consensus_fraction_cutoff;     // Default = 0.5       COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_fisher_strand_p_value_cutoff;  // Default = 0.05      COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_maximum_tail_homopolymer_fraction; // Default = 0.66  COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_maximum_tail_base_fraction;    // Default = 0.75      COMMAND-LINE OPTION  0 = OFF
 
 
     //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)

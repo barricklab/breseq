@@ -2843,7 +2843,7 @@ int breseq_default_action(int argc, char* argv[])
 		// record the final time and print summary table
 		settings.record_end_time("Output");
 
-		output::html_summary(settings.summary_html_file_name, settings, summary, ref_seq_info);
+		output::html_summary(settings.summary_html_file_name, settings, summary, ref_seq_info, gd);
 
     // Remove the individual evidence files now that everything is archived.
     // Skipped under --keep-intermediates so the raw evidence/ dir (plots, alignments)

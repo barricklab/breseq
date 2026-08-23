@@ -335,6 +335,9 @@ namespace breseq{
   public:
     uint64_t total_spanning_read_bases;      // read-through opportunities: reads spanning a position with
                                              // >= min_bases aligned on BOTH sides, counted once per direction
+    uint64_t total_spanning_read_bases_forward;  // ...split by the strand of the spanning read. The strand
+    uint64_t total_spanning_read_bases_reverse;  // test falls back to this ratio where a position has no
+                                                 // read-through of its own (frequency == 1.000).
     uint64_t total_clipped_read_ends;  // total soft-clip events; a read with both ends clipped counts twice
     double   soft_clipping_rate;       // raw clip rate: total_clipped_read_ends / total opportunities
 
@@ -343,6 +346,10 @@ namespace breseq{
     // zero-clip positions needed for these estimates are not recoverable later --
     // they must be carried forward here.
     uint64_t total_agreeing_clipped_read_ends;  // clip events whose tail matches the position consensus
+    // Diagnostic, not part of the null: how many of those sit at positions where every agreeing
+    // clipped read came from one strand. Near 100% means the run's clip population is dominated by
+    // an end-of-read artifact (dark-cycle poly-G, adapter read-through), not by breakpoints.
+    uint64_t total_strand_pure_agreeing_clipped_read_ends;
     double   soft_clipping_null_rate;           // p0 used (agreeing rate, after the minimum-rate floor)
     double   soft_clipping_dispersion;          // rho used; 0 => plain binomial
     double   soft_clipping_pearson_phi;         // diagnostic: Pearson chi2 / (N-1) over the fitted positions
@@ -352,9 +359,12 @@ namespace breseq{
 
     SoftClippingSummary()
     : total_spanning_read_bases(0)
+    , total_spanning_read_bases_forward(0)
+    , total_spanning_read_bases_reverse(0)
     , total_clipped_read_ends(0)
     , soft_clipping_rate(0.0)
     , total_agreeing_clipped_read_ends(0)
+    , total_strand_pure_agreeing_clipped_read_ends(0)
     , soft_clipping_null_rate(0.0)
     , soft_clipping_dispersion(0.0)
     , soft_clipping_pearson_phi(0.0)

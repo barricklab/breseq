@@ -1,8 +1,8 @@
 #=GENOME_DIFF	1.0
 #=TITLE	header
 #=AUTHOR	Jeffrey Barrick
-#=CREATED	13:25:13 30 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision 2474edd9b66f
+#=CREATED	14:26:05 23 Aug 2026
+#=PROGRAM	breseq 0.50.0 revision 68145331ba14
 #=COMMAND	./src/breseq/breseq -j 4 --predict-soft-clipping --polymorphism-prediction --header-genome-diff ./tests/lambda_polymorphism_soft_clipping/header.gd -o ./tests/lambda_polymorphism_soft_clipping -r ./tests/lambda_polymorphism_soft_clipping/../data/lambda/lambda.gbk ./tests/lambda_polymorphism_soft_clipping/../data/lambda/lambda_mixed_population.fastq.gz
 #=TIME	20
 #=CLONE	A
@@ -132,4 +132,4 @@ JC	117	.	NC_001416	21737	-1	NC_001416	27734	1	0	alignment_overlap=5	coverage_min
 UN	118	.	NC_001416	1	8
 UN	119	.	NC_001416	21738	27731
 UN	120	.	NC_001416	48502	48502
-SC	121	.	NC_001416	2915	1	agree_read_count=3	clipped_sequence=GGGGGGGGGGGG	consensus_fraction=0.7500	frequency=0.2727	frequency_lower=0.0788	frequency_upper=0.5644	gene_name=B	gene_position=coding (80/1602 nt)	gene_product=capsid component	gene_strand=>	locus_tag=lambdap04	log10_e_value=0.8	read_count=4	reject=SCORE_CUTOFF	total_count=11
+SC	121	.	NC_001416	2915	1	agree_read_count=3	agree_read_count_forward=3	agree_read_count_reverse=0	clipped_sequence=GGGGGGGGGGGG	consensus_fraction=0.7500	fisher_strand_p_value=8.33333e-03	frequency=0.2727	frequency_lower=0.0788	frequency_upper=0.5644	gene_name=B	gene_position=coding (80/1602 nt)	gene_product=capsid component	gene_strand=>	locus_tag=lambdap04	log10_e_value=0.8	read_count=4	reject=SCORE_CUTOFF,FISHER_STRAND,LOW_COMPLEXITY_TAIL	spanning_read_count_forward=0	spanning_read_count_reverse=7	total_count=11

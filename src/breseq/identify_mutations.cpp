@@ -1036,6 +1036,64 @@ void identify_mutations_pileup::load_user_ra_evidence_from_gd()
   _user_evidence_ra_list = gd.get_list(make_vector<gd_entry_type>(RA));
 }
 
+// Size the genome-wide spanning strand split is rescaled to when it stands in for a position's
+// own (absent) read-through population in the SC strand test. Large enough that the resulting
+// hypergeometric is numerically a binomial against that ratio, small enough to stay well inside
+// the range where fisher_exact_test_2x2's lgamma arithmetic is exact.
+const double kSCStrandFallbackScale = 10000.0;
+
+/*! Is a consensus clipped tail low-complexity enough to be an end-of-read artifact rather than
+    donor sequence?
+
+    Two ways to fail, because the same artifact shows up in both shapes. A dark-cycle poly-G tail
+    is one unbroken run (GGGGGGGGGGGG, or CCCCCCCCCCCC once stored reference-forward for a leading
+    clip); a tail that straddles the start of the dark cycles is broken but still nearly all one
+    base (AAAAAACCCCCC, GGGGGGGGTTTT). Measured over 29 LTEE clones, 929 of 1040 accepted SC calls
+    had a run of >= 8 in 12 bases, and no plausible real breakpoint did.
+
+    Both thresholds are fractions of the compared length rather than absolute counts, so they hold
+    when --soft-clipping-minimum-bases changes. Either fraction at 0 turns that half off.
+ */
+static bool sc_tail_is_low_complexity(const string& tail,
+                                      double maximum_homopolymer_fraction,
+                                      double maximum_base_fraction)
+{
+  if (tail.empty() || (tail == ".")) return false;
+
+  // Non-ACGT columns are not evidence of anything either way, so they are excluded from both
+  // the numerators and the denominator.
+  map<char, uint32_t> counts;
+  uint32_t informative = 0;
+  uint32_t longest_run = 0, run = 0;
+  char run_base = '\0';
+  for (size_t i = 0; i < tail.size(); i++) {
+    char b = static_cast<char>(toupper(static_cast<unsigned char>(tail[i])));
+    if ((b != 'A') && (b != 'C') && (b != 'G') && (b != 'T')) { run = 0; run_base = '\0'; continue; }
+    informative++;
+    counts[b]++;
+    if (b == run_base) run++; else { run_base = b; run = 1; }
+    if (run > longest_run) longest_run = run;
+  }
+  if (informative == 0) return false;
+
+  // The epsilon is not cosmetic: the intended reading of the 0.66 default at 12 compared bases is
+  // "8 of 12", and a fraction that multiplies out to exactly the integer count must include it
+  // rather than fall on the wrong side of a rounding step.
+  const double kEpsilon = 1e-9;
+  double n = static_cast<double>(informative);
+  if ((maximum_homopolymer_fraction > 0.0) &&
+      (static_cast<double>(longest_run) >= maximum_homopolymer_fraction * n - kEpsilon)) return true;
+
+  uint32_t most_common = 0;
+  for (map<char, uint32_t>::const_iterator it = counts.begin(); it != counts.end(); it++) {
+    if (it->second > most_common) most_common = it->second;
+  }
+  if ((maximum_base_fraction > 0.0) &&
+      (static_cast<double>(most_common) >= maximum_base_fraction * n - kEpsilon)) return true;
+
+  return false;
+}
+
 void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cReferenceSequences& ref_seq_info)
 {
   if (!file_exists(_settings.soft_clipping_counts_file_name.c_str())) return;
@@ -1076,14 +1134,21 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
     uint32_t clipped_count;
     uint32_t total_count;
     uint32_t agree_count;
+    uint32_t agree_count_fw;   // agree_count split by the strand of the clipped read
+    uint32_t agree_count_rv;
+    uint32_t spanning_fw;      // read-through reads here, split the same way
+    uint32_t spanning_rv;
     string   consensus_tail;
     double   score;
     double   frequency;
     double   consensus_fraction;
+    double   fisher_strand_p_value;
     bool     suppressed;
 
     sc_candidate() : position(0), direction(0), clipped_count(0), total_count(0),
-                     agree_count(0), score(0.0), frequency(0.0), consensus_fraction(0.0),
+                     agree_count(0), agree_count_fw(0), agree_count_rv(0),
+                     spanning_fw(0), spanning_rv(0), score(0.0), frequency(0.0),
+                     consensus_fraction(0.0), fisher_strand_p_value(1.0),
                      suppressed(false) {}
 
     static bool by_seq_direction_position(const sc_candidate& a, const sc_candidate& b) {
@@ -1104,7 +1169,7 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
          + _settings.soft_clipping_counts_file_name
          + "\nDelete 07_error_calibration/error_counts.done and re-run to regenerate it.");
   {
-    string expected = "#sc_format=2\tsoft_clipping_minimum_bases=" + to_string(_settings.soft_clipping_minimum_bases);
+    string expected = "#sc_format=3\tsoft_clipping_minimum_bases=" + to_string(_settings.soft_clipping_minimum_bases);
     ASSERT(line.substr(0, expected.size()) == expected,
            "Soft-clipping counts file was tabulated with different settings than the current run:\n  "
            + line + "\nDelete 07_error_calibration/error_counts.done and re-run to regenerate it.");
@@ -1121,7 +1186,7 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
 
   while (getline(in, line)) {
     vector<string> fields = split(line, "\t");
-    ASSERT(fields.size() >= 7,
+    ASSERT(fields.size() >= 11,
            "Soft-clipping counts file has too few columns and is probably from an older run:\n  "
            + _settings.soft_clipping_counts_file_name
            + "\nDelete 07_error_calibration/error_counts.done and re-run to regenerate it.");
@@ -1133,6 +1198,10 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
     uint32_t total_count = from_string<uint32_t>(fields[4]);
     uint32_t agree_count = from_string<uint32_t>(fields[5]);
     string consensus_tail = fields[6];
+    uint32_t agree_count_fw = from_string<uint32_t>(fields[7]);
+    uint32_t agree_count_rv = from_string<uint32_t>(fields[8]);
+    uint32_t spanning_fw = from_string<uint32_t>(fields[9]);
+    uint32_t spanning_rv = from_string<uint32_t>(fields[10]);
 
     if (clipped_count == 0 || total_count == 0) continue;
 
@@ -1172,10 +1241,59 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
     c.clipped_count      = clipped_count;
     c.total_count        = total_count;
     c.agree_count        = agree_count;
+    c.agree_count_fw     = agree_count_fw;
+    c.agree_count_rv     = agree_count_rv;
+    c.spanning_fw        = spanning_fw;
+    c.spanning_rv        = spanning_rv;
     c.consensus_tail     = consensus_tail;
     c.score              = score;
     c.frequency          = static_cast<double>(test_count) / static_cast<double>(total_count);
     c.consensus_fraction = static_cast<double>(agree_count) / static_cast<double>(clipped_count);
+
+    /*
+     * Strand test. Same 2x2 as the RA polymorphism one (see _add_polymorphism_bias_statistics):
+     * the agreeing clipped reads are the "minor allele" and the reads that read through the
+     * position are the "major allele", so a clip population drawn from a different strand mix
+     * than the local coverage is what gets rejected.
+     *
+     * This is the discriminator that matters on real Illumina data. A dark-cycle poly-G tail --
+     * the dominant SC false positive -- is always the 3' end of the read, so for a given clip
+     * direction it can only come from one strand: direction +1 clips from forward reads,
+     * direction -1 clips from reverse reads. Over 29 LTEE clones, 993 of 1040 accepted SC calls
+     * had every clipped read on a single strand, while every real-looking breakpoint was
+     * balanced. The consensus test cannot see this at all, because poly-G tails agree with each
+     * other perfectly.
+     *
+     * Comparing against the LOCAL spanning strand split rather than against 50/50 is what keeps
+     * a genuinely strand-skewed pileup from being read as a strand-skewed clip. Where there is
+     * no local read-through at all -- exactly the frequency == 1.000 positions, which carry the
+     * highest clip counts -- the contingency row is empty and Fisher returns 1 for anything;
+     * falling back to the genome-wide spanning split restores the test there (it becomes, in
+     * effect, a binomial test against the run's overall strand ratio).
+     */
+    uint32_t major_fw = spanning_fw;
+    uint32_t major_rv = spanning_rv;
+    if (major_fw + major_rv == 0) {
+      // Rescaled to kSCStrandFallbackScale rather than passed at full size: the genome-wide
+      // totals run into the hundreds of millions, where the lgamma differences inside
+      // fisher_exact_test_2x2 lose precision and row1 + row2 can overflow its uint32_t. At this
+      // size the hypergeometric is already indistinguishable from the binomial the fallback is
+      // meant to be, so only the ratio matters.
+      const double scale = kSCStrandFallbackScale;
+      double gw_fw = static_cast<double>(summary.soft_clipping.total_spanning_read_bases_forward);
+      double gw_rv = static_cast<double>(summary.soft_clipping.total_spanning_read_bases_reverse);
+      double gw_total = gw_fw + gw_rv;
+      if (gw_total > 0.0) {
+        major_fw = static_cast<uint32_t>(floor(scale * gw_fw / gw_total + 0.5));
+        major_rv = static_cast<uint32_t>(scale) - major_fw;
+      }
+    }
+    // With no reference population at all -- neither local nor genome-wide -- there is nothing to
+    // compare against, so leave the p-value at 1 rather than inventing a 50/50 expectation.
+    c.fisher_strand_p_value = (major_fw + major_rv > 0)
+      ? fisher_exact_test_2x2(c.agree_count_fw, c.agree_count_rv, major_fw, major_rv)
+      : 1.0;
+
     candidates.push_back(c);
   }
 
@@ -1246,6 +1364,16 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
     sc_entry[SC_CONSENSUS_FRACTION] = formatted_double(c.consensus_fraction, 4).to_string();
     if (c.consensus_tail != ".") sc_entry[SC_CONSENSUS_TAIL] = c.consensus_tail;
     sc_entry[SC_LOG10_E_VALUE] = formatted_double(c.score, kMutationScorePrecision).to_string();
+    // Strand split of the reads the score was computed from, and of the read-through population
+    // they were compared against. Reported whether or not the test rejected, because "all on one
+    // strand" is the first thing to look at when judging an SC call by eye.
+    sc_entry[SC_AGREE_COUNT_FORWARD] = to_string(c.agree_count_fw);
+    sc_entry[SC_AGREE_COUNT_REVERSE] = to_string(c.agree_count_rv);
+    sc_entry[SC_SPANNING_COUNT_FORWARD] = to_string(c.spanning_fw);
+    sc_entry[SC_SPANNING_COUNT_REVERSE] = to_string(c.spanning_rv);
+    // Spelled out rather than using output.h's FISHER_STRAND_P_VALUE, matching how the RA
+    // polymorphism code in this file writes the same key.
+    sc_entry["fisher_strand_p_value"] = formatted_double(c.fisher_strand_p_value, 5, true).to_string();
 
     //// TIER 2: soft reject. The entry is kept and shown as marginal evidence.
 
@@ -1272,6 +1400,20 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
         (_settings.soft_clipping_consensus_fraction_cutoff > 0.0) &&
         (c.consensus_fraction < _settings.soft_clipping_consensus_fraction_cutoff - _settings.polymorphism_precision_decimal)) {
       sc_entry.add_reject_reason("CLIPPED_TAIL_CONSENSUS");
+    }
+    // Clipped reads drawn from a different strand mix than the reads that read through the
+    // position; see the computation above for why this is the strongest SC filter there is.
+    if ((_settings.soft_clipping_fisher_strand_p_value_cutoff > 0.0) &&
+        (c.fisher_strand_p_value < _settings.soft_clipping_fisher_strand_p_value_cutoff)) {
+      sc_entry.add_reject_reason("FISHER_STRAND");
+    }
+    // The clipped tail is a homopolymer or near-homopolymer: a dark-cycle or adapter artifact,
+    // not donor sequence. Independent of the strand test, and it reaches the low-count positions
+    // where the strand test has no power.
+    if (sc_tail_is_low_complexity(c.consensus_tail,
+                                  _settings.soft_clipping_maximum_tail_homopolymer_fraction,
+                                  _settings.soft_clipping_maximum_tail_base_fraction)) {
+      sc_entry.add_reject_reason("LOW_COMPLEXITY_TAIL");
     }
 
     _gd.add(sc_entry);

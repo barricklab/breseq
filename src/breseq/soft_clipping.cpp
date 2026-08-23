@@ -37,6 +37,10 @@ namespace breseq {
 // a std::string -- on a 4 Mb genome at 150x there are ~200,000 clip events.
 const uint32_t kSoftClippingMaxConsensusBases = 21;
 
+// 21 bases x 3 bits fills bits 0-62, leaving the top bit free. The read's strand rides
+// there so that per-strand agree counts cost nothing beyond the tail itself.
+const uint64_t kSoftClippingTailStrandBit = (1ULL << 63);
+
 // Base <-> 3-bit code. 4 means "not A/C/G/T"; it never wins a consensus column
 // and always counts as a mismatch.
 static inline uint32_t base_to_code(char b)
@@ -56,9 +60,16 @@ static inline char code_to_base(uint32_t c)
   return (c < 4) ? bases[c] : 'N';
 }
 
+// column <= 20, so the shift is at most 60 and the 3-bit mask reads bits 60-62 --
+// kSoftClippingTailStrandBit (bit 63) is never part of any base code.
 static inline uint32_t tail_code_at(uint64_t packed, uint32_t column)
 {
   return static_cast<uint32_t>((packed >> (3 * column)) & 0x7ULL);
+}
+
+static inline bool tail_is_reversed(uint64_t packed)
+{
+  return (packed & kSoftClippingTailStrandBit) != 0;
 }
 
 /*
@@ -87,6 +98,17 @@ static inline uint32_t tail_code_at(uint64_t packed, uint32_t column)
  * the group consensus is the per-column consensus), and on noisy positions the simpler rule
  * here is the more conservative one.
  *
+ * The agreeing reads are also counted separately by the strand of the read they came from
+ * (agree_count_out == agree_forward_out + agree_reverse_out, always). This is what the
+ * strand test in add_sc_evidence() runs on, and it is the discriminator that matters most on
+ * real Illumina data: the dominant false positive is a dark-cycle poly-G tail, which is always
+ * the 3' end of the read, so it produces direction +1 clips only from forward-strand reads and
+ * direction -1 clips only from reverse-strand reads. Measured over 29 LTEE clones, 993 of 1040
+ * accepted SC calls had every clipped read on one strand, while every plausible real breakpoint
+ * was strand-balanced. Note that a poly-G tail is stored reference-forward, so it reads as
+ * poly-C for direction -1 -- the tails agree with each other perfectly and the consensus test
+ * above cannot see anything wrong with them.
+ *
  * base_fraction == 0 turns the whole test off: every clipped read counts and no sequence
  * is reported. consensus_out is returned in column order; the caller reverses it for
  * direction -1 so the stored sequence is always reference-forward.
@@ -96,13 +118,22 @@ static void compute_clipped_tail_consensus(
                                            uint32_t K,
                                            double base_fraction,
                                            string& consensus_out,
-                                           uint32_t& agree_count_out
+                                           uint32_t& agree_count_out,
+                                           uint32_t& agree_forward_out,
+                                           uint32_t& agree_reverse_out
                                            )
 {
   consensus_out.clear();
   agree_count_out = static_cast<uint32_t>(tails.size());
+  agree_forward_out = 0;
+  agree_reverse_out = 0;
+  for (vector<uint64_t>::const_iterator it = tails.begin(); it != tails.end(); it++) {
+    if (tail_is_reversed(*it)) agree_reverse_out++; else agree_forward_out++;
+  }
   if (tails.empty()) return;
 
+  // With the consensus test off every clipped read counts, and the strand split above is
+  // already the split of all of them.
   if (base_fraction <= 0.0) return;
 
   // Per-column plurality consensus over every clipped tail at this position.
@@ -128,6 +159,8 @@ static void compute_clipped_tail_consensus(
   if (informative_columns == 0) {
     consensus_out.clear();
     agree_count_out = 0;
+    agree_forward_out = 0;
+    agree_reverse_out = 0;
     return;
   }
 
@@ -138,13 +171,18 @@ static void compute_clipped_tail_consensus(
   if (required_matches < 1) required_matches = 1;
 
   agree_count_out = 0;
+  agree_forward_out = 0;
+  agree_reverse_out = 0;
   for (vector<uint64_t>::const_iterator it = tails.begin(); it != tails.end(); it++) {
     uint32_t matches = 0;
     for (uint32_t col = 0; col < K; col++) {
       if (consensus_codes[col] >= 4) continue;      // uninformative column
       if (tail_code_at(*it, col) == consensus_codes[col]) matches++;
     }
-    if (matches >= required_matches) agree_count_out++;
+    if (matches >= required_matches) {
+      agree_count_out++;
+      if (tail_is_reversed(*it)) agree_reverse_out++; else agree_forward_out++;
+    }
   }
 }
 
@@ -353,11 +391,19 @@ void tabulate_soft_clipping_counts(
   // NOTE: a read with a large internal deletion (CIGAR D/N) is credited with spanning positions it
   // does not actually align to. Pre-existing behavior of the difference-array approach, but this
   // is now the only denominator, so it matters more.
-  map<string, vector<int32_t> > spanning_diff;
+  //
+  // Kept split by the strand of the read, because that is the reference the strand test compares
+  // the clipped reads against: coverage itself is not always 50/50, and a locally strand-skewed
+  // pileup must not be read as evidence of a strand-skewed clip. The two arrays sum to what a
+  // single array held before, so every genome-wide total below is unchanged.
+  map<string, vector<int32_t> > spanning_diff_fw;
+  map<string, vector<int32_t> > spanning_diff_rv;
 
   uint64_t total_clipped_read_ends = 0;  // total clip events, both directions (a read clipped at
                                          // both ends counts twice)
   uint64_t total_agreeing_clipped_read_ends = 0;  // subset whose tail matches its position consensus
+  uint64_t total_strand_pure_agreeing_clipped_read_ends = 0;  // ...of those, the ones at positions
+                                         // where every agreeing clipped read was on one strand
   uint64_t total_tested_positions = 0;   // N: (position, direction) pairs with n_i > 0
 
   for (vector<string>::const_iterator bam_it = bam_file_names.begin(); bam_it != bam_file_names.end(); bam_it++) {
@@ -400,8 +446,14 @@ void tabulate_soft_clipping_counts(
         // evaluated in 64 bits so it cannot wrap; inside it ref_end - min_bases >= ref_start +
         // min_bases >= 1, so neither index underflows, and the high index is at most
         // seq_length + 1, which is in bounds for a seq_length + 2 array.
-        vector<int32_t>& sd = spanning_diff[seq_id];
-        if (sd.empty()) sd.resize(seq_length + 2, 0);
+        const bool read_reversed = a.reversed();
+        const uint64_t strand_bit = read_reversed ? kSoftClippingTailStrandBit : 0ULL;
+
+        vector<int32_t>& sd_fw = spanning_diff_fw[seq_id];
+        vector<int32_t>& sd_rv = spanning_diff_rv[seq_id];
+        if (sd_fw.empty()) sd_fw.resize(seq_length + 2, 0);
+        if (sd_rv.empty()) sd_rv.resize(seq_length + 2, 0);
+        vector<int32_t>& sd = read_reversed ? sd_rv : sd_fw;
         if (static_cast<uint64_t>(ref_end) >=
             static_cast<uint64_t>(ref_start) + 2ULL * minimum_clipped_bases) {
           sd[ref_start + minimum_clipped_bases] += 1;
@@ -416,7 +468,8 @@ void tabulate_soft_clipping_counts(
 
             // Column 0 is the clipped base adjacent to the wall (just before
             // query_start_1); columns then run backwards, away from the reference.
-            uint64_t packed = 0;
+            // Bit 63 carries the read's strand; see kSoftClippingTailStrandBit.
+            uint64_t packed = strand_bit;
             for (uint32_t col = 0; col < consensus_bases; col++) {
               uint32_t q = a.query_start_1() - 1 - col;   // >= 1, guaranteed by the clip length test
               packed |= static_cast<uint64_t>(base_to_code(a.read_base_char_1(q))) << (3 * col);
@@ -433,7 +486,8 @@ void tabulate_soft_clipping_counts(
 
             // Column 0 is the clipped base adjacent to the wall (just after query_end_1);
             // columns run forward, already reference-forward.
-            uint64_t packed = 0;
+            // Bit 63 carries the read's strand; see kSoftClippingTailStrandBit.
+            uint64_t packed = strand_bit;
             for (uint32_t col = 0; col < consensus_bases; col++) {
               uint32_t q = a.query_end_1() + 1 + col;     // <= read_length, guaranteed by the clip length test
               packed |= static_cast<uint64_t>(base_to_code(a.read_base_char_1(q))) << (3 * col);
@@ -455,27 +509,39 @@ void tabulate_soft_clipping_counts(
   //
   // which the Pearson chi-square expansion below depends on, and it keeps
   // summary.total_spanning_read_bases in the same units as previous versions.
-  map<string, vector<uint32_t> > spanning;
+  map<string, vector<uint32_t> > spanning_fw;
+  map<string, vector<uint32_t> > spanning_rv;
   uint64_t total_spanning_read_bases = 0;
+  uint64_t total_spanning_read_bases_fw = 0;
+  uint64_t total_spanning_read_bases_rv = 0;
   for (map<string, uint32_t>::iterator seq_it = seq_lengths.begin(); seq_it != seq_lengths.end(); seq_it++) {
     const string& seq_id = seq_it->first;
     uint32_t seq_length = seq_it->second;
-    if (spanning_diff.count(seq_id) == 0) continue; // no reads on this sequence
+    if (spanning_diff_fw.count(seq_id) == 0) continue; // no reads on this sequence
 
-    vector<int32_t>& sd = spanning_diff[seq_id];
-    vector<uint32_t>& sp = spanning[seq_id];
-    sp.resize(sd.size(), 0);
+    vector<int32_t>& sd_fw = spanning_diff_fw[seq_id];
+    vector<int32_t>& sd_rv = spanning_diff_rv[seq_id];
+    vector<uint32_t>& sp_fw = spanning_fw[seq_id];
+    vector<uint32_t>& sp_rv = spanning_rv[seq_id];
+    sp_fw.resize(sd_fw.size(), 0);
+    sp_rv.resize(sd_rv.size(), 0);
 
-    int32_t running = 0;
-    for (uint32_t p = 1; p < sd.size(); p++) {
-      running += sd[p];
-      sp[p] = (running > 0) ? static_cast<uint32_t>(running) : 0;
+    int32_t running_fw = 0;
+    int32_t running_rv = 0;
+    for (uint32_t p = 1; p < sd_fw.size(); p++) {
+      running_fw += sd_fw[p];
+      running_rv += sd_rv[p];
+      sp_fw[p] = (running_fw > 0) ? static_cast<uint32_t>(running_fw) : 0;
+      sp_rv[p] = (running_rv > 0) ? static_cast<uint32_t>(running_rv) : 0;
+      uint32_t sp = sp_fw[p] + sp_rv[p];
       if (sc_position_is_testable(p, seq_length, minimum_clipped_bases)) {
-        total_spanning_read_bases += 2ULL * static_cast<uint64_t>(sp[p]);
+        total_spanning_read_bases += 2ULL * static_cast<uint64_t>(sp);
+        total_spanning_read_bases_fw += 2ULL * static_cast<uint64_t>(sp_fw[p]);
+        total_spanning_read_bases_rv += 2ULL * static_cast<uint64_t>(sp_rv[p]);
         // N counts (position, direction) pairs with n_i > 0. A non-zero spanning count makes
         // both directions testable; positions with clips but no spanning reads are added in
         // the loop below, which only fires when read_through == 0, so nothing double counts.
-        if (sp[p] > 0) total_tested_positions += 2;
+        if (sp > 0) total_tested_positions += 2;
       }
     }
   }
@@ -495,6 +561,10 @@ void tabulate_soft_clipping_counts(
     uint32_t clipped_count;
     uint32_t total_count;
     uint32_t agree_count;
+    uint32_t agree_count_fw;   // agree_count split by the strand of the clipped read;
+    uint32_t agree_count_rv;   //   agree_count_fw + agree_count_rv == agree_count
+    uint32_t spanning_fw;      // read-through reads at this position, by strand;
+    uint32_t spanning_rv;      //   spanning_fw + spanning_rv == total_count - clipped_count
     string   consensus_tail;   // always stored reference-forward
   };
   vector<clipped_position> positions;
@@ -512,7 +582,9 @@ void tabulate_soft_clipping_counts(
 
     for (map<string, map<uint32_t, uint32_t> >::iterator seq_it = clipped.begin(); seq_it != clipped.end(); seq_it++) {
       const string& seq_id = seq_it->first;
-      const vector<uint32_t>& cov = spanning[seq_id];   // same denominator for both directions
+      // Same denominator for both directions.
+      const vector<uint32_t>& cov_fw = spanning_fw[seq_id];
+      const vector<uint32_t>& cov_rv = spanning_rv[seq_id];
       map<uint32_t, vector<uint64_t> >& seq_tails = tails[seq_id];
 
       for (map<uint32_t, uint32_t>::iterator pos_it = seq_it->second.begin(); pos_it != seq_it->second.end(); pos_it++) {
@@ -521,12 +593,15 @@ void tabulate_soft_clipping_counts(
         cp.position = pos_it->first;
         cp.direction = direction;
         cp.clipped_count = pos_it->second;
-        uint32_t read_through = (cp.position < cov.size()) ? cov[cp.position] : 0;
+        cp.spanning_fw = (cp.position < cov_fw.size()) ? cov_fw[cp.position] : 0;
+        cp.spanning_rv = (cp.position < cov_rv.size()) ? cov_rv[cp.position] : 0;
+        uint32_t read_through = cp.spanning_fw + cp.spanning_rv;
         cp.total_count = cp.clipped_count + read_through;
 
         compute_clipped_tail_consensus(seq_tails[cp.position], consensus_bases,
                                        settings.soft_clipping_consensus_base_fraction,
-                                       cp.consensus_tail, cp.agree_count);
+                                       cp.consensus_tail, cp.agree_count,
+                                       cp.agree_count_fw, cp.agree_count_rv);
 
         // Columns run outward from the wall. For a leading clip that is backwards
         // relative to the reference, so reverse it: the stored sequence is then always
@@ -534,6 +609,12 @@ void tabulate_soft_clipping_counts(
         if (direction < 0) reverse(cp.consensus_tail.begin(), cp.consensus_tail.end());
 
         total_agreeing_clipped_read_ends += cp.agree_count;
+        // Diagnostic only (reported in the SC gates table): how much of the agreeing clip
+        // population sits at positions that saw only one strand. A clean library runs a few
+        // percent; a run dominated by dark-cycle poly-G runs most of the way to 100%, which is
+        // the single number that says "the SC calls in this run are an artifact".
+        if ((cp.agree_count > 0) && ((cp.agree_count_fw == 0) || (cp.agree_count_rv == 0)))
+          total_strand_pure_agreeing_clipped_read_ends += cp.agree_count;
         // A position with clips but no read-through was not counted in the prefix-sum loop.
         if (read_through == 0) total_tested_positions++;
 
@@ -547,8 +628,15 @@ void tabulate_soft_clipping_counts(
   // the *agreeing* rate, since agree_count is the numerator being tested.
   uint64_t total_opportunities = total_clipped_read_ends + total_spanning_read_bases;
   summary.soft_clipping.total_spanning_read_bases = total_spanning_read_bases;
+  // The genome-wide strand split of the read-through population. add_sc_evidence() falls back to
+  // this as the expected strand ratio at a position with no read-through of its own, which is
+  // exactly the frequency == 1.000 case -- otherwise those positions have an empty contingency
+  // row and the strand test silently has no power where the clip count is highest.
+  summary.soft_clipping.total_spanning_read_bases_forward = total_spanning_read_bases_fw;
+  summary.soft_clipping.total_spanning_read_bases_reverse = total_spanning_read_bases_rv;
   summary.soft_clipping.total_clipped_read_ends = total_clipped_read_ends;
   summary.soft_clipping.total_agreeing_clipped_read_ends = total_agreeing_clipped_read_ends;
+  summary.soft_clipping.total_strand_pure_agreeing_clipped_read_ends = total_strand_pure_agreeing_clipped_read_ends;
   summary.soft_clipping.soft_clipping_rate = (total_opportunities > 0)
     ? static_cast<double>(total_clipped_read_ends) / static_cast<double>(total_opportunities)
     : 0.0;
@@ -636,17 +724,20 @@ void tabulate_soft_clipping_counts(
   // The leading format token exists so that a counts file written by an older binary fails
   // loudly rather than being silently reinterpreted. Bump it whenever the meaning of a column
   // or of the denominator changes, not just when a column is added.
-  out << "#sc_format=2"
+  out << "#sc_format=3"
       << "\tsoft_clipping_minimum_bases=" << minimum_clipped_bases
       << "\tconsensus_base_fraction=" << settings.soft_clipping_consensus_base_fraction
       << "\tnull_rate=" << p0
       << "\tdispersion=" << rho << "\n";
-  out << "seq_id\tposition\tdirection\tclipped_count\ttotal_count\tagree_count\tclipped_sequence\n";
+  out << "seq_id\tposition\tdirection\tclipped_count\ttotal_count\tagree_count\tclipped_sequence"
+         "\tagree_count_forward\tagree_count_reverse\tspanning_forward\tspanning_reverse\n";
 
   for (vector<clipped_position>::const_iterator it = positions.begin(); it != positions.end(); it++) {
     out << it->seq_id << "\t" << it->position << "\t" << it->direction << "\t"
         << it->clipped_count << "\t" << it->total_count << "\t" << it->agree_count << "\t"
-        << (it->consensus_tail.empty() ? "." : it->consensus_tail) << "\n";
+        << (it->consensus_tail.empty() ? "." : it->consensus_tail) << "\t"
+        << it->agree_count_fw << "\t" << it->agree_count_rv << "\t"
+        << it->spanning_fw << "\t" << it->spanning_rv << "\n";
   }
 
   out.close();
@@ -654,6 +745,12 @@ void tabulate_soft_clipping_counts(
   cerr << "  Soft-clipping summary: " << total_clipped_read_ends << " clip events ("
        << total_agreeing_clipped_read_ends << " agreeing with their position consensus) over "
        << total_opportunities << " read opportunities" << endl;
+  if (total_agreeing_clipped_read_ends > 0) {
+    cerr << "    " << total_strand_pure_agreeing_clipped_read_ends << " ("
+         << (100.0 * static_cast<double>(total_strand_pure_agreeing_clipped_read_ends)
+                   / static_cast<double>(total_agreeing_clipped_read_ends))
+         << "%) of the agreeing clip events are at positions that saw only one read strand" << endl;
+  }
   cerr << "    null rate p0 = " << p0;
   if (p0 != p0_raw) cerr << " (raised from " << p0_raw << " by --soft-clipping-minimum-rate)";
   cerr << endl;
