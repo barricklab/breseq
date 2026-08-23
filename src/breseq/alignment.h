@@ -652,9 +652,13 @@ struct read_group_ref {
  *  Replaces the deprecated sam_header_read2() removed in modern htslib.
  *  Declared here so any translation unit that includes alignment.h can use it.
  *  Any read groups given are emitted as @RG lines after the @SQ block.
+ *  pg_line, if given, is appended verbatim after the @RG block -- a complete "@PG\t...\n" line
+ *  (see Settings::bam_pg_header_line()), which is where a written BAM records the breseq run that
+ *  produced it. It must already be sanitized; sam_hdr_parse() rejecting it is a fatal ASSERT here.
  */
 bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name,
-                                      const cReadGroupList& read_groups = cReadGroupList());
+                                      const cReadGroupList& read_groups = cReadGroupList(),
+                                      const string& pg_line = "");
 
 /*! Soft-clip mis-mapped bases at the ends of an alignment.
  *
@@ -691,12 +695,12 @@ class bam_file {
 public:
   bam_file() : bam_header(NULL), m_bam_file(NULL) {}
   bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode,
-           const cReadGroupList& read_groups = cReadGroupList());
+           const cReadGroupList& read_groups = cReadGroupList(), const string& pg_line = "");
   ~bam_file();
 
   void open_read(const string& bam_file_name, const string& fasta_file_name);
   void open_write(const string& bam_file_name, const string& fasta_file_name,
-                  const cReadGroupList& read_groups = cReadGroupList());
+                  const cReadGroupList& read_groups = cReadGroupList(), const string& pg_line = "");
 
   bool read_alignments(alignment_list& alignments, bool paired = false);
 

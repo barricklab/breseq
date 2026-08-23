@@ -1021,6 +1021,13 @@ namespace breseq
     // cErrorTable::read_file_index(), which recombines the group and the mate flag.
     cReadGroupList read_groups() const;
 
+    //! The SAM @PG header line describing this breseq run (trailing newline included).
+    //
+    // Written by bam_file::open_write() so that a BAM records which breseq build and command line
+    // produced it -- otherwise the only @PG lines in data/reference.bam name samtools, which merely
+    // sorted the file. Returns a complete "@PG\t...\n" line; never empty.
+    string bam_pg_header_line() const;
+
 		void check_installed();
     
     bool do_step(const string& done_key, const string& message);

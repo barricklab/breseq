@@ -540,3 +540,61 @@ Here's how...
 
 > -   Click 'File', and then 'Load from File..."
 > -   Choose the BAM file: `data/reference.bam`.
+
+## Making sense of what you see
+
+A few things about `data/reference.bam` are specific to _breseq_ and will otherwise look
+like rendering bugs.
+
+**Turn on soft-clipped bases.** IGV hides them by default. _breseq_ soft-clips read ends
+that do not match the reference when it writes this file, so with the option off those
+reads simply look shorter than the others for no visible reason, and the clipping that
+supports a junction call is invisible. Turn it on under
+`View > Preferences > Alignments > Show soft-clipped bases`, or right-click the alignment
+track and choose "Show soft-clipped bases".
+
+**Reads that map to more than one place are given a mapping quality of 0.** Such a read is
+written once at each location, and every copy gets MAPQ 0, which IGV renders as a white or
+transparent read. This is the cue that the position sits in a repeat and that no single
+placement is trustworthy.
+
+Reads with exactly one placement keep the mapping quality _bowtie2_ reported. For most that
+is `255` — the SAM value for "unavailable" — because _breseq_ runs _bowtie2_ in a mode that
+does not compute a graded score; a small number of reads that aligned only partially carry a
+real, sometimes low, score instead. So a MAPQ of 0 is not by itself proof that a read is
+multiply mapped. Group or color by the `X1` tag (below) when you need the exact distinction.
+
+**Reads whose name ends in `-M1` or `-M2` are the two halves of one read that spans a new
+junction.** _breseq_ aligns each half to the reference sequence on its side of the junction
+and soft-clips the other half, so the same read appears twice, in two places, under two
+names. Turning on soft-clipped bases (above) makes the relationship visible: the clipped
+portion of `-M1` is the part that aligns where `-M2` is drawn, and vice versa.
+
+**Reads are not shown at every location they support.** When one side of a junction falls
+inside a repeat, _breseq_ does not write that side's half of the read at all, because it
+cannot tell which copy of the repeat the read belongs to.
+
+### Aux tags
+
+Alignments carry these _breseq_-specific tags. IGV can group or color by any of them via
+`Group alignments by > tag` and `Color alignments by > tag`, which is a quick way to
+separate ambiguous reads from confident ones.
+
+| Tag | Meaning |
+| --- | --- |
+| `X1` | Number of equally good placements for this read. `1` means uniquely placed. |
+| `XJ` | Present only on `-M1`/`-M2` reads; which side of the junction is the middle of the original read. |
+| `XL`, `XR` | Bases at the left and right ends of the read that _breseq_ ignores when calling mutations. |
+| `XP` | Orientation of this read pair, as two characters, e.g. `FR`. |
+| `X4` | Set when the pair's placement had to be chosen between several possibilities rather than measured. |
+| `X7`, `X8` | Log-likelihoods used to decide between placing the read on the reference and placing it on a candidate junction. |
+| `X9` | Set when this read's mate produced no alignment anywhere. |
+
+### Provenance
+
+The BAM header records the _breseq_ version and the exact command line that produced the
+file:
+
+```bash
+samtools view -H data/reference.bam | grep '^@PG'
+```

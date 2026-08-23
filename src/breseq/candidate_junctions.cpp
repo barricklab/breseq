@@ -776,7 +776,7 @@ namespace breseq {
     // BSAM includes best matches as they are merged from all alignment files
     bam_file BSAM;
     if (do_preprocess) {
-      BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name, read_groups);
+      BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name, read_groups, settings.bam_pg_header_line());
     }
 
     uint32_t i = 0;
@@ -800,7 +800,7 @@ namespace breseq {
             end_progress_line();
             cerr << "  READ FILE::" << read_file.m_base_name << endl;
             string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
-            PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name, read_groups);
+            PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name, read_groups, settings.bam_pg_header_line());
             PSAM.set_default_read_group(rg_r1);
             settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
           }
@@ -841,13 +841,13 @@ namespace breseq {
           end_progress_line();
           cerr << "  READ FILE::" << read_file_r1.m_base_name << endl;
           string split1 = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file_r1.m_base_name);
-          PSAM1.open_write(split1, reference_fasta_file_name, read_groups);
+          PSAM1.open_write(split1, reference_fasta_file_name, read_groups, settings.bam_pg_header_line());
           PSAM1.set_default_read_group(rg_r1);
           settings.track_intermediate_file(settings.candidate_junction_done_file_name, split1);
 
           cerr << "  READ FILE::" << read_file_r2.m_base_name << endl;
           string split2 = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file_r2.m_base_name);
-          PSAM2.open_write(split2, reference_fasta_file_name, read_groups);
+          PSAM2.open_write(split2, reference_fasta_file_name, read_groups, settings.bam_pg_header_line());
           PSAM2.set_default_read_group(rg_r2);
           settings.track_intermediate_file(settings.candidate_junction_done_file_name, split2);
         }

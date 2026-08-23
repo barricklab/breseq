@@ -415,8 +415,8 @@ void resolve_alignments(
   // These two become data/reference.bam and 06_bam/junction.bam (samtools sort preserves @RG), so
   // this is where read groups reach the output a user -- or CNery, via bam2cov -- actually reads.
   const cReadGroupList read_groups = settings.read_groups();
-  bam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out, read_groups);
-  bam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out, read_groups);
+  bam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out, read_groups, settings.bam_pg_header_line());
+  bam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out, read_groups, settings.bam_pg_header_line());
   
   settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_reference_sam_file_name);
   settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_junction_sam_file_name);

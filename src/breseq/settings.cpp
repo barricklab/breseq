@@ -1796,6 +1796,25 @@ namespace breseq
     return return_value;
   }
 
+  string Settings::bam_pg_header_line() const
+  {
+    // Same two macros the on-screen byline is built from (see pre_option_initialize), so a BAM and
+    // the HTML report always name the same build. GITHUB_REVISION_STRING may be empty when the
+    // source was not built from a git checkout (configure.ac), so DS is only emitted when it is not.
+    string line = "@PG\tID:breseq\tPN:breseq\tVN:" + sanitize_sam_tag_value(PACKAGE_VERSION);
+
+    string revision = sanitize_sam_tag_value(GITHUB_REVISION_STRING);
+    if (!revision.empty()) line += "\tDS:" + revision;
+
+    // full_command_line is raw argv, i.e. arbitrary user text -- a path with a tab in it would
+    // otherwise split the @PG line into extra fields and make sam_hdr_parse() reject the header,
+    // which make_bam_header_from_faidx() turns into a fatal ASSERT.
+    string command_line = sanitize_sam_tag_value(this->full_command_line);
+    if (!command_line.empty()) line += "\tCL:" + command_line;
+
+    return line + "\n";
+  }
+
   void Settings::resolve_sample_name()
   {
     // 1. An explicit --name always wins.

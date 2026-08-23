@@ -616,7 +616,7 @@ read_file_partition make_read_file_partition(const read_group_index_map& rg_map,
   return p;
 }
 
-bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name, const cReadGroupList& read_groups) {
+bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name, const cReadGroupList& read_groups, const string& pg_line) {
   // Strip .fai suffix to get base FASTA path for fai_load
   string fasta = fasta_file_name;
   if (fasta.size() > 4 && fasta.substr(fasta.size() - 4) == ".fai")
@@ -649,13 +649,17 @@ bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name, const cRead
     hdr_text += "\n";
   }
 
+  // @PG last, per the SAM spec's header line ordering. Already a complete line with its own
+  // terminating newline (Settings::bam_pg_header_line); empty when the caller has no run to name.
+  hdr_text += pg_line;
+
   bam_hdr_t *hdr = sam_hdr_parse(hdr_text.size(), hdr_text.c_str());
   ASSERT(hdr, "Could not parse BAM header from FASTA index: " + fasta);
   return hdr;
 }
 
 bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode,
-                   const cReadGroupList& read_groups)
+                   const cReadGroupList& read_groups, const string& pg_line)
 : bam_header(NULL), m_bam_file(NULL)
 {
   if (mode == ios_base::in)
@@ -664,7 +668,7 @@ bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, i
   }
   else
   {
-    open_write(bam_file_name, fasta_file_name, read_groups);
+    open_write(bam_file_name, fasta_file_name, read_groups, pg_line);
   }
 }
 
@@ -691,11 +695,11 @@ void bam_file::open_read(const string& bam_file_name, const string& fasta_file_n
 }
 
 void bam_file::open_write(const string& bam_file_name, const string& fasta_file_name,
-                          const cReadGroupList& read_groups)
+                          const cReadGroupList& read_groups, const string& pg_line)
 {
   m_bam_file = hts_open(bam_file_name.c_str(), "wb");
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
-  bam_header = make_bam_header_from_faidx(fasta_file_name, read_groups);
+  bam_header = make_bam_header_from_faidx(fasta_file_name, read_groups, pg_line);
   (void) sam_hdr_write(m_bam_file, bam_header);
   // Built from the parsed header rather than from read_groups, so a written RG:Z: value is always
   // an ID that actually appears in this file's header.
@@ -1004,7 +1008,13 @@ void bam_file::write_alignments(
     ll.push_back(to_string(apply_mate_flag(fix_flags(a.flag()), rg)));
     ll.push_back(bam_header->target_name[a.reference_target_id()]);
     ll.push_back(to_string(reference_start_1));
-    ll.push_back(to_string<uint32_t>(a.mapping_quality()));
+    // A read with more than one surviving placement gets MAPQ 0 -- the standard signal for
+    // "this position is one of several equally good ones", and the only ambiguity cue a genome
+    // browser shades on. bowtie2 runs in -k mode here, so its own MAPQ is 255 ("unavailable") on
+    // the primary record and a low graded value on the 0x100 siblings that fix_flags() strips,
+    // leaving the copies of one read contradicting each other. Keyed to alignments.size() so it
+    // can never disagree with the X1 tag written above, which is what every breseq consumer reads.
+    ll.push_back(to_string<uint32_t>((alignments.size() > 1) ? 0 : a.mapping_quality()));
     ll.push_back(cigar_string);
 
     if ((a.flag() & BAM_FPAIRED) == 0) {
