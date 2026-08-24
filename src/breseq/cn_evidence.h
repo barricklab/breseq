@@ -79,10 +79,16 @@ namespace breseq {
     // segments in genomic coordinates -- real boundaries, with no window granularity left to
     // resolve and no gap where CNery dropped a window. Both the CN evidence entries and the step
     // line on the CN plots are built from these, which is what keeps the two agreeing.
-    // Inclusive on both ends. Reference coordinates are 1-based and every boundary CNery calls lands
-    // on a window start -- except the very first segment, which opens at 0 rather than 1 (its
-    // Startpos is literally "0" in the file). Nothing needs a special case for that: the evidence
-    // ingest only keeps segments away from copy number 1, and the plot clamps to its own range.
+    // Inclusive on both ends, and 1-based like every other reference coordinate in breseq --
+    // read_cnery_segments() validates that as it reads and rejects anything else, so nothing
+    // downstream has to re-check it.
+    //
+    // CNery before its "Open the first segment of a sequence at 1, not 0" fix wrote the very first
+    // segment of every sequence with Startpos 0, and breseq passed it straight through on the theory
+    // that the first segment is always copy number 1 and so always dropped by the evidence ingest.
+    // It is not: a run whose first window is called CN != 1 -- a deletion at the start of a contig,
+    // or a library so thin that CNery calls the whole genome CN 0 -- wrote start = 0 into the .gd and
+    // then died parsing it back at the Output stage.
     struct cnery_segment {
       int32_t start;
       int32_t end;           // Startpos + Segment_Size - 1
@@ -131,7 +137,11 @@ namespace breseq {
     // unlike the per-window CSV this file has exactly three columns and the assert is fatal.
     // Returns false if the file cannot be opened, so each caller can decide: ingesting the evidence
     // treats that as fatal, drawing the plots treats it as a reason to leave the line off.
-    static bool read_cnery_segments(const string& break_pts_file_name, vector<cnery_segment>& segments);
+    //
+    // Coordinates arrive as breseq's: 1-based and inclusive, with anything that cannot be rejected
+    // rather than corrected. sequence_length bounds the far end; pass 0 to skip that one check.
+    static bool read_cnery_segments(const string& break_pts_file_name, vector<cnery_segment>& segments,
+                                    int32_t sequence_length);
 
     // Reduces a long window list to at most max_points entries, so a whole-genome overview does not
     // become a multi-megabyte SVG.
@@ -153,7 +163,8 @@ namespace breseq {
                                       const string& seq_id,
                                       const vector<cnery_window>& windows,
                                       const string& break_pts_file_name,
-                                      const string& gd_file_name
+                                      const string& gd_file_name,
+                                      int32_t sequence_length
                                       );
 
     // Emits one gnuplot SVG over [plot_start, plot_end]. Windows outside that range are ignored.

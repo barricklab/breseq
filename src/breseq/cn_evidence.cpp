@@ -54,7 +54,8 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
     ASSERT(read_cnery_windows(cnv_file_name, windows),
            "Could not open CNery output file: " + cnv_file_name);
 
-    ingest_csv_for_seq_id(seq.m_seq_id, windows, break_pts_file_name, gd_file_name);
+    ingest_csv_for_seq_id(seq.m_seq_id, windows, break_pts_file_name, gd_file_name,
+                          static_cast<int32_t>(seq.m_length));
 
     // Recorded now because none of what it is derived from survives the run: this whole directory is
     // deleted once the pipeline completes, but Output still has to report how the analysis went.
@@ -266,7 +267,17 @@ bool CNEvidence::read_cnery_otr(const string& otr_file_name, cnery_otr& otr)
 // three columns and a fourth would mean CNery changed something we need to look at, so the assert is
 // deliberately fatal. Returns false only when the file cannot be opened at all -- what that means
 // differs by caller, so it is theirs to decide.
-bool CNEvidence::read_cnery_segments(const string& break_pts_file_name, vector<cnery_segment>& segments)
+//
+// This is the ONE place CNery's coordinates become breseq's, so it is also where they are checked,
+// and nothing here corrects them -- a coordinate breseq cannot use is an error, not something to
+// clamp. The alternative is what used to happen: a bad coordinate rides through
+// ingest_csv_for_seq_id() into a .gd that breseq itself then refuses to parse, and the run dies in
+// cGenomeDiff::read() at the Output stage with a stack trace five stages away from the file that
+// actually caused it.
+//
+// sequence_length is this reference's length, used only to keep a segment from running off the end
+// of it; pass 0 to skip that one check.
+bool CNEvidence::read_cnery_segments(const string& break_pts_file_name, vector<cnery_segment>& segments, int32_t sequence_length)
 {
   segments.clear();
 
@@ -276,18 +287,64 @@ bool CNEvidence::read_cnery_segments(const string& break_pts_file_name, vector<c
   string line;
   getline(break_pts_file, line); // discard header
 
+  bool warned_past_end = false;
+  size_t row = 0;
+
   while (getline(break_pts_file, line)) {
     if (line.size() == 0) continue;
     vector<string> fields = split(line, ",");
     ASSERT(fields.size() == 3, "Unexpected number of columns in CNery output file: " + break_pts_file_name);
+    row++;
+
+    // Startpos is where the segment opens and Segment_Size is its length, so the last base it covers
+    // is one before the next segment's start.
+    int32_t raw_start = from_string<int32_t>(fields[0]);
 
     cnery_segment s;
-    // Startpos is where the segment opens and Segment_Size is its length, so the last base it covers
-    // is one before the next segment's start. See cnery_segment for the one place this is not simply
-    // a 1-based coordinate: the first segment of a sequence opens at 0.
-    s.start = from_string<int32_t>(fields[0]);
     s.copy_number = from_string<int32_t>(fields[1]);
-    s.end = s.start + from_string<int32_t>(fields[2]) - 1;
+    s.start       = raw_start;
+    s.end         = raw_start + from_string<int32_t>(fields[2]) - 1;
+
+    // Reference coordinates are 1-based and inclusive. Both of these produce a CN entry that fails
+    // GenomeDiff validation, so they are fatal here rather than at Output: START and END are
+    // positive-integer fields, and an entry that ends before it starts is not a range.
+    //
+    // A start of 0 specifically is what CNery used to write on the first segment of every sequence
+    // -- _segments_from_path() in its core.py seeded start_pos = 0 before it had looked at a window,
+    // so it was unconditional and had nothing to do with what state that segment was in. breseq
+    // passed it through, on the theory that the first segment is always copy number 1 and so always
+    // dropped by the evidence ingest; a first window called CN != 1 wrote start = 0 into the .gd and
+    // killed the run at Output. Fixed in CNery by its commit "Open the first segment of a sequence
+    // at 1, not 0", and NOT worked around here: dev-environment.yml pins cnery-prerelease to an
+    // exact commit build, so there is one CNery a given breseq tree is ever run against and a
+    // tolerated 0 would only hide a pin that had slipped backwards. If this fires, that is what
+    // happened -- check the pin rather than adding a clamp.
+    ASSERT(s.start >= 1,
+           "Segment starting before the first base of the sequence (" + to_string<int32_t>(s.start) +
+           ") on row " + to_string<size_t>(row) + " of CNery output file: " + break_pts_file_name +
+           "\nA start of 0 on row 1 means CNery predates its \"Open the first segment of a sequence\n"
+           "at 1, not 0\" fix; check the cnery-prerelease pin in dev-environment.yml.");
+    ASSERT(s.end >= s.start,
+           "Segment ending (" + to_string<int32_t>(s.end) + ") before it starts (" +
+           to_string<int32_t>(s.start) + ") on row " + to_string<size_t>(row) +
+           " of CNery output file: " + break_pts_file_name);
+
+    // Running past the end of the contig is recoverable in a way the two above are not -- the .gd
+    // parses either way and every plot clamps to its own range -- so trim it and say so instead of
+    // ending the run. CNery stops its last window short of the sequence end rather than overrunning
+    // it, so this is not expected to fire; it is here so that if that ever changes, the CN evidence
+    // stays inside the reference it describes. Warn once: only the last row can realistically trip.
+    if ((sequence_length > 0) && (s.end > sequence_length)) {
+      if (!warned_past_end) {
+        WARN("Copy number segment ending at " + to_string<int32_t>(s.end) + " runs past the end of the " +
+             to_string<int32_t>(sequence_length) + " bp reference sequence; trimming it.\n"
+             "CNery output file: " + break_pts_file_name);
+        warned_past_end = true;
+      }
+      s.end = sequence_length;
+      if (s.start > s.end) continue;
+    }
+
     segments.push_back(s);
   }
   break_pts_file.close();
@@ -301,13 +358,14 @@ void CNEvidence::ingest_csv_for_seq_id(
                                        const string& seq_id,
                                        const vector<cnery_window>& windows,
                                        const string& break_pts_file_name,
-                                       const string& gd_file_name
+                                       const string& gd_file_name,
+                                       int32_t sequence_length
                                        )
 {
   uint32_t window_size = windows.size() ? static_cast<uint32_t>(windows[0].length) : 0;
 
   vector<cnery_segment> segments;
-  ASSERT(read_cnery_segments(break_pts_file_name, segments),
+  ASSERT(read_cnery_segments(break_pts_file_name, segments, sequence_length),
          "Could not open CNery output file: " + break_pts_file_name);
 
   cGenomeDiff gd;
@@ -962,7 +1020,7 @@ void CNEvidence::draw_evidence_plots(
     // Absent is survivable -- the plot then simply carries no copy-number line.
     vector<cnery_segment> segments;
     string break_pts_file_name = settings.file_name(settings.cnery_break_points_file_name, "@", seq.m_seq_id);
-    if (!read_cnery_segments(break_pts_file_name, segments)) {
+    if (!read_cnery_segments(break_pts_file_name, segments, static_cast<int32_t>(seq.m_length))) {
       WARN("Omitting the copy number line from the plots for " + seq.m_seq_id +
            ": could not read CNery output file " + break_pts_file_name);
     }
