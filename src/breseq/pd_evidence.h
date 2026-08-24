@@ -30,9 +30,9 @@ namespace breseq {
 
   //! Load the null distribution that pair-distance (PD) evidence tests against.
   //
-  //  Reads the persisted majority-orientation pair distance histogram
-  //  (data/#.pair_distance_histogram.tab) and applies PD's length-bias correction: each bin is
-  //  weighted by (d - trunc), with trunc = 2 * read_length. The reason is exact rather than
+  //  Reads the majority-orientation pair distance histogram written by the stage-03 fit
+  //  (03_candidate_junctions/#.pair_distance_histogram.tab) and applies PD's length-bias correction:
+  //  each bin is weighted by (d - trunc), with trunc = 2 * read_length. The reason is exact rather than
   //  heuristic. PD only ever looks at a pair through the question "does this pair's unsequenced
   //  middle gap cover position b?", and the pairs whose gap covers a FIXED point are sampled in
   //  proportion to the length of that gap. So the correct null for a covering pair is the raw

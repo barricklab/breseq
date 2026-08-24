@@ -601,8 +601,9 @@ namespace breseq
 
     string paired_mapping_distance_done_file_name;
     string paired_mapping_distance_distribution_file_name;
-    string paired_mapping_distance_histogram_file_name;  // persisted majority-orientation distance->count
-                                                         // histogram (the empirical insert PMF for DP)
+    string paired_mapping_distance_histogram_file_name;  // majority-orientation distance->count histogram
+                                                         // (the empirical insert PMF for DP); lives in the
+                                                         // stage directory and dies with it
     string paired_mapping_distance_plot_file_name;
     string paired_mapping_distance_summary_file_name;
     string discordant_pairs_file_name;
@@ -639,7 +640,8 @@ namespace breseq
 		string alignment_resolution_summary_file_name;
 		string resolved_paired_mapping_distance_summary_file_name;
 		// Per-seq_id interior concordant-pair crossing histogram (crossing<TAB>count), written in resolve
-		// as a CSV/tab intermediate; read by the DP score and the crossing plots (# = seq_id).
+		// as a CSV/tab intermediate; read by the DP score and the crossing plots (# = seq_id). Lives in
+		// the stage directory and dies with it.
 		string concordant_pair_crossing_distribution_file_name;
     string jc_genome_diff_file_name;
     

@@ -852,7 +852,9 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
   make_svg_responsive(plot_file);
   remove(log_file_name.c_str());
-  if (histogram_file_name.empty()) remove(hist_table_file_name.c_str());  // keep the persisted histogram
+  // Keep the named histogram: later stages (mutation identification, DP, PD, and the PD evidence
+  // plots in Output) read it back. It is removed with its stage directory at the end of the run.
+  if (histogram_file_name.empty()) remove(hist_table_file_name.c_str());
   remove(cutoff_table_file_name.c_str());
   remove(median_table_file_name.c_str());
 

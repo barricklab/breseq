@@ -2107,7 +2107,9 @@ void load_junction_alignments(
   // Write each reference sequence's INTERIOR concordant-pair crossing histogram to a tab file (the null
   // distribution used to score DP evidence). Interior = >= distance_cutoff (max insert) from each end --
   // the only positions a pair can fully span (near-end positions are crossing-depleted). Prefix-sum the
-  // difference array into per-position counts. Distributions are CSV intermediates, not summary JSON.
+  // difference array into per-position counts. Distributions are CSV intermediates, not summary JSON:
+  // this one goes in THIS stage's directory, where it stays readable through the Output step (the DP
+  // score, the crossing plots, the summary.html skew model) and is then removed with the directory.
   double dist_cutoff = 0.0;
   for (PairedMappingDistanceDistributionSummaries::const_iterator it = summary.preliminary_paired_mapping_distance_distribution.begin();
        it != summary.preliminary_paired_mapping_distance_distribution.end(); it++)

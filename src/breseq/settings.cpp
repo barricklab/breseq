@@ -1596,7 +1596,11 @@ namespace breseq
     // Transient intermediate: written during preprocessing, consumed by the distance-distribution
     // fit/plot, then deleted (tracked under paired_mapping_distance_done_file_name).
     this->paired_mapping_distance_distribution_file_name = this->candidate_junction_path + "/#.pair_stats.csv";
-    // (paired_mapping_distance_histogram_file_name is assigned below, after data_path is set.)
+    // Per-read-file-set majority-orientation insert histogram (the empirical insert PMF for the DP
+    // Bayes placement test), written by the fit here and read back as late as the Output step. It
+    // therefore cannot be tracked under any earlier done-file; it is removed with this whole stage
+    // directory at the end of a successful run (unless --keep-intermediates).
+    this->paired_mapping_distance_histogram_file_name = this->candidate_junction_path + "/#.pair_distance_histogram.tab";
 
     this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
@@ -1630,6 +1634,10 @@ namespace breseq
 		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.bam";
 		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.json";
 		this->resolved_paired_mapping_distance_summary_file_name = this->alignment_resolution_path + "/paired_mapping_distance.summary.json";
+		// Per-seq_id interior concordant-pair crossing histogram (the DP null), written here and read
+		// as late as the Output step (the crossing plots and the summary.html skew-model line), so like
+		// the insert histogram it has no earlier done-key and is removed with this stage directory.
+		this->concordant_pair_crossing_distribution_file_name = this->alignment_resolution_path + "/#.concordant_pair_crossing.tab";
 		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
 
     this->junction_debug_file_name = this->alignment_resolution_path + "/junction_debug.txt";
@@ -1738,13 +1746,6 @@ namespace breseq
     //! Paths: Data
 		this->data_path = "data";
 		if (this->base_output_path.size() > 0) this->data_path = this->base_output_path + "/" + this->data_path;
-
-		// Per-seq_id concordant-pair crossing histogram tab (written in resolve, persists in data/).
-		this->concordant_pair_crossing_distribution_file_name = this->data_path + "/#.concordant_pair_crossing.tab";
-
-		// Per-read-file-set majority-orientation insert histogram (the empirical insert PMF for the DP Bayes
-		// placement test), written by the fit in preprocessing and read back in Output; persists in data/.
-		this->paired_mapping_distance_histogram_file_name = this->data_path + "/#.pair_distance_histogram.tab";
 
 		this->reference_bam_file_name = this->data_path + "/reference.bam";
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
