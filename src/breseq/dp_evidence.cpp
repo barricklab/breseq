@@ -1809,6 +1809,9 @@ namespace breseq {
       int k_distinct = weight;
       bool have_local_concordant = false;
       double c_local = 0.0;
+      // Which sequence the frequency ended up being measured against, when the two sides disagree.
+      // Empty for a same-seq_id item, where the question does not arise.
+      string freq_relative_seq_id;
       if (scanner) {
         // Count the three read categories at each side, classifying at the FINAL placed positions
         // (s1_pos/s2_pos) so the counts describe the reported breakpoint. The overlapping-mate
@@ -1859,12 +1862,50 @@ namespace breseq {
         // excluded side becomes "NA" and drops out of the mean). Average only the usable sides; when
         // both are redundant there is no denominator and the frequency is NA (written below).
         // The raw side_N_concordant_count fields above still report what was seen at each side.
+        //
+        // ...and among the usable sides, average only those on the LOWEST-COVERAGE sequence.
+        //
+        // The two sides measure different things as soon as their sequences sit at different copy
+        // number. For a plasmid integrated into the chromosome, k/(k+c_chromosome) is the fraction of
+        // CHROMOSOMES carrying the integration -- the per-cell frequency, since each cell has one
+        // chromosome at that locus -- while k/(k+c_plasmid) is the fraction of PLASMID MOLECULES that
+        // are the integrated one, deflated by the plasmid's copy number. Averaging the two raw counts
+        // conflates them, and the per-cell number is the one worth reporting.
+        //
+        // Rescaling the higher side by the coverage ratio and then averaging does NOT work: with a
+        // chromosome at 30x, a plasmid at 300x and the integration present in every cell, c1 = 0 and
+        // c2 ~ 300u, so rescale-and-average gives (0 + 30)/2 = 15 and a frequency of 67%. Rescaling
+        // changes the plasmid count's units but it still counts intact plasmids, which are not a
+        // denominator for "fraction of chromosomes". Taking the lower-coverage side gives 0, hence
+        // 100%, which is what the data says.
+        //
+        // Selecting on EXACT equality is what keeps every same-seq_id item bit-identical: both sides
+        // resolve to the same coverage entry, so both are at the minimum and the mean is unchanged.
+        // The same holds under -c/--contig-reference, where all of a file's contigs share one pooled
+        // coverage group (settings.cpp) and therefore stay pooled here too -- which is right, since
+        // contigs of one genome are at one copy number.
+        //
+        // A side whose coverage is unavailable (0.0 -- no fit, or a junction-only sequence) is not
+        // eligible to BE the minimum; selecting it would divide the run's frequencies by an artifact
+        // of a missing fit. When no side has a usable coverage, every usable side is kept and this
+        // degrades exactly to the previous mean.
+        double cov1 = dp_seq_coverage(summary, s1_seq_id);
+        double cov2 = dp_seq_coverage(summary, s2_seq_id);
+        double min_cov = 0.0;
+        if (!side1_red && cov1 > 0.0) min_cov = cov1;
+        if (!side2_red && cov2 > 0.0 && (min_cov == 0.0 || cov2 < min_cov)) min_cov = cov2;
+
         double c_sum = 0.0;
         int n_usable = 0;
-        if (!side1_red) { c_sum += static_cast<double>(c2a); n_usable++; }
-        if (!side2_red) { c_sum += static_cast<double>(c2b); n_usable++; }
+        if (!side1_red && (min_cov == 0.0 || cov1 == min_cov)) { c_sum += static_cast<double>(c2a); n_usable++; }
+        if (!side2_red && (min_cov == 0.0 || cov2 == min_cov)) { c_sum += static_cast<double>(c2b); n_usable++; }
         have_local_concordant = (n_usable > 0);
         c_local = have_local_concordant ? (c_sum / static_cast<double>(n_usable)) : 0.0;
+
+        // Name the sequence the frequency is relative to, but only when that was a real choice --
+        // i.e. the two sides are on different sequences and exactly one of them supplied the count.
+        if ((s1_seq_id != s2_seq_id) && (n_usable == 1) && (min_cov > 0.0))
+          freq_relative_seq_id = (cov1 == min_cov && !side1_red) ? s1_seq_id : s2_seq_id;
 
         // Nothing survived verification: the candidate's shared-pair count came from the coarse
         // region-overlap heuristic, but at the placed breakpoint not one read pair actually bridges the
@@ -1888,8 +1929,9 @@ namespace breseq {
         dp["background_e_value"] = to_string(background.e_value(weight), 3, true);
 
       // Local frequency: discordant pairs vs concordant pairs spanning the SAME breakpoint, i.e. the
-      // variant and reference observations of one sampling event. The non-redundant sides are averaged
-      // because each measures the same fragment population from one end (see where c_local is built).
+      // variant and reference observations of one sampling event. The usable sides on the lowest-
+      // coverage sequence are averaged, because each measures the same fragment population from one
+      // end (see where c_local is built for why the lower-coverage sequence is the right denominator).
       // See also the comment above dp_crossing_mean.
       double f_lcb = std::numeric_limits<double>::quiet_NaN();
       if (have_local_concordant) {
@@ -1907,6 +1949,11 @@ namespace breseq {
         // fraction is the signal rather than a problem. The upper bound exists so the report can
         // show an interval instead of a naked point estimate.
         dp[FREQUENCY_UPPER] = to_string(binomial_frequency_upper_bound(k, k + c_local, kDPFrequencyAlpha), 4, false);
+        // Which sequence's molecules the frequency counts, when the two sides could have given
+        // different answers. Written only for a cross-sequence item where one side actually supplied
+        // the denominator, so a same-seq_id item carries no new key at all.
+        if (!freq_relative_seq_id.empty())
+          dp["frequency_relative_to_seq_id"] = freq_relative_seq_id;
       } else if (scanner) {
         // Both sides redundant: every concordant pair seen belongs to some copy of a repeat, so there
         // is no reference observation of THIS breakpoint to divide by -- the frequency is unknown, not
