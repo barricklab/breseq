@@ -3363,8 +3363,8 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
   }
   ss << th("seq&nbsp;id")   << endl <<
         th("position")      << endl <<
-        th("pairs")         << endl <<   // side_1 / side_2 pair count
-        th("disc&nbsp;pairs") << endl <<  // discordant_pair_count
+        th("pairs&nbsp;(cov)")      << endl <<   // side_N_concordant_count (side_N_coverage)
+        th("disc&nbsp;pairs&nbsp;(cov)") << endl <<  // discordant_count (new_junction_coverage)
         th("freq")          << endl <<   // frequency (the operative accept/reject gate)
         th("range")         << endl <<   // frequency_lower / frequency_upper
         th("skew")          << endl <<   // neg_log10_discordance_p_value
@@ -3415,9 +3415,20 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         ss << td("align=\"center\"" + ak1, "=&nbsp;" + c[key + "_position"]);
       }
 
-      ss << td("align=\"center\"", c[key + "_concordant_count"]);
+      // "<pairs> (<relative coverage>)", the same shape as the JC table's per-side "reads (cov)" cell,
+      // and in the same units: 1.00 means one copy's worth of INTACT REFERENCE still spans this side.
+      // Reading it beside the count is the point -- 0 pairs at a 1.00-coverage sequence is a fully
+      // rearranged locus, whereas 0 pairs where the coverage is unknown says nothing.
+      ss << td("align=\"center\"", c[key + "_concordant_count"]
+               + (c.entry_exists(key + "_coverage")
+                  ? ("&nbsp;(" + string_to_fixed_digit_string(c[key + "_coverage"], 2) + ")") : ""));
 
-      ss << td("rowspan=\"2\" align=\"center\"", c["discordant_count"]) << endl;
+      // Same shape again for the junction itself, mirroring JC's rowspan=2 "reads (cov)" cell:
+      // new_junction_coverage is how many copies of the VARIANT junction there are, counted against
+      // the lower-coverage side so it reads as a per-cell copy number.
+      ss << td("rowspan=\"2\" align=\"center\"", c["discordant_count"]
+               + (c.entry_exists(NEW_JUNCTION_COVERAGE)
+                  ? ("&nbsp;(" + string_to_fixed_digit_string(c[NEW_JUNCTION_COVERAGE], 2) + ")") : "")) << endl;
       // Rendered as a percentage through the shared helper, matching the JC/RA/SC freq columns.
       // Guarded on the field existing: freq_to_string maps an empty string to "100%", and a DP item
       // that never got a BAM rescan has no frequency at all.
@@ -3460,7 +3471,13 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         ss << td("align=\"center\"" + ak2, "=&nbsp;" + c[key + "_position"]) << endl;
       }
 
-      ss << td("align=\"center\"", c[key + "_concordant_count"]);
+      // "<pairs> (<relative coverage>)", the same shape as the JC table's per-side "reads (cov)" cell,
+      // and in the same units: 1.00 means one copy's worth of INTACT REFERENCE still spans this side.
+      // Reading it beside the count is the point -- 0 pairs at a 1.00-coverage sequence is a fully
+      // rearranged locus, whereas 0 pairs where the coverage is unknown says nothing.
+      ss << td("align=\"center\"", c[key + "_concordant_count"]
+               + (c.entry_exists(key + "_coverage")
+                  ? ("&nbsp;(" + string_to_fixed_digit_string(c[key + "_coverage"], 2) + ")") : ""));
 
       ss << td("align=\"center\"" + ak2,
               nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;

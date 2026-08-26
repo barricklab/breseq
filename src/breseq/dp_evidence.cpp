@@ -830,6 +830,25 @@ namespace breseq {
     return 0.0;
   }
 
+  // Expected number of CONCORDANT PAIRS spanning a normal position on this seq_id: the run's reference
+  // crossing mean, projected to this sequence's coverage. 0.0 when unavailable (no crossing reference,
+  // or no coverage fit for the sequence), which callers must treat as "unknown", not "none".
+  //
+  // This is the denominator that turns a DP pair count into a relative coverage, i.e. a copy number
+  // where 1.0 means "one copy's worth". It is the pair-based analogue of what JC divides by: JC counts
+  // READS spanning a point, so it divides by depth times a register correction
+  // (possible_overlap_registers / read_length_avg, resolve_alignments.cpp); DP counts PAIRS, whose
+  // expected number at a point is (coverage / 2*read_length) * E[(insert - 2*read_length)+] -- which is
+  // exactly what the crossing distribution already measures, so no separate correction is needed.
+  static double dp_seq_expected_crossing(const Summary& summary, const string& seq_id,
+                                         double crossing_mean_ref, double crossing_C_ref)
+  {
+    if (!(crossing_C_ref > 0.0) || !(crossing_mean_ref > 0.0)) return 0.0;
+    double cov = dp_seq_coverage(summary, seq_id);
+    if (!(cov > 0.0)) return 0.0;
+    return crossing_mean_ref * (cov / crossing_C_ref);
+  }
+
   // Censor window [lo, hi] on the crossing distribution to the NORMAL bulk -- excluding the near-zero
   // deletion spike (deletions/no-coverage positions, which otherwise pollute the lower tail) and the
   // high repeat outliers. Peak (mode) is found ignoring the crossing=0 bin; window = [0.25, 2.5]*peak,
@@ -1854,6 +1873,42 @@ namespace breseq {
         dp["side_2_concordant_count"] = to_string(c2b);
         dp["side_1_unpaired_count"] = to_string(c3a);
         dp["side_2_unpaired_count"] = to_string(c3b);
+
+        // Relative coverage, in the same units and under the same key names JC uses, so a DP and a JC
+        // item describing one breakpoint can be read side by side: 1.0 means "one copy's worth".
+        //
+        //   side_N_coverage       = concordant pairs at that side / expected crossing on ITS OWN
+        //                           sequence -- how much INTACT REFERENCE is left there. 0.00 says the
+        //                           locus is fully rearranged; a value near 1 says it is untouched.
+        //   new_junction_coverage = bridging pairs / expected crossing on the LOWER-coverage side --
+        //                           how many copies of the VARIANT junction there are, counted in the
+        //                           molecules the junction can be a per-cell fraction of (same reason
+        //                           the frequency uses that side; see where c_local is built).
+        //
+        // Each side against its own sequence, exactly as JC does -- that is what makes the two numbers
+        // individually meaningful when the sequences sit at different copy number, and it is precisely
+        // what JC's new_junction_coverage loses by dividing by the mean of the two.
+        //
+        // "NA" whenever the expectation is unknown (no crossing reference, no coverage fit for that
+        // sequence) or the side is redundant, matching JC's convention -- string_to_fixed_digit_string
+        // passes the literal through, and freq_to_string-style consumers already expect it.
+        double lam1 = dp_seq_expected_crossing(summary, s1_seq_id, crossing_mean_ref, crossing_C_ref);
+        double lam2 = dp_seq_expected_crossing(summary, s2_seq_id, crossing_mean_ref, crossing_C_ref);
+        dp[SIDE_1_COVERAGE] = (side1_red || !(lam1 > 0.0)) ? "NA" : to_string(c2a / lam1, 2);
+        dp[SIDE_2_COVERAGE] = (side2_red || !(lam2 > 0.0)) ? "NA" : to_string(c2b / lam2, 2);
+
+        // The junction's own copy number is measured against whichever side could supply the frequency
+        // -- the lowest-coverage usable one. Falls back to the lower of the two expectations when both
+        // sides are redundant (no frequency, but the count itself is still worth a scale).
+        double lam_j = 0.0;
+        if (!side1_red && lam1 > 0.0) lam_j = lam1;
+        if (!side2_red && lam2 > 0.0 && (lam_j == 0.0 || lam2 < lam_j)) lam_j = lam2;
+        if (lam_j == 0.0) {
+          if (lam1 > 0.0) lam_j = lam1;
+          if (lam2 > 0.0 && (lam_j == 0.0 || lam2 < lam_j)) lam_j = lam2;
+        }
+        dp[NEW_JUNCTION_COVERAGE] = (lam_j > 0.0)
+          ? to_string(static_cast<double>(k_distinct < 0 ? 0 : k_distinct) / lam_j, 2) : "NA";
         // Concordant pairs at a REDUNDANT side cross the intact reference junction of SOME copy of
         // the repeat, not necessarily this one, so they say nothing about whether THIS junction is
         // present -- averaging them in dilutes a junction whose unique side has no concordant support
