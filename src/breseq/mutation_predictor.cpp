@@ -37,6 +37,16 @@ namespace breseq {
 		 ref_seq_info = _ref_seq_info;
 	}
 
+	// Largest distance an MC boundary may sit OUTSIDE a repeat and still be treated as belonging to
+	// it. An excised-element transposition intermediate carries the element's target-site
+	// duplication, so its reads match the chromosome for TSD-many bases past the annotated element
+	// end (3 bp for IS150, 9 for IS1) and leave real, uniquely-placed coverage in the gap; a
+	// pair-resolved multicopy read does the same. This bound is generous relative to those because it
+	// only decides WHETHER to believe the junction -- the breakpoint itself comes from the junction at
+	// base-pair resolution, so a looser bound never moves the answer, it only lets more true deletions
+	// through. Same value as the ResolveJunctionInfo repeat-proximity bound in resolve_alignments.cpp.
+	const int32_t kMaxMCBoundaryDistanceToRepeat = 20;
+
 	// Private methods
 	cFeatureLocation* MutationPredictor::within_repeat(string seq_id, int32_t position)
 	{
@@ -51,6 +61,19 @@ namespace breseq {
 				repeat = &test_repeat;
     }
 		return repeat;
+	}
+
+	// Like within_repeat(), but also accepts a boundary sitting just OUTSIDE the repeat, on the side
+	// the deletion runs away from. direction == -1 measures position - repeat.end_1 (use for the LEFT
+	// MC boundary); direction == +1 measures repeat.start_1 - position (use for the RIGHT one, probed
+	// at MC.end + 1). An interior position still counts as distance 0, so every case within_repeat()
+	// accepted is still accepted here.
+	cFeatureLocation* MutationPredictor::near_repeat_boundary(string seq_id, int32_t position, int32_t direction)
+	{
+		int32_t max_distance = kMaxMCBoundaryDistanceToRepeat;
+		return ref_seq_info.find_closest_repeat_region_boundary(
+			position, ref_seq_info[seq_id].m_repeats, max_distance, direction,
+			/* include_interior_matches = */ true);
 	}
 
 	bool MutationPredictor::sort_by_hybrid(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b)
@@ -547,7 +570,9 @@ namespace breseq {
             continue;
           }
         }
-        continue; // case (3) requires exactly one non-NULL r-pointer
+        // (2b) did not fire. Fall through to case (3), which can still recover an IS-mediated
+        // deletion here: a boundary that missed its repeat by a few bases reads as unique to
+        // within_repeat() but is found by the relaxed probe below.
       }
 
 			///
@@ -556,11 +581,29 @@ namespace breseq {
       ///
       if (verbose)
         cout << "(3) Checking for MC between unique sequence and repeat." << endl;
-     
-			cFeatureLocation& r = (r1_pointer != NULL) ? *r1_pointer : *r2_pointer;
-			int32_t redundant_deletion_side = (r1_pointer != NULL) ? -1 : +1;
+
+      // Relaxed probes, used ONLY by case (3). An MC boundary can stop a few bases short of the IS
+      // element that mediated the deletion -- reads from an excised-element transposition
+      // intermediate carry the target-site duplication and map there uniquely, and a pair-resolved
+      // multicopy read does the same -- which leaves within_repeat() above returning NULL for a
+      // boundary that plainly belongs to that element. Fall back to the boundary-distance probe,
+      // which also returns distance 0 for an interior position, so nothing within_repeat() found is
+      // lost. Cases (1), (2) and (2b) deliberately keep the strict pointers.
+      cFeatureLocation* side_repeat[2] = {
+        r1_pointer ? r1_pointer : near_repeat_boundary(mut["seq_id"], n(mut["position"]), -1),
+        r2_pointer ? r2_pointer : near_repeat_boundary(mut["seq_id"], n(mut["position"]) + n(mut["size"]), +1)
+      };
+
+      // With a tolerance both probes can hit, so which side is the repeat side is no longer decided
+      // by a single ternary. Try the left first, which is what the strict pointers used to pick.
+      for (int side = 0; (side < 2) && !done; side++)
+      {
+      if (side_repeat[side] == NULL) continue;
+
+			cFeatureLocation& r = *side_repeat[side];
+			int32_t redundant_deletion_side = (side == 0) ? -1 : +1;
 			int32_t unique_deletion_strand = -redundant_deletion_side;
-			int32_t needed_coord = (r1_pointer != NULL)
+			int32_t needed_coord = (side == 0)
       ? n(mut["position"]) + n(mut["size"])
       : n(mut["position"]) - 1;
       
@@ -615,22 +658,32 @@ namespace breseq {
         
         
 				// need to adjust the non-unique coords // mut has the MC coordinates at this point
-				if (redundant_deletion_side == -1)
-				{          
-					uint32_t move_dist = r.get_end_1() + 1 - n(mut["position"]) + n(j["_" + j["_is_interval"] + "_is_distance"]);
-					mut["position"] = s(n(mut["position"]) + move_dist);
-					mut["size"] = s(n(mut["size"]) - move_dist);
-				}
-				else
-				{
-					int32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.get_start_1() - 1) + n(j["_" + j["_is_interval"] + "_is_distance"]);
-					mut["size"] = s(n(mut["size"]) - move_dist);
-				}
-        
-        // Don't predict zero length deletions!
-        if (n(mut["size"]) <= 0)
+				// SIGNED: move_dist is negative when the MC boundary stopped SHORT of the element, in which
+				// case the deletion has to be extended back to it rather than trimmed. The junction, not the
+				// coverage, is what locates this breakpoint, and it does so at base-pair resolution.
+				int32_t is_distance = n(j["_" + j["_is_interval"] + "_is_distance"]);
+				int32_t move_dist = (redundant_deletion_side == -1)
+				? (static_cast<int32_t>(r.get_end_1()) + 1 - n(mut["position"]) + is_distance)
+				: ((n(mut["position"]) + n(mut["size"]) - 1) - (static_cast<int32_t>(r.get_start_1()) - 1) + is_distance);
+
+        // Never swallow more covered sequence than the probe that found this repeat was willing to
+        // reach across. near_repeat_boundary() already bounds it, so this only fires if the strict
+        // pointer supplied a repeat the relaxed probe would have rejected.
+        if (move_dist < -(kMaxMCBoundaryDistanceToRepeat + is_distance))
           continue;
-        
+
+        // Computed before assigning, so a rejected junction leaves mut's coordinates untouched for
+        // the next junction and the other side to try.
+        int32_t new_position = (redundant_deletion_side == -1) ? n(mut["position"]) + move_dist : n(mut["position"]);
+        int32_t new_size = n(mut["size"]) - move_dist;
+
+        // Don't predict zero length deletions!
+        if (new_size <= 0)
+          continue;
+
+        mut["position"] = s(new_position);
+        mut["size"] = s(new_size);
+
 				// OK, we're good!
 				mut["mediated"] = (*r.get_feature())["name"];
 				mut._evidence.push_back(j._id);
@@ -643,8 +696,10 @@ namespace breseq {
         if (verbose)
           cout << "**** Junction with repeat element corresponding to deletion boundaries found ****\n";
         
+        done = true;
         break; // done looking at jc_items
 			}
+      } // end of side loop
 		}
 
     
