@@ -439,6 +439,38 @@ static double cnery_robust_cv(vector<double> v)
   return 1.4826 * cnery_median(v) / med;
 }
 
+// The window set every per-sequence statistic below is measured over.
+//
+// The three coverage spreads are only meaningful against each other, so they must come from ONE set
+// of windows. Requiring all three stages to be positive is what makes that possible: CNery leaves
+// otr_gc_corr_norm_cov at 0 wherever raw coverage fell below 10% of the median, so scoring each
+// stage over "its own" non-zero windows would compare different parts of the genome. The plot scales
+// want the same set for the same reason -- three medians taken over three different subsets would
+// not put the three traces on one axis.
+//
+// Restricting to single-copy windows is the point: a real amplification or deletion inflates the
+// spread at every stage equally, which would hide exactly the improvement being measured, and it
+// would move the plot scales off the single-copy level the copy-number line is drawn at. Fall back
+// to all windows when there are too few calls to select on -- either because the HMM column was
+// missing, or because so much of the sequence is non-single-copy that the subset is not
+// representative -- and report which happened via single_copy_only, so the report can say so.
+void CNEvidence::select_measured_windows(const vector<cnery_window>& windows,
+                                         vector<size_t>& selected,
+                                         bool& single_copy_only)
+{
+  vector<size_t> usable, single_copy;
+  for (size_t i = 0; i < windows.size(); i++) {
+    const cnery_window& w = windows[i];
+    if ((w.raw_cov <= 0.0) || (w.gc_corrected_cov <= 0.0) || (w.corrected_cov <= 0.0)) continue;
+    usable.push_back(i);
+    if (w.copy_number == 1) single_copy.push_back(i);
+  }
+
+  const size_t kMinimumSpreadWindows = 100;
+  single_copy_only = (single_copy.size() >= kMinimumSpreadWindows);
+  selected = single_copy_only ? single_copy : usable;
+}
+
 void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& windows, CopyNumberSummary& cns)
 {
   cns.otr_detected = otr.detected;
@@ -486,26 +518,10 @@ void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& win
     }
   }
 
-  // The three spreads are only meaningful against each other, so they must come from ONE set of
-  // windows. Requiring all three values to be positive is what makes that possible: CNery leaves
-  // otr_gc_corr_norm_cov at 0 wherever raw coverage fell below 10% of the median, so scoring each
-  // stage over "its own" non-zero windows would compare different parts of the genome.
-  vector<size_t> usable, single_copy;
-  for (size_t i = 0; i < windows.size(); i++) {
-    const cnery_window& w = windows[i];
-    if ((w.raw_cov <= 0.0) || (w.gc_corrected_cov <= 0.0) || (w.corrected_cov <= 0.0)) continue;
-    usable.push_back(i);
-    if (w.copy_number == 1) single_copy.push_back(i);
-  }
-
-  // Restricting to single-copy windows is the point: a real amplification or deletion inflates the
-  // spread at every stage equally, which would hide exactly the improvement being measured. Fall
-  // back to all windows when there are too few calls to select on -- either because the HMM column
-  // was missing, or because so much of the sequence is non-single-copy that the subset is not
-  // representative -- and record which happened so the report can say so.
-  const size_t kMinimumSpreadWindows = 100;
-  const vector<size_t>& selected = (single_copy.size() >= kMinimumSpreadWindows) ? single_copy : usable;
-  cns.spread_single_copy = (single_copy.size() >= kMinimumSpreadWindows);
+  vector<size_t> selected;
+  bool single_copy_only = false;
+  select_measured_windows(windows, selected, single_copy_only);
+  cns.spread_single_copy = single_copy_only;
   cns.spread_windows = selected.size();
   if (selected.empty()) return;
 
@@ -533,6 +549,52 @@ void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& win
 // that one over the same interval. The two are meant to be read against each other, so the axes
 // have to land in the same place.
 // ---------------------------------------------------------------------------------------------
+
+// The scale each of this sequence's plotted coverage series is drawn on -- see cn_plot_scale for
+// why the plots cannot use CNery's numbers as they arrive. One median per series, over the one
+// window set select_measured_windows() picks, so the traces land on the same axis as each other and
+// as the copy-number line. A median that is not positive leaves its field at the neutral 1.0, which
+// draws exactly what this function not existing would have drawn.
+CNEvidence::cn_plot_scale CNEvidence::compute_plot_scale(const vector<cnery_window>& windows)
+{
+  cn_plot_scale scale;
+
+  vector<size_t> selected;
+  bool single_copy_only = false;
+  select_measured_windows(windows, selected, single_copy_only);
+
+  // No median of raw_cov: the uncorrected trace is deliberately drawn on the GC-corrected series'
+  // scale, so that its distance from single copy IS the size of the GC correction.
+  vector<double> gc, otr_gc;
+  gc.reserve(selected.size());
+  otr_gc.reserve(selected.size());
+  for (size_t k = 0; k < selected.size(); k++) {
+    const cnery_window& w = windows[selected[k]];
+    gc.push_back(w.gc_corrected_cov);
+    otr_gc.push_back(w.corrected_cov);
+  }
+
+  // cnery_median() returns 0 on an empty vector, so an empty selection -- a sequence with no usable
+  // windows, or a CNery run with no GC columns at all -- falls through to the 1.0 defaults here
+  // rather than needing its own branch.
+  double m;
+  m = cnery_median(gc);     if (m > 0.0) scale.gc = m;
+  m = cnery_median(otr_gc); if (m > 0.0) scale.corrected = m;
+
+  return scale;
+}
+
+// The one sentence saying what scale everything on these plots is drawn on. The relative copy number
+// is appended only when it would not print as "1.00x": on a single-sequence run, and on the longest
+// sequence of any run, it is 1.0 by construction and saying so is noise.
+static string cn_scale_label(double relative_copy_number)
+{
+  string label = "coverage normalized to this sequence's own median";
+  if ((relative_copy_number > 0.0) && (fabs(relative_copy_number - 1.0) >= 0.005)) {
+    label += " (" + to_string(relative_copy_number, 2, false) + "x the longest reference sequence)";
+  }
+  return label;
+}
 
 // The ori-ter ramp at one position, in GENOMIC coordinates.
 //
@@ -569,6 +631,9 @@ double CNEvidence::otr_ramp_at(const cnery_otr& otr, int32_t position, int32_t s
 }
 
 // Reduce a window list to at most max_points bins, averaging the coverage over each.
+//
+// Nothing here rescales. The plot scales (see cn_plot_scale) divide by a constant, and averaging
+// commutes with that, so they are applied once at the point of drawing rather than twice.
 //
 // Coverage only. A bin spans many windows and so has no single HMM state, and the copy-number line
 // is no longer drawn from windows at all -- it comes from CNery's merged segments, at full precision
@@ -633,7 +698,8 @@ void CNEvidence::render_cn_plot(
                                 int32_t shaded_start,
                                 int32_t shaded_end,
                                 const cnery_otr& otr,
-                                int32_t seq_length
+                                int32_t seq_length,
+                                const cn_plot_scale& scale
                                 )
 {
   // CNery drops any window overlapping repeat/redundant coverage rather than correcting it, so the
@@ -665,19 +731,29 @@ void CNEvidence::render_cn_plot(
     // which makes w.end exclusive) and every join lands on a real window boundary.
     //
     // The copy-number line does NOT come from here -- see the segment file below.
-    tab << w.start << "\t" << w.raw_cov << "\t" << w.corrected_cov << endl;
-    tab << w.end   << "\t" << w.raw_cov << "\t" << w.corrected_cov << endl;
+    //
+    // On this sequence's own single-copy level rather than the run's pooled one -- see
+    // cn_plot_scale. The uncorrected trace is divided by the GC-corrected median, not by its own, so
+    // that the gap between the two traces stays equal to the correction that was applied.
+    const double raw_y = w.raw_cov / scale.gc;
+    const double corrected_y = w.corrected_cov / scale.corrected;
+    tab << w.start << "\t" << raw_y << "\t" << corrected_y << endl;
+    tab << w.end   << "\t" << raw_y << "\t" << corrected_y << endl;
 
+    // Presence tested on the value CNery wrote, which is what says whether there is a column at all;
+    // everything after that is on the plot's scale. The ramp divides the GC-corrected series, so
+    // that is the series whose median it is expressed in.
     if (w.otr_fit_cov > 0) {
       // Only kept to set the axis and to place a flat line when there is no ori-ter bias; the ramp
       // itself is drawn from its endpoints, not from these per-window values.
-      otr_fit_sum += w.otr_fit_cov;
+      const double otr_fit_y = w.otr_fit_cov / scale.gc;
+      otr_fit_sum += otr_fit_y;
       otr_fit_n++;
-      if (w.otr_fit_cov > max_y) max_y = w.otr_fit_cov;
+      if (otr_fit_y > max_y) max_y = otr_fit_y;
     }
 
-    if (w.raw_cov > max_y) max_y = w.raw_cov;
-    if (w.corrected_cov > max_y) max_y = w.corrected_cov;
+    if (raw_y > max_y) max_y = raw_y;
+    if (corrected_y > max_y) max_y = corrected_y;
     n_drawn++;
   }
   tab.close();
@@ -747,7 +823,7 @@ void CNEvidence::render_cn_plot(
     fit << "position\totr_fit" << endl;
     if (otr.detected && (otr.origin_cov > 0) && (otr.terminus_cov > 0) && (seq_length > 0)) {
       for (size_t k = 0; k < vertices.size(); k++) {
-        double y = otr_ramp_at(otr, vertices[k], seq_length);
+        double y = otr_ramp_at(otr, vertices[k], seq_length) / scale.gc;
         fit << vertices[k] << "\t" << y << endl;
         if (y > max_y) max_y = y;
       }
@@ -811,7 +887,7 @@ void CNEvidence::render_cn_plot(
     // Mark where the two straight segments of the ramp meet, i.e. the fitted coverage at each end.
     // Guarded on being real numbers: CNery writes NaN -> null for these when it found no bias.
     if ((otr.origin_cov > 0) && (otr.terminus_cov > 0)) {
-      const double marker_y[2] = { otr.origin_cov, otr.terminus_cov };
+      const double marker_y[2] = { otr.origin_cov / scale.gc, otr.terminus_cov / scale.gc };
       for (int m = 0; m < 2; m++) {
         if ((markers[m] < plot_start) || (markers[m] > plot_end)) continue;
         s << "set label \"\" at " << markers[m] << "," << to_string<double>(marker_y[m])
@@ -821,13 +897,25 @@ void CNEvidence::render_cn_plot(
 
     // State the magnitude numerically as well as drawing it: a ratio near 1 means there was hardly
     // any bias to remove, so a dramatic-looking correction would deserve suspicion.
+    //
+    // The two coverage values are quoted on the PLOT's scale, so the text agrees with the two dots
+    // it annotates. That is deliberately not the scale summary.html's "coverage at ori"/"at ter"
+    // columns report, which are CNery's own values on the run-wide pooled scale: the two differ by
+    // this sequence's relative copy number, and the ratio -- the number that carries the meaning --
+    // is identical either way.
     ostringstream ratio_label;
     ratio_label << fixed << setprecision(2)
-                << "ori-ter bias: " << otr.origin_cov << " at ori to " << otr.terminus_cov
+                << "ori-ter bias: " << (otr.origin_cov / scale.gc) << " at ori to "
+                << (otr.terminus_cov / scale.gc)
                 << " at ter (" << otr.ratio << "x)";
-    s << "set label " << double_quote(ratio_label.str()) << " at graph 0.01, graph 0.04"
+    s << "set label " << double_quote(ratio_label.str()) << " at graph 0.01, graph 0.09"
       << " left tc rgb 'gray30' font ',20' front" << endl;
   }
+
+  // A y-axis that silently means something different on each reference sequence is the bug this
+  // scaling exists to fix, wearing a different hat. Say what the axis is.
+  s << "set label " << double_quote(cn_scale_label(otr.relative_copy_number))
+    << " at graph 0.01, graph 0.04 left tc rgb 'gray30' font ',20' front" << endl;
 
   s << "set bmargin 6" << endl;
   s << "set key below horizontal Left reverse font ',20' width 4 samplen 1.5" << endl;
@@ -867,11 +955,20 @@ void CNEvidence::render_cn_plot(
 void CNEvidence::render_gc_bias_plot(
                                      const string& output_svg,
                                      const string& seq_id,
-                                     const vector<cnery_window>& windows
+                                     const vector<cnery_window>& windows,
+                                     const cn_plot_scale& scale,
+                                     double relative_copy_number
                                      )
 {
   // The correction curve doubles as the check for whether there is anything to draw: CNery only
   // emits gc_corr_fact when it ran a GC correction at all.
+  //
+  // The curve is drawn exactly as CNery wrote it. Both clouds below go through the SAME divisor, and
+  // CNery defines gc_corr_norm_cov = norm_raw_cov / gc_corr_fact, so
+  //   raw/scale.gc == (gc/scale.gc) * gc_corr_fact
+  // holds pointwise: the curve is literally the ratio between the grey and blue clouds, readable off
+  // this axis. Dividing the grey cloud by its own median instead would have needed the curve
+  // rescaled to compensate, and would have hidden how far the correction moved the sequence.
   vector<pair<double, double> > curve;   // (GC%, correction factor)
   for (size_t i = 0; i < windows.size(); i++) {
     if ((windows[i].gc_corr_fact <= 0.0) || (windows[i].gc_percent <= 0.0)) continue;
@@ -909,17 +1006,22 @@ void CNEvidence::render_gc_bias_plot(
     if ((w.gc_percent <= 0.0) || (w.raw_cov <= 0.0)) continue;
     if ((kept++ % stride) != 0) continue;
 
-    tab << (w.gc_percent * 100.0) << "\t" << w.raw_cov << "\t";
+    // Both clouds through the same divisor -- see cn_plot_scale. Without any divisor a multi-copy
+    // replicon's windows sit at several times single copy and fall off the top of the clipped axis
+    // below; with one divisor each they would both sit at 1.0 and the correction would be invisible.
+    const double raw_y = w.raw_cov / scale.gc;
+    tab << (w.gc_percent * 100.0) << "\t" << raw_y << "\t";
     // Absent under --bias none: keep the window's raw value on the plot rather than dropping the row.
     if (w.gc_corrected_cov > 0.0) {
-      tab << w.gc_corrected_cov;
-      if (w.gc_corrected_cov > max_y) max_y = w.gc_corrected_cov;
+      const double gc_y = w.gc_corrected_cov / scale.gc;
+      tab << gc_y;
+      if (gc_y > max_y) max_y = gc_y;
     } else {
       tab << "NaN";
     }
     tab << endl;
 
-    if (w.raw_cov > max_y) max_y = w.raw_cov;
+    if (raw_y > max_y) max_y = raw_y;
     n_drawn++;
   }
   tab.close();
@@ -942,7 +1044,11 @@ void CNEvidence::render_gc_bias_plot(
 
   // Clip the axis rather than fitting it to the tail: a handful of windows sit at many times the
   // median (rDNA, prophage), and letting them set the range flattens the bulk of the cloud into a
-  // band too thin to read. 3.0 keeps the single-copy line at 1.0 comfortably mid-plot.
+  // band too thin to read. 3.0 keeps the single-copy line at 1.0 comfortably mid-plot -- which is
+  // only safe because the clouds above are on this sequence's own scale. On CNery's pooled scale a
+  // plasmid at 5.11x had four fifths of its windows above 3.0, so the clip cut away the bulk of
+  // both clouds and left only the deleted low tail on the figure -- which reads as the opposite
+  // of what the sequence actually looks like.
   max_y = min(3.0, max(2.0, max_y * 1.1));
 
   ostringstream s;
@@ -958,6 +1064,8 @@ void CNEvidence::render_gc_bias_plot(
   s << "set yrange [0:" << to_string<double>(max_y) << "]" << endl;
   s << "set bmargin 6" << endl;
   s << "set key below horizontal Left reverse font ',20' width 4 samplen 1.5" << endl;
+  s << "set label " << double_quote(cn_scale_label(relative_copy_number))
+    << " at graph 0.01, graph 0.04 left tc rgb 'gray30' font ',20' front" << endl;
 
   string quoted_tab = double_quote(tab_file_name);
   vector<string> clauses;
@@ -1015,6 +1123,12 @@ void CNEvidence::draw_evidence_plots(
     cnery_otr otr;
     read_cnery_otr(settings.file_name(settings.cnery_otr_results_file_name, "@", seq.m_seq_id), otr);
 
+    // Over the FULL window list, before binning and before any per-item subsetting: every plot drawn
+    // for this sequence has to be on one scale or they cannot be read against each other, and only
+    // the whole sequence can say where its single-copy level is. bin_cnery_windows() below also
+    // drops the HMM state this selects on.
+    const cn_plot_scale scale = compute_plot_scale(windows);
+
     // The copy-number calls as CNery merged them. Drawn instead of the per-window HMM column, whose
     // boundaries are only known to a window and which goes missing wherever CNery dropped one.
     // Absent is survivable -- the plot then simply carries no copy-number line.
@@ -1035,13 +1149,13 @@ void CNEvidence::draw_evidence_plots(
       render_cn_plot(overview_svg, seq.m_seq_id, overview_windows, segments,
                      1, static_cast<int32_t>(seq.m_length),
                      1, static_cast<int32_t>(seq.m_length), otr,
-                     static_cast<int32_t>(seq.m_length));
+                     static_cast<int32_t>(seq.m_length), scale);
     }
 
     // The GC correction the coverage above was corrected BY. Wants the unbinned windows: binning
     // averages together windows of unrelated GC content, which is exactly the axis this plots.
     render_gc_bias_plot(settings.file_name(settings.gc_bias_plot_file_name, "@", seq.m_seq_id),
-                        seq.m_seq_id, windows);
+                        seq.m_seq_id, windows, scale, otr.relative_copy_number);
 
     if (settings.no_evidence_html) continue;
 
@@ -1060,7 +1174,7 @@ void CNEvidence::draw_evidence_plots(
 
       string svg = settings.evidence_path + "/CN_" + item._id + ".svg";
       render_cn_plot(svg, seq.m_seq_id, windows, segments, plot_start, plot_end, start, end, otr,
-                     static_cast<int32_t>(seq.m_length));
+                     static_cast<int32_t>(seq.m_length), scale);
 
       if (file_exists(svg.c_str()))
         item["_cn_corrected_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);

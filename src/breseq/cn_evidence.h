@@ -122,6 +122,41 @@ namespace breseq {
       string  no_coverage_reason;
     };
 
+    // The per-reference-sequence scale every plotted coverage series is drawn on.
+    //
+    // CNery normalizes against ONE pooled median across every reference sequence it was handed
+    // (core.py process_multi_genome: norm_raw_cov = read_count_cov / global_median), so on a
+    // multi-copy replicon all three coverage columns arrive at a MULTIPLE of single copy -- 2.38x
+    // and 5.11x on two real plasmids -- while CNery's HMM refits the single-copy level per sequence
+    // and calls both copy number 1. Plotted as they arrive, the coverage traces float far above the
+    // copy-number line they exist to be read against, and the GC-bias plot's y-axis clip leaves a
+    // multi-copy plasmid's cloud mostly off the top of the figure. CNery has the same problem
+    // internally and solves it the same way (core.py censored_median_coverage, _in_band_fractions).
+    //
+    // TWO divisors, not one per series, and not one for everything.
+    //
+    // raw_cov, gc_corrected_cov and otr_fit_cov all arrive on CNery's pooled scale, so ONE divisor
+    // covers them and every offset BETWEEN them survives -- which matters, because those offsets are
+    // the corrections. On one real plasmid the GC correction moves the sequence's level from 3.90x
+    // the chromosome to 5.12x: dividing each series by its own median would flatten that 25% out of
+    // the picture, when showing it is most of the point of drawing the uncorrected trace at all.
+    //
+    // corrected_cov is the exception, and CNery's doing: its OTR stage renormalizes to ~1 wherever a
+    // tent actually fires (core.py otr_fit: y_corr = y/y_fit) and leaves the value untouched where
+    // one does not (that branch returns y). One divisor could not put it at single copy in both
+    // cases. Where no tent fired the two divisors are equal anyway -- corrected_cov IS
+    // gc_corrected_cov there -- so this splits only where CNery already split it.
+    //
+    // `gc` is CNery's own censored_median_coverage: the median of the GC-corrected coverage, which
+    // is what its "Relative copy number" is built from and the closest thing the run has to a
+    // definition of this sequence's single-copy level. 1.0 is the neutral value, so a series with
+    // nothing to measure is left exactly as it arrives.
+    struct cn_plot_scale {
+      double gc;          // divides raw_cov, gc_corrected_cov, otr_fit_cov, ori/ter marker heights
+      double corrected;   // divides corrected_cov, and equals gc wherever no ori-ter tent fired
+      cn_plot_scale() : gc(1.0), corrected(1.0) {}
+    };
+
     static void run_cnery(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const string& cnery_output_prefix);
 
     // Reads CNery's <prefix><seq_id>_otr_results.json. Returns false (leaving otr.detected false)
@@ -150,6 +185,20 @@ namespace breseq {
     // The ori-ter ramp at one position, evaluated in GENOMIC coordinates from the two endpoints
     // CNery reports. See the definition for why its per-window column cannot be drawn as a line.
     static double otr_ramp_at(const cnery_otr& otr, int32_t position, int32_t seq_length);
+
+    // The windows a per-sequence statistic is measured over: every correction stage positive, then
+    // restricted to copy number 1 when there are at least 100 of those. Shared by summarize() and
+    // compute_plot_scale() so that the spread reported in summary.html and the scale the plots are
+    // drawn on cannot drift into describing different parts of the sequence.
+    static void select_measured_windows(const vector<cnery_window>& windows,
+                                        vector<size_t>& selected,
+                                        bool& single_copy_only);
+
+    // The median of each coverage series over those windows -- see cn_plot_scale for why the plots
+    // need them. Must be computed over the FULL UNBINNED window list of the whole sequence: binning
+    // discards the HMM state this selects on, and a per-CN-item plot covers a subset that is
+    // typically inside an amplification, so neither can be allowed to derive a scale of its own.
+    static cn_plot_scale compute_plot_scale(const vector<cnery_window>& windows);
 
     // Distills the fit and the per-window coverage into the numbers summary.html and summary.json
     // report. Must happen in stage 09: everything it reads is deleted when the pipeline finishes.
@@ -184,7 +233,8 @@ namespace breseq {
                                int32_t shaded_start,
                                int32_t shaded_end,
                                const cnery_otr& otr,
-                               int32_t seq_length
+                               int32_t seq_length,
+                               const cn_plot_scale& scale
                                );
 
     // Coverage against window GC content, before and after the GC correction. Drawn from CNery's own
@@ -193,10 +243,14 @@ namespace breseq {
     // factors rather than the LOWESS curve that was actually divided out.
     //
     // Does nothing if CNery emitted no GC columns (--bias none or --bias otr).
+    // relative_copy_number is only used for the label saying what scale the axis is on, and is
+    // CNery's own (cnery_otr::relative_copy_number); 0 leaves that half of the label off.
     static void render_gc_bias_plot(
                                     const string& output_svg,
                                     const string& seq_id,
-                                    const vector<cnery_window>& windows
+                                    const vector<cnery_window>& windows,
+                                    const cn_plot_scale& scale,
+                                    double relative_copy_number
                                     );
 
   }; // class CNEvidence

@@ -3302,6 +3302,21 @@ string html_copy_number_string(const Settings& settings, Summary& summary, cRefe
      << "drop is how much the GC and ori-ter corrections actually flattened the coverage the copy "
      << "number calls are made from." << endl;
 
+  // Unconditional: the plots are normalized this way on every run, including the single-sequence
+  // ones where the factor happens to be 1.
+  ss << "<p>" << b("Coverage plots") << " are each normalized to their own reference sequence's "
+     << "median coverage, so every trace reads in copies of that sequence's single-copy level and "
+     << "can be compared against the copy number line on the same axis. CNery normalizes its output "
+     << "against a single median pooled across all reference sequences, which leaves a multi-copy "
+     << "plasmid's coverage at a multiple of single copy while its copy number is still called 1. "
+     << "The uncorrected trace goes through the same divisor as the corrected one rather than its "
+     << "own, so how far it sits from single copy is how far the GC and ori-ter corrections moved "
+     << "that sequence -- on a plasmid whose base composition differs from the chromosome that can "
+     << "be tens of percent. "
+     << "The coverage at ori and at ter reported above are CNery's own values on that pooled scale; "
+     << "the plots show the same fit on the per-sequence scale, so the two differ by the relative "
+     << "copy number while the peak-to-trough ratio is identical." << endl;
+
   if (one_all_windows) {
     ss << "<p>" << "Spread is normally measured over single-copy windows only, so that a real "
        << "amplification or deletion cannot mask the improvement. For at least one reference "
