@@ -432,6 +432,7 @@ void to_json(json& j, const DiscordantPairSummary& s)
     {"items_accepted", s.items_accepted},
     {"items_rejected_frequency", s.items_rejected_frequency},
     {"items_rejected_skew", s.items_rejected_skew},
+    {"items_sibling_pooled", s.items_sibling_pooled},
     {"items_ignored_circular", s.items_ignored_circular},
   };
 }
@@ -465,6 +466,7 @@ void from_json(const json& j, DiscordantPairSummary& s)
   s.items_accepted = get_uint64_or_default(j, "items_accepted");
   s.items_rejected_frequency = get_uint64_or_default(j, "items_rejected_frequency");
   s.items_rejected_skew = get_uint64_or_default(j, "items_rejected_skew");
+  s.items_sibling_pooled = get_uint64_or_default(j, "items_sibling_pooled");
   s.items_ignored_circular = get_uint64_or_default(j, "items_ignored_circular");
 }
 

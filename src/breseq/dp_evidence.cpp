@@ -1220,6 +1220,166 @@ namespace breseq {
     return s;
   }
 
+  // One side of a DP item, as the sibling search needs to see it.
+  struct dp_item_side { string seq_id; int32_t pos; int32_t strand; };
+
+  // Do these two DP items describe the two breakpoints of ONE insertion?
+  //
+  // An insertion at a point creates two junctions there: one retaining the flank to the right of the
+  // point (strand +1) joined to one end of the inserted sequence, one retaining the flank to the left
+  // (strand -1) joined to the other end. So the signature is FOUR things at once, and requiring all
+  // four is what keeps this from firing on a rearrangement hub, where several junctions genuinely
+  // share one breakpoint and each deserves its own test:
+  //
+  //   * the two items have a side on the SAME sequence, within the window, on OPPOSITE strands
+  //     -- the insertion point, the two flanks facing away from each other. (A hub's junctions share
+  //     a side at the SAME position on the SAME strand, so it fails here.)
+  //   * their other two sides are on ONE sequence, also on opposite strands -- the two ends of the
+  //     inserted element.
+  //
+  // The window covers the target-site duplication, which for the common IS elements is 3-9 bases.
+  static bool dp_are_sibling_breakpoints(const dp_item_side a[2], const dp_item_side b[2], int32_t window)
+  {
+    for (int ia = 0; ia < 2; ia++) {
+      for (int ib = 0; ib < 2; ib++) {
+        const dp_item_side& pa = a[ia];     const dp_item_side& pb = b[ib];       // the shared point
+        const dp_item_side& oa = a[1 - ia]; const dp_item_side& ob = b[1 - ib];   // the insert's ends
+        if (pa.seq_id != pb.seq_id) continue;
+        if (pa.strand == pb.strand) continue;
+        if (abs(pa.pos - pb.pos) > window) continue;
+        if (oa.seq_id != ob.seq_id) continue;
+        if (oa.strand == ob.strand) continue;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Judge the two breakpoints of one insertion together in the skew test.
+  //
+  // The skew asks whether a junction carries as many bridging pairs as a real one should, against the
+  // number of concordant pairs that span a normal position. At an insertion that expectation is shared:
+  // every fragment whose gap covers the insertion point is captured by ONE of the two junctions --
+  // which one depends on the side it came from -- so each is expected to carry only its share, and
+  // testing each against the FULL expectation rejects the weaker one for being weaker than a junction
+  // it is splitting the evidence with. Measured on a 3-replicon sample, one plasmid insertion produced
+  // k = 8 and k = 34 against an expectation of 36.7: the k = 8 breakpoint was rejected and its own
+  // partner accepted, though 8 + 34 accounts for the locus exactly.
+  //
+  // So pool k across the sibling set and re-test. Only the numerator moves; each item keeps its own
+  // expectation, which is set by its own sides' coverage. Nothing here can newly REJECT an item --
+  // pooling only ever raises k, and the skew falls as k rises -- so this cannot turn an accepted call
+  // into a rejected one.
+  //
+  // Runs as a pass over the finished items rather than inside the emit loop because it is inherently
+  // about pairs of items, and remove_reject_reason lets a decision already made be revised in place.
+  static void dp_pool_sibling_skew(const Settings& settings, Summary& summary, cGenomeDiff& dp_gd,
+                                   const vector<double>& hist_ref, int32_t lo, int32_t hi,
+                                   double C_ref, double mean_ref, bool use_empirical,
+                                   double nb_size, double nb_mu)
+  {
+    if (settings.discordant_pair_sibling_window <= 0) return;
+    if (!(settings.discordant_pair_skew_cutoff > 0.0)) return;
+    if (hist_ref.empty() || !(C_ref > 0.0)) return;
+
+    diff_entry_list_t items = dp_gd.get_list(make_vector<gd_entry_type>(DP));
+    vector<diff_entry_ptr_t> v(items.begin(), items.end());
+    size_t n = v.size();
+    if (n < 2) return;
+
+    vector<dp_item_side> sides(2 * n);
+    vector<int32_t> kv(n, 0);
+    for (size_t i = 0; i < n; i++) {
+      cDiffEntry& e = *v[i];
+      sides[2*i    ].seq_id = e[SIDE_1_SEQ_ID];
+      sides[2*i    ].pos    = from_string<int32_t>(e[SIDE_1_POSITION]);
+      sides[2*i    ].strand = from_string<int32_t>(e[SIDE_1_STRAND]);
+      sides[2*i + 1].seq_id = e[SIDE_2_SEQ_ID];
+      sides[2*i + 1].pos    = from_string<int32_t>(e[SIDE_2_POSITION]);
+      sides[2*i + 1].strand = from_string<int32_t>(e[SIDE_2_STRAND]);
+      kv[i] = e.entry_exists("distinct_discordant_count")
+              ? from_string<int32_t>(e["distinct_discordant_count"]) : 0;
+    }
+
+    // Union-find over the sibling relation. Components larger than two are DISCARDED below rather than
+    // pooled -- see there -- but they are still built, because a chained component has to be
+    // recognized as one before it can be refused.
+    vector<size_t> parent(n);
+    for (size_t i = 0; i < n; i++) parent[i] = i;
+    for (size_t i = 0; i < n; i++) {
+      for (size_t j = i + 1; j < n; j++) {
+        if (!dp_are_sibling_breakpoints(&sides[2*i], &sides[2*j], settings.discordant_pair_sibling_window)) continue;
+        size_t ri = i, rj = j;
+        while (parent[ri] != ri) ri = parent[ri];
+        while (parent[rj] != rj) rj = parent[rj];
+        if (ri != rj) parent[max(ri, rj)] = min(ri, rj);
+      }
+    }
+
+    map<size_t, vector<size_t> > groups;
+    for (size_t i = 0; i < n; i++) {
+      size_t r = i;
+      while (parent[r] != r) r = parent[r];
+      groups[r].push_back(i);
+    }
+
+    for (map<size_t, vector<size_t> >::const_iterator g = groups.begin(); g != groups.end(); g++) {
+      const vector<size_t>& members = g->second;
+
+      // EXACTLY two. An insertion creates two junctions and no more, so a component that grew past
+      // two is not one insertion -- it is the sibling relation chaining through a repeat-rich locus,
+      // where each item's partner side lands on a different copy of the same element and links the
+      // next. Measured on the LTEE clones, which are full of IS150: the honest insertions all came
+      // out as clean pairs, while every questionable pool was a component of four or six. Refusing to
+      // pool those costs nothing real -- each member is still tested exactly as it was before -- and
+      // it is what keeps this from quietly weakening the skew gate at precisely the loci where
+      // mismapping makes it most necessary.
+      if (members.size() != 2) continue;
+
+      int32_t pooled_k = 0;
+      for (size_t m = 0; m < members.size(); m++) pooled_k += kv[members[m]];
+
+      for (size_t m = 0; m < members.size(); m++) {
+        cDiffEntry& e = *v[members[m]];
+        if (pooled_k <= kv[members[m]]) continue;   // nothing added; leave the item exactly as it was
+
+        // Each item keeps its OWN expectation -- set by its own sides' coverage, which can differ
+        // between the two breakpoints of one insertion when they face different sequences.
+        double avgcov = min(dp_seq_coverage(summary, e[SIDE_1_SEQ_ID]),
+                            dp_seq_coverage(summary, e[SIDE_2_SEQ_ID]));
+        double lambda_x = (C_ref > 0.0) ? mean_ref * (avgcov / C_ref) : 0.0;
+        bool has_power = (settings.discordant_pair_minimum_crossing <= 0.0)
+                         || (lambda_x >= settings.discordant_pair_minimum_crossing);
+
+        double pooled_score = dp_discordance_skew(hist_ref, lo, hi, C_ref, avgcov,
+                                                  static_cast<uint32_t>(pooled_k),
+                                                  use_empirical, nb_size, nb_mu);
+        if (std::isnan(pooled_score)) continue;
+
+        // Report what was actually tested, so the number beside the item and the decision agree.
+        e["pooled_discordant_count"] = to_string(pooled_k);
+        e[NEG_LOG10_DISCORDANCE_P_VALUE] = to_string(pooled_score, 1, false);
+
+        bool was_rejected_by_skew = false;
+        vector<string> reasons = e.get_reject_reasons();
+        for (size_t r = 0; r < reasons.size(); r++)
+          if (reasons[r] == "CONCORDANT_PAIR_SKEW") was_rejected_by_skew = true;
+        if (!was_rejected_by_skew) continue;
+        if (has_power && (pooled_score > settings.discordant_pair_skew_cutoff)) continue;
+
+        e.remove_reject_reason("CONCORDANT_PAIR_SKEW");
+        summary.discordant_pair.items_rejected_skew--;
+        summary.discordant_pair.items_sibling_pooled++;
+
+        // items_accepted counts what survived BOTH gates and was not ignored, so it only moves when
+        // nothing else is still holding this item back.
+        bool still_rejected = e.entry_exists(REJECT);
+        bool ignored = e.entry_exists(IGNORE);
+        if (!still_rejected && !ignored) summary.discordant_pair.items_accepted++;
+      }
+    }
+  }
+
   void predict_discordant_pairs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
   {
     cGenomeDiff dp_gd;
@@ -2083,6 +2243,14 @@ namespace breseq {
     }
 
     if (scanner) delete scanner;
+
+    // An insertion's two breakpoints split one crossing expectation between them; judge them together
+    // rather than each against the whole of it. Runs after every item exists because it is a statement
+    // about PAIRS of items, and it can only lift a skew rejection, never add one.
+    if (have_crossing)
+      dp_pool_sibling_skew(settings, summary, dp_gd, crossing_hist_ref, crossing_lo, crossing_hi,
+                           crossing_C_ref, crossing_mean_ref, crossing_use_empirical,
+                           crossing_nb_size, crossing_nb_mu);
 
     dp_gd.write(settings.dp_genome_diff_file_name);
   }

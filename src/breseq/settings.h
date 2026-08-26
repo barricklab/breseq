@@ -414,6 +414,7 @@ namespace breseq
     //! Settings: Discordant Pair (DP) Evidence
     int32_t discordant_pair_seed;                         // Default = 3;         COMMAND-LINE OPTION
     double discordant_pair_skew_cutoff;                   // Default = 3.0;       COMMAND-LINE OPTION
+    int32_t discordant_pair_sibling_window;               // Default = 20;        COMMAND-LINE OPTION
     int32_t discordant_pair_minimum_pairs;                // Default = 2;         COMMAND-LINE OPTION
     double discordant_pair_frequency_cutoff;              // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
     double discordant_pair_minimum_crossing;              // Default = 10.0;      COMMAND-LINE OPTION

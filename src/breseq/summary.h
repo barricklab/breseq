@@ -416,6 +416,10 @@ namespace breseq{
     uint64_t items_accepted;
     uint64_t items_rejected_frequency;
     uint64_t items_rejected_skew;
+    // Items whose CONCORDANT_PAIR_SKEW rejection was lifted by pooling with the other breakpoint of
+    // the same insertion (see --discordant-pair-sibling-window). Counted separately so the effect of
+    // that pooling is visible rather than folded silently into items_accepted.
+    uint64_t items_sibling_pooled;
     uint64_t items_ignored_circular;
 
     DiscordantPairSummary()
@@ -443,6 +447,7 @@ namespace breseq{
     , items_accepted(0)
     , items_rejected_frequency(0)
     , items_rejected_skew(0)
+    , items_sibling_pooled(0)
     , items_ignored_circular(0)
     {}
   };
