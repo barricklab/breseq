@@ -2346,6 +2346,16 @@ namespace breseq {
   }
 
 
+  // DP is deliberately absent from every list below, and must stay that way.
+  //
+  // The types handled here are marked at a contig end because a contig end is where their statistic
+  // stops being measurable: coverage falls off, reads stop being placeable, and the artifact appears
+  // with no event present. PD and MP set their own equivalent for the same reason -- a linear sequence
+  // end truncates the distance/window distribution they are built on.
+  //
+  // A DP has no such artifact, and a DP whose two sides are on different reference sequences sits at
+  // two contig ends BY CONSTRUCTION: that is what a chromosome-to-plasmid junction or a translocation
+  // between two contigs looks like. Extending this rule to DP would silently ignore every one of them.
   void MutationPredictor::ignore_evidence_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
     (void) summary;

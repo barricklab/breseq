@@ -422,6 +422,7 @@ namespace breseq
     ("predict-discordant-pairs", "Predict discordant read-pair (DP) evidence for structural variants. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("discordant-pair-skew-cutoff", "Reference cutoff for the discordant-pair (DP) skew score. The DP skew marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has at least 10^(cutoff+1) non-deletion positions; smaller references fall back to a negative-binomial fit (whose parametric tail is not capped near log10(N), but is conservative). (DEFAULT = 3.0)", 3.0, NORMAL_OPTION)
+    ("discordant-pair-sibling-window", "Maximum distance, in bases, between the two breakpoints of one insertion for their DP items to be judged together by the skew test. An insertion creates TWO junctions at one point and the read pairs that would have spanned that point are divided between them, so each is expected to carry only its share; without this each is tested against the full crossing expectation and the weaker one is rejected. Set to 0 to disable the pooling. (DEFAULT = 20)", 20, NORMAL_OPTION)
     ("discordant-pair-minimum-pairs", "Minimum number of read pairs shared by two DP candidate regions for the junction between them to be examined at all. (DEFAULT = 2)", 2, NORMAL_OPTION)
     ("discordant-pair-frequency-cutoff", "Only accept DP evidence when the lower confidence bound on its local variant frequency -- discordant pairs divided by discordant plus concordant pairs spanning the breakpoint -- is above this value. 0 = OFF. Defaults to --polymorphism-frequency-cutoff and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
     ("discordant-pair-minimum-crossing", "Only apply the DP skew test when at least this many concordant pairs are expected to span a normal position at the breakpoint's local coverage. Below this the skew test has no power (short paired-mapping distance distributions leave almost no concordant pair spanning any position) and is not used to reject. 0 = always apply. (DEFAULT = 10.0)", 10.0, NORMAL_OPTION)
@@ -780,6 +781,8 @@ namespace breseq
     ASSERT(this->discordant_pair_seed >= 0, "Argument --discordant-pair-seed must be >= 0")
     this->discordant_pair_skew_cutoff = from_string<double>(options["discordant-pair-skew-cutoff"]);
     ASSERT(this->discordant_pair_skew_cutoff >= 0, "Argument --discordant-pair-skew-cutoff must be >= 0")
+    this->discordant_pair_sibling_window = from_string<int32_t>(options["discordant-pair-sibling-window"]);
+    ASSERT(this->discordant_pair_sibling_window >= 0, "Argument --discordant-pair-sibling-window must be >= 0")
     this->discordant_pair_minimum_pairs = from_string<int32_t>(options["discordant-pair-minimum-pairs"]);
     ASSERT(this->discordant_pair_minimum_pairs >= 1, "Argument --discordant-pair-minimum-pairs must be >= 1")
     this->discordant_pair_minimum_crossing = from_string<double>(options["discordant-pair-minimum-crossing"]);
@@ -1422,6 +1425,7 @@ namespace breseq
     this->call_mutations_overlapping_missing_coverage = false;
     this->discordant_pair_seed = 3;
     this->discordant_pair_skew_cutoff = 3.0;
+    this->discordant_pair_sibling_window = 20;
     this->discordant_pair_minimum_pairs = 2;
     // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
     this->discordant_pair_frequency_cutoff = 0.1;

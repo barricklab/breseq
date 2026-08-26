@@ -1479,8 +1479,17 @@ namespace breseq {
       }
     }
     
-    if (current_reject_reasons.size() > 0) {
-      (*this)[field] = join(current_reject_reasons, ",");
+    // new_reject_reasons, not current_reject_reasons -- joining the input list back over the field is
+    // what made this function a no-op: it built the filtered list and then wrote the unfiltered one.
+    //
+    // And when nothing survives, ERASE the field rather than writing an empty string. Every "is this
+    // rejected" test in the codebase is entry_exists(REJECT) (see is_rejected_and_not_user_defined),
+    // so a surviving `reject=` with no value would read as rejected-for-no-stated-reason, and
+    // clear_reject_reasons already erases for exactly this reason.
+    if (new_reject_reasons.size() > 0) {
+      (*this)[field] = join(new_reject_reasons, ",");
+    } else {
+      this->erase(field);
     }
   }
   

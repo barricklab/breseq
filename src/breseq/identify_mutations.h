@@ -242,9 +242,20 @@ namespace breseq {
 		};
 
     //! Discordant Pair (DP) candidate-region detection ----
-    //! Candidates are binned by (focal-read strand) x (pair orientation): index = strand*3 + orient,
-    //! strand 0=forward/1=reverse, orient 0=FR/1=RF/2=FF. 6 independent detectors per read group.
-    static const int kDPnBins = 6;
+    //! Candidates are binned by (focal-read strand) x (pair orientation): index =
+    //! strand*kDPnOrientations + orient, strand 0=forward/1=reverse, orient 0=FR/1=RF/2=FF/3=the pair's
+    //! two mates are on DIFFERENT reference sequences. 8 independent detectors per read group.
+    //!
+    //! That fourth orientation is not an orientation at all -- a cross-sequence pair has none, which is
+    //! why mark_pair_info writes XP:Z:NA and TLEN 0 for it -- but it is exactly the pair that reports a
+    //! plasmid integration, a co-integrate or a translocation, and it used to be dropped outright by the
+    //! enter step's `else continue`. It gets its own detector rather than a share of the FR/RF/FF ones
+    //! for two reasons: any letter pair we could synthesize for it would have to come from ordering the
+    //! two mates by reference target id, which makes the bin depend on the order the -r files were given
+    //! on the command line; and a multi-replicon library carries a diffuse background of chimeric
+    //! cross-sequence pairs that must not extend or merge the intra-sequence regions at a locus.
+    static const int kDPnOrientations = 4;
+    static const int kDPnBins = 2 * kDPnOrientations;
     //! One discordant read currently inside a bin's sliding window.
     struct dp_read {
       uint32_t start_pos;  //!< reference start (1-based) of this read (also its window position)
@@ -596,7 +607,7 @@ namespace breseq {
 		uint32_t _last_start_unknown_interval;
 
 		// these are state variables used by the discordant-pair (DP) region method.
-		// All per-bin state is indexed by bin = strand*3 + orient (see kDPnBins / dp_group).
+		// All per-bin state is indexed by bin = strand*kDPnOrientations + orient (see kDPnBins / dp_group).
 		int32_t _dp_seed;                                   //!< --discordant-pair-seed threshold (applied per bin)
 		vector<dp_group> _dp_groups;                        //!< one entry per paired read group with valid stats
 		vector<int> _read_group_to_dp_group;               //!< read group index -> index into _dp_groups (-1 = not paired)

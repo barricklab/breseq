@@ -432,6 +432,7 @@ void to_json(json& j, const DiscordantPairSummary& s)
     {"items_accepted", s.items_accepted},
     {"items_rejected_frequency", s.items_rejected_frequency},
     {"items_rejected_skew", s.items_rejected_skew},
+    {"items_sibling_pooled", s.items_sibling_pooled},
     {"items_ignored_circular", s.items_ignored_circular},
   };
 }
@@ -465,6 +466,7 @@ void from_json(const json& j, DiscordantPairSummary& s)
   s.items_accepted = get_uint64_or_default(j, "items_accepted");
   s.items_rejected_frequency = get_uint64_or_default(j, "items_rejected_frequency");
   s.items_rejected_skew = get_uint64_or_default(j, "items_rejected_skew");
+  s.items_sibling_pooled = get_uint64_or_default(j, "items_sibling_pooled");
   s.items_ignored_circular = get_uint64_or_default(j, "items_ignored_circular");
 }
 
@@ -782,9 +784,13 @@ PublicReferencesSummary::PublicReferencesSummary(
                                                    rss
                                                    )
                             );
+
+    // Needs the whole Summary and the full reference list to find the baseline, neither of which
+    // PublicReferenceSummary's constructor is given, so it is filled in here.
+    this->reference.at(seq_id).coverage_relative = seq_relative_coverage(s, r, seq_id);
   }
 }
-  
+
 PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
 {
   //! Settings: Workflow
@@ -1018,6 +1024,7 @@ void to_json(json& j, const PublicReferenceSummary& s)
     {"coverage_nbinom_variance", s.coverage_nbinom_variance},
     {"coverage_nbinom_relative_variance", s.coverage_nbinom_relative_variance},
     {"coverage_average", s.coverage_average},
+    {"coverage_relative", s.coverage_relative},
     {"coverage_variance", s.coverage_variance},
     {"coverage_relative_variance", s.coverage_relative_variance},
     
@@ -1044,6 +1051,9 @@ void from_json(const json& j, PublicReferenceSummary& s)
   s.coverage_nbinom_variance = get_double_or_default(j, "coverage_nbinom_variance");
   s.coverage_nbinom_relative_variance = get_double_or_default(j, "coverage_nbinom_relative_variance");
   s.coverage_average = get_double_or_default(j, "coverage_average");
+  // get_double_or_default, not j.at(): a summary.json written before this field existed must still
+  // load, and 0.0 is already this field's "not measurable" value.
+  s.coverage_relative = get_double_or_default(j, "coverage_relative");
   s.coverage_variance = get_double_or_default(j, "coverage_variance");
   s.coverage_relative_variance = get_double_or_default(j, "coverage_relative_variance");
   
@@ -1274,5 +1284,34 @@ void from_json(const json& j, PublicSummary& s)
     s.paired_mapping_distance_distribution = j.at("paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
 }
 
-  
+// See summary.h for why callers must not index unique_coverage directly.
+double seq_average_coverage(const Summary& summary, const string& seq_id)
+{
+  CoverageSummaries::const_iterator u = summary.unique_coverage.find(seq_id);
+  if (u != summary.unique_coverage.end() && u->second.average > 0.0) return u->second.average;
+  CoverageSummaries::const_iterator p = summary.preprocess_coverage.find(seq_id);
+  if (p != summary.preprocess_coverage.end() && p->second.average > 0.0) return p->second.average;
+  return 0.0;
+}
+
+double seq_relative_coverage(const Summary& summary, const cReferenceSequences& ref_seq_info,
+                             const string& seq_id)
+{
+  double cov = seq_average_coverage(summary, seq_id);
+  if (!(cov > 0.0)) return 0.0;
+
+  // The longest sequence is the baseline, matching CopyNumberSummary::relative_copy_number's
+  // convention. Longest rather than, say, highest-coverage because it is a property of the reference
+  // alone: it does not move when a plasmid's copy number does, so the scale means the same thing
+  // across samples that share a reference.
+  const cAnnotatedSequence* longest = NULL;
+  for (cReferenceSequences::const_iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++)
+    if (!longest || (it->get_sequence_length() > longest->get_sequence_length())) longest = &(*it);
+  if (!longest) return 0.0;
+
+  double base = seq_average_coverage(summary, longest->m_seq_id);
+  if (!(base > 0.0)) return 0.0;
+  return cov / base;
+}
+
 }

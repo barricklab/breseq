@@ -3805,29 +3805,63 @@ void  assign_one_junction_read_counts(
   
   // Finally assign average coverages based on fragments
 
-  if ((j[SIDE_1_READ_COUNT] == "NA") || (side_1_possible_overlap_registers == 0)) {
+  // Each side against ITS OWN sequence's depth, which is what makes the two numbers individually
+  // meaningful. seq_average_coverage rather than unique_coverage[...] -- the latter is a
+  // map::operator[] on a non-const Summary&, so a seq_id the map lacks (a junction-only reference, a
+  // failed fit) was silently default-inserted at 0.0 and then divided by. See summary.h.
+  double side_1_seq_coverage = seq_average_coverage(summary, j[SIDE_1_SEQ_ID]);
+  double side_2_seq_coverage = seq_average_coverage(summary, j[SIDE_2_SEQ_ID]);
+
+  if ((j[SIDE_1_READ_COUNT] == "NA") || (side_1_possible_overlap_registers == 0) || !(side_1_seq_coverage > 0.0)) {
       j[SIDE_1_COVERAGE] = "NA";
   }
   else {
     double side_1_correction = static_cast<double>(side_1_possible_overlap_registers) / read_length_avg;
-    j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
+    j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / side_1_seq_coverage / side_1_correction, 2);
   }
 
-  if ((j[SIDE_2_READ_COUNT] == "NA") || (side_2_possible_overlap_registers == 0)) {
+  if ((j[SIDE_2_READ_COUNT] == "NA") || (side_2_possible_overlap_registers == 0) || !(side_2_seq_coverage > 0.0)) {
     j[SIDE_2_COVERAGE] = "NA";
   }
   else {
     double side_2_correction = static_cast<double>(side_2_possible_overlap_registers) / read_length_avg;
-    j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average / side_2_correction, 2);
+    j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / side_2_seq_coverage / side_2_correction, 2);
   }
 
   //corrects for overlap making it less likely for a read to span
+  //
+  // The junction's own depth is measured against the LOWER-covered of its two sides, not the mean of
+  // them. A junction has one end on each sequence, and when those sequences sit at different copy
+  // number the mean is neither side's answer: for a plasmid integrated into the chromosome, the
+  // chromosomal end says "one copy per chromosome" and the plasmid end says "one in N plasmids", and
+  // averaging the two DEPTHS lands between them. The lower-covered sequence is the one whose
+  // molecules the junction can be a per-cell count of -- each cell has one chromosome at that locus --
+  // so that is the scale worth reporting. Measured: a junction present on every chromosome read 0.36
+  // against the mean of a 36x chromosome and a 127x plasmid, and 0.80, i.e. one copy, against the
+  // chromosome alone. DP reports the same quantity the same way (dp_evidence.cpp).
+  //
+  // A side with no usable coverage does not participate. That is not a corner case: a junction-only
+  // reference has no coverage fit at all, so it contributed 0.0 to the mean and HALVED the
+  // denominator, doubling every junction to it -- REL606_fragment_is_junction_only read 1.45-2.30
+  // where a single-copy IS junction should read ~1.0. With a non-zero read count and both sides at
+  // 0.0 the old expression was +inf, and to_string writes the literal "inf" into the .gd.
+  //
+  // Same-sequence junctions are unaffected in every case: both sides resolve to one coverage entry,
+  // so the lower of the two IS the mean of the two.
   if (!have_c) {
     j[NEW_JUNCTION_COVERAGE] = "NA";
   } else {
     double overlap_correction = static_cast<double>(junction_possible_overlap_registers) / read_length_avg;
-    double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
-    j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
+    double new_junction_average_read_count = 0.0;
+    if (side_1_seq_coverage > 0.0) new_junction_average_read_count = side_1_seq_coverage;
+    if (side_2_seq_coverage > 0.0 && (new_junction_average_read_count == 0.0 || side_2_seq_coverage < new_junction_average_read_count))
+      new_junction_average_read_count = side_2_seq_coverage;
+
+    if (!(new_junction_average_read_count > 0.0) || !(overlap_correction > 0.0)) {
+      j[NEW_JUNCTION_COVERAGE] = "NA";
+    } else {
+      j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
+    }
   }
 
 }

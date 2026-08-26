@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	13:25:31 30 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision 2474edd9b66f
+#=CREATED	09:16:16 26 Aug 2026
+#=PROGRAM	breseq 0.50.0 revision 0e2888064bed
 #=COMMAND	./src/breseq/breseq -j 4 --predict-discordant-pairs -o ./tests/tmv_plasmid_circular_deletion -r ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
 #=REFSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
 #=READSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz
@@ -211,4 +211,4 @@ UN	197	.	TMV-plasmid	6800	6800
 UN	198	.	TMV-plasmid	6802	6802
 UN	199	.	TMV-plasmid	6804	6888
 UN	200	.	TMV-plasmid	10254	10411
-DP	201	.	TMV-plasmid	7138	1	TMV-plasmid	10204	-1	background_e_value=2.396e-03	candidate_discordant_count=23	concordant_count=0.0	discordant_count=21	distinct_discordant_count=20	expected_concordant_count=5.3	frequency=1.0000	frequency_lower=0.8609	frequency_upper=1.0000	neg_log10_discordance_p_value=0.2	side_1_annotate_key=gene	side_1_concordant_count=0	side_1_discordant_count=21	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=609	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_discordant_count=22	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=637
+DP	201	.	TMV-plasmid	7138	1	TMV-plasmid	10204	-1	background_e_value=2.396e-03	candidate_discordant_count=23	concordant_count=0.0	discordant_count=21	distinct_discordant_count=20	expected_concordant_count=5.3	frequency=1.0000	frequency_lower=0.8609	frequency_upper=1.0000	neg_log10_discordance_p_value=0.2	new_junction_coverage=3.75	side_1_annotate_key=gene	side_1_concordant_count=0	side_1_coverage=0.00	side_1_discordant_count=21	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=609	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=22	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=637

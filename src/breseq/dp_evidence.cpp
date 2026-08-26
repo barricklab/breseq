@@ -820,14 +820,30 @@ namespace breseq {
   // Average coverage for a seq_id (unique-only fit if available, else the preliminary preprocess value).
   // Only the RATIO between sequences matters for the crossing coverage-projection, so any consistent
   // average-coverage measure works; unique_coverage is preferred (more accurate) and available at the
-  // DP scoring and output-plot stages.
+  // DP scoring and output-plot stages. Now shared with output.cpp and resolve_alignments.cpp -- see
+  // seq_average_coverage in summary.h for why nothing should index unique_coverage directly.
   static double dp_seq_coverage(const Summary& summary, const string& seq_id)
   {
-    CoverageSummaries::const_iterator u = summary.unique_coverage.find(seq_id);
-    if (u != summary.unique_coverage.end() && u->second.average > 0.0) return u->second.average;
-    CoverageSummaries::const_iterator p = summary.preprocess_coverage.find(seq_id);
-    if (p != summary.preprocess_coverage.end() && p->second.average > 0.0) return p->second.average;
-    return 0.0;
+    return seq_average_coverage(summary, seq_id);
+  }
+
+  // Expected number of CONCORDANT PAIRS spanning a normal position on this seq_id: the run's reference
+  // crossing mean, projected to this sequence's coverage. 0.0 when unavailable (no crossing reference,
+  // or no coverage fit for the sequence), which callers must treat as "unknown", not "none".
+  //
+  // This is the denominator that turns a DP pair count into a relative coverage, i.e. a copy number
+  // where 1.0 means "one copy's worth". It is the pair-based analogue of what JC divides by: JC counts
+  // READS spanning a point, so it divides by depth times a register correction
+  // (possible_overlap_registers / read_length_avg, resolve_alignments.cpp); DP counts PAIRS, whose
+  // expected number at a point is (coverage / 2*read_length) * E[(insert - 2*read_length)+] -- which is
+  // exactly what the crossing distribution already measures, so no separate correction is needed.
+  static double dp_seq_expected_crossing(const Summary& summary, const string& seq_id,
+                                         double crossing_mean_ref, double crossing_C_ref)
+  {
+    if (!(crossing_C_ref > 0.0) || !(crossing_mean_ref > 0.0)) return 0.0;
+    double cov = dp_seq_coverage(summary, seq_id);
+    if (!(cov > 0.0)) return 0.0;
+    return crossing_mean_ref * (cov / crossing_C_ref);
   }
 
   // Censor window [lo, hi] on the crossing distribution to the NORMAL bulk -- excluding the near-zero
@@ -1202,6 +1218,166 @@ namespace breseq {
       s += " -- below --discordant-pair-minimum-crossing, so the skew test is reported but does not reject; "
            "DP evidence is accepted or rejected on its local frequency alone";
     return s;
+  }
+
+  // One side of a DP item, as the sibling search needs to see it.
+  struct dp_item_side { string seq_id; int32_t pos; int32_t strand; };
+
+  // Do these two DP items describe the two breakpoints of ONE insertion?
+  //
+  // An insertion at a point creates two junctions there: one retaining the flank to the right of the
+  // point (strand +1) joined to one end of the inserted sequence, one retaining the flank to the left
+  // (strand -1) joined to the other end. So the signature is FOUR things at once, and requiring all
+  // four is what keeps this from firing on a rearrangement hub, where several junctions genuinely
+  // share one breakpoint and each deserves its own test:
+  //
+  //   * the two items have a side on the SAME sequence, within the window, on OPPOSITE strands
+  //     -- the insertion point, the two flanks facing away from each other. (A hub's junctions share
+  //     a side at the SAME position on the SAME strand, so it fails here.)
+  //   * their other two sides are on ONE sequence, also on opposite strands -- the two ends of the
+  //     inserted element.
+  //
+  // The window covers the target-site duplication, which for the common IS elements is 3-9 bases.
+  static bool dp_are_sibling_breakpoints(const dp_item_side a[2], const dp_item_side b[2], int32_t window)
+  {
+    for (int ia = 0; ia < 2; ia++) {
+      for (int ib = 0; ib < 2; ib++) {
+        const dp_item_side& pa = a[ia];     const dp_item_side& pb = b[ib];       // the shared point
+        const dp_item_side& oa = a[1 - ia]; const dp_item_side& ob = b[1 - ib];   // the insert's ends
+        if (pa.seq_id != pb.seq_id) continue;
+        if (pa.strand == pb.strand) continue;
+        if (abs(pa.pos - pb.pos) > window) continue;
+        if (oa.seq_id != ob.seq_id) continue;
+        if (oa.strand == ob.strand) continue;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Judge the two breakpoints of one insertion together in the skew test.
+  //
+  // The skew asks whether a junction carries as many bridging pairs as a real one should, against the
+  // number of concordant pairs that span a normal position. At an insertion that expectation is shared:
+  // every fragment whose gap covers the insertion point is captured by ONE of the two junctions --
+  // which one depends on the side it came from -- so each is expected to carry only its share, and
+  // testing each against the FULL expectation rejects the weaker one for being weaker than a junction
+  // it is splitting the evidence with. Measured on a 3-replicon sample, one plasmid insertion produced
+  // k = 8 and k = 34 against an expectation of 36.7: the k = 8 breakpoint was rejected and its own
+  // partner accepted, though 8 + 34 accounts for the locus exactly.
+  //
+  // So pool k across the sibling set and re-test. Only the numerator moves; each item keeps its own
+  // expectation, which is set by its own sides' coverage. Nothing here can newly REJECT an item --
+  // pooling only ever raises k, and the skew falls as k rises -- so this cannot turn an accepted call
+  // into a rejected one.
+  //
+  // Runs as a pass over the finished items rather than inside the emit loop because it is inherently
+  // about pairs of items, and remove_reject_reason lets a decision already made be revised in place.
+  static void dp_pool_sibling_skew(const Settings& settings, Summary& summary, cGenomeDiff& dp_gd,
+                                   const vector<double>& hist_ref, int32_t lo, int32_t hi,
+                                   double C_ref, double mean_ref, bool use_empirical,
+                                   double nb_size, double nb_mu)
+  {
+    if (settings.discordant_pair_sibling_window <= 0) return;
+    if (!(settings.discordant_pair_skew_cutoff > 0.0)) return;
+    if (hist_ref.empty() || !(C_ref > 0.0)) return;
+
+    diff_entry_list_t items = dp_gd.get_list(make_vector<gd_entry_type>(DP));
+    vector<diff_entry_ptr_t> v(items.begin(), items.end());
+    size_t n = v.size();
+    if (n < 2) return;
+
+    vector<dp_item_side> sides(2 * n);
+    vector<int32_t> kv(n, 0);
+    for (size_t i = 0; i < n; i++) {
+      cDiffEntry& e = *v[i];
+      sides[2*i    ].seq_id = e[SIDE_1_SEQ_ID];
+      sides[2*i    ].pos    = from_string<int32_t>(e[SIDE_1_POSITION]);
+      sides[2*i    ].strand = from_string<int32_t>(e[SIDE_1_STRAND]);
+      sides[2*i + 1].seq_id = e[SIDE_2_SEQ_ID];
+      sides[2*i + 1].pos    = from_string<int32_t>(e[SIDE_2_POSITION]);
+      sides[2*i + 1].strand = from_string<int32_t>(e[SIDE_2_STRAND]);
+      kv[i] = e.entry_exists("distinct_discordant_count")
+              ? from_string<int32_t>(e["distinct_discordant_count"]) : 0;
+    }
+
+    // Union-find over the sibling relation. Components larger than two are DISCARDED below rather than
+    // pooled -- see there -- but they are still built, because a chained component has to be
+    // recognized as one before it can be refused.
+    vector<size_t> parent(n);
+    for (size_t i = 0; i < n; i++) parent[i] = i;
+    for (size_t i = 0; i < n; i++) {
+      for (size_t j = i + 1; j < n; j++) {
+        if (!dp_are_sibling_breakpoints(&sides[2*i], &sides[2*j], settings.discordant_pair_sibling_window)) continue;
+        size_t ri = i, rj = j;
+        while (parent[ri] != ri) ri = parent[ri];
+        while (parent[rj] != rj) rj = parent[rj];
+        if (ri != rj) parent[max(ri, rj)] = min(ri, rj);
+      }
+    }
+
+    map<size_t, vector<size_t> > groups;
+    for (size_t i = 0; i < n; i++) {
+      size_t r = i;
+      while (parent[r] != r) r = parent[r];
+      groups[r].push_back(i);
+    }
+
+    for (map<size_t, vector<size_t> >::const_iterator g = groups.begin(); g != groups.end(); g++) {
+      const vector<size_t>& members = g->second;
+
+      // EXACTLY two. An insertion creates two junctions and no more, so a component that grew past
+      // two is not one insertion -- it is the sibling relation chaining through a repeat-rich locus,
+      // where each item's partner side lands on a different copy of the same element and links the
+      // next. Measured on the LTEE clones, which are full of IS150: the honest insertions all came
+      // out as clean pairs, while every questionable pool was a component of four or six. Refusing to
+      // pool those costs nothing real -- each member is still tested exactly as it was before -- and
+      // it is what keeps this from quietly weakening the skew gate at precisely the loci where
+      // mismapping makes it most necessary.
+      if (members.size() != 2) continue;
+
+      int32_t pooled_k = 0;
+      for (size_t m = 0; m < members.size(); m++) pooled_k += kv[members[m]];
+
+      for (size_t m = 0; m < members.size(); m++) {
+        cDiffEntry& e = *v[members[m]];
+        if (pooled_k <= kv[members[m]]) continue;   // nothing added; leave the item exactly as it was
+
+        // Each item keeps its OWN expectation -- set by its own sides' coverage, which can differ
+        // between the two breakpoints of one insertion when they face different sequences.
+        double avgcov = min(dp_seq_coverage(summary, e[SIDE_1_SEQ_ID]),
+                            dp_seq_coverage(summary, e[SIDE_2_SEQ_ID]));
+        double lambda_x = (C_ref > 0.0) ? mean_ref * (avgcov / C_ref) : 0.0;
+        bool has_power = (settings.discordant_pair_minimum_crossing <= 0.0)
+                         || (lambda_x >= settings.discordant_pair_minimum_crossing);
+
+        double pooled_score = dp_discordance_skew(hist_ref, lo, hi, C_ref, avgcov,
+                                                  static_cast<uint32_t>(pooled_k),
+                                                  use_empirical, nb_size, nb_mu);
+        if (std::isnan(pooled_score)) continue;
+
+        // Report what was actually tested, so the number beside the item and the decision agree.
+        e["pooled_discordant_count"] = to_string(pooled_k);
+        e[NEG_LOG10_DISCORDANCE_P_VALUE] = to_string(pooled_score, 1, false);
+
+        bool was_rejected_by_skew = false;
+        vector<string> reasons = e.get_reject_reasons();
+        for (size_t r = 0; r < reasons.size(); r++)
+          if (reasons[r] == "CONCORDANT_PAIR_SKEW") was_rejected_by_skew = true;
+        if (!was_rejected_by_skew) continue;
+        if (has_power && (pooled_score > settings.discordant_pair_skew_cutoff)) continue;
+
+        e.remove_reject_reason("CONCORDANT_PAIR_SKEW");
+        summary.discordant_pair.items_rejected_skew--;
+        summary.discordant_pair.items_sibling_pooled++;
+
+        // items_accepted counts what survived BOTH gates and was not ignored, so it only moves when
+        // nothing else is still holding this item back.
+        bool still_rejected = e.entry_exists(REJECT);
+        bool ignored = e.entry_exists(IGNORE);
+        if (!still_rejected && !ignored) summary.discordant_pair.items_accepted++;
+      }
+    }
   }
 
   void predict_discordant_pairs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
@@ -1809,6 +1985,9 @@ namespace breseq {
       int k_distinct = weight;
       bool have_local_concordant = false;
       double c_local = 0.0;
+      // Which sequence the frequency ended up being measured against, when the two sides disagree.
+      // Empty for a same-seq_id item, where the question does not arise.
+      string freq_relative_seq_id;
       if (scanner) {
         // Count the three read categories at each side, classifying at the FINAL placed positions
         // (s1_pos/s2_pos) so the counts describe the reported breakpoint. The overlapping-mate
@@ -1851,6 +2030,42 @@ namespace breseq {
         dp["side_2_concordant_count"] = to_string(c2b);
         dp["side_1_unpaired_count"] = to_string(c3a);
         dp["side_2_unpaired_count"] = to_string(c3b);
+
+        // Relative coverage, in the same units and under the same key names JC uses, so a DP and a JC
+        // item describing one breakpoint can be read side by side: 1.0 means "one copy's worth".
+        //
+        //   side_N_coverage       = concordant pairs at that side / expected crossing on ITS OWN
+        //                           sequence -- how much INTACT REFERENCE is left there. 0.00 says the
+        //                           locus is fully rearranged; a value near 1 says it is untouched.
+        //   new_junction_coverage = bridging pairs / expected crossing on the LOWER-coverage side --
+        //                           how many copies of the VARIANT junction there are, counted in the
+        //                           molecules the junction can be a per-cell fraction of (same reason
+        //                           the frequency uses that side; see where c_local is built).
+        //
+        // Each side against its own sequence, exactly as JC does -- that is what makes the two numbers
+        // individually meaningful when the sequences sit at different copy number, and it is precisely
+        // what JC's new_junction_coverage loses by dividing by the mean of the two.
+        //
+        // "NA" whenever the expectation is unknown (no crossing reference, no coverage fit for that
+        // sequence) or the side is redundant, matching JC's convention -- string_to_fixed_digit_string
+        // passes the literal through, and freq_to_string-style consumers already expect it.
+        double lam1 = dp_seq_expected_crossing(summary, s1_seq_id, crossing_mean_ref, crossing_C_ref);
+        double lam2 = dp_seq_expected_crossing(summary, s2_seq_id, crossing_mean_ref, crossing_C_ref);
+        dp[SIDE_1_COVERAGE] = (side1_red || !(lam1 > 0.0)) ? "NA" : to_string(c2a / lam1, 2);
+        dp[SIDE_2_COVERAGE] = (side2_red || !(lam2 > 0.0)) ? "NA" : to_string(c2b / lam2, 2);
+
+        // The junction's own copy number is measured against whichever side could supply the frequency
+        // -- the lowest-coverage usable one. Falls back to the lower of the two expectations when both
+        // sides are redundant (no frequency, but the count itself is still worth a scale).
+        double lam_j = 0.0;
+        if (!side1_red && lam1 > 0.0) lam_j = lam1;
+        if (!side2_red && lam2 > 0.0 && (lam_j == 0.0 || lam2 < lam_j)) lam_j = lam2;
+        if (lam_j == 0.0) {
+          if (lam1 > 0.0) lam_j = lam1;
+          if (lam2 > 0.0 && (lam_j == 0.0 || lam2 < lam_j)) lam_j = lam2;
+        }
+        dp[NEW_JUNCTION_COVERAGE] = (lam_j > 0.0)
+          ? to_string(static_cast<double>(k_distinct < 0 ? 0 : k_distinct) / lam_j, 2) : "NA";
         // Concordant pairs at a REDUNDANT side cross the intact reference junction of SOME copy of
         // the repeat, not necessarily this one, so they say nothing about whether THIS junction is
         // present -- averaging them in dilutes a junction whose unique side has no concordant support
@@ -1859,12 +2074,50 @@ namespace breseq {
         // excluded side becomes "NA" and drops out of the mean). Average only the usable sides; when
         // both are redundant there is no denominator and the frequency is NA (written below).
         // The raw side_N_concordant_count fields above still report what was seen at each side.
+        //
+        // ...and among the usable sides, average only those on the LOWEST-COVERAGE sequence.
+        //
+        // The two sides measure different things as soon as their sequences sit at different copy
+        // number. For a plasmid integrated into the chromosome, k/(k+c_chromosome) is the fraction of
+        // CHROMOSOMES carrying the integration -- the per-cell frequency, since each cell has one
+        // chromosome at that locus -- while k/(k+c_plasmid) is the fraction of PLASMID MOLECULES that
+        // are the integrated one, deflated by the plasmid's copy number. Averaging the two raw counts
+        // conflates them, and the per-cell number is the one worth reporting.
+        //
+        // Rescaling the higher side by the coverage ratio and then averaging does NOT work: with a
+        // chromosome at 30x, a plasmid at 300x and the integration present in every cell, c1 = 0 and
+        // c2 ~ 300u, so rescale-and-average gives (0 + 30)/2 = 15 and a frequency of 67%. Rescaling
+        // changes the plasmid count's units but it still counts intact plasmids, which are not a
+        // denominator for "fraction of chromosomes". Taking the lower-coverage side gives 0, hence
+        // 100%, which is what the data says.
+        //
+        // Selecting on EXACT equality is what keeps every same-seq_id item bit-identical: both sides
+        // resolve to the same coverage entry, so both are at the minimum and the mean is unchanged.
+        // The same holds under -c/--contig-reference, where all of a file's contigs share one pooled
+        // coverage group (settings.cpp) and therefore stay pooled here too -- which is right, since
+        // contigs of one genome are at one copy number.
+        //
+        // A side whose coverage is unavailable (0.0 -- no fit, or a junction-only sequence) is not
+        // eligible to BE the minimum; selecting it would divide the run's frequencies by an artifact
+        // of a missing fit. When no side has a usable coverage, every usable side is kept and this
+        // degrades exactly to the previous mean.
+        double cov1 = dp_seq_coverage(summary, s1_seq_id);
+        double cov2 = dp_seq_coverage(summary, s2_seq_id);
+        double min_cov = 0.0;
+        if (!side1_red && cov1 > 0.0) min_cov = cov1;
+        if (!side2_red && cov2 > 0.0 && (min_cov == 0.0 || cov2 < min_cov)) min_cov = cov2;
+
         double c_sum = 0.0;
         int n_usable = 0;
-        if (!side1_red) { c_sum += static_cast<double>(c2a); n_usable++; }
-        if (!side2_red) { c_sum += static_cast<double>(c2b); n_usable++; }
+        if (!side1_red && (min_cov == 0.0 || cov1 == min_cov)) { c_sum += static_cast<double>(c2a); n_usable++; }
+        if (!side2_red && (min_cov == 0.0 || cov2 == min_cov)) { c_sum += static_cast<double>(c2b); n_usable++; }
         have_local_concordant = (n_usable > 0);
         c_local = have_local_concordant ? (c_sum / static_cast<double>(n_usable)) : 0.0;
+
+        // Name the sequence the frequency is relative to, but only when that was a real choice --
+        // i.e. the two sides are on different sequences and exactly one of them supplied the count.
+        if ((s1_seq_id != s2_seq_id) && (n_usable == 1) && (min_cov > 0.0))
+          freq_relative_seq_id = (cov1 == min_cov && !side1_red) ? s1_seq_id : s2_seq_id;
 
         // Nothing survived verification: the candidate's shared-pair count came from the coarse
         // region-overlap heuristic, but at the placed breakpoint not one read pair actually bridges the
@@ -1888,8 +2141,9 @@ namespace breseq {
         dp["background_e_value"] = to_string(background.e_value(weight), 3, true);
 
       // Local frequency: discordant pairs vs concordant pairs spanning the SAME breakpoint, i.e. the
-      // variant and reference observations of one sampling event. The non-redundant sides are averaged
-      // because each measures the same fragment population from one end (see where c_local is built).
+      // variant and reference observations of one sampling event. The usable sides on the lowest-
+      // coverage sequence are averaged, because each measures the same fragment population from one
+      // end (see where c_local is built for why the lower-coverage sequence is the right denominator).
       // See also the comment above dp_crossing_mean.
       double f_lcb = std::numeric_limits<double>::quiet_NaN();
       if (have_local_concordant) {
@@ -1907,6 +2161,11 @@ namespace breseq {
         // fraction is the signal rather than a problem. The upper bound exists so the report can
         // show an interval instead of a naked point estimate.
         dp[FREQUENCY_UPPER] = to_string(binomial_frequency_upper_bound(k, k + c_local, kDPFrequencyAlpha), 4, false);
+        // Which sequence's molecules the frequency counts, when the two sides could have given
+        // different answers. Written only for a cross-sequence item where one side actually supplied
+        // the denominator, so a same-seq_id item carries no new key at all.
+        if (!freq_relative_seq_id.empty())
+          dp["frequency_relative_to_seq_id"] = freq_relative_seq_id;
       } else if (scanner) {
         // Both sides redundant: every concordant pair seen belongs to some copy of a repeat, so there
         // is no reference observation of THIS breakpoint to divide by -- the frequency is unknown, not
@@ -1918,9 +2177,17 @@ namespace breseq {
         dp[FREQUENCY_UPPER] = "NA";
       }
 
-      // Discordance "skew" score: -log10 P(a normal position on side_1's seq_id is spanned by <= k
-      // concordant pairs), projecting the run-wide reference distribution to this seq_id's coverage.
-      double avgcov = dp_seq_coverage(summary, s1_seq_id);
+      // Discordance "skew" score: -log10 P(a normal position at this junction's coverage is spanned by
+      // <= k concordant pairs), projecting the run-wide reference distribution to that coverage.
+      //
+      // The LOWER-covered of the two sides sets it. A junction's supporting pair count is bounded by
+      // whichever flank contributes fewer fragments, so that is the coverage its null has to be built
+      // at. This used to read side_1's alone, which is fine while both sides are on one sequence (the
+      // two are then the same number) but arbitrary once they are not: side_1 is merely the side whose
+      // seq_id sorts first, so a chromosome-to-plasmid junction picked between two coverages that can
+      // differ by the plasmid's copy number. Picking the smaller is also the conservative direction --
+      // a lower expectation means a lower skew, so it can only make this test reject less.
+      double avgcov = min(dp_seq_coverage(summary, s1_seq_id), dp_seq_coverage(summary, s2_seq_id));
       double dp_score = std::numeric_limits<double>::quiet_NaN();
       if (have_crossing) {
         dp_score = dp_discordance_skew(crossing_hist_ref, crossing_lo, crossing_hi, crossing_C_ref, avgcov, static_cast<uint32_t>(k_distinct < 0 ? 0 : k_distinct),
@@ -1976,6 +2243,14 @@ namespace breseq {
     }
 
     if (scanner) delete scanner;
+
+    // An insertion's two breakpoints split one crossing expectation between them; judge them together
+    // rather than each against the whole of it. Runs after every item exists because it is a statement
+    // about PAIRS of items, and it can only lift a skew rejection, never add one.
+    if (have_crossing)
+      dp_pool_sibling_skew(settings, summary, dp_gd, crossing_hist_ref, crossing_lo, crossing_hi,
+                           crossing_C_ref, crossing_mean_ref, crossing_use_empirical,
+                           crossing_nb_size, crossing_nb_mu);
 
     dp_gd.write(settings.dp_genome_diff_file_name);
   }

@@ -809,7 +809,7 @@ identify_mutations_pileup::identify_mutations_pileup(
   // remove once used
   (void)settings;
 
-  // Initialize per-bin discordant-pair region state (bin = strand*3 + orient; see kDPnBins).
+  // Initialize per-bin discordant-pair region state (bin = strand*kDPnOrientations + orient; see kDPnBins).
   for (int bin = 0; bin < kDPnBins; bin++) {
     _dp_metric[bin] = 0;
     _dp_region_start[bin] = UNDEFINED_UINT32;
@@ -1563,15 +1563,33 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
             // Bin by (focal-read strand) x (pair orientation). Strand: 0 = forward, 1 = reverse.
             int s = i->reversed() ? 1 : 0;
-            // Orientation from the XP tag written by mark_pair_info: FR / RF / FF (RR folded to FF).
-            string orientation;
             int o;
-            if (!i->aux_get_Z("XP", orientation)) continue;  // no orientation -> not a countable DP read
-            if      (orientation == "FR") o = 0;
-            else if (orientation == "RF") o = 1;
-            else if (orientation == "FF") o = 2;
-            else continue;                                    // unexpected orientation -> skip
-            int bin = s * 3 + o;
+            if (i->mate_reference_target_id() != i->reference_target_id()) {
+              // The two mates are on DIFFERENT reference sequences, so the pair has no within-sequence
+              // orientation at all -- mark_pair_info writes XP:Z:NA and TLEN 0 for it, and that used to
+              // fall through the letter tests below onto their `else continue`, which is why no
+              // chromosome-to-plasmid or contig-to-contig rearrangement could ever produce DP evidence
+              // no matter how many pairs supported it. It gets its own orientation slot instead (see
+              // kDPnOrientations). Decided on the target ids rather than on the tag: cheaper, since
+              // these reads never build the aux_get_Z string, and independent of how the tag happens to
+              // spell "none".
+              //
+              // core.mtid is trustworthy here. BAM_FPAIRED is only ever set by mark_pair_info or
+              // mark_mate_unmapped (see the comment above the latter), both of which assign mtid, and
+              // the guard above already requires is_paired() and excludes BAM_FMUNMAP -- so an untouched
+              // -1, which would read back through the uint32_t accessor as 4294967295 and masquerade as
+              // a different sequence, cannot reach this line.
+              o = 3;
+            } else {
+              // Orientation from the XP tag written by mark_pair_info: FR / RF / FF (RR folded to FF).
+              string orientation;
+              if (!i->aux_get_Z("XP", orientation)) continue;  // no orientation -> not a countable DP read
+              if      (orientation == "FR") o = 0;
+              else if (orientation == "RF") o = 1;
+              else if (orientation == "FF") o = 2;
+              else continue;                                    // unexpected orientation -> skip
+            }
+            int bin = s * kDPnOrientations + o;
 
             // Build the condensed read-pair key: <read1_name>__<read2_name>__<r1_insert_size>.
             // breseq names mates <file_index>:<read_num> sharing read_num (fastq.cpp); both mates
@@ -2241,6 +2259,11 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     _dp_region_start[bin] = UNDEFINED_UINT32;
     _dp_region_max_count[bin] = 0;
     _dp_region_descriptors[bin].clear();
+    // Reset alongside the descriptors it counts a subset of, as the MP block below already does for
+    // its equivalent. Today check_discordant_completion is always called at target_length+1 first and
+    // closes any open region (which resets this), so the omission was invisible -- but the two are one
+    // region's state and leaving them out of sync here is a bug waiting on a change to that flush.
+    _dp_region_redundant_count[bin] = 0;
   }
 
   // Reset the Missing Pair (MP) evidence variables (regions do not span reference boundaries)
@@ -2533,7 +2556,10 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint3
  */
 void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uint32_t position)
 {
-  static const char* kOrientName[3] = { "FR", "RF", "FF" };
+  // The fourth name is the cross-sequence slot, which is not an orientation at all (see
+  // kDPnOrientations). It only reaches the CSV's `orientation` column, which is diagnostic: the reader
+  // in dp_evidence.cpp takes columns 0-3, 7 and 8 and never looks at column 4.
+  static const char* kOrientName[kDPnOrientations] = { "FR", "RF", "FF", "XS" };
 
   // Run an independent detector for each (focal strand x orientation) bin, so a breakpoint's
   // forward/reverse shoulders and its distinct orientations each become separate regions.
@@ -2574,8 +2600,8 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
       region.seq_id = target_name(seq_id);
       region.start = _dp_region_start[bin];
       region.end = position - 1;
-      region.strand = (bin / 3 == 0) ? 'F' : 'R';
-      region.orientation = kOrientName[bin % 3];
+      region.strand = (bin / kDPnOrientations == 0) ? 'F' : 'R';
+      region.orientation = kOrientName[bin % kDPnOrientations];
       region.max_count = _dp_region_max_count[bin];
       // Redundant side: a majority of the region's discordant reads mapped redundantly (i.e. the
       // reads pile up here as a tie-broken multicopy element side). Propagated to DP evidence's
