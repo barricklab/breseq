@@ -280,10 +280,28 @@ number), `UN` (unknown), `SC` (soft clipping), `DP` (discordant pair), `MP` (mis
 The last four are experimental and opt-in (`--predict-soft-clipping`, `--predict-discordant-pairs`,
 `--predict-missing-pairs`, `--predict-pair-distance`). The three pair-based types divide the space by
 what is anomalous about a read pair: `DP` fires on pairs that are individually discordant (wrong
-orientation, or distance past the cutoff), `MP` on reads whose mate did not map anywhere, and `PD` on
-pairs that are individually unremarkable but collectively shifted in mapping distance — the deletions
-and insertions of a few hundred bases the other two cannot see. Where a PD and a DP describe the same
-breakpoint the DP is removed, since PD uses the whole pair population where DP uses only its tail.
+orientation, distance past the cutoff, **or mates on two different reference sequences**), `MP` on
+reads whose mate did not map anywhere, and `PD` on pairs that are individually unremarkable but
+collectively shifted in mapping distance — the deletions and insertions of a few hundred bases the
+other two cannot see. Where a PD and a DP describe the same breakpoint the DP is removed, since PD
+uses the whole pair population where DP uses only its tail.
+
+`DP` is the only one of the three that is two-sided across sequences: its two sides carry independent
+`side_1_seq_id` / `side_2_seq_id`, so a plasmid integration or a translocation between two contigs is
+a single DP item. A cross-sequence pair has no within-sequence orientation — `mark_pair_info` writes
+`XP:Z:NA` and `TLEN 0` for it — so the DP sliding-window detector gives it a fourth orientation slot
+of its own (`kDPnOrientations`, `identify_mutations.h`) rather than one of FR/RF/FF. Do **not** try to
+synthesize a letter pair for it by ordering the two mates by reference target id: that would make the
+bin depend on the order the `-r` files were given on the command line. `PD` and `MP` are
+single-sequence by construction (PD's statistic *is* the insert distribution, which is undefined
+across sequences; MP's mate has no alignment at all), and `pd_evidence`/`identify_mutations` gate them
+on `mate_reference_target_id() == reference_target_id()` accordingly.
+
+Note also that `DP` is deliberately absent from `MutationPredictor::ignore_evidence_near_contig_ends`,
+which marks RA/MC/JC/SC (and, via their own equivalents, PD/MP) at a contig end. Those types are
+ignored there because a sequence end is where their statistic stops being measurable; DP has no such
+artifact, and a cross-sequence DP sits at two contig ends *by construction*. Adding DP to that rule
+would silently discard every translocation call.
 
 `MP` counts only reads whose mate produced **no alignment at all** — not merely reads flagged
 `BAM_FMUNMAP`, which also covers mates the aligner placed and breseq then rejected on

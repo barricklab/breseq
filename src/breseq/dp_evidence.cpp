@@ -1918,9 +1918,17 @@ namespace breseq {
         dp[FREQUENCY_UPPER] = "NA";
       }
 
-      // Discordance "skew" score: -log10 P(a normal position on side_1's seq_id is spanned by <= k
-      // concordant pairs), projecting the run-wide reference distribution to this seq_id's coverage.
-      double avgcov = dp_seq_coverage(summary, s1_seq_id);
+      // Discordance "skew" score: -log10 P(a normal position at this junction's coverage is spanned by
+      // <= k concordant pairs), projecting the run-wide reference distribution to that coverage.
+      //
+      // The LOWER-covered of the two sides sets it. A junction's supporting pair count is bounded by
+      // whichever flank contributes fewer fragments, so that is the coverage its null has to be built
+      // at. This used to read side_1's alone, which is fine while both sides are on one sequence (the
+      // two are then the same number) but arbitrary once they are not: side_1 is merely the side whose
+      // seq_id sorts first, so a chromosome-to-plasmid junction picked between two coverages that can
+      // differ by the plasmid's copy number. Picking the smaller is also the conservative direction --
+      // a lower expectation means a lower skew, so it can only make this test reject less.
+      double avgcov = min(dp_seq_coverage(summary, s1_seq_id), dp_seq_coverage(summary, s2_seq_id));
       double dp_score = std::numeric_limits<double>::quiet_NaN();
       if (have_crossing) {
         dp_score = dp_discordance_skew(crossing_hist_ref, crossing_lo, crossing_hi, crossing_C_ref, avgcov, static_cast<uint32_t>(k_distinct < 0 ? 0 : k_distinct),
