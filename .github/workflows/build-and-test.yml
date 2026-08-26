@@ -54,6 +54,43 @@ jobs:
       - name: Run tests
         run: make test          # exits non-zero if any of the 66 tests fail
 
+      # Everything below only runs when 'Run tests' failed. Each test's output is
+      # captured to tests/<name>/test.log by tests/run_logged_test.sh (see
+      # tests/Snakefile), and until these steps existed none of it reached the job
+      # log: a red run said only "(command exited with non-zero exit code)", so a
+      # failure that did not reproduce on the other OS could not be diagnosed at
+      # all. Print the failing logs inline, keep the full ones as an artifact.
+      - name: Show failing test logs
+        if: failure()
+        run: tests/print_failing_test_logs.sh tests
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.os }}
+          path: |
+            tests/*/test.log
+            tests/*/test.result
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # A test that suddenly takes 15x its usual wall time and then fails is as
+      # likely to be a starved runner as a code change; these are the numbers that
+      # tell the two apart after the fact.
+      - name: Runner diagnostics
+        if: failure()
+        run: |
+          echo "::group::disk"
+          df -h
+          echo "::endgroup::"
+          echo "::group::memory"
+          if [ "$RUNNER_OS" = "Linux" ]; then free -m; else vm_stat; fi
+          echo "::endgroup::"
+          echo "::group::load"
+          uptime
+          echo "::endgroup::"
+
       # NOTE: 'make test-long' is deliberately NOT run in CI at all. It downloads
       # gigabytes from ENA/NCBI and runs breseq on a full bacterial genome, which
       # would blow this job's 60-minute timeout and make every pull request
