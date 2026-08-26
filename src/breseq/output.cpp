@@ -1341,6 +1341,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                     th("length") <<
                     th(ALIGN_CENTER, "fit mean") <<
                     th(ALIGN_CENTER, "fit relative_variance") <<
+                    // The run's own copy-number scale: each sequence's depth against the LONGEST
+                    // one, which therefore reads 1.00. Always present, unlike the ori-ter table's
+                    // relative copy number, which needs --predict-copy-number -- and it is what the
+                    // JC and DP relative coverages are normalized by, so a reader can check them.
+                    th(ALIGN_CENTER, nonbreaking("rel cov")) <<
                     th(ALIGN_CENTER, "% mapped reads") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
@@ -1455,12 +1460,19 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_relative_variance));
     }
     
+    // Relative to the longest sequence, which reads 1.00 by construction. "NA" when this sequence or
+    // the baseline has no usable coverage -- a junction-only reference has none at all.
+    {
+      double rel = seq_relative_coverage(summary, ref_seq_info, it->m_seq_id);
+      HTML << td(ALIGN_CENTER, (rel > 0.0) ? (to_string(rel, 2) + "&times;") : "NA");
+    }
+
     HTML << td(ALIGN_CENTER, to_string(this_reference_fraction_mapped_reads) + "%");
-    
+
     HTML << td(it->m_description);
     HTML << "</tr>";
   }
-  
+
   HTML << "<tr class=\"highlight_table_row\">";
   HTML << td();
   HTML << td();
@@ -1469,6 +1481,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(ALIGN_RIGHT, b(commify(to_string(total_length))) );
   HTML << td();
   HTML << td();
+  HTML << td();   // rel cov: no meaningful total
   HTML << td(ALIGN_CENTER, to_string(100.0) + "%");
   HTML << td();
   HTML << "</tr>" << endl;

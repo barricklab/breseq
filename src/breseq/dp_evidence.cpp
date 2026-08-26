@@ -820,14 +820,11 @@ namespace breseq {
   // Average coverage for a seq_id (unique-only fit if available, else the preliminary preprocess value).
   // Only the RATIO between sequences matters for the crossing coverage-projection, so any consistent
   // average-coverage measure works; unique_coverage is preferred (more accurate) and available at the
-  // DP scoring and output-plot stages.
+  // DP scoring and output-plot stages. Now shared with output.cpp and resolve_alignments.cpp -- see
+  // seq_average_coverage in summary.h for why nothing should index unique_coverage directly.
   static double dp_seq_coverage(const Summary& summary, const string& seq_id)
   {
-    CoverageSummaries::const_iterator u = summary.unique_coverage.find(seq_id);
-    if (u != summary.unique_coverage.end() && u->second.average > 0.0) return u->second.average;
-    CoverageSummaries::const_iterator p = summary.preprocess_coverage.find(seq_id);
-    if (p != summary.preprocess_coverage.end() && p->second.average > 0.0) return p->second.average;
-    return 0.0;
+    return seq_average_coverage(summary, seq_id);
   }
 
   // Expected number of CONCORDANT PAIRS spanning a normal position on this seq_id: the run's reference

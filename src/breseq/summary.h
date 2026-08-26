@@ -852,9 +852,14 @@ namespace breseq{
     double coverage_nbinom_variance;
     double coverage_nbinom_relative_variance;
     double coverage_average;
+    // coverage_average against the LONGEST reference sequence of the run, which reads exactly 1.00 --
+    // the run's own copy-number scale, and the quantity JC and DP relative coverages are normalized
+    // by. 0.0 => not measurable. Assigned by PublicReferencesSummary, not by this class's
+    // constructor, which is not given the other sequences it has to compare against.
+    double coverage_relative;
     double coverage_variance;
     double coverage_relative_variance;
-    
+
     int32_t coverage_group;
     bool junction_only;
     
@@ -1048,6 +1053,27 @@ namespace breseq{
   // PublicSummary
   void to_json(json& j, const PublicSummary& s);
   void from_json(const json& j, PublicSummary& s);
+
+  //! Average read depth on one reference sequence: the unique-only fit if it has one, else the
+  //! preliminary preprocess value, else 0.0 meaning "not measured".
+  //
+  //  Use this rather than reaching into summary.unique_coverage[seq_id].average directly. That is a
+  //  map::operator[] on a non-const Summary&, so a seq_id the map does not have -- a junction-only
+  //  reference, a sequence whose fit failed -- is silently DEFAULT-INSERTED with average 0.0, a
+  //  mutation disguised as a read, and the 0.0 then propagates into whatever arithmetic asked for it.
+  //  This uses find(), never inserts, and never returns a zero it did not measure.
+  double seq_average_coverage(const Summary& summary, const string& seq_id);
+
+  //! That coverage relative to the LONGEST reference sequence of the run, which therefore reads
+  //! exactly 1.00. The run's own copy-number scale: a plasmid at 4.07 sits at four times the
+  //! chromosome's depth. 0.0 when either sequence has no usable coverage.
+  //
+  //  Deliberately the same convention CopyNumberSummary::relative_copy_number uses, so the two can be
+  //  read against each other -- but it is a different measurement, available on every run rather than
+  //  only under --predict-copy-number, and uncorrected for GC and ori-ter bias. They can legitimately
+  //  disagree (3.50 here against CNery's 2.78 on one measured plasmid).
+  double seq_relative_coverage(const Summary& summary, const cReferenceSequences& ref_seq_info,
+                               const string& seq_id);
 
 } // breseq namespace
 
