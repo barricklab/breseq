@@ -72,13 +72,32 @@ namespace breseq {
       double  corrected_cov;     // otr_gc_corr_norm_cov  (normalized, GC- and ori-ter-corrected)
       double  otr_fit_cov;       // otr_gc_corr_fact      (the ori-ter ramp that was divided out)
       int32_t copy_number;       // prob_copy_number      (HMM Viterbi state)
+
+      // is_redundant: CNery flagged this window as overlapping repeat coverage (its
+      // mask_coverage_windows() sets it for pct_redundant > 0, i.e. ANY redundant base among the
+      // window's 100). Such a window is censored from every fit and from the HMM's observation
+      // sequence, and its copy number is inherited from the surrounding segment rather than voted
+      // for -- so nothing here may treat its coverage as a measurement of this locus's copy number.
+      // False when CNery emitted no such column, which is how its own plottable() reads it too.
+      bool    is_redundant;
     };
+
+    // A half-open [start, end) run of consecutive redundant windows, in genomic coordinates. Built
+    // once per reference sequence from the UNBINNED window list and handed to every plot of that
+    // sequence, so the shaded bands land at the repeats' true extent even on a binned overview.
+    typedef std::pair<int32_t, int32_t> cnery_region;
 
     // One merged run of equal copy number, from CNery's <prefix><seq_id>_break_pts.csv. CNery has
     // already collapsed contiguous windows of the same HMM state, so these are the copy-number
     // segments in genomic coordinates -- real boundaries, with no window granularity left to
-    // resolve and no gap where CNery dropped a window. Both the CN evidence entries and the step
-    // line on the CN plots are built from these, which is what keeps the two agreeing.
+    // resolve. Both the CN evidence entries and the step line on the CN plots are built from these,
+    // which is what keeps the two agreeing.
+    //
+    // They do NOT tile the sequence. CNery decodes its Viterbi path over the CENSORED window
+    // sequence (_segments_from_path in its core.py), so where a state change has redundant windows
+    // beside it, one segment's Endpos and the next one's Startpos are not adjacent -- the gap is
+    // exactly the stretch CNery had no evidence over. render_cn_plot() breaks the copy-number line
+    // across those gaps rather than sloping through them.
     // Inclusive on both ends, and 1-based like every other reference coordinate in breseq --
     // read_cnery_segments() validates that as it reads and rejects anything else, so nothing
     // downstream has to re-check it.
@@ -179,8 +198,14 @@ namespace breseq {
                                     int32_t sequence_length);
 
     // Reduces a long window list to at most max_points entries, so a whole-genome overview does not
-    // become a multi-megabyte SVG.
+    // become a multi-megabyte SVG. Each bin averages only its NON-redundant windows -- see the
+    // definition -- so a repeat's collapsed depth never leaks into a bin mean.
     static vector<cnery_window> bin_cnery_windows(const vector<cnery_window>& in, size_t max_points);
+
+    // The runs of consecutive is_redundant windows, merged, in genomic coordinates. Must be built
+    // from the FULL UNBINNED window list: binning would lose every repeat narrower than a bin, and
+    // these runs are what every plot of this sequence breaks its traces and its copy-number line at.
+    static vector<cnery_region> redundant_regions(const vector<cnery_window>& windows);
 
     // The ori-ter ramp at one position, evaluated in GENOMIC coordinates from the two endpoints
     // CNery reports. See the definition for why its per-window column cannot be drawn as a line.
@@ -208,6 +233,9 @@ namespace breseq {
                           CopyNumberSummary& cns
                           );
 
+    // Turns CNery's segments into CN evidence entries. The per-window list supplies only each
+    // entry's displayed relative_coverage, averaged over that segment's NON-redundant windows --
+    // see the definition for what a redundant one would otherwise contribute.
     static void ingest_csv_for_seq_id(
                                       const string& seq_id,
                                       const vector<cnery_window>& windows,
@@ -223,18 +251,34 @@ namespace breseq {
     // `segments` drives the copy-number step line and `windows` the coverage traces. They are kept
     // separate on purpose: the coverage is a per-window measurement, while the copy number is a
     // piecewise-constant call whose boundaries CNery already resolved to a base.
+    //
+    // `redundant` is where NOTHING is drawn -- no coverage trace and no copy-number line. See
+    // cnery_window::is_redundant: over a repeat the window depth counts collapsed REFERENCE copies
+    // and the copy number is inherited rather than called, so there is no honest value to plot.
+    // Pass it at full resolution even when `windows` is binned.
+    //
+    // The two bools split what a whole-reference overview wants from what a per-CN-item zoom does:
+    //  - shade_redundant: draw a red band over each redundant run. Right on a zoom, where there are
+    //    a handful and the reader needs to know why the traces stop; wrong on an overview, where
+    //    hundreds of bands would swamp the figure. The gaps themselves are drawn either way.
+    //  - draw_otr_fit: draw the fitted ori-ter ramp. It is a whole-chromosome statement, and across
+    //    a few kb of zoom it is an uninformative straight line that only competes with the
+    //    copy-number line for the eye.
     static void render_cn_plot(
                                const string& output_svg,
                                const string& seq_id,
                                const vector<cnery_window>& windows,
                                const vector<cnery_segment>& segments,
+                               const vector<cnery_region>& redundant,
                                int32_t plot_start,
                                int32_t plot_end,
                                int32_t shaded_start,
                                int32_t shaded_end,
                                const cnery_otr& otr,
                                int32_t seq_length,
-                               const cn_plot_scale& scale
+                               const cn_plot_scale& scale,
+                               bool shade_redundant,
+                               bool draw_otr_fit
                                );
 
     // Coverage against window GC content, before and after the GC correction. Drawn from CNery's own

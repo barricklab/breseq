@@ -5816,13 +5816,18 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                  (END,  (*item)[END])
                  (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME]); // filled by draw_coverage
 
-    // The corrected coverage CNery actually called this region from, over the same interval as the
-    // raw plot above it (stamped by CNEvidence::draw_evidence_plots). Absent when CNery's per-window
-    // output was not available, in which case the page keeps just the raw plot and no captions.
+    // The corrected coverage CNery actually called this region from goes FIRST, over the same
+    // interval as the raw plot beneath it (stamped by CNEvidence::draw_evidence_plots): it is the
+    // evidence this page is about, and the raw coverage is what one checks it against. Absent when
+    // CNery's per-window output was not available, in which case the page keeps just the raw plot
+    // and no captions -- which is why the two are swapped here rather than at the emitter, where
+    // the "Failed to generate coverage plot." fallback hangs off the PLOT slot and PLOT_2 is only
+    // drawn when PLOT is filled.
     if (item->entry_exists("_cn_corrected_plot_file_name")) {
-      cn_fields[PLOT_2] = (*item)["_cn_corrected_plot_file_name"];
-      cn_fields[PLOT_CAPTION] = "Read coverage depth";
-      cn_fields[PLOT_2_CAPTION] = "Copy number from CNery bias-corrected coverage";
+      cn_fields[PLOT] = (*item)["_cn_corrected_plot_file_name"];
+      cn_fields[PLOT_2] = (*item)[_COVERAGE_PLOT_FILE_NAME];
+      cn_fields[PLOT_CAPTION] = "Copy number from CNery bias-corrected coverage";
+      cn_fields[PLOT_2_CAPTION] = "Read coverage depth";
     }
 
     add_evidence(_EVIDENCE_FILE_NAME, item, parent_item, cn_fields);

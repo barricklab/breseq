@@ -114,8 +114,19 @@ void CNEvidence::run_cnery(Settings& settings, Summary& summary, cReferenceSeque
 //
 // Only win_st, win_len and otr_gc_corr_norm_cov are required -- those are what turning the
 // segments into CN entries needs. The rest are what the plots want, and get a neutral value when
-// absent (0 for coverage, -1 = "no call" for copy number) so a CNery that stopped emitting them
-// degrades the plot instead of failing the run.
+// absent (0 for coverage, -1 = "no call" for copy number, false for is_redundant) so a CNery that
+// stopped emitting them degrades the plot instead of failing the run.
+
+// pandas writes a bool column as the Python literals "True"/"False", and from_string<bool> cannot
+// read those: it tries `>> boolalpha`, which in the default locale matches only lowercase "true",
+// then falls back to reading an integer, which "True" is not either -- so BOTH parses fail and every
+// value comes back false, silently. Changing the generic converter to suit one CSV column would be
+// the wrong trade, so the column is read here instead.
+static bool cnery_bool(const string& field)
+{
+  return (field == "True") || (field == "true") || (field == "TRUE") || (field == "1");
+}
+
 bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_window>& windows)
 {
   windows.clear();
@@ -131,6 +142,7 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
   size_t win_end_col = string::npos, raw_cov_col = string::npos, copy_number_col = string::npos;
   size_t otr_fit_col = string::npos;
   size_t gc_percent_col = string::npos, gc_cov_col = string::npos, gc_fit_col = string::npos;
+  size_t redundant_col = string::npos;
   for (size_t i = 0; i < header_fields.size(); i++) {
     if (header_fields[i] == "win_st") win_st_col = i;
     else if (header_fields[i] == "win_len") win_len_col = i;
@@ -142,6 +154,7 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
     else if (header_fields[i] == "gc_percent") gc_percent_col = i;
     else if (header_fields[i] == "gc_corr_norm_cov") gc_cov_col = i;
     else if (header_fields[i] == "gc_corr_fact") gc_fit_col = i;
+    else if (header_fields[i] == "is_redundant") redundant_col = i;
   }
   ASSERT((win_st_col != string::npos) && (win_len_col != string::npos) && (rel_cov_col != string::npos),
          "Unexpected column layout in CNery output file: " + cnv_file_name);
@@ -149,7 +162,8 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
   // Highest column index actually read, so a truncated row can be skipped rather than indexed past.
   size_t max_needed_col = 0;
   const size_t used_cols[] = { win_st_col, win_len_col, rel_cov_col, win_end_col, raw_cov_col,
-                               copy_number_col, otr_fit_col, gc_percent_col, gc_cov_col, gc_fit_col };
+                               copy_number_col, otr_fit_col, gc_percent_col, gc_cov_col, gc_fit_col,
+                               redundant_col };
   for (size_t i = 0; i < sizeof(used_cols) / sizeof(used_cols[0]); i++) {
     if ((used_cols[i] != string::npos) && (used_cols[i] > max_needed_col)) max_needed_col = used_cols[i];
   }
@@ -172,6 +186,7 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
     w.gc_corrected_cov = (gc_cov_col != string::npos) ? from_string<double>(fields[gc_cov_col]) : 0.0;
     w.gc_corr_fact = (gc_fit_col != string::npos) ? from_string<double>(fields[gc_fit_col]) : 0.0;
     w.copy_number = (copy_number_col != string::npos) ? from_string<int32_t>(fields[copy_number_col]) : -1;
+    w.is_redundant = (redundant_col != string::npos) ? cnery_bool(fields[redundant_col]) : false;
     windows.push_back(w);
   }
   cnv_file.close();
@@ -379,12 +394,29 @@ void CNEvidence::ingest_csv_for_seq_id(
     // regions CNery calls as different from that are evidence-worthy.
     if (copy_number == 1) continue;
 
+    // Averaged over the segment's NON-redundant windows. A window overlapping repeat coverage
+    // measures how many REFERENCE copies collapsed onto that locus, not how many this sample
+    // carries there, which is why CNery censored those windows from every fit and from its HMM in
+    // the first place -- so letting one into this mean puts a number in the .gd that contradicts
+    // the copy_number beside it. One 18x repeat window (CNery records exactly that case, on zero
+    // unique coverage) in a ten-window deletion reports relative_coverage 1.8 on a CN 0 call.
+    //
+    // The second pass is for the case where there is nothing clean to average. CNery's HMM softens
+    // its own censoring when it would leave too few windows (min_called_windows), so a small
+    // reference can have a segment called entirely from redundant windows; reporting 0 for it would
+    // be indistinguishable on the evidence page from a real full deletion. Falling back to the
+    // windows CNery actually used says what was measured, which is the honest answer when the only
+    // alternative is inventing one.
     double coverage_sum = 0;
     uint32_t coverage_n = 0;
-    for (size_t i = 0; i < windows.size(); i++) {
-      if ((windows[i].start >= start_pos) && (windows[i].start <= end_pos)) {
-        coverage_sum += windows[i].corrected_cov;
-        coverage_n++;
+    for (int pass = 0; (pass < 2) && (coverage_n == 0); pass++) {
+      const bool allow_redundant = (pass == 1);
+      for (size_t i = 0; i < windows.size(); i++) {
+        if (windows[i].is_redundant && !allow_redundant) continue;
+        if ((windows[i].start >= start_pos) && (windows[i].start <= end_pos)) {
+          coverage_sum += windows[i].corrected_cov;
+          coverage_n++;
+        }
       }
     }
 
@@ -454,6 +486,11 @@ static double cnery_robust_cv(vector<double> v)
 // to all windows when there are too few calls to select on -- either because the HMM column was
 // missing, or because so much of the sequence is non-single-copy that the subset is not
 // representative -- and report which happened via single_copy_only, so the report can say so.
+//
+// Redundant windows are excluded before any of that. CNery censored them from every fit and from
+// its HMM, so a spread measured over them describes something CNery never modelled, and their
+// collapsed repeat depth -- 18x on zero unique coverage in one real case -- would drag the median
+// the plot scales are built from off the single-copy level it is supposed to name.
 void CNEvidence::select_measured_windows(const vector<cnery_window>& windows,
                                          vector<size_t>& selected,
                                          bool& single_copy_only)
@@ -461,6 +498,7 @@ void CNEvidence::select_measured_windows(const vector<cnery_window>& windows,
   vector<size_t> usable, single_copy;
   for (size_t i = 0; i < windows.size(); i++) {
     const cnery_window& w = windows[i];
+    if (w.is_redundant) continue;
     if ((w.raw_cov <= 0.0) || (w.gc_corrected_cov <= 0.0) || (w.corrected_cov <= 0.0)) continue;
     usable.push_back(i);
     if (w.copy_number == 1) single_copy.push_back(i);
@@ -488,9 +526,10 @@ void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& win
 
   cns.window_size = windows[0].length;
 
-  // The step, as the most common gap between consecutive window starts rather than the mean gap:
-  // CNery drops every window overlapping repeat coverage, and those holes -- up to 5.9 kb on REL606
-  // -- would drag a mean well above the step actually used.
+  // The step, as the most common gap between consecutive window starts rather than the mean gap.
+  // CNery tiles without holes, so the two agree today; the mode is kept because it costs nothing and
+  // is right whatever the tiling turns out to be, and because a partial window at the end of the
+  // sequence is dropped rather than shortened.
   {
     map<int32_t, uint32_t> step_counts;
     for (size_t i = 1; i < windows.size(); i++) {
@@ -545,9 +584,9 @@ void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& win
 // Plots of CNery's corrected coverage
 //
 // These are deliberately styled to match coverage_output::plot -- same canvas, fonts, tics, grey
-// shading and key placement -- because on a CN evidence page this plot is stacked directly beneath
-// that one over the same interval. The two are meant to be read against each other, so the axes
-// have to land in the same place.
+// shading, key placement, and the same meaning for blue and red -- because on a CN evidence page
+// this plot is stacked directly above that one over the same interval. The two are meant to be read
+// against each other, so the axes have to land in the same place.
 // ---------------------------------------------------------------------------------------------
 
 // The scale each of this sequence's plotted coverage series is drawn on -- see cn_plot_scale for
@@ -658,26 +697,36 @@ vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cner
     w.end = in[hi - 1].end;
     w.length = w.end - w.start;
 
+    // Averaged over the bin's NON-redundant windows only. A repeat's depth counts collapsed
+    // reference copies, so one 18x window inside a bin of eleven would lift that bin to 2.5x and
+    // paint an amplification across the whole bin's width. A bin with nothing but redundant windows
+    // has no clean value to report and is flagged redundant itself, which drops it from the traces
+    // exactly as an unbinned redundant window is dropped.
     double raw_sum = 0, corrected_sum = 0, otr_fit_sum = 0;
     double gc_percent_sum = 0, gc_corrected_sum = 0, gc_fit_sum = 0;
+    size_t n_clean = 0;
     for (size_t i = lo; i < hi; i++) {
+      if (in[i].is_redundant) continue;
       raw_sum += in[i].raw_cov;
       corrected_sum += in[i].corrected_cov;
       otr_fit_sum += in[i].otr_fit_cov;
       gc_percent_sum += in[i].gc_percent;
       gc_corrected_sum += in[i].gc_corrected_cov;
       gc_fit_sum += in[i].gc_corr_fact;
+      n_clean++;
     }
-    w.raw_cov = raw_sum / static_cast<double>(hi - lo);
-    w.corrected_cov = corrected_sum / static_cast<double>(hi - lo);
+    w.is_redundant = (n_clean == 0);
+    const double n = static_cast<double>(n_clean ? n_clean : 1);
+    w.raw_cov = raw_sum / n;
+    w.corrected_cov = corrected_sum / n;
     // Not drawn on the overview this binning feeds, but averaged rather than left at the first
     // window's value so a binned list stays a faithful summary of the windows it replaced.
-    w.gc_percent = gc_percent_sum / static_cast<double>(hi - lo);
-    w.gc_corrected_cov = gc_corrected_sum / static_cast<double>(hi - lo);
-    w.gc_corr_fact = gc_fit_sum / static_cast<double>(hi - lo);
+    w.gc_percent = gc_percent_sum / n;
+    w.gc_corrected_cov = gc_corrected_sum / n;
+    w.gc_corr_fact = gc_fit_sum / n;
     // The ramp is piecewise linear, so a bin mean is its value at the bin centre -- averaging does
     // not distort it the way it smooths the coverage traces.
-    w.otr_fit_cov = otr_fit_sum / static_cast<double>(hi - lo);
+    w.otr_fit_cov = otr_fit_sum / n;
     // The struct's "no call" sentinel: a bin spans many windows and has no one HMM state, and
     // nothing reads a binned copy number now.
     w.copy_number = -1;
@@ -688,23 +737,114 @@ vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cner
   return out;
 }
 
+// The stretches of the sequence CNery had no usable measurement over, merged into runs.
+//
+// Half-open [start, end): a window's `end` is where the next one opens, so a run's end is the first
+// base past it and two adjacent runs meet exactly. Consecutive windows are merged rather than kept
+// one per window, because CNery flags a 100 bp window on a SINGLE redundant base: an IS element
+// leaves a dozen or more consecutive flagged windows, a bacterial chromosome has hundreds of such
+// stretches, and every one of them becomes a gnuplot `set object` and a pass of the copy-number
+// clipping loop below. Merging turns that back into one per repeat.
+vector<CNEvidence::cnery_region> CNEvidence::redundant_regions(const vector<cnery_window>& windows)
+{
+  vector<cnery_region> regions;
+
+  for (size_t i = 0; i < windows.size(); i++) {
+    if (!windows[i].is_redundant) continue;
+
+    // Extends the open run when this window touches or overlaps it. CNery's windows arrive sorted
+    // and non-overlapping, so this is the only merge case there is.
+    if (regions.size() && (windows[i].start <= regions.back().second)) {
+      if (windows[i].end > regions.back().second) regions.back().second = windows[i].end;
+    } else {
+      regions.push_back(make_pair(windows[i].start, windows[i].end));
+    }
+  }
+
+  return regions;
+}
+
+// Write one horizontal run of the copy-number line, at height `y` across [from, to), as the pieces
+// of it that lie OUTSIDE the redundant runs -- each piece its own gnuplot datablock, so the line is
+// absent over a repeat rather than drawn through it. Both corners of every piece are emitted, which
+// is what makes the line step (see the segment loop for why `with steps` cannot be used).
+//
+// The parameter is spelled as the pair type rather than as CNEvidence::cnery_region because that
+// typedef is private to the class; it is the same type.
+//
+// `last_x` is the x the previous piece closed at and `have_any` whether there was one. Together they
+// are what decides between a blank line and a join, and they are the whole reason this is not simply
+// "separate every piece": two ADJACENT copy-number segments must stay in one datablock so that
+// gnuplot draws the vertical between their levels. Separating them dropped every transition on the
+// plot -- the line went from 1 to 0 with nothing connecting the two. So a separator is emitted only
+// where a piece does not open exactly where the last one closed, which covers both a gap between
+// segments and a repeat clipped out of the middle of one, and nothing else.
+//
+// Returns true if anything was written, so the caller can tell whether the series exists at all.
+static bool write_clipped_run(ostream& out,
+                              int32_t from,
+                              int32_t to,
+                              int32_t y,
+                              const vector<pair<int32_t, int32_t> >& regions,
+                              int32_t& last_x,
+                              bool& have_any)
+{
+  bool wrote = false;
+  int32_t cursor = from;
+
+  // regions arrive sorted and disjoint from redundant_regions(), so one forward pass suffices.
+  for (size_t i = 0; (i < regions.size()) && (cursor < to); i++) {
+    if (regions[i].second <= cursor) continue;   // entirely before what is left to draw
+    if (regions[i].first >= to) break;           // and the rest are entirely after it
+
+    if (regions[i].first > cursor) {
+      int32_t piece_end = min(regions[i].first, to);
+      if (have_any && (cursor != last_x)) out << endl;
+      out << cursor    << "\t" << y << endl;
+      out << piece_end << "\t" << y << endl;
+      last_x = piece_end;
+      have_any = true;
+      wrote = true;
+    }
+    if (regions[i].second > cursor) cursor = regions[i].second;
+  }
+
+  if (cursor < to) {
+    if (have_any && (cursor != last_x)) out << endl;
+    out << cursor << "\t" << y << endl;
+    out << to     << "\t" << y << endl;
+    last_x = to;
+    have_any = true;
+    wrote = true;
+  }
+
+  return wrote;
+}
+
 void CNEvidence::render_cn_plot(
                                 const string& output_svg,
                                 const string& seq_id,
                                 const vector<cnery_window>& windows,
                                 const vector<cnery_segment>& segments,
+                                const vector<cnery_region>& redundant,
                                 int32_t plot_start,
                                 int32_t plot_end,
                                 int32_t shaded_start,
                                 int32_t shaded_end,
                                 const cnery_otr& otr,
                                 int32_t seq_length,
-                                const cn_plot_scale& scale
+                                const cn_plot_scale& scale,
+                                bool shade_redundant,
+                                bool draw_otr_fit
                                 )
 {
-  // CNery drops any window overlapping repeat/redundant coverage rather than correcting it, so the
-  // window list has real holes in it. Emitting a blank line across each hole stops gnuplot drawing
-  // a straight line through a region where nothing was measured.
+  // Redundant windows are skipped rather than drawn, which is what puts the holes in this table:
+  // the blank line below is then what stops gnuplot joining across one. CNery does NOT drop these
+  // windows -- it writes a bias-corrected number for every one of them -- but that number is the
+  // depth of however many reference copies collapsed onto the locus, not this sample's copy number
+  // there, and CNery censored them from every fit and from its HMM for exactly that reason. There is
+  // no honest y to put over a repeat, so nothing is put there -- and, where shade_redundant asks for
+  // it, the region is banded instead so the hole reads as a statement rather than as missing data.
   string tab_file_name = output_svg + ".tab";
   ofstream tab(tab_file_name.c_str());
   ASSERT(tab.good(), "Could not write file: " + tab_file_name);
@@ -719,6 +859,7 @@ void CNEvidence::render_cn_plot(
   for (size_t i = 0; i < windows.size(); i++) {
     const cnery_window& w = windows[i];
     if ((w.end < plot_start) || (w.start > plot_end)) continue;
+    if (w.is_redundant) continue;
 
     if (n_drawn && (w.start > previous_end)) tab << endl;
     previous_end = w.end;
@@ -774,15 +915,29 @@ void CNEvidence::render_cn_plot(
   // corners of each segment and joining them with straight lines has neither problem, and it is the
   // same reasoning the ori-ter ramp file below is written on.
   //
-  // The segments tile the sequence, so segment i's closing vertex and segment i+1's opening vertex
-  // share an x: the connecting line is exactly vertical and lands exactly on the boundary CNery
-  // called -- the same boundary the CN evidence entry reports and the shading above is drawn at.
+  // Where consecutive segments touch, one's closing vertex and the next one's opening vertex share
+  // an x, so the connecting line is exactly vertical and lands exactly on the boundary CNery called
+  // -- the same boundary the CN evidence entry reports and the shading above is drawn at.
+  //
+  // They do NOT always touch. CNery decodes its Viterbi path over the CENSORED window sequence, so a
+  // state change with redundant windows beside it leaves a real gap between Endpos and the next
+  // Startpos, and joining across one drew a diagonal ramp through it -- the plot's most conspicuous
+  // lie, since the whole point of this series is that copy number changes in steps. A blank line
+  // between blocks is what breaks it there instead.
+  //
+  // The same goes for a repeat INSIDE a segment: the windows under it were censored from the
+  // observation sequence and inherited the surrounding call rather than voting for it, so
+  // write_clipped_run() lifts the line off them too. Between the two, every x the line is drawn over
+  // is an x CNery actually had evidence at.
   string cn_file_name = output_svg + ".cn.tab";
   bool have_copy_number = false;
   {
     ofstream cn(cn_file_name.c_str());
     ASSERT(cn.good(), "Could not write file: " + cn_file_name);
     cn << "position\tcopy_number" << endl;
+
+    int32_t last_x = 0;
+    bool have_any = false;
 
     for (size_t i = 0; i < segments.size(); i++) {
       const cnery_segment& s = segments[i];
@@ -794,10 +949,10 @@ void CNEvidence::render_cn_plot(
       int32_t to   = min(s.end + 1, plot_end);
       if (to <= from) continue;
 
-      cn << from << "\t" << s.copy_number << endl;
-      cn << to   << "\t" << s.copy_number << endl;
-      have_copy_number = true;
-      if (s.copy_number > max_y) max_y = s.copy_number;
+      if (write_clipped_run(cn, from, to, s.copy_number, redundant, last_x, have_any)) {
+        have_copy_number = true;
+        if (s.copy_number > max_y) max_y = s.copy_number;
+      }
     }
     cn.close();
   }
@@ -807,9 +962,13 @@ void CNEvidence::render_cn_plot(
   // those the ramp IS a straight line, so gnuplot drawing straight between them is exact. Keeping it
   // out of the main table also keeps it clear of the blank lines that break the coverage traces at
   // unmeasured regions: those breaks are right for measurements and wrong for a model.
+  //
+  // Whole-reference plots only (draw_otr_fit). The ramp is a statement about the chromosome; across
+  // the few kb of a per-CN-item zoom it is an uninformative straight line, and leaving it off there
+  // is what frees the strongest ink on that plot for the copy-number call the page is about.
   string fit_file_name = output_svg + ".fit.tab";
   bool have_otr_fit = false;
-  {
+  if (draw_otr_fit) {
     vector<int32_t> vertices;
     vertices.push_back(plot_start);
     if ((otr.terminus > plot_start) && (otr.terminus < plot_end)) vertices.push_back(otr.terminus);
@@ -838,8 +997,13 @@ void CNEvidence::render_cn_plot(
     fit.close();
   }
 
-  // Floor the axis at 2.5 so that a region called at copy number 1 still shows the baseline line
-  // with room around it, instead of gnuplot zooming into the noise about 1.0.
+  // Floor the axis at 2.5 so that a region called at copy number 1 sits well inside the frame with
+  // room around it, instead of gnuplot zooming into the noise about 1.0.
+  //
+  // Nothing from a redundant window reaches max_y -- those windows never got as far as the loop
+  // above -- which is half the reason they are left off. A single repeat at 18x the single-copy
+  // level (CNery records exactly that case, on zero unique coverage) used to set this axis and
+  // squash every real feature on the plot into its bottom twentieth.
   max_y = max(2.5, max_y * 1.1);
 
   ostringstream s;
@@ -868,6 +1032,28 @@ void CNEvidence::render_cn_plot(
       << ", graph 1 fc rgb 'grey85' fillstyle solid 1.0 noborder behind" << endl;
   }
 
+  // And band each stretch CNery had no usable measurement over, in the same red the raw coverage
+  // plot above draws redundant coverage in (coverage_output::plot). This is what says why the
+  // traces and the copy-number line stop: not "no coverage here" -- there is plenty -- but "the
+  // coverage here does not measure this sample's copy number".
+  //
+  // After the grey85 rects, not before: both are `behind`, and among behind objects the later one
+  // draws on top, so a repeat that happens to fall in a greyed flank still reads as a repeat.
+  //
+  // Whole-reference overviews pass shade_redundant false. A bacterial chromosome has hundreds of
+  // these runs, and at 4.6 Mb across 2200 px each is a pixel or two wide -- the bands would read as
+  // a red wash over the whole figure and bury the copy-number calls the plot exists to show. The
+  // gaps are still there; only the explanation is dropped, at a scale where it cannot be legible.
+  if (shade_redundant) {
+    for (size_t i = 0; i < redundant.size(); i++) {
+      int32_t from = max(redundant[i].first, plot_start);
+      int32_t to   = min(redundant[i].second, plot_end);
+      if (to <= from) continue;
+      s << "set object " << (obj_id++) << " rect from " << from << ", graph 0 to " << to
+        << ", graph 1 fc rgb '#FFDDDD' fillstyle solid 1.0 noborder behind" << endl;
+    }
+  }
+
   // The origin and terminus of replication CNery fit. These are what the "corrected" series is
   // corrected FOR -- the ramp between them is the bias being divided out -- so seeing where they
   // landed is how you judge whether that correction was reasonable. A terminus sitting exactly on a
@@ -885,8 +1071,10 @@ void CNEvidence::render_cn_plot(
         << " left offset 0.5,0 tc rgb " << colors[m] << " font ',24' front" << endl;
     }
     // Mark where the two straight segments of the ramp meet, i.e. the fitted coverage at each end.
-    // Guarded on being real numbers: CNery writes NaN -> null for these when it found no bias.
-    if ((otr.origin_cov > 0) && (otr.terminus_cov > 0)) {
+    // Guarded on being real numbers: CNery writes NaN -> null for these when it found no bias, and
+    // on the ramp actually being drawn -- a vertex marker for a line that is not on the plot is just
+    // a large dot floating at an unexplained height.
+    if (draw_otr_fit && (otr.origin_cov > 0) && (otr.terminus_cov > 0)) {
       const double marker_y[2] = { otr.origin_cov / scale.gc, otr.terminus_cov / scale.gc };
       for (int m = 0; m < 2; m++) {
         if ((markers[m] < plot_start) || (markers[m] > plot_end)) continue;
@@ -903,13 +1091,18 @@ void CNEvidence::render_cn_plot(
     // columns report, which are CNery's own values on the run-wide pooled scale: the two differ by
     // this sequence's relative copy number, and the ratio -- the number that carries the meaning --
     // is identical either way.
-    ostringstream ratio_label;
-    ratio_label << fixed << setprecision(2)
-                << "ori-ter bias: " << (otr.origin_cov / scale.gc) << " at ori to "
-                << (otr.terminus_cov / scale.gc)
-                << " at ter (" << otr.ratio << "x)";
-    s << "set label " << double_quote(ratio_label.str()) << " at graph 0.01, graph 0.09"
-      << " left tc rgb 'gray30' font ',20' front" << endl;
+    //
+    // Like the markers, only where the ramp itself is drawn: it quotes the two heights the dots sit
+    // at, so on a plot without them it annotates nothing.
+    if (draw_otr_fit) {
+      ostringstream ratio_label;
+      ratio_label << fixed << setprecision(2)
+                  << "ori-ter bias: " << (otr.origin_cov / scale.gc) << " at ori to "
+                  << (otr.terminus_cov / scale.gc)
+                  << " at ter (" << otr.ratio << "x)";
+      s << "set label " << double_quote(ratio_label.str()) << " at graph 0.01, graph 0.09"
+        << " left tc rgb 'gray30' font ',20' front" << endl;
+    }
   }
 
   // A y-axis that silently means something different on each reference sequence is the bug this
@@ -920,23 +1113,35 @@ void CNEvidence::render_cn_plot(
   s << "set bmargin 6" << endl;
   s << "set key below horizontal Left reverse font ',20' width 4 samplen 1.5" << endl;
 
+  // Colors follow the raw coverage plot this one is stacked with (coverage_output::plot): blue is
+  // unique coverage there and the corrected trace here, red is redundant coverage there and the
+  // redundant band here. Reading the two figures against each other is the point of the page, and
+  // that only works if the same thing is the same color on both.
   string quoted_tab = double_quote(tab_file_name);
   vector<string> clauses;
-  // The single-copy baseline, so a step away from it is visible without reading the axis.
-  clauses.push_back("1 with lines lc rgb 'dark-grey' lw 3 dt 2 title 'single copy'");
+  if (shade_redundant && redundant.size()) {
+    // A key entry for the band. gnuplot has no way to put an `object` in the key, so this is the
+    // same dummy-swatch trick coverage_output::plot uses: a clause whose data is a single NaN draws
+    // nothing on the canvas and everything in the legend.
+    clauses.push_back("NaN with boxes fc rgb '#FFDDDD' fillstyle solid 1.0 noborder title 'redundant (repeat) coverage - not used'");
+  }
   clauses.push_back(quoted_tab + " using \"position\":\"raw\" with lines lc rgb 'grey60' lw 3 title 'uncorrected'");
   clauses.push_back(quoted_tab + " using \"position\":\"corrected\" with lines lc rgb 'blue' lw 4 title 'GC + ori-ter corrected'");
   if (have_otr_fit) {
-    // The straight-line ramp itself, from its own gap-free file. Its distance from the single-copy
-    // line at 1.0 IS the correction applied at each position: corrected = GC-corrected / this.
-    // Drawing both together is what makes the size and direction of the correction readable rather
-    // than inferred.
-    clauses.push_back(double_quote(fit_file_name) + " using \"position\":\"otr_fit\" with lines lc rgb 'black' lw 3 title 'ori-ter bias fit (divided out)'");
+    // The straight-line ramp itself, from its own gap-free file. Its distance from 1.0 IS the
+    // correction applied at each position: corrected = GC-corrected / this. Drawing it against the
+    // trace it was divided out of is what makes the size and direction of the correction readable
+    // rather than inferred.
+    //
+    // Dashed grey, not black: it is a fitted model rather than a measurement or a call, and black
+    // now belongs to the copy-number line.
+    clauses.push_back(double_quote(fit_file_name) + " using \"position\":\"otr_fit\" with lines lc rgb 'gray30' lw 3 dt 2 title 'ori-ter bias fit (divided out)'");
   }
   if (have_copy_number) {
     // Piecewise-constant by nature, and drawn as the exact corners of each called segment -- see
-    // where the file is written for why this is not `with steps`.
-    clauses.push_back(double_quote(cn_file_name) + " using \"position\":\"copy_number\" with lines lc rgb 'red' lw 4 title 'copy number (HMM)'");
+    // where the file is written for why this is not `with steps`. Last in the list so it draws over
+    // everything else, and the heaviest line on the plot: it is the answer the page is about.
+    clauses.push_back(double_quote(cn_file_name) + " using \"position\":\"copy_number\" with lines lc rgb 'black' lw 5 title 'copy number (HMM)'");
   }
   s << "plot " << join(clauses, string(", \\\n     ")) << endl;
 
@@ -989,6 +1194,7 @@ void CNEvidence::render_gc_bias_plot(
   {
     size_t n_scatter = 0;
     for (size_t i = 0; i < windows.size(); i++) {
+      if (windows[i].is_redundant) continue;
       if ((windows[i].gc_percent > 0.0) && (windows[i].raw_cov > 0.0)) n_scatter++;
     }
     if (n_scatter > kMaximumScatterPoints) stride = (n_scatter / kMaximumScatterPoints) + 1;
@@ -1003,6 +1209,10 @@ void CNEvidence::render_gc_bias_plot(
   size_t kept = 0, n_drawn = 0;
   for (size_t i = 0; i < windows.size(); i++) {
     const cnery_window& w = windows[i];
+    // Redundant windows are left out of both clouds: CNery censored them from the LOWESS fit this
+    // figure exists to display, so a point of theirs sitting off the curve would look like the fit
+    // missing data it was actually never shown. Their inflated depth would set the y-axis too.
+    if (w.is_redundant) continue;
     if ((w.gc_percent <= 0.0) || (w.raw_cov <= 0.0)) continue;
     if ((kept++ % stride) != 0) continue;
 
@@ -1139,6 +1349,11 @@ void CNEvidence::draw_evidence_plots(
            ": could not read CNery output file " + break_pts_file_name);
     }
 
+    // Where this sequence has no usable measurement, at full resolution. Built here rather than
+    // inside render_cn_plot so that the overview -- whose windows are binned below -- still bands
+    // and breaks at the repeats' true extent instead of at bin boundaries.
+    const vector<cnery_region> redundant = redundant_regions(windows);
+
     // Whole-reference overview. Drawn even under --brief-html-mode, matching how draw_coverage
     // always produces its own per-reference overviews.
     {
@@ -1146,10 +1361,13 @@ void CNEvidence::draw_evidence_plots(
       // Only the coverage traces are binned; the copy-number line is drawn from the segments at full
       // precision, so a narrow event stays at its true width instead of being painted a bin wide.
       vector<cnery_window> overview_windows = bin_cnery_windows(windows, 4000);
-      render_cn_plot(overview_svg, seq.m_seq_id, overview_windows, segments,
+      // No redundant banding at this scale (hundreds of runs, each a pixel or two wide), and the
+      // ori-ter ramp is drawn HERE and only here -- this is the plot it is a statement about.
+      render_cn_plot(overview_svg, seq.m_seq_id, overview_windows, segments, redundant,
                      1, static_cast<int32_t>(seq.m_length),
                      1, static_cast<int32_t>(seq.m_length), otr,
-                     static_cast<int32_t>(seq.m_length), scale);
+                     static_cast<int32_t>(seq.m_length), scale,
+                     false, true);
     }
 
     // The GC correction the coverage above was corrected BY. Wants the unbinned windows: binning
@@ -1173,8 +1391,10 @@ void CNEvidence::draw_evidence_plots(
       int32_t plot_end = min(static_cast<int32_t>(seq.m_length), end + flanking);
 
       string svg = settings.evidence_path + "/CN_" + item._id + ".svg";
-      render_cn_plot(svg, seq.m_seq_id, windows, segments, plot_start, plot_end, start, end, otr,
-                     static_cast<int32_t>(seq.m_length), scale);
+      render_cn_plot(svg, seq.m_seq_id, windows, segments, redundant,
+                     plot_start, plot_end, start, end, otr,
+                     static_cast<int32_t>(seq.m_length), scale,
+                     true, false);
 
       if (file_exists(svg.c_str()))
         item["_cn_corrected_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);
