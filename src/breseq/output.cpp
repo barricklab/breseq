@@ -177,7 +177,25 @@ string htmlize(const string& input)
   /* substitute nonbreaking hyphen */
   retval = substitute(retval, "-", "&#8209;");
 
-  return retval;
+  /* Add a break opportunity after each comma that is not already followed by a space.
+     Every caller of htmlize() passes a gene name or a gene product. A gene list is joined
+     with a bare comma (cReferenceSequences::gene_list_separator) and the hyphens have just
+     been made nonbreaking above, so a list like "[insB-6],insA-6,nmpC,ybcR,..." is a single
+     unbreakable word as far as the layout engine is concerned. That one cell then sets its
+     table's minimum width -- 2582px on a real LTEE report -- and, because body is
+     min-width: min-content, the whole page with it. <wbr> is markup rather than a zero-width
+     space character, so it creates the break opportunity without ending up in text copied
+     out of the report. Commas inside prose product descriptions are already followed by a
+     space, which is a break opportunity of its own, so those are left alone. */
+  string retval_with_breaks;
+  retval_with_breaks.reserve(retval.size());
+  for (size_t i = 0; i < retval.size(); i++) {
+    retval_with_breaks += retval[i];
+    if ((retval[i] == ',') && ((i + 1 == retval.size()) || (retval[i+1] != ' ')))
+      retval_with_breaks += "<wbr>";
+  }
+
+  return retval_with_breaks;
 }
 
 /*-----------------------------------------------------------------------------
@@ -191,7 +209,23 @@ string header_style_string()
   // starts at viewport y=0 and its "position: sticky; top: 0" pin never has to move it.
   // Left/right/bottom stay at 8px (alignStickyColumns() reads paddingLeft and .sticky_left_mask
   // assumes 8px). See the .breseq-page-header rule below -- the two are coupled.
-  ss << "body {font-family: sans-serif; font-size: 11pt; margin: 0; padding: 0 8px 8px 8px;}" << endl;
+  //
+  // "min-width: min-content" lets body grow to the document's scrollable width. width stays auto
+  // (= the viewport), and min-width only ever clamps UPWARD, to the widest child's minimum content
+  // width. Two things depend on it:
+  //   (1) The sticky page header can never be wider than its containing block, which is body. With
+  //       body pinned at the viewport width, a horizontally scrolled page slides the header left and
+  //       exposes the band to its right, where table rows then show through. Letting body match the
+  //       scroll extent makes the header's -8px side-margin bleed span the whole scrollable width
+  //       instead, with no JS and no fixed-position mask.
+  //   (2) "table.report_table {width: 100%}" below then resolves against that same width, so the
+  //       report tables stay flush with each other even when one of them overflows the viewport.
+  // Deliberately min-content, not max-content / fit-content: max-content of a paragraph is its full
+  // unwrapped line, which would blow the page out sideways. min-content of prose is one word, so the
+  // only real contributors are things that already overflow today -- wide tables, coverage-plot
+  // images, alignment <pre> blocks. Engines that do not know min-content drop the declaration and
+  // get exactly today's behavior.
+  ss << "body {font-family: sans-serif; font-size: 11pt; margin: 0; padding: 0 8px 8px 8px; min-width: min-content;}" << endl;
   ss << "th {background-color: rgb(0,0,0); color: rgb(255,255,255);}"      << endl;
   ss << "table {background-color: rgb(1,0,0); color: rgb(0,0,0);}"         << endl;
   ss << "tr {background-color: rgb(255,255,255);}"                         << endl;
@@ -238,12 +272,15 @@ string header_style_string()
   // scrolled and the shift comes back at a different scroll threshold.
   //
   // The -8px left/right margins with matching 8px left/right padding bleed the white background
-  // and the bottom rule across the full window width while leaving the content box width
-  // unchanged (so nothing inside reflows). That also seals body's side-padding strips, where
-  // content of a horizontally scrolled table would otherwise show through beside the pinned
-  // header. Keep these in sync with body's padding above. (Not "width: 100vw" -- 100vw includes
-  // the scrollbar and would add a horizontal scrollbar.)
-  ss << ".breseq-page-header { background-color: white; border-bottom: 1px solid #ccc; padding: 12px 8px 4px 8px; margin: 0 -8px; }" << endl;
+  // across the full window width while leaving the content box width unchanged (so nothing inside
+  // reflows). That also seals body's side-padding strips, where content of a horizontally scrolled
+  // table would otherwise show through beside the pinned header. Keep these in sync with body's
+  // padding above. (Not "width: 100vw" -- 100vw includes the scrollbar and would add a horizontal
+  // scrollbar.)
+  //
+  // No border-bottom: the first thing under the header is always a table whose own dark header row
+  // is a hard edge already, and once the header is pinned the rule ends up squashed against it.
+  ss << ".breseq-page-header { background-color: white; padding: 12px 8px 4px 8px; margin: 0 -8px; }" << endl;
   ss << ".breseq-page-header p { margin: 0.3em 0; }"                           << endl;
   // Reserve the logo's box before the PNG loads (breseq_icon.png is 54x32). Without this the
   // header is ~25px short at first layout and grows when the image paints -- a visible jump on
@@ -251,6 +288,16 @@ string header_style_string()
   ss << ".breseq-page-header img { width: 54px; height: 32px; }"               << endl;
   ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; }"    << endl;
   ss << ".sample_name { font-size: 14pt; font-weight: bold; text-align: left; margin: 0 0 4px 0; }" << endl;
+  // Every top-level report table (predicted mutations + each unassigned-evidence table) carries
+  // class="report_table" and is sized here rather than by an HTML width= attribute, so they all end
+  // flush with each other. The tables also mark their last column <th width="100%"> -- keep that: it
+  // is what makes description/product absorb the slack instead of spreading it over every column.
+  // A percentage width on a CELL is the part of the auto table layout algorithm that CSS 2.1 leaves
+  // explicitly non-normative, so on its own it sized these tables differently in each engine and
+  // rescaled them differently on window resize. A specified width on the TABLE resolves against a
+  // definite containing block and is interoperable. Do not promote this to a bare "table" rule --
+  // the summary/gate/BAM2ALN tables and the header's own nav table must stay shrink-to-fit.
+  ss << "table.report_table { width: 100%; }"                                  << endl;
   // Sticky column-header cells. The tables use cellspacing="1" over a near-black table
   // background, so a 1px gap surrounds every cell. The sticky th covers its own box but not
   // that gap, so rows scrolling up flash through the 1px band at the header's bottom edge.
@@ -646,7 +693,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   }
 
   if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() + mp.size() + pd.size() > 0) {
-    HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>";
+    HTML << "<p>Jump to: <a href=\"#mutation_list\">predicted mutations</a>";
     HTML << " | Unassigned evidence: ";
     vector<string> jump_link_list;
     if (mc.size() > 0)
@@ -2153,7 +2200,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   stringstream ssf; //!< Used for formatting strings
   
   ss << "<div id=\"read_alignment_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\", cellpadding=\"3\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   
   // Evidence hyperlinks will be the first column if they exist
   bool link;
@@ -2412,7 +2459,7 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   
   ss << endl;
   ss << "<div id=\"missing_coverage_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100%\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   
   bool coverage_plots = list_ref.front()->entry_exists(_EVIDENCE_FILE_NAME);
     
@@ -2549,7 +2596,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
                test_item.entry_exists(_NEW_JUNCTION_EVIDENCE_FILE_NAME));
 
   ss << "<div id=\"new_junction_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 13 : 11; //@ded 12/10 instead of 11/9 for frequency addition, +1 more for its range. SNPS set up to only do so if frequency is != 1 should this be done here as well?
   
   ss << "<thead>" << endl;
@@ -3373,7 +3420,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
   int link_cols = (link ? 1 : 0) + (side_link ? 1 : 0);
 
   ss << "<div id=\"discordant_pair_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = 10 + link_cols;
 
   ss << "<thead>" << endl;
@@ -3557,7 +3604,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
   
   ss << "<div id=\"copy_number_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 10 : 9;
   
   ss << "<thead>" << endl;
@@ -3648,7 +3695,7 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
   bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
 
   ss << "<div id=\"soft_clipping_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 16 : 15;
 
   ss << "<thead>" << endl;
@@ -3764,7 +3811,7 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
   bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
 
   ss << "<div id=\"missing_pair_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 14 : 13;
 
   ss << "<thead>" << endl;
@@ -3861,7 +3908,7 @@ string html_pair_distance_table_string(diff_entry_list_t& list_ref, bool show_de
   bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
 
   ss << "<div id=\"pair_distance_list\">" << endl;
-  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 13 : 12;
 
   ss << "<thead>" << endl;
@@ -5093,7 +5140,7 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
     (*this) += "<div class=\"sticky_left_mask\"></div>\n";
     (*this) += "<div class=\"sticky_top_mask\"></div>\n";
   }
-  (*this) += "<table border=\"0\" cellspacing=\"1\" cellpadding=\"3\">\n";
+  (*this) += "<table class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\">\n";
   this->Header_Line();
   this->Item_Lines();
   (*this) += "</table></div>\n";
@@ -5211,7 +5258,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
  
     ss << th(CLASS_ANNOTATION, "annotation") << endl;
     ss << th(CLASS_GENE, "gene") << endl;
-    ss << th(string(CLASS_DESCRIPTION)+"width=\"100%\"","description") << endl;
+    ss << th(string(CLASS_DESCRIPTION)+string(" width=\"100%\""),"description") << endl;
     ss << "</tr>" << endl;
   }
 
