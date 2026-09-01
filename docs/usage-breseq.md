@@ -45,6 +45,33 @@ Do not predict new sequence junctions.
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
 
+### Evidence prediction options
+
+Four kinds of evidence are **off by default** and must be requested. All are experimental; each links
+to a page describing what it detects, what gates it applies, and why an item is rejected.
+
+`--predict-copy-number`\
+[CN evidence](evidence-cn.md) — regions whose read depth implies a copy number other than one.
+
+`--predict-soft-clipping`\
+[SC evidence](evidence-sc.md) — positions where reads stop aligning part-way and their tails agree
+on what follows. Note this also lowers `--require-match-fraction` from 0.9 to 0.5 unless you set it
+explicitly, which changes the alignments every other evidence type is computed from.
+
+`--predict-discordant-pairs`\
+[DP evidence](evidence-dp.md) — breakpoints joined by read pairs that are individually mis-mapped,
+including mates on two different reference sequences. Requires paired reads.
+
+`--predict-missing-pairs`\
+[MP evidence](evidence-mp.md) — insertion points of sequence absent from the reference, seen as reads
+whose mates map nowhere. Requires paired reads.
+
+`--predict-pair-distance`\
+[PD evidence](evidence-pd.md) — points where the read pairs spanning them are collectively shifted in
+mapping distance, detecting events too small for `DP` to see. Requires paired reads.
+
+Each has its own group of tuning options in `breseq --help`; the per-type pages document them.
+
 !!! tip
     For a complete list of options (including many advanced options), please show the full command line help by running `breseq -h` or `breseq --help`.
 

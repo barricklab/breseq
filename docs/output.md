@@ -17,10 +17,10 @@ You can load these files directly in a browser to examine the results, or copy t
 Key files include:
 
 `output/index.html` \
-The main results page. It consists of an upper table showing predicted mutational events and possibly several other tables showing high-quality "orphan" evidence that _breseq_ was unable to assign to mutational events. The format of each row varies depending on the type of mutation, as described in `mutation-display` and `evidence-display`.
+The main results page. It consists of an upper table showing predicted mutational events and possibly several other tables showing high-quality "orphan" evidence that _breseq_ was unable to assign to mutational events. The format of each row varies depending on the type of mutation, as described in [Mutation Display](#mutation-display) and [Evidence Display](#evidence-display).
 
 `output/marginal.html`\
-Result page showing evidence for mutations with marginal support. Specifically: (1) RA evidence that supports a mutated base or indel more than the reference sequence, but without sufficient support to pass the cutoff threshold, and (2) JC evidence for a set number of the highest scoring junctions that do not pass all test criteria. The format of these tables is described in `evidence-display`.
+Result page showing evidence for mutations with marginal support. Specifically: (1) RA evidence that supports a mutated base or indel more than the reference sequence, but without sufficient support to pass the cutoff threshold, and (2) JC evidence for a set number of the highest scoring junctions that do not pass all test criteria. The format of these tables is described under [Evidence Display](#evidence-display).
 
 `output/summary.html`\
 Additional information about the read files, reference sequences, analysis settings, and results. Links to plots showing the re-calibrated base error model, coverage distribution for each reference sequence, and coverage across each reference sequence.
@@ -37,7 +37,7 @@ Column descriptions:
 
 `evidence`\
 Links to the types of evidence that support this particular prediction.
-See `evidence-display`.
+See [Evidence Display](#evidence-display).
 
 `seq id`\
 The identifier for the reference sequence with the mutation. This column
@@ -160,7 +160,7 @@ A 6,934-base deletion starting at position 3,894,997. The *annotation*
 column reports that it is IS150-mediated, because this repetitive
 element occurs on one margin of the deletion. This deletion begins
 before the *rbsD* gene and ends within the *yieO* gene. This mutation is
-supported by `new-junction-display` and `missing-coverage-display`
+supported by [JC evidence](evidence-jc.md) and [MC evidence](evidence-mc.md)
 evidence.
 
 <figure>
@@ -170,7 +170,7 @@ evidence.
 A single-base deletion at position 1,332,148 in an intergenic region.
 The deleted nucleotide is located 131 bp downstream of the *topA* gene
 and 79 bp upstream of the *cysB* gene. This mutation is supported by
-`read-alignment-display`.
+[RA evidence](evidence-ra.md).
 
 ### Mobile element insertion (MOB)
 
@@ -231,256 +231,46 @@ frameshift.
 
 ## Evidence Display
 
-Evidence is shown in tables with different fields from mutation
-predictions, that provide more detailed information about support for
-genomic changes. Clicking on any evidence link for a mutation prediction
-will also bring up pages with tables showing all items of evidence that
-_breseq_ used to predict the mutational event.
+Evidence is shown in tables with different fields from mutation predictions, that provide more
+detailed information about support for genomic changes. Clicking on any evidence link for a mutation
+prediction will also bring up pages with tables showing all items of evidence that _breseq_ used to
+predict the mutational event.
+
+There are nine kinds of evidence. **The column reference for each one, together with how that
+evidence is produced and why an item is rejected, is on its own page under
+[Evidence Types](evidence-overview.md):**
+
+| | | |
+|---|---|---|
+| [RA](evidence-ra.md) — read alignment | [MC](evidence-mc.md) — missing coverage | [JC](evidence-jc.md) — new junction |
+| [CN](evidence-cn.md) — copy number | [UN](evidence-un.md) — unknown base | [SC](evidence-sc.md) — soft clipping |
+| [DP](evidence-dp.md) — discordant pair | [MP](evidence-mp.md) — missing pair | [PD](evidence-pd.md) — pair distance |
+
+A few conventions apply to every evidence table:
+
+- An item that passed all of its tests is **accepted**, and appears on `index.html` — attached to the
+  mutation it supports, or under an "unassigned evidence" banner if no mutation prediction consumed
+  it.
+- An item that failed a test is **rejected**, and appears on `marginal.html` with a row reading
+  *Rejected:* followed by the reason. Only a capped number of rejected items per type is shown, so
+  the GenomeDiff file is the complete record.
+- An item may also be **ignored**, meaning it is dropped from the report entirely as an artifact of
+  the reference's shape — spanning the origin of a circular sequence, or sitting at a contig end.
+
+These three states, the shared `freq`/`range`/`score` columns, and the full list of rejection reasons
+are explained in the [Evidence overview](evidence-overview.md).
 
 ### New Junction (JC)
 
-Each JC row consists of two sub-rows, one describing one side of the
-junction in the reference sequence. If a sub-row is highlighted in
-orange, it means that side of the junction ambiguously maps to more than
-one place in the reference. In this case, the coordinate shown is an
-example of one site.
-
-Column descriptions:
-
-`* link`\
-Links to a results page showing the sequence of the new junction as the
-reference and all reads aligned to the junction.
-
-`? links`\
-Links to a results pages for each side of the juncton, that show the
-reference sequence at that site and any reads that aligned better to
-this original sequence than to the new junction. Note that in some cases
-(such as tandem duplications), it is possible for both the new and old
-junction sequences to exist in the sample. You can check for this by
-examining these read alignments. Sequences where the read name has a -M1
-or -M2 appended are reads that mapped better to the new junction.
-
-`seq id`\
-Identifiers for the reference sequences involved in the new junction.
-
-`position`\
-Positions in the reference sequence of the two sides of the new
-junction. Each position has an equals sign (=) before or after it that
-represents how the junction was constructed. The joined pieces of the
-reference sequence approach the given coordinates from the sides with
-the equals signs. The displayed coordinates are juxtaposed with each
-other to make the new junction. See the figure below for an illustration
-of different junction orientations.
-
-`overlap`\  
-If positive, the number of bp in the junction that could map to either
-side in the reference sequence. Generally, positive overlap has been
-resolved to zero by assigning these base pairs to one side of the
-junction. If negative, the number of bp that are unique to reads mapping
-across the junction and represent insertions relative to the reference
-sequence.
-
-`reads`\
-The total number of reads that map to this junction.
-
-`score`\
-The position-hash score for the junction in **\<bold angle brackets>**
-and the minimum-overlap score on the next line.
-
-`freq`\
-Frequency of the new junction: reads supporting the junction divided by
-those supporting the junction plus those spanning the original reference
-sequence at the same breakpoint. `NA` when neither side falls in unique
-sequence, so no denominator can be formed.
-
-`range`\
-Confidence limits on `freq` — exact (Clopper-Pearson) bounds, taken at
-the effective depth implied by how well each read distinguishes the
-junction from the reference rather than at the raw read count. As in the
-read alignment table, this is the interval the frequency cutoffs test,
-so a junction can be rejected at a frequency above its cutoff.
-
-`annotation, gene, product`\
-Description of the effects of this change on each side of the junction.
-The format of these columns is the same as in `mutation-display`.
-
-**Explanation of New Junction Orientations**
-
-<figure>
-<img src="../images/jc_side_explanation.png" width="600" />
-</figure>
-
-*Figure Credit: Jeff Barrick with additions by Emily Layton*
-
-In the HTML output, equals signs next to the coordinates indicate how
-the two sides of split reads supporting a junction are oriented in
-relation to the reference coordinates that are joined together in the
-sample. In the GenomeDiff output, the strands of each side of the
-junction are given as –1 or +1 to indicate how the read leads up to the
-junction on the first side and continues after the junction on the
-second side. The most common type of junction has a side 1 strand of -1
-and a side 2 strand of +1 and can indicate that there has been a
-deletion.
-
-Examples:
-
-<figure>
-<img src="../images/jc_1.png" width="750" />
-</figure>
-
-This image shows the page from clicking on the \* link for this
-junction. A partial alignment of reads to the new junction is shown.
-Notice the two joined pieces of the reference sequence at the top that
-they align to. This sequence is on the bottom strand of the reference if
-start is greater than end. The end of the junction in yellow indicates that end maps to a repetitive region of the reference.
-
-<figure>
-<img src="../images/jc_2.png" width="750" />
-</figure>
-
-This image shows the page from clicking on one of the ? links for this
-junction. Notice that only a piece of the reads maps to this region and
-that it ends where these reads begin matching a disjoint region in the
-reference genome. Clearly the old junction is not supported by any reads
-in this sample and must no longer exist. Once again, only a partial
-alignment is shown.
+Moved to [JC: New junction evidence](evidence-jc.md).
 
 ### Read alignment (RA)
 
-Column descriptions:
-
-`* link`\
-Links to a results page showing the alignment of reads to this position.
-
-`seq id`\
-Identifier for the reference sequence where the change is located.
-
-`position`\
-Position in the reference sequence of the single base substitution,
-insertion, or deletion. It consists of two parts. The first is the
-reference position, the second is an "insert count" that - if greater
-than zero - indicates this is in a column of the alignment that does not
-exist in the reference sequence (i.e., it is an insertion relative to
-the reference and is this many columns past the specified reference
-position.).
-
-`change`\
-The base change, deletion, or insertion.
-
-`freq`\
-Frequency of this base change in the sample. In consensus mode this is
-still the fitted estimate rather than a snapped 0% or 100%; whether the
-position was called fixed or mixed is recorded separately, and only the
-predicted mutation reports a rounded 100%.
-
-`range`\
-Confidence limits on `freq`, shown as a percentage range. Each endpoint
-is a one-sided 95% bound, so the interval is 90% two-sided. For read
-alignment evidence the limits come from the profile likelihood of the
-fitted allele model, so they widen for low coverage or poor base quality
-rather than tracking read count alone.
-
-This is the interval the frequency cutoffs are applied to — not the
-point estimate in `freq`. An item can therefore be rejected at a
-frequency that reads as comfortably above its cutoff, because it is the
-bound that falls below. The same column appears on new junction (`JC`),
-soft clipping (`SC`), discordant pair (`DP`), missing pair (`MP`), and
-pair distance (`PD`) evidence, where the limits are exact
-(Clopper-Pearson) bounds on the underlying read counts.
-
-`score`\
-The base-10 logarithm ratio of the posterior probability that this
-position in the sample is the called base to the probability that it is
-any other base, minus the base-10 logarithm of the total number of
-positions in all reference sequences. The higher the score, the more
-evidence for the mutation.
-
-Soft clipping (`SC`), missing pair (`MP`), and pair distance (`PD`)
-evidence each carry a `score` of the same *form* &mdash; minus the log10
-of the number of items this good expected anywhere in the reference by
-chance, so that 0 means "expected once per genome" and 3 means "once per
-thousand genomes" &mdash; but the statistic underneath differs by type,
-and in each case the null it is measured against is fitted to the run
-rather than assumed. The `summary.html` gates table for each type reports
-the fitted null, so a run that predicts unusually few or many can be
-explained.
-
-`cov`\
-The number of reads overlapping the mutation. Note that portions of
-reads that are not aligned (lowercase bases with a white background),
-ends of reads that have been trimmed because alignments their may be
-ambiguous (lowercase bases with a colored background), and read
-positions with very low base quality scores that typically indicate
-sequencing errors (highlighted in yellow) are not counted in this
-coverage number.
-
-`annotation, gene, product`\ 
-Description of the change's effects for each side of the junction. The
-format of these columns is the same as in `mutation-display`.
-
-Example:
-
-<figure>
-<img src="../images/ra_1.png" width="750" />
-</figure>
-
-Partial alignment of reads showing that most support a base
-substitution. The `>` and `<` for each named read indicate the strand of
-the reference sequence that it matched (top and bottom, respectively).
+Moved to [RA: Read alignment evidence](evidence-ra.md).
 
 ### Missing coverage (MC)
 
-Column descriptions:
-
-`* links`\
-Links to results pages showing the alignment of reads to the left and
-right margins of the region with missing coverage.
-
-`÷ link`\
-Link to the results page showing a plot of the read coverage in the
-region of the msising coverage.
-
-`seq id`\
-Identifier for the reference sequence where the change is located.
-
-`start, end, size`\
-The start and end reference positions and size of the missing coverage.
-May indicate a range of positions when one end of the missing coverage
-is in a repeat region.
-
-`← cov`\
-Unique read coverage depth on the left margin of the region of missing
-coverage. Coverage at the last position outside the region is shown
-followed by coverage at the first position inside the region of missing
-coverage in brackets.
-
-`→ cov`\
-Unique read coverage depth on the right margin of the region of missing
-coverage. Coverage at the last position inside the region is shown
-followed by coverage at the first position outside the region.
-
-`gene, description`\
-Description of the change's effects for each side of the junction. The
-format of these columns is the same as in `mutation-display`.
-
-Example:
-
-<figure>
-<img src="../images/mc_1.png" width="750" />
-</figure>
-
-Read coverage depth around the missing coverage. The white area shows
-the maximal boundaries of the predicted range.
-
-The graphed lines are labeled "unique" for reads with only one best
-match to the reference genome and "repeat" for multiple equally good
-matches to repeat sequences (which are down-weighted by how many matches
-they have, i.e. a read matching three places contributes 1/3 to the
-coverage depth at each matched site). Within each type coverage is
-graphed separately for reads mapping to the "top" and "bottom" strands
-of the reference sequence (i.e., forward and reverse complement matches)
-to aid in detecting artifacts, and these sum to the "total" coverage
-value.
+Moved to [MC: Missing coverage evidence](evidence-mc.md).
 
 # Data Output (Computer-Readable)
 

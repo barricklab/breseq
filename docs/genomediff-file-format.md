@@ -472,6 +472,11 @@ _breseq_.
 
 ## Evidence Types
 
+Evidence types are listed here in `sort_order`, the same order they appear in a GenomeDiff file and
+in `output/index.html`. This section is the normative **field specification**. For how each kind of
+evidence is produced, what gates it must pass, and why an item is rejected, see the corresponding
+page under [Evidence Types](evidence-overview.md).
+
 ### RA: Read alignment evidence
 
 Line specification:
@@ -499,6 +504,8 @@ Line specification:
 8.  **new_base** *\<char>*
 
     new base supported by read alignment evidence.
+
+See [RA: Read alignment evidence](evidence-ra.md) for how this evidence is produced.
 
 ### MC: Missing coverage evidence
 
@@ -529,6 +536,8 @@ Line specification:
 
 Essentially this is evidence of missing coverage between two positions
 in the ranges \[start, start+start_range\] \[end-end_range, end\].
+
+See [MC: Missing coverage evidence](evidence-mc.md) for how this evidence is produced.
 
 ### JC: New junction evidence
 
@@ -561,12 +570,213 @@ in the ranges \[start, start+start_range\] \[end-end_range, end\].
     Number of bases that the two sides of the new junction have in
     common.
 
+See [JC: New junction evidence](evidence-jc.md) for how this evidence is produced.
+
+### CN: Copy number evidence
+
+A run of reference tiles whose corrected, normalized read depth implies a number of copies in the
+sample different from one. Unlike every other evidence type, `CN` is built from coverage depth alone
+and never examines how an individual read aligned, so its coordinates are tile boundaries rather than
+breakpoints.
+
+Predicted only when `--predict-copy-number` is given. This functionality is experimental.
+
+Line specification:
+
+4.  **seq_id** *\<string>*
+
+    id of reference sequence fragment containing the region.
+
+5.  **start** *\<uint32>*
+
+    start position in reference sequence of the region.
+
+6.  **end** *\<uint32>*
+
+    end position in reference sequence of the region.
+
+7.  **copy_number** *\<uint32>*
+
+    the integer number of copies of this region inferred to be present in the sample. `0` means the
+    region appears to be deleted.
+
+Notable name=value pairs:
+
+*   **relative_coverage** *\<float>* — the corrected, normalized coverage over the region's tiles,
+    where 1.0 is one copy. This is the underlying measurement; **copy_number** is it rounded, so the
+    two together say how confident the rounding was.
+*   **tile_size** *\<uint32>* — the width of the tiles the item was built from, and therefore the
+    resolution of **start** and **end**.
+
+`CN` items are never rejected.
+
+See [CN: Copy number evidence](evidence-cn.md) for how this evidence is produced.
+
+### UN: Unknown base evidence
+
+Line specification:
+
+4.  **seq_id** *\<string>*
+
+    id of reference sequence fragment containing mutation, evidence, or
+    validation.
+
+5.  **start** *\<uint32>*
+
+    start position in reference sequence of region.
+
+6.  **end** *\<uint32>*
+
+    end position in reference sequence of region.
+
+`UN` items carry no name=value pairs and are never rejected.
+
+See [UN: Unknown base evidence](evidence-un.md) for how this evidence is produced.
+
+### SC: Soft clipping evidence
+
+A position where reads stop aligning part-way along their length and their unaligned tails agree with
+one another on what comes next. `SC` is one-sided: the clipped tail is real sequence but is not
+itself aligned, so the item names the breakpoint base and the tail's consensus but not what the tail
+matches. A real breakpoint normally produces two `SC` items, one per clip direction, on opposite
+strands.
+
+This is the case [`JC`](evidence-jc.md) covers when *both* halves of a read align. Where only one
+half does, `SC` is what remains.
+
+Predicted only when `--predict-soft-clipping` is given. This functionality is experimental. Note that
+it also lowers `--require-match-fraction` from 0.9 to 0.5 unless set explicitly, which changes the
+alignments every other evidence type in the run is computed from.
+
+Line specification:
+
+4.  **seq_id** *\<string>*
+
+    id of reference sequence fragment containing the clip position.
+
+5.  **position** *\<uint32>*
+
+    the last aligned reference base before the clip.
+
+6.  **strand** *\<1/-1>*
+
+    which side of **position** the clipped tails extend towards.
+
+Notable name=value pairs:
+
+*   **clipped_sequence** — the consensus of the clipped tails. Matching this back to the reference by
+    hand is often what identifies the event.
+*   **consensus_fraction** *\<float>* — the fraction of clipped reads at this position agreeing with
+    that consensus.
+*   **agree_read_count**, **agree_read_count_forward**, **agree_read_count_reverse** — clipped reads
+    agreeing with the consensus, and their strand split. A zero in one of the two strand fields is
+    the fastest way to spot an end-of-read artifact by eye.
+*   **read_count** — all clipped reads at the position, agreeing or not.
+*   **spanning_read_count_forward**, **spanning_read_count_reverse** — reads aligning straight
+    through the position, by strand. The comparison group for the strand test.
+*   **total_count** — clipped plus spanning reads.
+*   **fisher_strand_p_value** *\<float>* — Fisher's exact test of the clipped reads' strand split
+    against that of the spanning reads. **On real data this, not the score, is what rejects most
+    false positives**, because the dominant artifacts are always the read's 3' end and so appear on
+    only one strand for a given clip direction.
+*   **log10_e_value** *\<float>* — minus the log10 of the expected number of positions anywhere in
+    the reference showing agreement this strong by chance, given a background clipping rate and
+    dispersion fitted to the run and reported in the "Soft clipping (SC) evidence metrics" table of
+    `summary.html`.
+*   **frequency**, **frequency_lower**, **frequency_upper** — the clipped fraction and its 95%
+    confidence bounds. The cutoff is applied to **frequency_lower**, so an item can be rejected at a
+    frequency that reads as above it.
+
+See [SC: Soft clipping evidence](evidence-sc.md) for how this evidence is produced.
+
+### DP: Discordant pair evidence
+
+Two breakpoints joined by read pairs that are, individually, mapped wrongly — in the wrong
+orientation, farther apart than the library's cutoff, or **with their two mates on two different
+reference sequences**.
+
+That third case makes `DP` the only evidence type that is genuinely two-sided across sequences:
+**side_1_seq_id** and **side_2_seq_id** are independent, so a plasmid integration or a translocation
+between two contigs is a single `DP` item. A cross-sequence pair has no within-sequence orientation
+and no meaningful distance, so it is binned into an orientation slot of its own rather than being
+forced into one of the same-sequence categories.
+
+For the same reason, `DP` is deliberately **exempt** from the rule that marks evidence at a contig
+end with `ignore=CONTIG_END`: a cross-sequence `DP` sits at two contig ends by construction, and
+applying the rule would discard every translocation call.
+
+Because each pair is tested on its own, `DP` cannot see an event too small to make any individual
+pair an outlier, and it applies no cutoff at all on the short side. That band belongs to
+[`PD`](evidence-pd.md), and where a `PD` and a `DP` describe the same breakpoint the `DP` is removed.
+
+Predicted only when `--predict-discordant-pairs` is given. This functionality is experimental.
+
+Line specification:
+
+4.  **side_1\_seq_id** *\<string>*
+
+    id of reference sequence fragment containing side 1.
+
+5.  **side_1\_position** *\<uint32>*
+
+    position of side 1 at the breakpoint.
+
+6.  **side_1\_strand** *\<1/-1>*
+
+    direction that side 1 continues matching the reference sequence.
+
+7.  **side_2\_seq_id** *\<string>*
+
+    id of reference sequence fragment containing side 2. May differ from **side_1\_seq_id**.
+
+8.  **side_2\_position** *\<uint32>*
+
+    position of side 2 at the breakpoint.
+
+9.  **side_2\_strand** *\<1/-1>*
+
+    direction that side 2 continues matching the reference sequence.
+
+Notable name=value pairs:
+
+*   **discordant_count** — read pairs supporting this junction.
+*   **distinct_discordant_count** — distinct fragment ends among them, so that PCR duplicates of one
+    molecule cannot carry a prediction.
+*   **candidate_discordant_count** — the count while the candidate region was open, before the
+    breakpoints were finally placed.
+*   **concordant_count** *\<float>* — pairs spanning the breakpoint normally. These molecules carry
+    unbroken reference sequence there, so they are evidence against the call and the second term of
+    the frequency.
+*   **expected_concordant_count** *\<float>* — how many concordant pairs would be expected to span a
+    normal position at this coverage. Comparing this with **concordant_count** is the skew test: a
+    real junction depletes the molecules crossing it.
+*   **side_1\_concordant_count**, **side_2\_concordant_count**, **side_1\_discordant_count**,
+    **side_2\_discordant_count** — the same counts measured at each side separately.
+*   **side_1\_coverage**, **side_2\_coverage** — local read-depth coverage at each side. `NA` where
+    that side falls in repetitive sequence.
+*   **side_1\_redundant**, **side_2\_redundant** — set when that side maps to more than one place, so
+    the coordinate shown is one example among several.
+*   **neg_log10\_discordance_p_value** *\<float>* — the concordant pair skew score. Only applied as a
+    rejection when the run has enough expected crossing pairs for the test to discriminate; below
+    `--discordant-pair-minimum-crossing` it is reported but does not reject.
+*   **background_e_value** *\<float>* — the expected number of junctions this well supported arising
+    by chance across the run's candidate junctions, from a fitted spurious-pair background.
+*   **pooled_discordant_count** — present when sibling junctions of one insertion were judged
+    together.
+*   **new_junction_coverage** *\<float>* — coverage attributable to the new junction.
+*   **frequency**, **frequency_lower**, **frequency_upper** — discordant divided by discordant plus
+    concordant pairs, with exact 95% bounds. The cutoff is applied to **frequency_lower**.
+*   **ignore** — `CIRCULAR_CHROMOSOME` when the two sides are the two ends of a circular sequence,
+    which are physically adjacent; such items are dropped from the report rather than rejected.
+
+See [DP: Discordant pair evidence](evidence-dp.md) for how this evidence is produced.
+
 ### MP: Missing pair evidence
 
 A point where a *novel* sequence &mdash; one present in neither the reference nor any candidate
 junction &mdash; has been inserted. A fragment spanning such a point puts one mate in reference
 sequence, where it maps, and the other in the insert, where it maps nowhere. The mapped mates
-therefore pile up facing the insertion point. This is precisely the case neither `JC` nor `DP` can
+therefore pile up facing the insertion point. This is precisely the case neither [`JC`](evidence-jc.md) nor [`DP`](evidence-dp.md) can
 see: `JC` needs a read split across the breakpoint with both halves mapping, `DP` needs both mates
 mapped. `MP` is the only evidence type that can see sequence absent from the reference entirely.
 
@@ -574,7 +784,8 @@ mapped. `MP` is the only evidence type that can see sequence absent from the ref
 normally produces two `MP` items, one per shoulder, on opposite strands.
 
 A read supports an `MP` call only when its mate produced *no alignment at all*. A mate that aligns
-over part of its length is a partially-aligning read &mdash; the signal `SC` reports &mdash; not
+over part of its length is a partially-aligning read &mdash; the signal [`SC`](evidence-sc.md)
+reports &mdash; not
 evidence that its sequence is missing from the reference.
 
 Predicted only when `--predict-missing-pairs` is given. This functionality is experimental.
@@ -614,7 +825,7 @@ Notable name=value pairs:
     means one such position is expected per genome, 3 means one per thousand genomes. **This is the
     test that decides an `MP` call**; every other field below is a local sanity check. The null it is
     measured against is fitted to the run itself and reported in the "Missing pair (MP) evidence
-    gates" table of `summary.html`.
+    metrics" table of `summary.html`.
 *   **unpaired_read_count** — supporting reads: mapped, on the crossing strand, with the flank on the
     kept side, and with a mate that aligned nowhere.
 *   **window_read_count** — *every* crossing-strand read on the kept flank within the counting
@@ -636,13 +847,16 @@ Notable name=value pairs:
     diagnostic; nothing is gated on it.
 *   **redundant** — present when a majority of the supporting reads mapped to more than one place.
 
+See [MP: Missing pair evidence](evidence-mp.md) for how this evidence is produced.
+
 ### PD: Pair distance evidence
 
 A point where the read pairs whose unsequenced middle gap spans it map at a systematically different
 distance from the one the sequencing library predicts. Pairs mapping *farther* apart than expected
 mean the sample is missing reference sequence there; pairs mapping *closer together* mean sequence
 was added. Neither shift has to be large enough to make any individual pair discordant, which is what
-distinguishes PD from `JC` (which needs a read split across the breakpoint) and from `DP` (which
+distinguishes PD from [`JC`](evidence-jc.md) (which needs a read split across the breakpoint) and
+from [`DP`](evidence-dp.md) (which
 tests each pair on its own, and applies no cutoff at all on the short side).
 
 Predicted only when `--predict-pair-distance` is given. This functionality is experimental.
@@ -695,22 +909,7 @@ Notable name=value pairs:
 *   **snapped_to_junction** — present when the coordinates were taken from a validated split-read
     junction inside the interval, and are therefore exact to the base.
 
-### UN: Unknown base evidence
-
-Line specification:
-
-4.  **seq_id** *\<string>*
-
-    id of reference sequence fragment containing mutation, evidence, or
-    validation.
-
-5.  **start** *\<uint32>*
-
-    start position in reference sequence of region.
-
-6.  **end** *\<uint32>*
-
-    end position in reference sequence of region.
+See [PD: Pair distance evidence](evidence-pd.md) for how this evidence is produced.
 
 ## Validation Types
 

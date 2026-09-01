@@ -1,224 +1,48 @@
-This section describes the algorithms used by _breseq_.
+This section describes the algorithms used by _breseq_ that are shared across evidence types,
+and how the evidence it gathers is turned into mutation predictions.
+
+The detection algorithm for each individual kind of evidence has its own page under
+[Evidence Types](evidence-overview.md).
 
 # Read mapping
 
 _breseq_ uses [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2)
 to map reads to the reference genome sequence.
 
-Currently, _breseq_ does not use the distance contraints available
-in paired-end or mate-paired libraries during read alignment or as a
-source of evidence supporting mutations. These data sets are treated as
-single-end reads.
+_breseq_ does not use the distance constraints available in paired-end or mate-paired
+libraries during read *alignment* — each read is mapped on its own merits. It does use
+them afterwards as a source of evidence: [DP](evidence-dp.md), [MP](evidence-mp.md) and
+[PD](evidence-pd.md) are all built from how the two mates of a pair were placed relative
+to one another. Those three evidence types are experimental and off by default, so
+without them a paired data set is effectively treated as single-end reads.
 
 _breseq_ keeps track of two kinds of read alignments:
 
-<span class="title-ref">unique read matches</span>  
+**unique read matches**\
 Where a read aligns best to only one location in the reference sequence.
 
-<span class="title-ref">repeat read matches</span>  
+**repeat read matches**\
 Where a read aligns equivalently to multiple locations in the reference
 sequence (because the repeats are longer than the read length).
 
 For some calculations, _breseq_ is concerned with:
 
-<span class="title-ref">unique-only reference positions</span>  
-Position in the reference sequence that do not overlap any *repeat read
+**unique-only reference positions**\
+Positions in the reference sequence that do not overlap any *repeat read
 matches*.
 
 # New junction evidence (JC)
 
-First, _breseq_ searches for mosaic read alignments that may
-indicate new junctions in the sample between disjoint regions of the
-reference sequence.
-
-## Identifying candidate junctions
-
-In a pre-processing step, all read alignments with insertions or
-deletions of more than 2 bases are split into their constituent
-sub-alignments. This strategy tends to be more accurate than looking for
-these types of mutations as `read-alignment-evidence` because gaps
-larger than a couple of bp can be problematic for generating accurate
-and consistent read alignments, especially for indels involving simple
-sequence repeats.
-
-Next, for each read that has multiple alignments to the reference, all
-pairs of alignments are tested to find cases where:
-
-1.  One alignment begins with the first base of the read.
-2.  Both alignments together cover a number of bases in the read that is
-    more than 2 bases longer than the length covered by any other single
-    alignment.
-3.  Both alignments contain at least 5 read bases that do not overlap
-    the other.
-4.  One alignment contains at least 10 read bases that do not overlap
-    the other.
-5.  There are at most 20 bp unique to the read between matches to the
-    reference.
-
-If a pair of alignments passes this test, _breseq_ generates the
-putative sequence of the new junction from the reference sequence and
-any intervening base pairs that are unique to the read.
-
-In cases where the two read alignments overlap because some of its
-sequence could be assigned to match either location in the reference
-genome, _breseq_ first trims each alignment to remove portions with
-mismatched bases or indels, then assigns as much of this overlap as
-possible to the side of the read that maps uniquely to the reference
-genome, or to the side with the lowest reference coordinate. It
-considers a location in the reference genome non-unique if it has repeat
-matches. If `repeat_region` annotation exists in the reference genome,
-then _breseq_ prefers to have junctions exactly overlap their
-boundaries.
-
-This candidate junction sequence includes as many flanking reference
-bases on each end as the longest read in the entire data set. (So, if
-the data set consists of 36-bp reads, and the two read alignments
-overlapped by five bases, the sequence for this candidate junction would
-be 36 x 2 – 5 = 67 bases.
-
-After processing every read in this manner, _breseq_ combines all
-candidate junctions that match the same reference sequence and
-calculates a "position-hash" score. This score is a count of the number
-of _different_ start position-strand combinations in the
-reference sequence that are observed among the reads that support a
-candidate junction. This scoring scheme favors junctions supported by
-reads that are evenly distributed on each strand of the reference genome
-and evenly distributed at different positions relative to the junction
-point. (Pathological junction candidates tend to be supported only by
-reads that barely overlap the junction and are all on one strand.)
-
-_breseq_ sorts all candidate junctions according to this
-position-hash score, breaking ties with a "minimum-overlap" score. This
-score simply sums, over all reads, the minimum overlap that each read
-supporting the junction has to either of the two sides of the junction
-(not counting overlap regions). Top-scoring candidate junctions
-according to this two-tiered sorting scheme are retained until adding
-new candidates would cause their cumulative length to exceed 0.1x the
-total reference sequence length or their total number to exceed 5000.
-
-## Scoring and accepting junctions
-
-New junctions may also be supported by reads that do not overlap both
-sides sufficiently to seed alignments during mapping. To include these,
-_breseq_ performs a second alignment step where it maps all reads to
-the new candidate junction sequences. Then, for each read, it determines
-whether its best alignment is to a junction candidate or to the
-reference sequence. For this purpose, alignments are assigned a score
-that is the number of matched reference bases minus the number of indel
-positions. Alignments that do not cover at least 28 bases of the read
-are discarded. Ties are resolved later.
-
-A position-hash score is calculated again for each candidate junction by
-counting the number of different start positions that are observed among
-the reads that map best to that candidate junction. Junctions are tested
-in order from those with the most best alignments to those with the
-least or none. Reads that map equally well to the reference and to one
-or several junctions are included when calculating these position-hash
-scores.
-
-Candidate junctions are accepted as evidence for a mutational event if
-their position-hash score exceeds a specified cutoff according to the
-value of their neg_log10_pos_hash_p\_value field, also known as the
-"skew" score.
-
-In consensus mode, the skew score is calculated by fitting a censored
-negative binomial (overdispersed Poisson) distribution to the read-depth
-coverage at unique-only reference positions as described under
-`read-coverage-distribution`. _breseq_ keeps track of what fraction
-of read position-strand combinations in the reference genome at large
-have reads that start there. _breseq_ uses this baseline to
-calculate the chance that at least one read will start at any given
-position, on a given strand, at different read-depth coverage levels.
-The chance of observing the actual position-hash score for a junction is
-then calculated according to the binomial distribution assuming twice
-the read length number of trials (for each strand), and this chance per
-trial of observing a read in this register starting at a given position.
-The negative log10 of this probability is the "skew" score. A higher
-skew means that it was less likely to either observe such a small number
-of reads or so many reads being highly biased to start at certain
-positions, both of which would be unlikely for an average position in
-the genome. With the defaulr settings a junction fails this test when it
-has a skew of \>3.0 (a probability of \<0.001 of observing the given
-position-hash score given the number of aligned reads).
-
-As of version 0.34.0, a correction is applied to these calculations to
-deal with "saturation" in high read-depth coverage samples. If coverage
-is very high compared to the read length, then almost all
-position-strand combinations will have a read starting there in the
-genome. However, some smaller regions of the genome may not locally
-reach such a high level even under optimal conditions because there are
-biases in shearing and amplification. To prevent these from having high
-"skew" values, and ultimately incorrectly rejecting junction candidate,
-_breseq_ assumes that the fraction of position-strand start
-combinations that are not occupied by reads levels out at a specific
-level above zero. This is set to 0.10 by default. It can be changed via
-the `--junction-minimum-pr-no-read-start-per-position` option to tune
-this behavior. You can set this option to 0 (zero) if you want the
-behavior of prior versions of _breseq_.
-
-In polymorphism mode, the skew score is not useful since the true
-coverage of the variant is only an unknown fraction of the average
-coverage. Therefore, junctions are assigned skew scores of "Not Tested"
-(NT). Other criteria can be used to rule out unlikely junctions in
-polymorphism mode.
-
-In addition to this score, several other criteria are used when deciding
-whether a predicted junction has sufficient support. The complete list
-is:
-
-1.  Must be supported by reads mapping to both strands of the predicted
-    junction.
-2.  Must have reads mapping to the predicted junction that extend at
-    least 14 base pairs into each side of the reference.
-3.  Must have reads mapping to each strand of the predicted junction
-    that extend into each side of the junction at least 9 bp.
-4.  Must have reads mapping to the predicted junction where the side of
-    the read with the smallest reference overlap extends at least 3 bp
-    into the reference sequence on each side.
-
-If the junction meets all of these criteria, it will be reported as
-evidence. In this case, reads that map equally elsewhere (to the
-reference or a different junction) are assigned to this junction and
-removed from further consideration. If, after all junction candidates
-have been tested, a read remains unused, it is assigned to the reference
-genome.
-
-For junctions that pass this scoring cutoff, the ends of reads aligning
-to the junction are re-added as split sub-alignments to the alignment
-database, resolving ambiguously aligned bases, so that each read base is
-aligned to only one reference base. These split reads can be recognized
-in the output because they are renamed with suffixes of -M1 and -M2 for
-the two portions.
+Moved to [JC: New junction evidence](evidence-jc.md), which describes how junction
+candidates are identified, how they are scored and accepted, and why one is rejected.
 
 # Read alignment evidence (RA)
 
-_breseq_ calls base substitution mutations and small indels by
-examining the pileup of reads mapped to each position in the reference
-genome. There are two fundamentally different methods of doing so:
+Moved to [RA: Read alignment evidence](evidence-ra.md), which describes the consensus
+and polymorphism models, the statistical filters, and why an item is rejected.
+<span id="polymorphism-prediction"></span>
 
-1.  CONSENSUS mode is appropriate when re-sequencing a clonal haploid
-    genome. It expects all variant alleles will be present in 100% of
-    the sample. This mode is the default.
-2.  POLYMORPHISM (METAGENOMIC) mode can be used to analyze a mixed
-    population of genomes evolved from a common ancestor. It will
-    predict variants with frequencies between 0% and 100% if a mixture
-    model is well-supported by the read alignment evidence.
-
-!!! warning
-    Polymorphism prediction is prone to false positives. There are many
-    biases in NGS data. Since _breseq_ only analyzes one sample at a
-    time, it cannot fully account for all of these biases. After running
-    _breseq_ you will need to leverage comparisons between multiple
-    populations, time points sequenced from one population, and/or clonal
-    control samples in order to better understand which predictions in
-    polymorphism mode are real. To some extent, you can reduce false
-    positives by adjusting the _breseq_ `--polymorphism-*` filtering
-    options. In general, indels in homopolymer runs and low frequency base
-    substitutions (\<5%) based on `RA` evidence are more likely to be false
-    positives. Predictions of deletions and IS element insertions based on
-    `JC` evidence can still be true positives at much lower frequencies.
-
-## Read end trimming
+# Read end trimming
 
 The ends of alignments of short reads to a reference sequence can be
 ambiguous with respect to insertion and deletion mutations. _breseq_
@@ -275,7 +99,7 @@ here when they are aligned to the reference. With end trimming, these
 bases are ignored because they are ambiguous with respect to possible
 insertions, like the event that happened, or deletion of one AGC copy.
 
-## Base quality re-calibration
+# Base quality re-calibration
 
 In the FASTQ input files, each read base has been assigned a quality
 score by the normal pipeline for a given sequencing technology. Base
@@ -309,197 +133,22 @@ sequencing errors.
 
 Recall that _breseq_ requires input in [Sanger FASTQ
 format](https://en.wikipedia.org/wiki/FASTQ_format). Therefore the
-expected total error rate (<span class="title-ref">E</span>) at a given
-quality score (<span class="title-ref">Q</span>) before re-calibration
+expected total error rate (*E*) at a given
+quality score (*Q*) before re-calibration
 is:
 
 $E=10^{-\\frac{Q}{10}}$
 
-## Calling mutations from RA evidence
-
-Both CONSENSUS and POLYMORPHISM mode operate by calculating a 'consensus
-score' and a 'polymorphism score' for each alignment column. In
-describing how mutation predictions are made in each mode from these
-scores and additional statistical filters, we first introduce several
-calculations and concepts. Then, we present a full list of _breseq_
-command-line options and RA evidence attributes. Finally, we show the
-flowcharts that determine what pieces of RA evidence make it into the
-final HTML output files as "predicted mutations" versus being relegated
-to the "marginal predictions" section or being discarded entirely.
-
-## Consensus score (Bayesian SNP caller)
-
-At each alignment position, _breseq_ calculates the Bayesian
-posterior probability of possible sample bases given the observed read
-bases. Specifically, it uses a haploid model with five possible base
-states (A, T, C, G, and a gap), assumes a uniform prior probability of
-each state, and uses the empirical error model derived during base
-quality re-calibration to update the prior with each read base
-observation.
-
-Thus, at a given alignment position, the log10 ratio of the posterior
-probability that the sample has a certain base b<sub>x</sub> versus the
-probability that the sample has a different base is:
-
-$L(b_x) = \\sum\\limits\_{i=1}^{n}\\{\\log\_{10}\[E(b_x, b_i, q_i)\] - log\_{10}\[1 - E(b_x, b_i, q_i)\]\\}$
-
-Where there are n reads aligned to this position, b<sub>i</sub> is the
-base observed in the ith read, q<sub>i</sub> is the quality of this
-base, and E is the probability of observing this read base given its
-quality score at a reference position with base b<sub>x</sub> according
-to the empirical error model.
-
-_breseq_ determines the base with the highest value of L, and
-records read alignment evidence if this base is different from the
-reference base. This evidence is assigned log10 L minus the log10 of the
-cumulative length of all reference sequences as a consensus E-value
-score for this consensus base prediction.
-
-Recall that _breseq_ will typically only find indels of at most 2
-bases as read alignment evidence, because all alignments with longer
-indels were split in a pre-processing step when predicting
-`new-junction-evidence`.
-
-## Polymorphism score (mixed allele model)<span id="polymorphism-prediction"></span>
-
-Next, _breseq_ tests the hypothesis that reads aligned to each
-reference position (and base insertions relative to the reference)
-support a model that is a mixture of a major and minor mutational
-variant as opposed to a model that all disagreements with the reference
-sequence (or consensus change predicted as above) are due to sequencing
-errors. To do this, it calculates the chances of generating the observed
-alignment given the hypotheses that the sequenced sample consists of
-100% of each of the four bases or a gap character and the per-base error
-model described above. Then it takes the base states giving the top and
-second highest probabilites and tests a mixture model that allows the
-major and minor variants to be present at any intermediate fraction in
-the sequenced population.
-
-How this model is specified depends on the mode:
-
-1.  In CONSENSUS mode, only the raw frequency predicted from the read
-    counts of the major and variant allele is tested. So if there are
-2.  IN POLYMORPHISM mode, the maximum likelihood allele frequency
-    (taking into account bases observed in the pileup and their quality
-    scores) is found with a precision of 0.000001.
-
-_breseq_ then tests the statistical support for the model having
-only one reference base in the sequenced sample versus the model with
-one additional free parameter consisting of mixture of two alleles using
-a likelihood-ratio test. That is, twice the natural logarithm of the
-probability of the mixture model divided by the probability of the
-one-base model is compared to a chi-squared distribution with 1 degree
-of freedom.
-
-As for the case of consensus mutation prediction from read alignment
-evidence, the p-value significance of the likelihood-ratio test is
-finally converted to a polymorphism E-value score by multiplying by the
-total number of reference positions.
-
-## Statistical filters for RA predictions
-
-The empirical error model described above in
-`base-quality-re-calibration` does not capture some second-order sources
-of variation in error rates that can lead to substantial numbers of
-false-positive predictions. For example: sequencing error hotspots at
-certain positions, in certain contexts, and on certain strands. Several
-levels of additional filters can be used to prevent these types of
-predictions. In general, the default settings used by _breseq_
-should yield excellent results in CONSENSUS mode. The performance of
-POLYMORPHISM mode is much more variable with data from different
-sequencers, with different levels of coverage, etc. In POLYMORPHISM
-mode, it maybe beneficial to adjust these filtering settings depending
-on whether one wants to aggressively filter out these false-positives
-(at the expense of filtering some true-positives) or try to recover all
-true-positives (at the possible expense of letting more false-positives
-through into the output).
-
-### Strand bias
-
-This bias test uses Fisher's Exact Test to calculate a two-sided p-value
-for the hypothesis that the top/bottom strand distribution of reads
-supporting the major base is not different from the top/bottom strand
-distribution of reads supporting the minor base. If the hypothesis is
-rejected when the p-value is compared to
-`--polymorphism-bias-p-value-cutoff`, then this may indicate that there
-was a sequencing-error hotspot in reads on one strand that generated a
-false-positive polymorphism prediction. This type of error happens
-frequently in data we have examined.
-
-In practice, most problem predictions of this kind have zero or only a
-handful of reads on one strand and many reads on the other strand
-supporting the minor variant. This test can fail to reject
-false-positive predictions when there is low enough coverage of the
-minor variant that the test is not significant even if all of the reads
-supporting it are on one strand. In practice, this situation may be
-better dealt with by requiring there to be at least one read supporting
-the minor variant on each strand with
-`--polymorphism-coverage-both-strands`.
-
-Conversely, if coverage is high there may be so many observations that a
-statistically significant bias is detected simply because library prep
-and sequencing is slightly more efficient on one strand due to the
-different sequence context, even when there is high coverage of all
-strand/base combinations. Use this option with caution in cases of very
-high coverage (>1000 reads).
-
-### Quality score bias
-
-This bias test uses a one-sided Kolmogorov-Smirnov test to test whether
-base quality scores supporting the minor mutational variants are
-suspiciously lower than the base quality scores supporting the major
-variant. The p-value significance of rejecting the null hypothesis by
-this test is also compared to `--polymorphism-bias-p-value-cutoff`.
-
-### Homopolymer stretches
-
-Currently, application of the error model in _breseq_ on a
-per-column basis causes overprediction of indel polymorphisms in
-homopolymer stretches. Why is this the case? If there are 10 A's in a
-row in the reference genome, deleting any one A will cause what looks
-like the same mutation after the gap is aligned to the rightmost
-reference position possible. Therefore, the actual chance of observing a
-deleted A is ten times the value expected from the error model. This
-discrepancy can make a small number of reads aligned to this position
-with deletions achieve significance by the likelihood-ratio test.
-Similar logic applies in the case of base insertions.
-
-If _breseq_ cannot adequately correct for these types of errors,
-they can be filtered from the output by specifying the
-`--polymorphism-reject-homopolymer-length` option. A value of 5 gives
-reasonable results for *E. coli*. Generally, these false predictions
-also have extremely low frequencies (\<2%) for the minor indel variants.
-
-## RA prediction options and flowcharts
-
-<figure>
-<img src="../images/mutation_calling_settings.png" class="align-center" width="800" height="448" />
-</figure>
-
-<figure>
-<img src="../images/consensus_mode_RA_flowchart.png" class="align-center" width="600" height="572" />
-</figure>
-
-<figure>
-<img src="../images/polymorphism_mode_RA_flowchart.png" class="align-center" width="800" height="525" />
-</figure>
-
 # Unknown base evidence (UN)
 
-When there is insufficient evidence to call any base at a reference
-position, _breseq_ reports this base as "unknown". Contiguous
-stretches of unknown bases are output and shown in the results.
-Explicitly marking bases as unknown can be useful when analyzing many
-similar genomes; it allows one to ascertain when a mutation found in
-certain data sets may have been missed in others due to low coverage
-and/or poor data quality in a particular sample.
+Moved to [UN: Unknown base evidence](evidence-un.md).
 
 # Missing coverage evidence (MC)
 
-As _breseq_ traverses read pileups it predicts deletions when it
-encounters reference regions with missing and low coverage.
+Moved to [MC: Missing coverage evidence](evidence-mc.md), which describes the seed-and-extend
+algorithm and how ambiguous boundaries in repeats are handled.
 
-## Read coverage distribution
+# Read coverage distribution
 
 If read sequences were randomly distributed across the entire reference
 sequence, then the number of positions with a given depth of read
@@ -566,55 +215,12 @@ will call mutations in these sequences no matter what coverage
 distribution looks like (naturally, deletion mutations will not be
 called in this case).
 
-## Seed and extend algorithm
-
-From the fit coverage distribution, _breseq_ calibrates how it will
-call deletions. Deletion predictions are initiated at every reference
-position with unique-only coverage of zero. They are extended in each
-direction and merged until unique coverage exceeds a threshold
-calculated from the overall coverage distribution for the reference
-sequence. This cutoff is the the minimum threshold coverage *t* that
-satisfies the following relationship:
-
-$F(t) > 0.05\\times\\sqrt{L}$,
-
-where *F* is the negative binomial cumulative distribution function with
-best-fit mean and size parameters and *L* is the reference sequence
-length.
-
-In some cases there is ambiguity concerning the size of missing coverage
-regions because they encompass or overlap regions with repeat matches.
-Even if a specific example of a repetitive region is deleted, there will
-still appear to be coverage there because exact copies still exist
-elsewhere in the genome.
-
-_breseq_ assumes that any regions with repeat coverage that occur
-wholly within a region of low unique coverage (defined as above) have
-been deleted along with those flanking sequences. If a region of repeat
-coverage overlaps one end of the missing region prediction, then that
-end is assigned a range of possible reference positions. They reflect
-the two extreme possibilities that (1) the entire contiguous repetitive
-region is missing and (2) the entire contiguous repetitive region is
-still there. To determine the latter boundary, the same algorithm
-applied to unique coverage is used on unique coverage plus normalized
-repeat coverage depth, where normalization means that a repeat match
-counts as coverage of one divided by the total number of locations in
-the reference sequence that it matches.
-
-<figure>
-<img src="../images/region_coverage_example.png" class="align-center" width="600" height="333" alt="Coverage in a deleted reference region." /><figcaption aria-hidden="true"><strong>Coverage in a deleted reference region.</strong></figcaption>
-</figure>
-
-This example shows a region of missing coverage (white background) that
-extends into a region of repeat coverage (red line), making the left
-side end of the missing coverage ambiguous.
-
 # Mutation prediction
 
-The previous sections describe **evidence** for mutations. _breseq_
-next tries to predict biologicaly relevant **mutational events** from
-this evidence. These rules are summarized in each section using
-`genomediff-format` abbreviations for types of mutations and evidence.
+The [Evidence Types](evidence-overview.md) pages describe **evidence** for mutations.
+_breseq_ next tries to predict biologically relevant **mutational events** from that
+evidence. These rules are summarized in each section using
+[GenomeDiff](genomediff-file-format.md) abbreviations for types of mutations and evidence.
 
 ## Base substitutions
 
@@ -704,28 +310,38 @@ page.
 Even given perfect data, _breseq_ cannot find some types of
 mutations:
 
-<span class="title-ref">Novel sequences, not existing in the reference</span>  
-Because _breseq_ maps reads to reference sequences, it will not find
-entirely novel sequences that have been inserted into the genome or
-novel extrachromosomal DNA fragments such as plasmids. Reads that do not
-map to the reference genome are dumped to an output file suitable for de
-novo assembly, so that they can be examined with other software
-programs.
+**Novel sequences, not existing in the reference**\
+Because _breseq_ maps reads to reference sequences, it cannot reconstruct
+entirely novel sequences that have been inserted into the genome, or novel
+extrachromosomal DNA fragments such as plasmids. Reads that do not map to the
+reference genome are dumped to an output file suitable for de novo assembly, so
+that they can be examined with other software programs.
 
-<span class="title-ref">Mutations in repeat regions</span>  
+With paired data, [MP](evidence-mp.md) evidence can at least tell you *where* such an
+insertion begins, since a fragment crossing into novel sequence leaves one mate
+unmappable. It reports the insertion point and nothing about the insert itself, so it
+locates the problem rather than solving it.
+
+**Mutations in repeat regions**\
 In genomic regions where the only mapped reads also match equally well
 to other locations in the genome, it is not possible to call mutations.
 This is an inherent limitation of short-read data. These regions are
-reported as 'UN' evidence, so that the user can distinguish where in the
-genome there was not sufficient coverage of uniquely mapped reads to
+reported as [UN](evidence-un.md) evidence, so that the user can distinguish where in
+the genome there was not sufficient coverage of uniquely mapped reads to
 call mutations.
 
-<span class="title-ref">Chromosomal inversions and rearrangements through repeat sequences</span>  
-These types of mutations cannot be detected when they involve sequence
-repeats on the order of the read length. Reads that span repeats and
-uniquely align in the reference sequence on each end are necessary.
-_breseq_ currently does not take advantage of mate-paired or
-paired-end information.
+**Chromosomal inversions and rearrangements through repeat sequences**\
+These types of mutations are difficult to detect when they involve sequence
+repeats on the order of the read length, because [JC](evidence-jc.md) evidence needs
+reads that span the repeat and align uniquely on each end.
+
+With paired data this is no longer an absolute limit. [DP](evidence-dp.md) evidence
+detects rearrangements from pairs whose mates are individually misplaced — including
+between two different reference sequences, which is how a translocation or plasmid
+integration is found — and [PD](evidence-pd.md) detects events too small to make any
+individual pair unusual. Neither resolves a breakpoint to the base, so the two are
+complements to `JC` rather than replacements for it. All three pair-based types are
+experimental and off by default.
 
 # Annotated bibliography
 

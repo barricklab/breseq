@@ -47,6 +47,17 @@ nav:
   - More Information:
       - Reference Sequence File Formats: reference-sequence-file-formats.md
       - Output: output.md
+      - Evidence Types:
+          - Overview: evidence-overview.md
+          - "RA: Read alignment": evidence-ra.md
+          - "MC: Missing coverage": evidence-mc.md
+          - "JC: New junction": evidence-jc.md
+          - "CN: Copy number": evidence-cn.md
+          - "UN: Unknown base": evidence-un.md
+          - "SC: Soft clipping": evidence-sc.md
+          - "DP: Discordant pair": evidence-dp.md
+          - "MP: Missing pair": evidence-mp.md
+          - "PD: Pair distance": evidence-pd.md
       - Methods: methods.md
       - GenomeDiff File Format: genomediff-file-format.md
       - Bibliography: bibliography.md
