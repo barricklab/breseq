@@ -31,6 +31,8 @@ EXTRA_DIST = \
 	dev-environment.yml \
 	tests/common.sh \
 	tests/test.sh \
+	tests/check_doc_examples.sh \
+	tests/check_doc_gate_names.sh \
 	tests/lambda_mult_ref_read/expected.gd \
 	tests/lambda_mult_ref_read/testcmd.sh \
 	tests/data/lambda/empty.fastq \
@@ -163,7 +165,15 @@ test:
 	END=$$(date '+%s'); \
 	$(top_srcdir)/tests/print_test_summary.sh $(top_srcdir)/tests $$((END - START)); \
 	SUMMARY_STATUS=$$?; \
-	test $$SNAKEMAKE_STATUS -eq 0 -a $$SUMMARY_STATUS -eq 0
+	$(SHELL) $(top_srcdir)/tests/check_doc_examples.sh && $(SHELL) $(top_srcdir)/tests/check_doc_gate_names.sh; \
+	DOCS_STATUS=$$?; \
+	test $$SNAKEMAKE_STATUS -eq 0 -a $$SUMMARY_STATUS -eq 0 -a $$DOCS_STATUS -eq 0
+
+## Verify that every GenomeDiff example quoted in docs/ still exists in the golden it
+## names. Reads only; never re-runs a test. Also run at the end of 'make test'.
+check-doc-examples:
+	$(SHELL) $(top_srcdir)/tests/check_doc_examples.sh
+	$(SHELL) $(top_srcdir)/tests/check_doc_gate_names.sh
 
 test-long:
 	## NEW method: 'make test' after 'make'
@@ -177,7 +187,9 @@ test-long:
 	END=$$(date '+%s'); \
 	$(top_srcdir)/tests/print_test_summary.sh $(top_srcdir)/tests $$((END - START)); \
 	SUMMARY_STATUS=$$?; \
-	test $$SNAKEMAKE_STATUS -eq 0 -a $$SUMMARY_STATUS -eq 0
+	$(SHELL) $(top_srcdir)/tests/check_doc_examples.sh && $(SHELL) $(top_srcdir)/tests/check_doc_gate_names.sh; \
+	DOCS_STATUS=$$?; \
+	test $$SNAKEMAKE_STATUS -eq 0 -a $$SUMMARY_STATUS -eq 0 -a $$DOCS_STATUS -eq 0
 
 
 clean-tests:
@@ -193,7 +205,7 @@ clean-tests:
 	rm -rf $(top_srcdir)/tests/.test_data_stamps
 
 
-.PHONY: test-data verify-test-data clean-test-data
+.PHONY: test-data verify-test-data clean-test-data check-doc-examples
 
 ## Pre-fetch every data set in tests/test_data_manifest.tsv into the cache
 ## (tests/data/downloads by default; override with BRESEQ_TEST_DATA_DIR). Useful
