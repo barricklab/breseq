@@ -765,7 +765,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
 
   if (dp.size() > 0) {
-    HTML << "<p>" << html_discordant_pair_table_string(dp, settings, false, "Discordant pair unassigned evidence", relative_path);
+    HTML << "<p>" << html_discordant_pair_table_string(dp, settings, false, "Unassigned discordant pair evidence", relative_path);
   }
 
   /////////////////////////
@@ -1639,7 +1639,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Coverage evenness (position-hash) score of predicted junctions must be")
                + td(ALIGN_CENTER, (settings.minimum_alignment_resolution_pos_hash_score == 0) ? "NO&nbsp;LIMIT" : "&ge;&nbsp;" + to_string<uint32_t>(settings.minimum_alignment_resolution_pos_hash_score))
                );
-    HTML << tr(td("Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction")
+    HTML << tr(td("Minimum probability assigned that no mapped read will start at a given position and strand for junction prediction")
                + td(ALIGN_CENTER, to_string<double>(settings.minimum_pr_no_read_start_per_position))
                );
     
@@ -1720,7 +1720,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                + td((settings.polymorphism_no_indels) ? "NO" : "YES")
                );
     // Rejects if >= this length
-    HTML << tr(td("Skip indel polymorphisms in homopolymers runs of")
+    HTML << tr(td("Skip indel polymorphisms in homopolymer runs of")
                + td((settings.polymorphism_reject_indel_homopolymer_length == 0) ? "OFF" : " &ge;" + s(settings.polymorphism_reject_indel_homopolymer_length) + " bases")
                );
     
@@ -2818,8 +2818,8 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
   ss << "<p>" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   ss << tr(th("colspan=\"3\" align=\"left\" class=\"discordant_pair_header_row\"",
-              "Discordant pair (DP) evidence gates")) << endl;
-  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+              "Discordant pair (DP) evidence metrics")) << endl;
+  ss << tr(th("metric") + th("value") + th("width=\"100%\"", "basis")) << endl;
 
   // Library shape: what every DP test is ultimately derived from.
   ss << tr(td("paired-mapping distance")
@@ -2846,19 +2846,33 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
                 + " candidate junctions: " + bg
                 + "; E-value cutoff " + to_string(d.background_e_value_cutoff, 3, false))) << endl;
 
-  // Gate 2: the local frequency test -- the operative accept/reject rule.
+  ss << "</table>" << endl;
+
+  // Second table: the decisions taken on those metrics.
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"4\" align=\"left\" class=\"discordant_pair_header_row\"",
+              "Discordant pair (DP) evidence gates")) << endl;
+  ss << tr(th("gate") + th("rule") + th(nonbreaking("rejects as"))
+           + th("width=\"100%\"", "basis")) << endl;
+
+  // Gate 1: the local frequency test -- the operative accept/reject rule.
   ss << tr(td("local frequency")
            + td(d.frequency_cutoff > 0.0
                 ? ("&ge; " + Html_Mutation_Table_String::freq_to_string(to_string(d.frequency_cutoff, 4, false)))
                 : string("OFF"))
+           + td("DISCORDANT_PAIR_FREQUENCY")
            + td("exact lower confidence bound on discordant / (discordant + concordant) pairs spanning "
                 "the breakpoint; tracks the prediction mode")) << endl;
 
-  // Gate 3: the skew test and its power gate.
+  // Gate 2: the skew test and its power gate.
+  // "> " and not "&ge;": the skew test rejects an item whose score is ABOVE the cutoff, which is the
+  // opposite direction to every other gate in these tables.
   ss << tr(td("concordant pair skew")
            + td(d.skew_cutoff > 0.0
-                ? (to_string(d.skew_cutoff, 1, false) + (d.skew_in_force ? "" : " (not applied)"))
+                ? ("&gt; " + to_string(d.skew_cutoff, 1, false)
+                   + (d.skew_in_force ? "" : " (not applied)"))
                 : string("OFF"))
+           + td("CONCORDANT_PAIR_SKEW")
            + td("expected concordant pairs spanning a normal position: "
                 + to_string(d.expected_concordant_crossing, 1, false)
                 + (d.crossing_reference_seq_id.empty() ? "" : " in " + d.crossing_reference_seq_id)
@@ -2884,7 +2898,8 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
     tally += ", " + to_string(d.items_merged_duplicate)
            + " folded into another candidate placed at the same breakpoint";
   ss << tr(td("outcome")
-           + td(to_string(d.items_tested + d.items_dropped_unsupported + d.items_merged_duplicate) + " examined")
+           + td("colspan=\"2\"",
+                to_string(d.items_tested + d.items_dropped_unsupported + d.items_merged_duplicate) + " examined")
            + td(tally)) << endl;
 
   ss << "</table>" << endl;
@@ -2904,8 +2919,8 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
   ss << "<p>" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   ss << tr(th("colspan=\"3\" align=\"left\" class=\"pair_distance_header_row\"",
-              "Pair distance (PD) evidence gates")) << endl;
-  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+              "Pair distance (PD) evidence metrics")) << endl;
+  ss << tr(th("metric") + th("value") + th("width=\"100%\"", "basis")) << endl;
 
   // Library shape. The mean covering gap is the load-bearing number: it is the correlation length of
   // the seed statistic, so it sets how many independent chances to seed the reference offers. The
@@ -2919,16 +2934,18 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
                    ? " &mdash; fragments are shorter than two reads, so only the minority of pairs with a gap can carry PD evidence"
                    : ""))) << endl;
 
-  ss << tr(td("effective tests")
+  ss << tr(td("independent chances")
            + td(to_string(d.n_effective_tests, 0, false))
            + td("reference length / mean covering gap ("
                 + to_string(d.mean_covering_gap, 0, false)
-                + " bases), which is the distance over which the set of pairs covering a position turns over")) << endl;
+                + " bases), which is the distance over which the set of pairs covering a position"
+                " turns over &mdash; so that is how many independent chances the reference offers"
+                " for a false positive, not one per base")) << endl;
 
   // How much the chosen-placement filter actually costs on THIS library. The argument that refusing
   // those pairs is free rests on this being a small fraction, so it is stated rather than assumed.
   if (d.pairs_considered) {
-    ss << tr(td("chosen placements refused")
+    ss << tr(td("multi-mapped pairs excluded")
              + td(to_string(100.0 * static_cast<double>(d.pairs_ambiguous_placement)
                             / static_cast<double>(d.pairs_considered), 2, false) + "%")
              + td(to_string(d.pairs_ambiguous_placement) + " of " + to_string(d.pairs_considered)
@@ -2946,7 +2963,7 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
                 " is measured against")) << endl;
 
   if (d.region_tail_fit_ok) {
-    ss << tr(td("seed null tail")
+    ss << tr(td("fitted null model")
              + td("&sigma; = " + to_string(d.region_tail_sigma, 2, false))
              + td("fitted to the number of independent regions over |z| = "
                   + to_string(d.region_tail_fit_lo, 2, false) + " to "
@@ -2956,12 +2973,46 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
                   + "x, which describes the bulk and not the tail")) << endl;
   }
 
+  ss << "</table>" << endl;
+
+  // Second table: the decisions taken on those metrics.
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"4\" align=\"left\" class=\"pair_distance_header_row\"",
+              "Pair distance (PD) evidence gates")) << endl;
+  ss << tr(th("gate") + th("rule") + th(nonbreaking("rejects as"))
+           + th("width=\"100%\"", "basis")) << endl;
+
   ss << tr(td("score cutoff")
-           + td(d.score_cutoff > 0.0 ? to_string(d.score_cutoff, 1, false) : string("OFF"))
+           + td(d.score_cutoff > 0.0 ? "&ge; " + to_string(d.score_cutoff, 1, false) : string("OFF"))
+           + td("PAIR_DISTANCE_SCORE")
            + td(string("&minus;log10 of the expected number of PD regions in this reference reaching this"
-                " seed |z| by chance, read off the region counts measured above; a score of 0 means one"
-                " such region is expected per genome. This is the test that decides a call &mdash; every"
-                " other gate is a local sanity check."))) << endl;
+                " seed |z| by chance, read off the region counts in the metrics table; a score of 0 means"
+                " one such region is expected per genome. This is the test that decides a call &mdash;"
+                " every other gate is a local sanity check."))) << endl;
+
+  ss << tr(td("size shift")
+           + td("interval excludes 0")
+           + td("PAIR_DISTANCE_SIZE")
+           + td("the profile-likelihood interval on the estimated shift must not span zero, or the"
+                " direction of the event &mdash; sequence added or removed &mdash; is undetermined")) << endl;
+
+  ss << tr(td("supporting pairs")
+           + td("&ge; " + to_string(settings.pair_distance_minimum_pairs))
+           + td("PAIR_DISTANCE_COUNT")
+           + td("shifted read pairs required to support the call")) << endl;
+
+  ss << tr(td("distinct fragment ends")
+           + td("&ge; " + to_string(settings.pair_distance_minimum_distinct))
+           + td("PAIR_DISTANCE_DUPLICATES")
+           + td("so that PCR duplicates of one molecule cannot carry a prediction")) << endl;
+
+  ss << tr(td("local frequency")
+           + td(settings.pair_distance_frequency_cutoff > 0.0
+                  ? "&ge; " + to_string(100.0 * settings.pair_distance_frequency_cutoff, 1, false) + "%"
+                  : string("OFF"))
+           + td("PAIR_DISTANCE_FREQUENCY")
+           + td("exact lower confidence bound on shifted / (shifted + normal) pairs covering the"
+                " point, not the point estimate")) << endl;
 
   string tally = to_string(d.items_accepted) + " accepted";
   if (d.items_rejected_score) tally += ", " + to_string(d.items_rejected_score) + " rejected (score)";
@@ -2970,7 +3021,7 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
     tally += ", " + to_string(d.items_dropped_score)
            + " dropped as expected by chance somewhere in this genome";
   ss << tr(td("outcome")
-           + td(to_string(d.items_tested) + " examined")
+           + td("colspan=\"2\"", to_string(d.items_tested) + " examined")
            + td(tally)) << endl;
 
   ss << "</table>" << endl;
@@ -2998,7 +3049,8 @@ string html_soft_clipping_gates_string(const Settings& settings, Summary& summar
   if ((d.total_clipped_read_ends == 0) && (d.total_spanning_read_bases == 0)) return "";
 
   uint32_t accepted = 0, rejected_score = 0, rejected_strand = 0,
-           rejected_low_complexity = 0, rejected_other = 0;
+           rejected_low_complexity = 0, rejected_consensus = 0, rejected_frequency = 0,
+           rejected_other = 0;
   // get_list, not show_list: the point of this tally is to say how many were rejected, and
   // show_list has already dropped the rejected ones.
   diff_entry_list_t sc_list = gd.get_list(make_vector<gd_entry_type>(SC));
@@ -3006,18 +3058,23 @@ string html_soft_clipping_gates_string(const Settings& settings, Summary& summar
     cDiffEntry& e = **it;
     if (!e.entry_exists(REJECT)) { accepted++; continue; }
     vector<string> reasons = e.get_reject_reasons();
-    bool score = false, strand = false, low_complexity = false, other = false;
+    bool score = false, strand = false, low_complexity = false,
+         consensus = false, frequency = false, other = false;
     for (vector<string>::const_iterator r = reasons.begin(); r != reasons.end(); r++) {
-      if      (*r == "SCORE_CUTOFF")        score = true;
-      else if (*r == "FISHER_STRAND")       strand = true;
-      else if (*r == "LOW_COMPLEXITY_TAIL") low_complexity = true;
-      else                                  other = true;
+      if      (*r == "SCORE_CUTOFF")           score = true;
+      else if (*r == "FISHER_STRAND")          strand = true;
+      else if (*r == "LOW_COMPLEXITY_TAIL")    low_complexity = true;
+      else if (*r == "CLIPPED_TAIL_CONSENSUS") consensus = true;
+      else if (*r == "FREQUENCY_BELOW_CUTOFF") frequency = true;
+      else                                     other = true;
     }
     // An item can fail several gates at once; count it under the most specific one so the
     // columns add up to the number of rejected items.
     if      (strand)         rejected_strand++;
     else if (low_complexity) rejected_low_complexity++;
+    else if (consensus)      rejected_consensus++;
     else if (score)          rejected_score++;
+    else if (frequency)      rejected_frequency++;
     else if (other)          rejected_other++;
   }
 
@@ -3025,8 +3082,8 @@ string html_soft_clipping_gates_string(const Settings& settings, Summary& summar
   ss << "<p>" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   ss << tr(th("colspan=\"3\" align=\"left\" class=\"soft_clipping_header_row\"",
-              "Soft clipping (SC) evidence gates")) << endl;
-  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+              "Soft clipping (SC) evidence metrics")) << endl;
+  ss << tr(th("metric") + th("value") + th("width=\"100%\"", "basis")) << endl;
 
   ss << tr(td("clipped bases required")
            + td(to_string(settings.soft_clipping_minimum_bases) + " bases")
@@ -3049,7 +3106,7 @@ string html_soft_clipping_gates_string(const Settings& settings, Summary& summar
                  + " trimmed at a clipped fraction of "
                  + to_string(settings.soft_clipping_dispersion_trim_frequency, 2, false)
                  + " or above so that real breakpoints cannot define their own background";
-    ss << tr(td("background unevenness")
+    ss << tr(td("background dispersion")
              + td(d.soft_clipping_dispersion > 0.0
                     ? "&rho; = " + to_string(d.soft_clipping_dispersion, 5, false)
                     : string("none (binomial)"))
@@ -3067,13 +3124,25 @@ string html_soft_clipping_gates_string(const Settings& settings, Summary& summar
                   " positions that saw only one read strand. Reads clipped at a real breakpoint"
                   " come from both strands; an end-of-read artifact (dark-cycle poly-G, adapter"
                   " read-through) can only come from one. A high value here means most of this"
-                  " run's clipping is artifact &mdash; the strand gate below is what removes it.")) << endl;
+                  " run's clipping is artifact &mdash; the strand gate is what removes it.")) << endl;
   }
+
+  ss << "</table>" << endl;
+
+  // Second table: the decisions taken on those metrics. Each row names the metric it tests and
+  // the reject reason it writes into the .gd, so a "Rejected: ..." line in the report can be
+  // traced back to the threshold that produced it.
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"4\" align=\"left\" class=\"soft_clipping_header_row\"",
+              "Soft clipping (SC) evidence gates")) << endl;
+  ss << tr(th("gate") + th("rule") + th(nonbreaking("rejects as"))
+           + th("width=\"100%\"", "basis")) << endl;
 
   ss << tr(td("strand gate")
            + td(settings.soft_clipping_fisher_strand_p_value_cutoff > 0.0
                   ? "p &ge; " + to_string(settings.soft_clipping_fisher_strand_p_value_cutoff, 3, false)
                   : string("OFF"))
+           + td("FISHER_STRAND")
            + td("Fisher's exact test of the clipped reads' strand split against the strand split"
                 " of the reads that read through the same position, so a genuinely strand-skewed"
                 " pileup is not mistaken for a strand-skewed clip")) << endl;
@@ -3083,26 +3152,49 @@ string html_soft_clipping_gates_string(const Settings& settings, Summary& summar
                   ? "run &lt; " + to_string(settings.soft_clipping_maximum_tail_homopolymer_fraction, 3, false)
                     + ", one base &lt; " + to_string(settings.soft_clipping_maximum_tail_base_fraction, 2, false)
                   : string("OFF"))
+           + td("LOW_COMPLEXITY_TAIL")
            + td("as fractions of the compared clipped bases. Homopolymer tails agree with each"
                 " other perfectly, so the consensus test cannot see them.")) << endl;
 
+  ss << tr(td("tail consensus")
+           + td(settings.soft_clipping_consensus_fraction_cutoff > 0.0
+                  ? "fraction &ge; " + to_string(settings.soft_clipping_consensus_fraction_cutoff, 2, false)
+                  : string("OFF"))
+           + td("CLIPPED_TAIL_CONSENSUS")
+           + td("the fraction of clipped reads at the position agreeing on one consensus tail."
+                " Reads clipped for uninteresting reasons disagree with each other; reads spanning"
+                " a real breakpoint carry the same donor sequence")) << endl;
+
+  ss << tr(td("local frequency")
+           + td(settings.soft_clipping_frequency_cutoff > 0.0
+                  ? "&ge; " + to_string(100.0 * settings.soft_clipping_frequency_cutoff, 1, false) + "%"
+                  : string("OFF"))
+           + td("FREQUENCY_BELOW_CUTOFF")
+           + td("exact lower confidence bound on the clipped fraction, not the fraction itself, so"
+                " an item can be rejected at a frequency that reads as above the cutoff")) << endl;
+
   ss << tr(td("score cutoff")
            + td(settings.soft_clipping_log10_e_value_cutoff > 0.0
-                  ? to_string(settings.soft_clipping_log10_e_value_cutoff, 1, false)
+                  ? "&ge; " + to_string(settings.soft_clipping_log10_e_value_cutoff, 1, false)
                   : string("OFF"))
+           + td("SCORE_CUTOFF")
            + td("&minus;log10 of the expected number of positions in this reference where this many"
                 " reads would be clipped with the same tail by chance, given the background rate"
-                " and its unevenness")) << endl;
+                " and its dispersion")) << endl;
 
   {
     string tally = to_string(accepted) + " accepted";
     if (rejected_strand) tally += ", " + to_string(rejected_strand) + " rejected (strand)";
     if (rejected_low_complexity)
       tally += ", " + to_string(rejected_low_complexity) + " rejected (clipped tail complexity)";
+    if (rejected_consensus)
+      tally += ", " + to_string(rejected_consensus) + " rejected (tail consensus)";
     if (rejected_score) tally += ", " + to_string(rejected_score) + " rejected (score)";
+    if (rejected_frequency)
+      tally += ", " + to_string(rejected_frequency) + " rejected (local frequency)";
     if (rejected_other) tally += ", " + to_string(rejected_other) + " rejected (other gates)";
     ss << tr(td("outcome")
-             + td(to_string(sc_list.size()) + " reported")
+             + td("colspan=\"2\"", to_string(sc_list.size()) + " reported")
              + td(tally)) << endl;
   }
 
@@ -3120,8 +3212,8 @@ string html_missing_pair_gates_string(const Settings& settings, Summary& summary
   ss << "<p>" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   ss << tr(th("colspan=\"3\" align=\"left\" class=\"missing_pair_header_row\"",
-              "Missing pair (MP) evidence gates")) << endl;
-  ss << tr(th("gate") + th("value") + th("width=\"100%\"", "basis")) << endl;
+              "Missing pair (MP) evidence metrics")) << endl;
+  ss << tr(th("metric") + th("value") + th("width=\"100%\"", "basis")) << endl;
 
   ss << tr(td("counting window")
            + td(to_string(d.window_width, 0, false) + " bases")
@@ -3151,13 +3243,13 @@ string html_missing_pair_gates_string(const Settings& settings, Summary& summary
       basis += "; clamped from " + to_string(d.dispersion_raw, 5, false)
              + " by --missing-pair-maximum-dispersion";
     basis += ". Columns overlap, so the column count is not an independent sample size.";
-    ss << tr(td("background unevenness")
+    ss << tr(td("background dispersion")
              + td(d.dispersion > 0.0 ? "&rho; = " + to_string(d.dispersion, 5, false)
                                      : string("none (binomial)"))
              + td(basis)) << endl;
   }
 
-  ss << tr(td("effective tests")
+  ss << tr(td("independent chances")
            + td(to_string(d.n_effective_tests, 0, false))
            + td("2 strands x reference length / counting window &mdash; the window turns over"
                 " completely every " + to_string(d.window_width, 0, false)
@@ -3169,12 +3261,41 @@ string html_missing_pair_gates_string(const Settings& settings, Summary& summary
                 " A fixed fraction has no fixed relationship to the background measured above,"
                 " which is why it no longer decides anything.")) << endl;
 
+  ss << "</table>" << endl;
+
+  // Second table: the decisions taken on those metrics.
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  ss << tr(th("colspan=\"4\" align=\"left\" class=\"missing_pair_header_row\"",
+              "Missing pair (MP) evidence gates")) << endl;
+  ss << tr(th("gate") + th("rule") + th(nonbreaking("rejects as"))
+           + th("width=\"100%\"", "basis")) << endl;
+
   ss << tr(td("score cutoff")
-           + td(d.score_cutoff > 0.0 ? to_string(d.score_cutoff, 1, false) : string("OFF"))
+           + td(d.score_cutoff > 0.0 ? "&ge; " + to_string(d.score_cutoff, 1, false) : string("OFF"))
+           + td("MISSING_PAIR_SCORE")
            + td(string("&minus;log10 of the expected number of positions in this reference where this"
                 " many reads would lose their mates by chance, given the background rate and its"
-                " unevenness; a score of 0 means one such position is expected per genome. This is"
+                " dispersion; a score of 0 means one such position is expected per genome. This is"
                 " the test that decides a call &mdash; every other gate is a local sanity check."))) << endl;
+
+  ss << tr(td("supporting reads")
+           + td("&ge; " + to_string(settings.missing_pair_minimum_reads))
+           + td("MISSING_PAIR_COUNT")
+           + td("reads with a mate that produced no alignment at all &mdash; not merely a mate"
+                " flagged unmapped, which also covers mates the aligner placed and breseq rejected")) << endl;
+
+  ss << tr(td("distinct start positions")
+           + td("&ge; " + to_string(settings.missing_pair_minimum_distinct))
+           + td("MISSING_PAIR_DUPLICATES")
+           + td("so that PCR duplicates of one molecule cannot carry a prediction")) << endl;
+
+  ss << tr(td("local frequency")
+           + td(settings.missing_pair_frequency_cutoff > 0.0
+                  ? "&ge; " + to_string(100.0 * settings.missing_pair_frequency_cutoff, 1, false) + "%"
+                  : string("OFF"))
+           + td("MISSING_PAIR_FREQUENCY")
+           + td("exact lower confidence bound on unpaired / (unpaired + spanning) reads. This says"
+                " how much of the sample carries the insertion, not whether it is there")) << endl;
 
   string tally = to_string(d.items_accepted) + " accepted";
   if (d.items_rejected_score) tally += ", " + to_string(d.items_rejected_score) + " rejected (score)";
@@ -3186,7 +3307,7 @@ string html_missing_pair_gates_string(const Settings& settings, Summary& summary
     tally += ", " + to_string(d.items_dropped_unplaced)
            + " dropped with no supporting read left in the rescan window";
   ss << tr(td("outcome")
-           + td(to_string(d.items_tested) + " examined")
+           + td("colspan=\"2\"", to_string(d.items_tested) + " examined")
            + td(tally)) << endl;
 
   ss << "</table>" << endl;
@@ -4040,6 +4161,10 @@ string decode_reject_reason(const string& reject)
   {
     return "A better-scoring missing pair prediction lies within one paired-mapping distance.";
   }
+  else if (reject == "PAIR_DISTANCE_SCORE")
+  {
+    return "Pair distance score below the genome-wide false-positive cutoff.";
+  }
   else if (reject == "PAIR_DISTANCE_COUNT")
   {
     return "Too few read pairs with a shifted mapping distance support this position.";
@@ -4088,7 +4213,7 @@ string decode_reject_reason(const string& reject)
   }
   else if (reject == "KS_BASE_QUALITY")
   {
-    return "Biased base quality scores supporting prediction .";
+    return "Biased base quality scores supporting prediction.";
   }
   else if (reject == "FISHER_STRAND")
   {
@@ -4113,6 +4238,10 @@ string decode_reject_reason(const string& reject)
   else if (reject == "INDEL_HOMOPOLYMER")
   {
     return "Polymorphic indel expands or contracts a homopolymer stretch.";
+  }
+  else if (reject == "POLYMORPHIC_INDEL")
+  {
+    return "Indel polymorphism suppressed by --polymorphism-no-indels.";
   }
   else if (reject == "SURROUNDING_HOMOPOLYMER")
   {

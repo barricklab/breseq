@@ -528,7 +528,7 @@ namespace breseq
     ;
     
     options.addUsage("", NORMAL_OPTION);
-    options.addUsage("Copy numnber (CN) Evidence Options (HIGHLY EXPERIMENTAL)", NORMAL_OPTION);
+    options.addUsage("Copy number (CN) Evidence Options (HIGHLY EXPERIMENTAL)", NORMAL_OPTION);
     options
     ("predict-copy-number","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
