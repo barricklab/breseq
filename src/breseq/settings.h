@@ -263,7 +263,11 @@ namespace breseq
     bool predict_read_alignments;           // Default = true COMMAND-LINE OPTION
     bool predict_missing_coverage;          // Default = true, set to false if targeted_sequencing
     bool predict_homologous_deletions;      // Default = true COMMAND-LINE OPTION
-    bool predict_copy_number;                    // Default = false COMMAND-LINE OPTION
+    bool predict_copy_number;                    // Default = true COMMAND-LINE OPTION
+    //! Whether the user asked for CN via the deprecated --predict-copy-number, rather than
+    //! getting it by default. A missing CNery program is fatal only then; by default
+    //! CNEvidence::predict warns and skips, so breseq still runs without CNery installed.
+    bool copy_number_explicitly_requested;  // Default = false
     bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
     //! Validate options and all file/folder arguments, then exit without doing any work.
     //! A dry run creates nothing -- in particular it skips the command-line logging that
@@ -281,9 +285,9 @@ namespace breseq
     uint32_t read_file_long_read_split_length;  // Default = 200 COMMAND-LINE OPTION
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
     bool paired_mapping;                                     // Default = true COMMAND-LINE OPTION (disable with --no-paired-mapping)
-    bool predict_discordant_pairs;                           // Default = false COMMAND-LINE OPTION (--predict-discordant-pairs; requires paired-mapping)
-    bool predict_missing_pairs;                              // Default = false COMMAND-LINE OPTION (--predict-missing-pairs; requires paired-mapping)
-    bool predict_pair_distance;                              // Default = false COMMAND-LINE OPTION (--predict-pair-distance; requires paired-mapping)
+    bool predict_discordant_pairs;                           // Default = true COMMAND-LINE OPTION (disable with --no-discordant-pair-prediction; requires paired-mapping)
+    bool predict_missing_pairs;                              // Default = true COMMAND-LINE OPTION (disable with --no-missing-pair-prediction; requires paired-mapping)
+    bool predict_pair_distance;                              // Default = true COMMAND-LINE OPTION (disable with --no-pair-distance-prediction; requires paired-mapping)
 
     // Reference sequences
     vector<string> all_reference_file_names;    // REQUIRED COMMAND-LINE OPTION (filled by below)

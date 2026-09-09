@@ -45,6 +45,23 @@ Do not predict new sequence junctions.
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
 
+`--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`, `--no-pair-distance-prediction`
+
+Copy number (CN), discordant pair (DP), missing pair (MP) and pair distance (PD) evidence are
+predicted by default. Each of these flags turns one of them off. The older opt-in flags
+(`--predict-copy-number`, `--predict-discordant-pairs`, `--predict-missing-pairs`,
+`--predict-pair-distance`) are deprecated: they are still accepted so that existing command lines
+keep working, but they no longer do anything.
+
+DP, MP and PD need paired-end reads, so they are skipped for a single-end run or under
+`--no-paired-mapping`. CN prediction needs the separate
+[CNery](https://github.com/barricklab/CNery) program on your `PATH`; if it is missing, _breseq_
+warns and skips CN rather than failing.
+
+Soft clipping (SC) evidence is the exception: it remains opt-in via `--predict-soft-clipping`,
+because that option also lowers `--require-match-fraction` from 0.9 to 0.5 and so changes which
+read alignments are accepted throughout the analysis.
+
 `--dry-run`
 
 Validate every option, check that the required external programs (`bowtie2`, `gnuplot`,

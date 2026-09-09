@@ -1,17 +1,17 @@
 #=GENOME_DIFF	1.0
-#=CREATED	13:25:46 30 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision 2474edd9b66f
-#=COMMAND	./src/breseq/breseq -j 4 --no-paired-mapping -o ./tests/tmv_plasmid_circular_deletion_start_only -r ./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk ./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz ./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
-#=REFSEQ	./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk
-#=READSEQ	./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz
-#=READSEQ	./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=CREATED	07:37:27 09 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=COMMAND	./src/breseq/breseq -j 4 --no-paired-mapping -o tests/tmv_plasmid_circular_deletion_start_only -r tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=REFSEQ	tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk
+#=READSEQ	tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz
+#=READSEQ	tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
 #=CONVERTED-BASES	2735772
 #=CONVERTED-READS	18371
 #=INPUT-BASES	2738037
 #=INPUT-READS	18386
 #=MAPPED-BASES	2292887
 #=MAPPED-READS	15416
-DEL	1	5,7	TMV-plasmid-truncate-end	1	7137	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=7137	position_start=1	ref_seq=7137-bp
+DEL	1	5,7,54	TMV-plasmid-truncate-end	1	7137	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=7137	position_start=1	ref_seq=7137-bp
 RA	2	.	TMV-plasmid-truncate-end	1565	0	C	T	allele_frequencies=T:1.000e+00	deleted=1	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=7.129e-01	frequency_upper=1.000e+00	ks_quality_p_value=1.00000e+00	major_base=T	major_cov=1/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=1/3	prediction=consensus	ref_cov=0/0	score=10.1	total_cov=1/3
 RA	3	.	TMV-plasmid-truncate-end	5198	0	A	G	allele_frequencies=G:1.000e+00	deleted=1	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=7.981e-01	frequency_upper=1.000e+00	ks_quality_p_value=1.00000e+00	major_base=G	major_cov=3/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/3	prediction=consensus	ref_cov=0/0	score=18.1	total_cov=3/3
 RA	4	.	TMV-plasmid-truncate-end	7566	0	T	A	allele_frequencies=A:1.258e-01,C:2.452e-03,T:8.717e-01	consensus_reject=FREQUENCY_CUTOFF	fisher_strand_p_value=7.56060e-01	frequency=1.258e-01	frequency_lower=1.074e-01	frequency_upper=1.459e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=T	major_cov=360/355	major_frequency=8.717e-01	minor_base=A	minor_cov=56/51	new_cov=56/51	prediction=polymorphism	ref_cov=360/355	score=201.4	snp_type=intergenic	total_cov=419/408
@@ -64,148 +64,152 @@ JC	50	.	TMV-plasmid-truncate-end	9443	1	TMV-plasmid-truncate-end	9519	1	0	alignm
 JC	51	.	TMV-plasmid-truncate-end	9544	-1	TMV-plasmid-truncate-end	9840	1	0	alignment_overlap=3	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=1.278e-02	frequency_lower=7.302e-03	frequency_upper=2.081e-02	junction_effective_depth=904.50	junction_mixture_iterations=6	junction_possible_overlap_registers=140	junction_possible_overlap_registers_before_trimming=144	key=TMV-plasmid-truncate-end__9544__-1__TMV-plasmid-truncate-end__9837__1__3____151__151__0__0	max_left=84	max_left_minus=84	max_left_plus=43	max_min_left=51	max_min_left_minus=51	max_min_left_plus=43	max_min_right=71	max_min_right_minus=71	max_min_right_plus=0	max_pos_hash_score=290	max_right=105	max_right_minus=97	max_right_plus=105	neg_log10_pos_hash_p_value=9.3	new_junction_coverage=0.01	new_junction_read_count=3	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=3.00	no_show=1	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.74	side_1_overlap=3	side_1_possible_overlap_registers=145	side_1_possible_overlap_registers_before_trimming=147	side_1_read_count=975	side_1_redundant=0	side_1_weighted_read_count=960.65	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.32	side_2_overlap=0	side_2_possible_overlap_registers=141	side_2_possible_overlap_registers_before_trimming=144	side_2_read_count=842	side_2_redundant=0	side_2_weighted_read_count=839.04	total_non_overlap_reads=3
 JC	52	.	TMV-plasmid-truncate-end	9590	-1	TMV-plasmid-truncate-end	10035	1	0	alignment_overlap=2	coverage_minus=3	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=1.658e-02	frequency_lower=1.004e-02	frequency_upper=2.583e-02	junction_effective_depth=839.98	junction_mixture_iterations=6	junction_possible_overlap_registers=142	junction_possible_overlap_registers_before_trimming=145	key=TMV-plasmid-truncate-end__9590__-1__TMV-plasmid-truncate-end__10033__1__2____151__151__0__0	max_left=142	max_left_minus=142	max_left_plus=92	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=57	max_min_right_minus=55	max_min_right_plus=57	max_pos_hash_score=292	max_right=57	max_right_minus=55	max_right_plus=57	neg_log10_pos_hash_p_value=9.3	new_junction_coverage=0.02	new_junction_read_count=5	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=5.00	no_show=1	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.59	side_1_overlap=2	side_1_possible_overlap_registers=145	side_1_possible_overlap_registers_before_trimming=147	side_1_read_count=936	side_1_redundant=0	side_1_weighted_read_count=922.33	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.95	side_2_overlap=0	side_2_possible_overlap_registers=141	side_2_possible_overlap_registers_before_trimming=145	side_2_read_count=749	side_2_redundant=0	side_2_weighted_read_count=744.54	total_non_overlap_reads=5
 JC	53	.	TMV-plasmid-truncate-end	9676	1	TMV-plasmid-truncate-end	9753	1	0	alignment_overlap=2	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=5.036e-03	frequency_lower=1.678e-03	frequency_upper=1.165e-02	junction_effective_depth=765.98	junction_mixture_iterations=5	junction_possible_overlap_registers=142	junction_possible_overlap_registers_before_trimming=145	key=TMV-plasmid-truncate-end__9676__1__TMV-plasmid-truncate-end__9751__1__2____151__151__0__0	max_left=148	max_left_minus=148	max_left_plus=65	max_min_left=65	max_min_left_minus=0	max_min_left_plus=65	max_min_right=61	max_min_right_minus=61	max_min_right_plus=0	max_pos_hash_score=292	max_right=84	max_right_minus=61	max_right_plus=84	neg_log10_pos_hash_p_value=9.3	new_junction_coverage=0.01	new_junction_read_count=2	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=2.00	no_show=1	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.08	side_1_overlap=2	side_1_possible_overlap_registers=143	side_1_possible_overlap_registers_before_trimming=147	side_1_read_count=792	side_1_redundant=0	side_1_weighted_read_count=789.65	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.00	side_2_overlap=0	side_2_possible_overlap_registers=137	side_2_possible_overlap_registers_before_trimming=145	side_2_read_count=739	side_2_redundant=0	side_2_weighted_read_count=737.55	total_non_overlap_reads=3
-UN	54	.	TMV-plasmid-truncate-end	1	185
-UN	55	.	TMV-plasmid-truncate-end	191	191
-UN	56	.	TMV-plasmid-truncate-end	204	204
-UN	57	.	TMV-plasmid-truncate-end	210	211
-UN	58	.	TMV-plasmid-truncate-end	213	213
-UN	59	.	TMV-plasmid-truncate-end	217	217
-UN	60	.	TMV-plasmid-truncate-end	219	219
-UN	61	.	TMV-plasmid-truncate-end	231	231
-UN	62	.	TMV-plasmid-truncate-end	238	238
-UN	63	.	TMV-plasmid-truncate-end	241	241
-UN	64	.	TMV-plasmid-truncate-end	268	268
-UN	65	.	TMV-plasmid-truncate-end	274	274
-UN	66	.	TMV-plasmid-truncate-end	283	283
-UN	67	.	TMV-plasmid-truncate-end	294	294
-UN	68	.	TMV-plasmid-truncate-end	298	298
-UN	69	.	TMV-plasmid-truncate-end	301	301
-UN	70	.	TMV-plasmid-truncate-end	304	304
-UN	71	.	TMV-plasmid-truncate-end	306	772
-UN	72	.	TMV-plasmid-truncate-end	779	1544
-UN	73	.	TMV-plasmid-truncate-end	1564	1564
-UN	74	.	TMV-plasmid-truncate-end	1566	1567
-UN	75	.	TMV-plasmid-truncate-end	1569	1571
-UN	76	.	TMV-plasmid-truncate-end	1576	1576
-UN	77	.	TMV-plasmid-truncate-end	1579	1579
-UN	78	.	TMV-plasmid-truncate-end	1582	1583
-UN	79	.	TMV-plasmid-truncate-end	1586	1586
-UN	80	.	TMV-plasmid-truncate-end	1590	1592
-UN	81	.	TMV-plasmid-truncate-end	1598	1598
-UN	82	.	TMV-plasmid-truncate-end	1600	1754
-UN	83	.	TMV-plasmid-truncate-end	1764	1764
-UN	84	.	TMV-plasmid-truncate-end	1774	1774
-UN	85	.	TMV-plasmid-truncate-end	1777	1777
-UN	86	.	TMV-plasmid-truncate-end	1779	1779
-UN	87	.	TMV-plasmid-truncate-end	1781	1781
-UN	88	.	TMV-plasmid-truncate-end	1785	1785
-UN	89	.	TMV-plasmid-truncate-end	1958	1958
-UN	90	.	TMV-plasmid-truncate-end	1964	1964
-UN	91	.	TMV-plasmid-truncate-end	1969	2427
-UN	92	.	TMV-plasmid-truncate-end	2430	2430
-UN	93	.	TMV-plasmid-truncate-end	2435	2435
-UN	94	.	TMV-plasmid-truncate-end	2441	2441
-UN	95	.	TMV-plasmid-truncate-end	2540	2540
-UN	96	.	TMV-plasmid-truncate-end	2547	2548
-UN	97	.	TMV-plasmid-truncate-end	2552	2552
-UN	98	.	TMV-plasmid-truncate-end	2563	2563
-UN	99	.	TMV-plasmid-truncate-end	2570	2879
-UN	100	.	TMV-plasmid-truncate-end	2882	2882
-UN	101	.	TMV-plasmid-truncate-end	2888	2888
-UN	102	.	TMV-plasmid-truncate-end	2935	2936
-UN	103	.	TMV-plasmid-truncate-end	2938	2938
-UN	104	.	TMV-plasmid-truncate-end	2944	2944
-UN	105	.	TMV-plasmid-truncate-end	2952	2956
-UN	106	.	TMV-plasmid-truncate-end	2989	2989
-UN	107	.	TMV-plasmid-truncate-end	3024	3031
-UN	108	.	TMV-plasmid-truncate-end	3037	3037
-UN	109	.	TMV-plasmid-truncate-end	3044	3044
-UN	110	.	TMV-plasmid-truncate-end	3056	3056
-UN	111	.	TMV-plasmid-truncate-end	3062	3062
-UN	112	.	TMV-plasmid-truncate-end	3070	3070
-UN	113	.	TMV-plasmid-truncate-end	3072	3072
-UN	114	.	TMV-plasmid-truncate-end	3076	3076
-UN	115	.	TMV-plasmid-truncate-end	3109	3109
-UN	116	.	TMV-plasmid-truncate-end	3181	3181
-UN	117	.	TMV-plasmid-truncate-end	3183	3189
-UN	118	.	TMV-plasmid-truncate-end	3194	3195
-UN	119	.	TMV-plasmid-truncate-end	3199	3199
-UN	120	.	TMV-plasmid-truncate-end	3202	3202
-UN	121	.	TMV-plasmid-truncate-end	3204	3204
-UN	122	.	TMV-plasmid-truncate-end	3206	3206
-UN	123	.	TMV-plasmid-truncate-end	3213	3214
-UN	124	.	TMV-plasmid-truncate-end	3216	3216
-UN	125	.	TMV-plasmid-truncate-end	3218	3219
-UN	126	.	TMV-plasmid-truncate-end	3222	3222
-UN	127	.	TMV-plasmid-truncate-end	3224	3225
-UN	128	.	TMV-plasmid-truncate-end	3228	3229
-UN	129	.	TMV-plasmid-truncate-end	3235	3235
-UN	130	.	TMV-plasmid-truncate-end	3239	3292
-UN	131	.	TMV-plasmid-truncate-end	3298	3322
-UN	132	.	TMV-plasmid-truncate-end	3408	3408
-UN	133	.	TMV-plasmid-truncate-end	3416	3416
-UN	134	.	TMV-plasmid-truncate-end	3438	3576
-UN	135	.	TMV-plasmid-truncate-end	3582	3582
-UN	136	.	TMV-plasmid-truncate-end	3739	3739
-UN	137	.	TMV-plasmid-truncate-end	3758	3758
-UN	138	.	TMV-plasmid-truncate-end	3763	3802
-UN	139	.	TMV-plasmid-truncate-end	3837	3837
-UN	140	.	TMV-plasmid-truncate-end	3842	3842
-UN	141	.	TMV-plasmid-truncate-end	3846	3846
-UN	142	.	TMV-plasmid-truncate-end	3864	3864
-UN	143	.	TMV-plasmid-truncate-end	3866	3877
-UN	144	.	TMV-plasmid-truncate-end	3879	3883
-UN	145	.	TMV-plasmid-truncate-end	3887	3887
-UN	146	.	TMV-plasmid-truncate-end	3891	3892
-UN	147	.	TMV-plasmid-truncate-end	3894	3894
-UN	148	.	TMV-plasmid-truncate-end	3896	3896
-UN	149	.	TMV-plasmid-truncate-end	3900	3900
-UN	150	.	TMV-plasmid-truncate-end	3903	3904
-UN	151	.	TMV-plasmid-truncate-end	3906	3907
-UN	152	.	TMV-plasmid-truncate-end	3909	3913
-UN	153	.	TMV-plasmid-truncate-end	3915	3915
-UN	154	.	TMV-plasmid-truncate-end	3917	3921
-UN	155	.	TMV-plasmid-truncate-end	3926	3927
-UN	156	.	TMV-plasmid-truncate-end	3929	3930
-UN	157	.	TMV-plasmid-truncate-end	3932	3932
-UN	158	.	TMV-plasmid-truncate-end	3934	3934
-UN	159	.	TMV-plasmid-truncate-end	3937	3938
-UN	160	.	TMV-plasmid-truncate-end	3940	4236
-UN	161	.	TMV-plasmid-truncate-end	4239	4241
-UN	162	.	TMV-plasmid-truncate-end	4391	4391
-UN	163	.	TMV-plasmid-truncate-end	4393	4393
-UN	164	.	TMV-plasmid-truncate-end	4395	4395
-UN	165	.	TMV-plasmid-truncate-end	4397	4398
-UN	166	.	TMV-plasmid-truncate-end	4401	4401
-UN	167	.	TMV-plasmid-truncate-end	4403	4407
-UN	168	.	TMV-plasmid-truncate-end	4409	4409
-UN	169	.	TMV-plasmid-truncate-end	4416	4416
-UN	170	.	TMV-plasmid-truncate-end	4418	4432
-UN	171	.	TMV-plasmid-truncate-end	4434	4434
-UN	172	.	TMV-plasmid-truncate-end	4436	4682
-UN	173	.	TMV-plasmid-truncate-end	4686	4686
-UN	174	.	TMV-plasmid-truncate-end	4831	4831
-UN	175	.	TMV-plasmid-truncate-end	4846	4846
-UN	176	.	TMV-plasmid-truncate-end	4850	5173
-UN	177	.	TMV-plasmid-truncate-end	5299	5299
-UN	178	.	TMV-plasmid-truncate-end	5303	5400
-UN	179	.	TMV-plasmid-truncate-end	5406	5406
-UN	180	.	TMV-plasmid-truncate-end	5483	5483
-UN	181	.	TMV-plasmid-truncate-end	5493	5493
-UN	182	.	TMV-plasmid-truncate-end	5509	5542
-UN	183	.	TMV-plasmid-truncate-end	5545	5551
-UN	184	.	TMV-plasmid-truncate-end	5557	5558
-UN	185	.	TMV-plasmid-truncate-end	5562	5562
-UN	186	.	TMV-plasmid-truncate-end	5564	5564
-UN	187	.	TMV-plasmid-truncate-end	5586	5586
-UN	188	.	TMV-plasmid-truncate-end	5595	5595
-UN	189	.	TMV-plasmid-truncate-end	5598	5598
-UN	190	.	TMV-plasmid-truncate-end	5625	5625
-UN	191	.	TMV-plasmid-truncate-end	5634	5634
-UN	192	.	TMV-plasmid-truncate-end	5643	5643
-UN	193	.	TMV-plasmid-truncate-end	5673	5673
-UN	194	.	TMV-plasmid-truncate-end	5677	5677
-UN	195	.	TMV-plasmid-truncate-end	5688	6662
-UN	196	.	TMV-plasmid-truncate-end	6800	6800
-UN	197	.	TMV-plasmid-truncate-end	6802	6802
-UN	198	.	TMV-plasmid-truncate-end	6804	6888
+CN	54	.	TMV-plasmid-truncate-end	1	7000	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	relative_coverage=0.725	tile_size=100
+CN	55	.	TMV-plasmid-truncate-end	7001	7900	4	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	relative_coverage=125	tile_size=100
+CN	56	.	TMV-plasmid-truncate-end	7901	8800	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	relative_coverage=1.13	tile_size=100
+CN	57	.	TMV-plasmid-truncate-end	8801	10200	2	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	relative_coverage=141	tile_size=100
+UN	58	.	TMV-plasmid-truncate-end	1	185
+UN	59	.	TMV-plasmid-truncate-end	191	191
+UN	60	.	TMV-plasmid-truncate-end	204	204
+UN	61	.	TMV-plasmid-truncate-end	210	211
+UN	62	.	TMV-plasmid-truncate-end	213	213
+UN	63	.	TMV-plasmid-truncate-end	217	217
+UN	64	.	TMV-plasmid-truncate-end	219	219
+UN	65	.	TMV-plasmid-truncate-end	231	231
+UN	66	.	TMV-plasmid-truncate-end	238	238
+UN	67	.	TMV-plasmid-truncate-end	241	241
+UN	68	.	TMV-plasmid-truncate-end	268	268
+UN	69	.	TMV-plasmid-truncate-end	274	274
+UN	70	.	TMV-plasmid-truncate-end	283	283
+UN	71	.	TMV-plasmid-truncate-end	294	294
+UN	72	.	TMV-plasmid-truncate-end	298	298
+UN	73	.	TMV-plasmid-truncate-end	301	301
+UN	74	.	TMV-plasmid-truncate-end	304	304
+UN	75	.	TMV-plasmid-truncate-end	306	772
+UN	76	.	TMV-plasmid-truncate-end	779	1544
+UN	77	.	TMV-plasmid-truncate-end	1564	1564
+UN	78	.	TMV-plasmid-truncate-end	1566	1567
+UN	79	.	TMV-plasmid-truncate-end	1569	1571
+UN	80	.	TMV-plasmid-truncate-end	1576	1576
+UN	81	.	TMV-plasmid-truncate-end	1579	1579
+UN	82	.	TMV-plasmid-truncate-end	1582	1583
+UN	83	.	TMV-plasmid-truncate-end	1586	1586
+UN	84	.	TMV-plasmid-truncate-end	1590	1592
+UN	85	.	TMV-plasmid-truncate-end	1598	1598
+UN	86	.	TMV-plasmid-truncate-end	1600	1754
+UN	87	.	TMV-plasmid-truncate-end	1764	1764
+UN	88	.	TMV-plasmid-truncate-end	1774	1774
+UN	89	.	TMV-plasmid-truncate-end	1777	1777
+UN	90	.	TMV-plasmid-truncate-end	1779	1779
+UN	91	.	TMV-plasmid-truncate-end	1781	1781
+UN	92	.	TMV-plasmid-truncate-end	1785	1785
+UN	93	.	TMV-plasmid-truncate-end	1958	1958
+UN	94	.	TMV-plasmid-truncate-end	1964	1964
+UN	95	.	TMV-plasmid-truncate-end	1969	2427
+UN	96	.	TMV-plasmid-truncate-end	2430	2430
+UN	97	.	TMV-plasmid-truncate-end	2435	2435
+UN	98	.	TMV-plasmid-truncate-end	2441	2441
+UN	99	.	TMV-plasmid-truncate-end	2540	2540
+UN	100	.	TMV-plasmid-truncate-end	2547	2548
+UN	101	.	TMV-plasmid-truncate-end	2552	2552
+UN	102	.	TMV-plasmid-truncate-end	2563	2563
+UN	103	.	TMV-plasmid-truncate-end	2570	2879
+UN	104	.	TMV-plasmid-truncate-end	2882	2882
+UN	105	.	TMV-plasmid-truncate-end	2888	2888
+UN	106	.	TMV-plasmid-truncate-end	2935	2936
+UN	107	.	TMV-plasmid-truncate-end	2938	2938
+UN	108	.	TMV-plasmid-truncate-end	2944	2944
+UN	109	.	TMV-plasmid-truncate-end	2952	2956
+UN	110	.	TMV-plasmid-truncate-end	2989	2989
+UN	111	.	TMV-plasmid-truncate-end	3024	3031
+UN	112	.	TMV-plasmid-truncate-end	3037	3037
+UN	113	.	TMV-plasmid-truncate-end	3044	3044
+UN	114	.	TMV-plasmid-truncate-end	3056	3056
+UN	115	.	TMV-plasmid-truncate-end	3062	3062
+UN	116	.	TMV-plasmid-truncate-end	3070	3070
+UN	117	.	TMV-plasmid-truncate-end	3072	3072
+UN	118	.	TMV-plasmid-truncate-end	3076	3076
+UN	119	.	TMV-plasmid-truncate-end	3109	3109
+UN	120	.	TMV-plasmid-truncate-end	3181	3181
+UN	121	.	TMV-plasmid-truncate-end	3183	3189
+UN	122	.	TMV-plasmid-truncate-end	3194	3195
+UN	123	.	TMV-plasmid-truncate-end	3199	3199
+UN	124	.	TMV-plasmid-truncate-end	3202	3202
+UN	125	.	TMV-plasmid-truncate-end	3204	3204
+UN	126	.	TMV-plasmid-truncate-end	3206	3206
+UN	127	.	TMV-plasmid-truncate-end	3213	3214
+UN	128	.	TMV-plasmid-truncate-end	3216	3216
+UN	129	.	TMV-plasmid-truncate-end	3218	3219
+UN	130	.	TMV-plasmid-truncate-end	3222	3222
+UN	131	.	TMV-plasmid-truncate-end	3224	3225
+UN	132	.	TMV-plasmid-truncate-end	3228	3229
+UN	133	.	TMV-plasmid-truncate-end	3235	3235
+UN	134	.	TMV-plasmid-truncate-end	3239	3292
+UN	135	.	TMV-plasmid-truncate-end	3298	3322
+UN	136	.	TMV-plasmid-truncate-end	3408	3408
+UN	137	.	TMV-plasmid-truncate-end	3416	3416
+UN	138	.	TMV-plasmid-truncate-end	3438	3576
+UN	139	.	TMV-plasmid-truncate-end	3582	3582
+UN	140	.	TMV-plasmid-truncate-end	3739	3739
+UN	141	.	TMV-plasmid-truncate-end	3758	3758
+UN	142	.	TMV-plasmid-truncate-end	3763	3802
+UN	143	.	TMV-plasmid-truncate-end	3837	3837
+UN	144	.	TMV-plasmid-truncate-end	3842	3842
+UN	145	.	TMV-plasmid-truncate-end	3846	3846
+UN	146	.	TMV-plasmid-truncate-end	3864	3864
+UN	147	.	TMV-plasmid-truncate-end	3866	3877
+UN	148	.	TMV-plasmid-truncate-end	3879	3883
+UN	149	.	TMV-plasmid-truncate-end	3887	3887
+UN	150	.	TMV-plasmid-truncate-end	3891	3892
+UN	151	.	TMV-plasmid-truncate-end	3894	3894
+UN	152	.	TMV-plasmid-truncate-end	3896	3896
+UN	153	.	TMV-plasmid-truncate-end	3900	3900
+UN	154	.	TMV-plasmid-truncate-end	3903	3904
+UN	155	.	TMV-plasmid-truncate-end	3906	3907
+UN	156	.	TMV-plasmid-truncate-end	3909	3913
+UN	157	.	TMV-plasmid-truncate-end	3915	3915
+UN	158	.	TMV-plasmid-truncate-end	3917	3921
+UN	159	.	TMV-plasmid-truncate-end	3926	3927
+UN	160	.	TMV-plasmid-truncate-end	3929	3930
+UN	161	.	TMV-plasmid-truncate-end	3932	3932
+UN	162	.	TMV-plasmid-truncate-end	3934	3934
+UN	163	.	TMV-plasmid-truncate-end	3937	3938
+UN	164	.	TMV-plasmid-truncate-end	3940	4236
+UN	165	.	TMV-plasmid-truncate-end	4239	4241
+UN	166	.	TMV-plasmid-truncate-end	4391	4391
+UN	167	.	TMV-plasmid-truncate-end	4393	4393
+UN	168	.	TMV-plasmid-truncate-end	4395	4395
+UN	169	.	TMV-plasmid-truncate-end	4397	4398
+UN	170	.	TMV-plasmid-truncate-end	4401	4401
+UN	171	.	TMV-plasmid-truncate-end	4403	4407
+UN	172	.	TMV-plasmid-truncate-end	4409	4409
+UN	173	.	TMV-plasmid-truncate-end	4416	4416
+UN	174	.	TMV-plasmid-truncate-end	4418	4432
+UN	175	.	TMV-plasmid-truncate-end	4434	4434
+UN	176	.	TMV-plasmid-truncate-end	4436	4682
+UN	177	.	TMV-plasmid-truncate-end	4686	4686
+UN	178	.	TMV-plasmid-truncate-end	4831	4831
+UN	179	.	TMV-plasmid-truncate-end	4846	4846
+UN	180	.	TMV-plasmid-truncate-end	4850	5173
+UN	181	.	TMV-plasmid-truncate-end	5299	5299
+UN	182	.	TMV-plasmid-truncate-end	5303	5400
+UN	183	.	TMV-plasmid-truncate-end	5406	5406
+UN	184	.	TMV-plasmid-truncate-end	5483	5483
+UN	185	.	TMV-plasmid-truncate-end	5493	5493
+UN	186	.	TMV-plasmid-truncate-end	5509	5542
+UN	187	.	TMV-plasmid-truncate-end	5545	5551
+UN	188	.	TMV-plasmid-truncate-end	5557	5558
+UN	189	.	TMV-plasmid-truncate-end	5562	5562
+UN	190	.	TMV-plasmid-truncate-end	5564	5564
+UN	191	.	TMV-plasmid-truncate-end	5586	5586
+UN	192	.	TMV-plasmid-truncate-end	5595	5595
+UN	193	.	TMV-plasmid-truncate-end	5598	5598
+UN	194	.	TMV-plasmid-truncate-end	5625	5625
+UN	195	.	TMV-plasmid-truncate-end	5634	5634
+UN	196	.	TMV-plasmid-truncate-end	5643	5643
+UN	197	.	TMV-plasmid-truncate-end	5673	5673
+UN	198	.	TMV-plasmid-truncate-end	5677	5677
+UN	199	.	TMV-plasmid-truncate-end	5688	6662
+UN	200	.	TMV-plasmid-truncate-end	6800	6800
+UN	201	.	TMV-plasmid-truncate-end	6802	6802
+UN	202	.	TMV-plasmid-truncate-end	6804	6888

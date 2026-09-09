@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:09:51 29 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision bb5cb58cb627
+#=CREATED	07:31:49 09 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
 #=COMMAND	./src/breseq/breseq -j 4 -b 0 -o tests/REL606_fragment_deletion_between_is -r tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq.gz
 #=REFSEQ	tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.gbk
 #=READSEQ	tests/REL606_fragment_deletion_between_is/../data/REL606/REL606.fragment.2.fastq.gz
@@ -10,12 +10,13 @@
 #=INPUT-READS	24075
 #=MAPPED-BASES	866283
 #=MAPPED-READS	24072
-DEL	1	2	REL606-5	10535	21535	between=IS1	gene_name=[ECB_00212]–[phoE]	gene_product=[ECB_00212],yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP,ykfJ,prfH,pepD,gpt,yafA,crl,insA-3,insB-3,[phoE]	genes_inactivated=ECB_00212,yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP,ykfJ,prfH,pepD,gpt,yafA,crl,insA-3,insB-3	genes_overlapping=phoE	locus_tag=[ECB_00212]–[ECB_00238]	locus_tags_inactivated=ECB_00212,ECB_00213,ECB_00214,ECB_00215,ECB_00216,ECB_00217,ECB_00218,ECB_00219,ECB_00220,ECB_00221,ECB_00222,ECB_00223,ECB_00224,ECB_00225,ECB_00226,ECB_00227,ECB_00228,ECB_00229,ECB_00230,ECB_00231,ECB_00232,ECB_00233,ECB_00234,ECB_00235,ECB_00236,ECB_00237	locus_tags_overlapping=ECB_00238	mutation_category=large_deletion	position_end=32069	position_start=10535	ref_seq=21535-bp
+DEL	1	2,3	REL606-5	10535	21535	between=IS1	gene_name=[ECB_00212]–[phoE]	gene_product=[ECB_00212],yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP,ykfJ,prfH,pepD,gpt,yafA,crl,insA-3,insB-3,[phoE]	genes_inactivated=ECB_00212,yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP,ykfJ,prfH,pepD,gpt,yafA,crl,insA-3,insB-3	genes_overlapping=phoE	locus_tag=[ECB_00212]–[ECB_00238]	locus_tags_inactivated=ECB_00212,ECB_00213,ECB_00214,ECB_00215,ECB_00216,ECB_00217,ECB_00218,ECB_00219,ECB_00220,ECB_00221,ECB_00222,ECB_00223,ECB_00224,ECB_00225,ECB_00226,ECB_00227,ECB_00228,ECB_00229,ECB_00230,ECB_00231,ECB_00232,ECB_00233,ECB_00234,ECB_00235,ECB_00236,ECB_00237	locus_tags_overlapping=ECB_00238	mutation_category=large_deletion	position_end=32069	position_start=10535	ref_seq=21535-bp
 MC	2	.	REL606-5	10229	32044	305	298	gene_name=[insB-2]–[insB-3]	gene_product=[insB-2],ECB_00212,yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP,ykfJ,prfH,pepD,gpt,yafA,crl,insA-3,[insB-3]	left_inside_cov=15	left_outside_cov=18	locus_tag=[ECB_00211]–[ECB_00237]	right_inside_cov=15	right_outside_cov=17
-UN	3	.	REL606-5	1	1
-UN	4	.	REL606-5	389	408
-UN	5	.	REL606-5	8392	8416
-UN	6	.	REL606-5	9797	10001
-UN	7	.	REL606-5	10059	10181
-UN	8	.	REL606-5	10244	32036
-UN	9	.	REL606-5	46297	46298
+CN	3	.	REL606-5	10601	31300	0	gene_name=[ECB_00212]–crl	gene_product=[ECB_00212],yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP,ykfJ,prfH,pepD,gpt,yafA,crl	locus_tag=[ECB_00212]–[ECB_00235]	relative_coverage=0	tile_size=100
+UN	4	.	REL606-5	1	1
+UN	5	.	REL606-5	389	408
+UN	6	.	REL606-5	8392	8416
+UN	7	.	REL606-5	9797	10001
+UN	8	.	REL606-5	10059	10181
+UN	9	.	REL606-5	10244	32036
+UN	10	.	REL606-5	46297	46298

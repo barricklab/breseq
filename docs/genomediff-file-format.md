@@ -577,7 +577,8 @@ A read supports an `MP` call only when its mate produced *no alignment at all*. 
 over part of its length is a partially-aligning read &mdash; the signal `SC` reports &mdash; not
 evidence that its sequence is missing from the reference.
 
-Predicted only when `--predict-missing-pairs` is given. This functionality is experimental.
+Predicted by default. Pass `--no-missing-pair-prediction` to turn it off. This functionality is
+experimental.
 
 Line specification:
 
@@ -645,7 +646,8 @@ was added. Neither shift has to be large enough to make any individual pair disc
 distinguishes PD from `JC` (which needs a read split across the breakpoint) and from `DP` (which
 tests each pair on its own, and applies no cutoff at all on the short side).
 
-Predicted only when `--predict-pair-distance` is given. This functionality is experimental.
+Predicted by default. Pass `--no-pair-distance-prediction` to turn it off. This functionality is
+experimental.
 
 Line specification:
 

@@ -1017,8 +1017,9 @@ identify_mutations_pileup::identify_mutations_pileup(
       _pd_ring_short.assign(_pd_ring_w, 0);
       _pd_ring_u.assign(_pd_ring_w, 0);
     } else {
-      cerr << "WARNING: --predict-pair-distance was given, but no paired read group has a usable" << endl;
-      cerr << "         mapping-distance histogram. No pair-distance (PD) evidence will be predicted." << endl;
+      cerr << "WARNING: No paired read group has a usable mapping-distance histogram, so no" << endl;
+      cerr << "         pair-distance (PD) evidence will be predicted. Pass" << endl;
+      cerr << "         --no-pair-distance-prediction to skip PD without this warning." << endl;
     }
   }
 

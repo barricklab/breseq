@@ -2443,7 +2443,11 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.error_rates_done_file_name);
     }
     summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
-    if (settings.predict_soft_clipping) {
+    // Guarded as MP, PD, DP and CN are: JSONStorable::retrieve asserts on a missing file, and
+    // this one is absent for any output directory produced before SC reporting existed -- a case
+    // that stopped being exotic once SC became the default.
+    if (settings.predict_soft_clipping
+        && file_exists(settings.soft_clipping_summary_file_name.c_str())) {
       summary.soft_clipping.retrieve(settings.soft_clipping_summary_file_name);
     }
 
@@ -2504,8 +2508,12 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.discordant_pair_done_file_name);
     }
     // Restore on a restart that skipped the step above: Output reports these gates in summary.html
-    // and summary.json, and they are not recoverable from the evidence .gd alone.
-    summary.discordant_pair.retrieve(settings.discordant_pair_summary_file_name);
+    // and summary.json, and they are not recoverable from the evidence .gd alone. Guarded as MP, PD
+    // and CN are, because JSONStorable::retrieve asserts on a missing file and this one is absent
+    // for any output directory produced before DP reporting existed -- a case that stopped being
+    // exotic once DP became the default.
+    if (file_exists(settings.discordant_pair_summary_file_name.c_str()))
+      summary.discordant_pair.retrieve(settings.discordant_pair_summary_file_name);
   }
 
     //
