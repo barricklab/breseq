@@ -258,6 +258,10 @@ namespace breseq
     bool skip_homologous_deletion_prediction; // Default = false COMMAND-LINE OPTION
     bool predict_copy_number;                    // Default = false COMMAND-LINE OPTION
     bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
+    //! Validate options and all file/folder arguments, then exit without doing any work.
+    //! A dry run creates nothing -- in particular it skips the command-line logging that
+    //! would otherwise create the output directory (see Settings::log).
+    bool dry_run;                           // Default = false COMMAND-LINE OPTION
     
     //! Settings: Read File Options
     vector<string> read_file_names;             // REQUIRED COMMAND-LINE OPTION

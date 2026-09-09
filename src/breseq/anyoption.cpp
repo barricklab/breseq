@@ -113,6 +113,7 @@ namespace breseq {
 		once = true;
 		hasoptions = false;
 		autousage = false;
+		m_last_declared_has_argument = false;
 
 		strcpy( long_opt_prefix , "--" );
 
@@ -1068,6 +1069,200 @@ namespace breseq {
 		}
     //cout << "DONE" << endl;
 		return sentence;
+	}
+
+
+	/*
+	 * path validation
+	 */
+
+	AnyOption&
+	AnyOption::addPathRole( PathRole role )
+	{
+		ASSERT(!m_last_declared_option.empty(),
+		       "A path role marker (isInputFile/isInputDirectory/isOutputFile/isOutputDirectory) was used before any option was declared.");
+		ASSERT(m_last_declared_has_argument,
+		       "Option --" + split(m_last_declared_option, ",")[0] + " takes no argument, so it cannot name a path. Remove the path role marker.");
+
+		PathOption po;
+		po.declared_name = m_last_declared_option;
+		po.long_name = split(m_last_declared_option, ",")[0];
+		po.role = role;
+		po.is_positional = false;
+		path_options.push_back(po);
+
+		return *this;
+	}
+
+	void
+	AnyOption::setPositionalArgumentsRole( PathRole role, const string& label )
+	{
+		PathOption po;
+		po.role = role;
+		po.is_positional = true;
+		po.label = label;
+		path_options.push_back(po);
+	}
+
+	namespace {
+
+		// Values that name no path at all and must never be checked. The empty string is
+		// how most optional path options say "off" (--mask-gd, --user-evidence-gd,
+		// --header-genome-diff, gdtools COUNT --detailed-output, ...), and "stdout"/"-"
+		// are literal sentinels compared by name (breseq SUMMARIZE-FASTQ/-REFERENCE
+		// default their --output to "stdout").
+		bool is_path_sentinel(const string& value)
+		{
+			return value.empty() || (value == "stdout") || (value == "-");
+		}
+
+		// Checks one path in one role. Appends a message to `problems` if it is no good,
+		// and fills in a short description for the --dry-run report otherwise.
+		bool check_one_path(const string& path, PathRole role, const string& usage_name,
+		                    vector<string>& problems, string& description)
+		{
+			switch (role) {
+
+				case INPUT_FILE:
+					// "Exists, is not a directory, and is readable" -- deliberately NOT
+					// S_ISREG. A reference or read file is legitimately a pipe when given
+					// by process substitution (breseq -r <(zcat ref.gbk.gz) ... hands us
+					// /dev/fd/63), so requiring a regular file would reject a working
+					// command line. stat() follows symlinks, so a symlinked input passes
+					// and a DANGLING symlink correctly does not.
+					if (!path_exists(path)) {
+						problems.push_back("Input file for " + usage_name + " does not exist: " + path);
+						return false;
+					}
+					// Pointing -r at a directory is a common enough mistake that the generic
+					// "does not exist" would be actively misleading.
+					if (is_directory(path)) {
+						problems.push_back("Input file for " + usage_name + " is a directory, not a file: " + path);
+						return false;
+					}
+					if (!is_readable(path)) {
+						problems.push_back("Input file for " + usage_name + " is not readable: " + path);
+						return false;
+					}
+					description = "input file";
+					return true;
+
+				case INPUT_DIRECTORY:
+					if (!is_directory(path)) {
+						if (is_regular_file(path))
+							problems.push_back("Input directory for " + usage_name + " is a file, not a directory: " + path);
+						else
+							problems.push_back("Input directory for " + usage_name + " does not exist: " + path);
+						return false;
+					}
+					if (!is_readable(path) || (::access(path.c_str(), X_OK) != 0)) {
+						problems.push_back("Input directory for " + usage_name + " is not readable: " + path);
+						return false;
+					}
+					description = "input directory";
+					return true;
+
+				case OUTPUT_FILE:
+				case OUTPUT_DIRECTORY: {
+					// Both output roles ask only one question: could something be created here?
+					//
+					// They deliberately do NOT require the value to name the thing finally written,
+					// because very often it does not. It may be a prefix (gdtools PHYLOGENY -o
+					// output writes output.tre), a template (breseq SIMULATE-READS splits -o into
+					// _1/_2 in paired mode), a name whose extension depends on --format (gdtools
+					// APPLY/ANNOTATE, breseq CONVERT-REFERENCE), or a file in one mode and a
+					// directory in another (breseq BAM2ALN/BAM2COV, depending on region count).
+					//
+					// Nor is the PARENT required to exist: create_path() is mkdir -p, and several
+					// commands call it on exactly this dirname, so a deep new path is legitimate.
+					// The question is whether the nearest ancestor that DOES exist is a writable
+					// directory we could build downwards from.
+					const string noun = (role == OUTPUT_DIRECTORY) ? "Output directory" : "Output path";
+
+					struct stat st;
+					if (::stat(path.c_str(), &st) == 0) {
+						// It already exists. Only its writability matters.
+						if ((role == OUTPUT_DIRECTORY) && !is_directory(path)) {
+							problems.push_back(noun + " for " + usage_name + " exists but is not a directory: " + path);
+							return false;
+						}
+						if (::access(path.c_str(), W_OK) != 0) {
+							problems.push_back(noun + " for " + usage_name + " is not writable: " + path);
+							return false;
+						}
+						description = is_directory(path) ? "existing directory" : "existing file (will be overwritten)";
+						return true;
+					}
+
+					const string ancestor = nearest_existing_ancestor(path);
+					if (ancestor.empty()) {
+						problems.push_back(noun + " for " + usage_name + " cannot be created: " + path);
+						return false;
+					}
+					if (!is_writable_directory(ancestor)) {
+						problems.push_back(noun + " for " + usage_name + " cannot be created because "
+						                   + ancestor + " is not a writable directory: " + path);
+						return false;
+					}
+					description = "will be created under " + ancestor;
+					return true;
+				}
+			}
+
+			return true;
+		}
+
+	} // anonymous namespace
+
+	bool check_option_paths( AnyOption& options, bool verbose )
+	{
+		ASSERT(options.commandArgsProcessed(),
+		       "check_option_paths() was called before processCommandArgs(), so no option has a value yet.");
+
+		const vector<PathOption>& path_options = options.getPathOptions();
+		if (path_options.empty()) return true;
+
+		vector<string> problems;
+		vector<string> passed;
+
+		for (vector<PathOption>::const_iterator it = path_options.begin(); it != path_options.end(); it++) {
+
+			// Collect the values to check for this entry.
+			vector<string> values;
+			if (it->is_positional) {
+				for (int32_t i = 0; i < options.getArgc(); i++)
+					values.push_back(options.getArgv(i));
+			} else {
+				// The EFFECTIVE value, which falls back to the registered default -- not
+				// count(), which is false for a default. breseq BAM2ALN/BAM2COV/BAM2DRP
+				// deliberately validate -b/-f against their data/reference.{bam,fasta}
+				// defaults, and that behavior has to survive. Repeated options accumulate
+				// newline-joined (see AnyOption::setValue), so one option can carry many paths.
+				const string value = options[it->long_name];
+				if (!value.empty()) values = split(value, "\n");
+			}
+
+			for (vector<string>::const_iterator v = values.begin(); v != values.end(); v++) {
+				if (is_path_sentinel(*v)) continue;
+
+				string description;
+				if (check_one_path(*v, it->role, it->usage_name(), problems, description))
+					passed.push_back(it->usage_name() + " :: " + *v + " [" + description + "]");
+			}
+		}
+
+		if (verbose) {
+			cerr << endl << color_yellow("Checking input and output paths") << endl;
+			for (vector<string>::const_iterator it = passed.begin(); it != passed.end(); it++)
+				cerr << color_green("---> " + *it) << endl;
+			if (passed.empty() && problems.empty())
+				cerr << "---> No file or folder arguments to check." << endl;
+		}
+
+		for (vector<string>::const_iterator it = problems.begin(); it != problems.end(); it++)
+			cerr << color_red("---> ERROR " + *it) << endl;
+
+		return problems.empty();
 	}
 
 } // namespace breseq

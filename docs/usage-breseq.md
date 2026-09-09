@@ -45,6 +45,18 @@ Do not predict new sequence junctions.
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
 
+`--dry-run`
+
+Validate every option, check that the required external programs (`bowtie2`, `gnuplot`,
+`samtools`) are installed, and check that every input file exists and every output path can
+be written &mdash; then exit without running the pipeline and without creating any files.
+Exits with status 0 if everything checks out and non-zero otherwise, so it can gate a real
+run: `breseq --dry-run -r reference.gbk reads.fastq && breseq -r reference.gbk reads.fastq`.
+
+Note that the file and folder checks themselves happen on *every* run, not just this one: a
+mistyped path fails immediately rather than part way through the analysis. What `--dry-run`
+adds is stopping afterwards, and reporting each path it checked.
+
 !!! tip
     For a complete list of options (including many advanced options), please show the full command line help by running `breseq -h` or `breseq --help`.
 
