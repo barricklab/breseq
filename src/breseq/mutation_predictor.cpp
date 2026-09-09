@@ -1549,7 +1549,7 @@ namespace breseq {
   void MutationPredictor::predictMCtoDELbyHomology(Settings& settings, Summary& summary, cGenomeDiff& gd,
                                                    diff_entry_list_t& mc, diff_entry_list_t& dp, diff_entry_list_t& ra)
   {
-    if (settings.skip_homologous_deletion_prediction) return;
+    if (!settings.predict_homologous_deletions) return;
     if (mc.empty()) return;
 
     int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);

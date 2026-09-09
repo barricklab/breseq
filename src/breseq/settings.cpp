@@ -646,7 +646,7 @@ namespace breseq
       cerr << "Input files are aligned SAM instead of FASTQ (--aligned-sam option)." << endl;
       cerr << "No junction prediction will take place." << endl;
       cerr << output_divider << endl;
-      this->skip_new_junction_prediction = true;
+      this->predict_new_junctions = false;
     }
     this->paired_mapping = !options.count("no-paired-mapping");
 
@@ -924,7 +924,7 @@ namespace breseq
     }
 
     //! Settings: Junction Prediction
-    this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("no-junction-prediction");
+    this->predict_new_junctions = this->predict_new_junctions && !options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
     this->maximum_candidate_junctions = from_string<int32_t>(options["junction-maximum-candidates"]);
     this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);
@@ -936,10 +936,10 @@ namespace breseq
     this->junction_weight_reads = !options.count("junction-no-read-weighting");
     
     //! Settings: Pipeline Control
-    this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
-    this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("skip-JC-prediction");
-    this->skip_missing_coverage_prediction = options.count("skip-MC-prediction");
-    this->skip_homologous_deletion_prediction = options.count("skip-homologous-DEL-prediction");
+    this->predict_read_alignments = !options.count("skip-RA-MC-prediction");
+    this->predict_new_junctions = this->predict_new_junctions && !options.count("skip-JC-prediction");
+    this->predict_missing_coverage = !options.count("skip-MC-prediction");
+    this->predict_homologous_deletions = !options.count("skip-homologous-DEL-prediction");
     
     //! Settings: Debugging
     this->keep_all_intermediates = options.count("keep-intermediates");
@@ -1197,7 +1197,7 @@ namespace breseq
     
     this->targeted_sequencing = options.count("targeted-sequencing");
     if (this->targeted_sequencing)
-      this->skip_missing_coverage_prediction = true;
+      this->predict_missing_coverage = false;
     
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
@@ -1365,11 +1365,11 @@ namespace breseq
     this->dry_run = false;
 
     //! Options that control which parts of the pipeline to execute
-    this->skip_read_filtering = false;
-    this->skip_new_junction_prediction = false;
-		this->skip_read_alignment_and_missing_coverage_prediction = false;
-		this->skip_missing_coverage_prediction = false;
-    this->skip_homologous_deletion_prediction = false;
+    this->filter_reads = true;
+    this->predict_new_junctions = true;
+		this->predict_read_alignments = true;
+		this->predict_missing_coverage = true;
+    this->predict_homologous_deletions = true;
     this->no_evidence_html = false;
 		this->predict_copy_number = false;
 		this->do_periodicity = false;

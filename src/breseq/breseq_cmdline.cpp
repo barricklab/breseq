@@ -1639,7 +1639,7 @@ int breseq_default_action(int argc, char* argv[])
               flat_file_counter + 1,
               flat_file_counter + 2,
               settings.quality_score_trim,
-              !settings.skip_read_filtering,
+              settings.filter_reads,
               s.num_bases,
               read_file_base_limit,
               settings.read_file_read_length_min,
@@ -1685,7 +1685,7 @@ int breseq_default_action(int argc, char* argv[])
                                                        convert_file_name,
                                                        flat_file_counter + 1,
                                                        settings.quality_score_trim,
-                                                       !settings.skip_read_filtering,
+                                                       settings.filter_reads,
                                                        s.num_bases,
                                                        read_file_base_limit,
                                                        settings.read_file_read_length_min,
@@ -1906,7 +1906,7 @@ int breseq_default_action(int argc, char* argv[])
   create_path(settings.candidate_junction_path);
 
   if ( !settings.aligned_sam_mode &&
-      settings.do_step(settings.preprocess_junction_done_file_name, settings.skip_new_junction_prediction ? "Preprocessing alignments: merging files" : "Preprocessing alignments: merging files and finding alignments for candidate junction identification"))
+      settings.do_step(settings.preprocess_junction_done_file_name, settings.predict_new_junctions ? "Preprocessing alignments: merging files and finding alignments for candidate junction identification" : "Preprocessing alignments: merging files"))
   {
     /////////////////////////////////////////////
     // MERGE SAM FILES AND PREPROCESS ALIGNMENTS //
@@ -1944,7 +1944,7 @@ int breseq_default_action(int argc, char* argv[])
   // Only do steps 03 and 04 if we are performing new junction prediction
   //
   
-  if ( !settings.skip_new_junction_prediction )
+  if ( settings.predict_new_junctions )
   {
   
   //
@@ -2089,7 +2089,7 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		create_path(settings.alignment_resolution_path);
 
-    bool junction_prediction = !settings.skip_new_junction_prediction;
+    bool junction_prediction = settings.predict_new_junctions;
     
     // Fail-safe to not try to resolve to junctions if none exist
     if (file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
@@ -2128,7 +2128,7 @@ int breseq_default_action(int argc, char* argv[])
 		string junction_bam_file_name = settings.junction_bam_file_name;
 
     // only run samtools if we are predicting junctions (resolved_junction BAM already in BAM format)
-		if (!settings.skip_new_junction_prediction && !file_empty(settings.candidate_junction_fasta_file_name.c_str()))
+		if (settings.predict_new_junctions && !file_empty(settings.candidate_junction_fasta_file_name.c_str()))
 		{
       samtools_sort(resolved_junction_sam_file_name, junction_bam_file_name, settings.num_processors);
       samtools_index(junction_bam_file_name);
@@ -2269,7 +2269,7 @@ int breseq_default_action(int argc, char* argv[])
 	//# }
 	//#
 
-  if (!settings.skip_read_alignment_and_missing_coverage_prediction)
+  if (settings.predict_read_alignments)
   {
     
     //
@@ -2340,7 +2340,7 @@ int breseq_default_action(int argc, char* argv[])
     
     if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
     {
-      if (!settings.skip_missing_coverage_prediction) {
+      if (settings.predict_missing_coverage) {
         CoverageDistribution::analyze_unique_coverage_distributions(
                                                                     settings,
                                                                     summary,
@@ -2607,7 +2607,7 @@ int breseq_default_action(int argc, char* argv[])
       create_path(settings.evidence_path);
       
       cGenomeDiff jc_gd;
-      if (!settings.skip_new_junction_prediction) {
+      if (settings.predict_new_junctions) {
         jc_gd.read(settings.jc_genome_diff_file_name);
       }
            
@@ -2618,7 +2618,7 @@ int breseq_default_action(int argc, char* argv[])
       assign_junction_read_counts(settings, summary, jc_gd);
 
       cGenomeDiff ra_mc_gd;
-      if (!settings.skip_read_alignment_and_missing_coverage_prediction) {
+      if (settings.predict_read_alignments) {
         ra_mc_gd.read(settings.ra_mc_genome_diff_file_name);
       }
       test_RA_evidence(ra_mc_gd, ref_seq_info, settings);
