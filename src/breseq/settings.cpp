@@ -566,10 +566,13 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Pipeline Control Options", NORMAL_OPTION);
     options
-    ("skip-RA-MC-prediction", "Skip generating read alignment and missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("skip-JC-prediction", "Skip generating new junction evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("skip-MC-prediction", "Skip generating missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("skip-homologous-DEL-prediction", "Skip predicting large deletions between two near-identical copies of an unannotated repeat (paralogous genes, an rRNA operon) from missing coverage evidence. These deletions leave no new junction, so they are located by reading which copy the surviving reads came from.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-read-alignment-prediction", "Do not predict read alignment (RA) evidence. Missing coverage (MC) evidence comes from the same pileup pass, so it is not predicted either, and neither are the CN/DP/MP/PD evidence types that read what that pass writes. (DEFAULT=OFF, i.e. RA prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-missing-coverage-prediction", "Do not predict missing coverage (MC) evidence. Read alignment (RA) evidence is still predicted. (DEFAULT=OFF, i.e. MC prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-homologous-deletion-prediction", "Do not predict large deletions between two near-identical copies of an unannotated repeat (paralogous genes, an rRNA operon) from missing coverage evidence. These deletions leave no new junction, so they are located by reading which copy the surviving reads came from. (DEFAULT=OFF, i.e. they are predicted)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("skip-RA-MC-prediction", "DEPRECATED: use --no-read-alignment-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("skip-JC-prediction", "DEPRECATED: use --no-junction-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("skip-MC-prediction", "DEPRECATED: use --no-missing-coverage-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("skip-homologous-DEL-prediction", "DEPRECATED: use --no-homologous-deletion-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("dry-run", "Validate every option, check that all required executables are installed, and check that every input file exists and every output path can be written, then exit WITHOUT running the pipeline and without creating any files. Exits with status 0 if everything checks out and nonzero otherwise, so it can gate a real run.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
@@ -979,10 +982,38 @@ namespace breseq
     this->junction_weight_reads = !options.count("junction-no-read-weighting");
     
     //! Settings: Pipeline Control
-    this->predict_read_alignments = !options.count("skip-RA-MC-prediction");
+    this->predict_read_alignments = !options.count("no-read-alignment-prediction")
+                                 && !options.count("skip-RA-MC-prediction");
     this->predict_new_junctions = this->predict_new_junctions && !options.count("skip-JC-prediction");
-    this->predict_missing_coverage = !options.count("skip-MC-prediction");
-    this->predict_homologous_deletions = !options.count("skip-homologous-DEL-prediction");
+    this->predict_missing_coverage = !options.count("no-missing-coverage-prediction")
+                                  && !options.count("skip-MC-prediction");
+    this->predict_homologous_deletions = !options.count("no-homologous-deletion-prediction")
+                                      && !options.count("skip-homologous-DEL-prediction");
+
+    // Backward compatibility: the four --skip-* spellings are DEPRECATED. They still work, so no
+    // existing command line breaks, but every opt-out is now spelled --no-X-prediction. Note
+    // --skip-JC-prediction was always an exact duplicate of --no-junction-prediction: both OR into
+    // the same setting, so there is no new flag for it.
+    if (options.count("skip-RA-MC-prediction")) {
+      cerr << "WARNING: The --skip-RA-MC-prediction option is DEPRECATED. It still works, but" << endl;
+      cerr << "         use --no-read-alignment-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("skip-JC-prediction")) {
+      cerr << "WARNING: The --skip-JC-prediction option is DEPRECATED. It still works, but" << endl;
+      cerr << "         use --no-junction-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("skip-MC-prediction")) {
+      cerr << "WARNING: The --skip-MC-prediction option is DEPRECATED. It still works, but" << endl;
+      cerr << "         use --no-missing-coverage-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("skip-homologous-DEL-prediction")) {
+      cerr << "WARNING: The --skip-homologous-DEL-prediction option is DEPRECATED. It still works," << endl;
+      cerr << "         but use --no-homologous-deletion-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
 
     // The stage-08 pileup writes the DP/MP/PD candidate-region CSVs, the soft-clipping counts and
     // the per-position coverage table, but the stages that CONSUME them run outside the guard that

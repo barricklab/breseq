@@ -9,8 +9,8 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 
 # Regression test for the starvation guard.
 #
-# --skip-RA-MC-prediction skips the stage-08 pileup, which is also what writes the discordant-pair/
-# missing-pair/pair-distance candidate-region CSVs and the per-position coverage table that CN reads.
+# --no-read-alignment-prediction skips the stage-08 pileup, which is also what writes the discordant-
+# pair/missing-pair/pair-distance candidate-region CSVs and the per-position coverage table CN reads.
 # The stages that CONSUME those files sit outside the guard that skips the pileup, so once CN/DP/MP/PD
 # became default-on this combination ran them with their inputs absent and died on a missing file.
 # Settings now turns all four off when RA prediction is off.
@@ -21,7 +21,7 @@ TESTCMD="\
     ${BRESEQ} \
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
-    --skip-RA-MC-prediction \
+    --no-read-alignment-prediction \
     -r ${DATADIR}/lambda/lambda.gbk \
     ${DATADIR}/lambda/lambda_mixed_population.fastq.gz \
     "

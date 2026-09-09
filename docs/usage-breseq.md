@@ -37,10 +37,6 @@ Human-readable name of the analysis run for output (DEFAULT=\<none>).
 
 Number of processors to use in multithreaded steps (DEFAULT=1).
 
-`--no-junction-prediction`
-
-Do not predict new sequence junctions.
-
 `-p, --polymorphism-prediction`
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
@@ -61,6 +57,14 @@ warns and skips CN rather than failing.
 Soft clipping (SC) evidence is the exception: it remains opt-in via `--predict-soft-clipping`,
 because that option also lowers `--require-match-fraction` from 0.9 to 0.5 and so changes which
 read alignments are accepted throughout the analysis.
+
+`--no-read-alignment-prediction`, `--no-missing-coverage-prediction`, `--no-junction-prediction`, `--no-homologous-deletion-prediction`
+
+Turn off one kind of evidence prediction. `--no-read-alignment-prediction` also turns off missing
+coverage, because both come from the same pileup pass (as do CN, DP, MP and PD, which read what
+that pass writes). The older `--skip-RA-MC-prediction`, `--skip-MC-prediction`,
+`--skip-JC-prediction` and `--skip-homologous-DEL-prediction` spellings are deprecated: they still
+work, but every opt-out is now spelled `--no-X-prediction`.
 
 `--dry-run`
 
