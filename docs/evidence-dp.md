@@ -2,9 +2,9 @@
 
 A pair of breakpoints joined by read pairs that are, **individually**, mapped wrongly: in the wrong
 orientation, farther apart than the library allows, or with their two mates on two different
-reference sequences. It is experimental and off by default; enable it with
-`--predict-discordant-pairs`. It is not currently promoted to any mutation type, so accepted `DP`
-items appear as unassigned evidence.
+reference sequences. It is predicted by default on paired-end data; turn it off with
+`--no-discordant-pair-prediction`. It is not currently promoted to any mutation type, so accepted
+`DP` items appear as unassigned evidence.
 
 ## At a glance
 
@@ -14,7 +14,7 @@ items appear as unassigned evidence.
 | Tables in `summary.html` | `Discordant pair (DP) evidence metrics` + `... gates` |
 | Banner in `index.html` | `Unassigned discordant pair evidence` |
 | Sort order in the GenomeDiff file | 16 |
-| Enabled by | `--predict-discordant-pairs` |
+| Enabled by | on by default; turn off with `--no-discordant-pair-prediction` |
 | Requires | paired reads |
 | Promotes to | *(nothing — reported as evidence only)* |
 | Rejected items visible in HTML | yes, on `marginal.html` (top 20) |
@@ -252,11 +252,15 @@ Annotation at each side.
 
 ## Options
 
-!!! warning "Experimental"
-    `DP` prediction is experimental and off by default. Enable it with `--predict-discordant-pairs`.
+`DP` is predicted by default on paired-end data.
 
-`--predict-discordant-pairs`\
-Predict discordant read-pair (DP) evidence for structural variants.
+`--no-discordant-pair-prediction`\
+Do not predict discordant read-pair (DP) evidence. `DP` is also skipped automatically on a single-end
+run or under `--no-paired-mapping`, since it needs both mates of a pair.
+
+!!! note "`--predict-discordant-pairs` is deprecated"
+    Still accepted so existing command lines keep working, and hidden from `breseq --help`, but it no
+    longer switches anything on.
 
 `--discordant-pair-seed <int>` (default 3)\
 Minimum discordant read pairs within a paired-mapping-distance window required to seed a candidate

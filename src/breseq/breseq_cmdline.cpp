@@ -66,9 +66,9 @@ int do_bam2aln(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
-  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
-  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=ACCESSION_START-END.alignment.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names ACCESSION_START-END.alignment.*, ... (DEFAULT=.)");
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam").isInputFile();
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta").isInputFile();
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=ACCESSION_START-END.alignment.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names ACCESSION_START-END.alignment.*, ... (DEFAULT=.)").isOutputFile();
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
   options("format", "Format of output alignment(s): HTML, TXT, or JSON", "HTML");
   options("max-flanking-columns,w", "Maximum number of bases in aligned reads to show flanking the region of interest (0=ALL)", 100);
@@ -85,21 +85,10 @@ int do_bam2aln(int argc, char* argv[]) {
 		options.printNormalUsage();
 		return -1;
 	}
-  
-  if (!file_exists(options["fasta"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
-    options.printUsage();
-    return -1;
-  }
-                     
-  if (!file_exists(options["bam"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
-    options.printUsage();
-    return -1;
-  }
-  
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
+
   vector<string> region_list;
   if (options.count("region")) {
     region_list= from_string<vector<string> >(options["region"]);
@@ -248,9 +237,9 @@ int do_bam2drp(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
-  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
-  options("output,o", "Output SVG plot file name", "discordant_pairs.svg");
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam").isInputFile();
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta").isInputFile();
+  options("output,o", "Output SVG plot file name", "discordant_pairs.svg").isOutputFile();
 
   options.processCommandArgs(argc, argv);
 
@@ -259,18 +248,8 @@ int do_bam2drp(int argc, char* argv[]) {
     return -1;
   }
 
-  if (!file_exists(options["fasta"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
-    options.printUsage();
-    return -1;
-  }
-  if (!file_exists(options["bam"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
-    options.printUsage();
-    return -1;
-  }
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
 
   // 0, 1, or 2 regions as unnamed command-line arguments.
   vector<string> region_list;
@@ -305,10 +284,10 @@ int do_bam2cov(int argc, char* argv[]) {
 
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   // required options
-  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
-  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam").isInputFile();
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta").isInputFile();
   // options controlling what files are output
-  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=ACCESSION_START-END.coverage.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with automatically generated names (DEFAULT=.). When no region is provided, one file is created per reference sequence, named ACCESSION.coverage.*");
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=ACCESSION_START-END.coverage.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with automatically generated names (DEFAULT=.). When no region is provided, one file is created per reference sequence, named ACCESSION.coverage.*").isOutputFile();
   options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
   options("format", "Format of output: PNG, PDF, or SVG for a coverage plot; TSV (tab-separated) or CSV (comma-separated) for a coverage table", "PNG");
@@ -338,20 +317,9 @@ int do_bam2cov(int argc, char* argv[]) {
     options.printNormalUsage();
     exit(-1);
   }
-  
-  if (!file_exists(options["fasta"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
-    options.printUsage();
-    return -1;
-  }
-  
-  if (!file_exists(options["bam"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
-    options.printUsage();
-    return -1;
-  }
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   vector<string> region_list;
   if (options.count("region"))
@@ -556,7 +524,7 @@ int do_convert_fastq(int argc, char* argv[])
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o", "output FASTQ file", "output.fastq");
+  options("output,o", "output FASTQ file", "output.fastq").isOutputFile();
   options("input-format,1", "format to convert from", "GUESS");
   options("output-format,2", "format to convert to", "SANGER");
   options("reverse-complement,r", "reverse complement all reads and add _RC to their names", TAKES_NO_ARGUMENT);
@@ -573,6 +541,12 @@ int do_convert_fastq(int argc, char* argv[])
     options.printUsage();
     return -1;
   }
+
+  // The trailing unnamed arguments are the input FASTQ file.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input FASTQ file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   // make sure that the config options are good:
   if (options.getArgc() != 1) {
@@ -630,8 +604,8 @@ int do_convert_reference(int argc, char* argv[]) {
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("format,f", "Output format. Valid options: FASTA, GFF3, GENBANK, CSV (Default = FASTA)", "FASTA");
   options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
-  options("output,o", "Output reference file path (Default = output.*)");
-  options("isescan-results,s", "Path to CSV file output by isescan. Existing mobile_element, repeat_region, and transposon,  annotations will be replaced with these results.");
+  options("output,o", "Output reference file path (Default = output.*)").isOutputFile();
+  options("isescan-results,s", "Path to CSV file output by isescan. Existing mobile_element, repeat_region, and transposon,  annotations will be replaced with these results.").isInputFile();
   options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", NORMAL_OPTION);
 
 	options.processCommandArgs(argc, argv);
@@ -640,6 +614,12 @@ int do_convert_reference(int argc, char* argv[]) {
     options.printUsage();
     return -1;
   }
+
+  // The trailing unnamed arguments are the input reference files.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input reference file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
 	// make sure that the config options are good:
   if (options.getArgc() == 0) {
@@ -727,7 +707,7 @@ int do_summarize_fastq(int argc, char* argv[])
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o", "output JSON file or stdout", "stdout");
+  options("output,o", "output JSON file or stdout", "stdout").isOutputFile();
   
   options.processCommandArgs(argc, argv);
   
@@ -736,6 +716,12 @@ int do_summarize_fastq(int argc, char* argv[])
     options.printNormalUsage();
     return -1;
   }
+
+  // The trailing unnamed arguments are the input FASTQ files.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input FASTQ file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   if (options.getArgc() == 0) {
     options.printUsage();
@@ -795,7 +781,7 @@ int do_summarize_reference(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o", "output JSON file or stdout", "stdout");
+  options("output,o", "output JSON file or stdout", "stdout").isOutputFile();
 
   options.processCommandArgs(argc, argv);
   
@@ -803,6 +789,12 @@ int do_summarize_reference(int argc, char* argv[]) {
     options.printUsage();
     return -1;
   }
+
+  // The trailing unnamed arguments are the input reference files.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input reference file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   // make sure that the config options are good:
   if (options.getArgc() == 0) {
@@ -853,8 +845,8 @@ int do_get_sequence(int argc, char *argv[])
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (Default=data/reference.fasta)");
-  options("output,o","output FASTA file. Will write to STDOUT if not provided.");
+  options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (Default=data/reference.fasta)").isInputFile();
+  options("output,o","output FASTA file. Will write to STDOUT if not provided.").isOutputFile();
   options("reverse-complement,c","reverse complement", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -863,6 +855,9 @@ int do_get_sequence(int argc, char *argv[])
     options.printNormalUsage();
     return -1;
   }
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   if (options.getArgc() == 0) {
     options.addUsage("");
@@ -975,9 +970,9 @@ int do_error_count(int argc, char* argv[]) {
 	AnyOption options("Usage: breseq ERROR_COUNT --bam reference.bam --fasta reference.fasta --output test --readfile reads.fastq --covariates ref_base,obs_base,quality=40 [--coverage] [--errors] [--minimum-quality-score 3]");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("bam,b", "BAM file containing aligned read sequences", "data/reference.bam")
-		("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-		("output,o", "output directory", "./")
+		("bam,b", "BAM file containing aligned read sequences", "data/reference.bam").isInputFile()
+		("fasta,f", "FASTA file of reference sequence", "data/reference.fasta").isInputFile()
+		("output,o", "output directory", "./").isOutputDirectory()
 		("coverage", "generate unique coverage distribution output", TAKES_NO_ARGUMENT)
 		("errors", "generate unique error count output", TAKES_NO_ARGUMENT)
     ("covariates", "covariates for error model. a comma separated list (no spaces) of these choices: ref_base, obs_base, prev_base, quality, read_set, ref_pos, read_pos, base_repeat. For quality, read_pos, and base_repeat you must specify the maximum value possible, e.g. quality=40")
@@ -990,6 +985,9 @@ int do_error_count(int argc, char* argv[]) {
 		options.printUsage();
 		return -1;
 	}
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
   
   if(options.count("errors") && !options.count("covariates") ) {
     WARN("Must provide --covariates when --errors specified.");
@@ -1045,10 +1043,10 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("bam,b", "BAM file containing aligned read sequences", "data/reference.bam");
-  options("fasta,f", "FASTA file of reference sequence", "data/reference.fasta");
-  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files", "data/reference.gff3");
-  options("output,o", "Output CSV file", "contingency_loci.csv");
+  options("bam,b", "BAM file containing aligned read sequences", "data/reference.bam").isInputFile();
+  options("fasta,f", "FASTA file of reference sequence", "data/reference.fasta").isInputFile();
+  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files", "data/reference.gff3").isInputFile();
+  options("output,o", "Output CSV file", "contingency_loci.csv").isOutputFile();
   options("minimum-length,m", "Minimum length of a homopolymer tract in the reference genome to consider a putative contingency locus", "8");
   //options("loci,l", "Contingency loci coordinates", "");
   options("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT);
@@ -1059,13 +1057,9 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
 		options.printNormalUsage();
 		return -1;
 	}
-  
-  if ( !file_exists(options["bam"].c_str()) || !file_exists(options["fasta"].c_str()) || !file_exists(options["reference"].c_str()) ) {
-    options.addUsage("");
-    options.addUsage("Provide valid bam, fasta, and reference file paths.");
-    options.printUsage();
-    return -1;
-  }
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
   
 	// attempt to calculate error calibrations:
   analyze_contingency_loci(
@@ -1095,9 +1089,9 @@ int do_analyze_soft_clipping( int argc, char* argv[]){
 
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   // required options
-  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta").isInputFile();
   // options controlling what files are output
-  options("output,o", "Output CSV path", "output.csv");
+  options("output,o", "Output CSV path", "output.csv").isOutputFile();
   options("minimum-clipped-bases,c", "Minimum bases that can be soft-clipped for a read to be reported", "100");
 
   options.processCommandArgs(argc, argv);
@@ -1107,13 +1101,12 @@ int do_analyze_soft_clipping( int argc, char* argv[]){
     options.printNormalUsage();
     exit(-1);
   }
-  
-  if (!file_exists(options["fasta"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
-    options.printUsage();
-    return -1;
-  }
+
+  // The trailing unnamed arguments are the input BAM files.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input BAM file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   vector<string> bam_file_names;
   if (options.getArgc() == 0)
@@ -1155,8 +1148,8 @@ int do_simulate_reads(int argc, char *argv[])
 
   options
   ("mode,m",        "Simulation mode: 'single', 'paired-end' or 'tiled'.", "single")
-  ("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-  ("output,o",      "Output file name. Should be of the form *.fastq. Two output files (*_1.fastq and *_2.fastq) will be created for paired-end reads.", "simulated_reads.fastq")
+  ("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile()
+  ("output,o",      "Output file name. Should be of the form *.fastq. Two output files (*_1.fastq and *_2.fastq) will be created for paired-end reads.", "simulated_reads.fastq").isOutputFile()
   ("coverage,c",    "Average coverage value to simulate.", static_cast<uint32_t>(80))
   ("number-of-reads,n", "Number of reads (single/tiled) or read pairs (paired-end) to simulate. Overrides --coverage.")
   ("length,l",      "Read length to simulate.", static_cast<uint32_t>(50))
@@ -1208,7 +1201,10 @@ int do_simulate_reads(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
-  
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
+
   cerr << "COMMAND: SIMULATE-READS" << endl;
 
 
@@ -1346,30 +1342,19 @@ int do_coverage_bias(int argc, char *argv[])
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
-  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam").isInputFile();
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta").isInputFile();
   options("read-length,l", "Length of read used to calculate %GC", 200);
-  options("output,o", "Output file prefix", "coverage_bias");
+  options("output,o", "Output file prefix", "coverage_bias").isOutputFile();
   options.processCommandArgs(argc, argv);
   
   if(options.count("help")) {
     options.printNormalUsage();
     return -1;
   }
-  
-  if (!file_exists(options["fasta"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
-    options.printUsage();
-    return -1;
-  }
-  
-  if (!file_exists(options["bam"].c_str())) {
-    options.addUsage("");
-    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
-    options.printUsage();
-    return -1;
-  }
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   //(re)load the reference sequences from our converted files
   //cReferenceSequences ref_seq_info;
@@ -1419,7 +1404,7 @@ int do_assemble_unmatched(int argc, char* argv[])
   options.addUsage("This command must be run from the main results directory of a breseq run (i.e., it must contain a data directory),");
   options.addUsage("You must provide the exact set of original fastq read files used in the breseq run. It is assumed that each set of two read files, in order, contain the first and second reads from pairs.");
   options.addUsage("Output is in directory: unmatched_assembly");
-  options("output,o","Main directory containing output from the breseq run. A directory within this called unmatched_assembly will be created for the output of this command.", ".");
+  options("output,o","Main directory containing output from the breseq run. A directory within this called unmatched_assembly will be created for the output of this command.", ".").isInputDirectory();
   options("verbose,v","Verbose output", TAKES_NO_ARGUMENT);
   options.addUsage("");
   options.addUsage("Example assembly commands:");
@@ -1427,6 +1412,12 @@ int do_assemble_unmatched(int argc, char* argv[])
   options.addUsage("  velvetg assemble_unmatched -exp_cov auto -cov_cutoff auto");
 
   options.processCommandArgs(argc, argv);
+
+  // The trailing unnamed arguments are the input FASTQ files.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input FASTQ file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   // Need empty setting object for trimming files.
   Summary summary;
@@ -1537,6 +1528,18 @@ int breseq_default_action(int argc, char* argv[])
 	Settings settings(argc, argv);
 	settings.check_installed();
 
+  // --dry-run: the Settings constructor has already validated every option value and every
+  // file/folder argument (exiting nonzero if anything was wrong), and check_installed() has
+  // confirmed the required executables. Nothing is left to check and nothing has been created,
+  // so report success and stop.
+  //
+  // Deliberately placed BEFORE the output.done short-circuit below: asked to validate a command
+  // line, breseq should validate it, not notice that some previous run already finished here.
+  if (settings.dry_run) {
+    cerr << endl << color_green("+++   DRY RUN PASSED -- options and paths are valid, no work performed") << endl;
+    return 0;
+  }
+
   // If the pipeline has already completed successfully, don't redo any work
   // (the numbered intermediate stage directories may have already been removed).
   if (file_exists(settings.output_done_file_name.c_str())) {
@@ -1636,7 +1639,7 @@ int breseq_default_action(int argc, char* argv[])
               flat_file_counter + 1,
               flat_file_counter + 2,
               settings.quality_score_trim,
-              !settings.skip_read_filtering,
+              settings.filter_reads,
               s.num_bases,
               read_file_base_limit,
               settings.read_file_read_length_min,
@@ -1682,7 +1685,7 @@ int breseq_default_action(int argc, char* argv[])
                                                        convert_file_name,
                                                        flat_file_counter + 1,
                                                        settings.quality_score_trim,
-                                                       !settings.skip_read_filtering,
+                                                       settings.filter_reads,
                                                        s.num_bases,
                                                        read_file_base_limit,
                                                        settings.read_file_read_length_min,
@@ -1903,7 +1906,7 @@ int breseq_default_action(int argc, char* argv[])
   create_path(settings.candidate_junction_path);
 
   if ( !settings.aligned_sam_mode &&
-      settings.do_step(settings.preprocess_junction_done_file_name, settings.skip_new_junction_prediction ? "Preprocessing alignments: merging files" : "Preprocessing alignments: merging files and finding alignments for candidate junction identification"))
+      settings.do_step(settings.preprocess_junction_done_file_name, settings.predict_new_junctions ? "Preprocessing alignments: merging files and finding alignments for candidate junction identification" : "Preprocessing alignments: merging files"))
   {
     /////////////////////////////////////////////
     // MERGE SAM FILES AND PREPROCESS ALIGNMENTS //
@@ -1941,7 +1944,7 @@ int breseq_default_action(int argc, char* argv[])
   // Only do steps 03 and 04 if we are performing new junction prediction
   //
   
-  if ( !settings.skip_new_junction_prediction )
+  if ( settings.predict_new_junctions )
   {
   
   //
@@ -2086,7 +2089,7 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		create_path(settings.alignment_resolution_path);
 
-    bool junction_prediction = !settings.skip_new_junction_prediction;
+    bool junction_prediction = settings.predict_new_junctions;
     
     // Fail-safe to not try to resolve to junctions if none exist
     if (file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
@@ -2125,7 +2128,7 @@ int breseq_default_action(int argc, char* argv[])
 		string junction_bam_file_name = settings.junction_bam_file_name;
 
     // only run samtools if we are predicting junctions (resolved_junction BAM already in BAM format)
-		if (!settings.skip_new_junction_prediction && !file_empty(settings.candidate_junction_fasta_file_name.c_str()))
+		if (settings.predict_new_junctions && !file_empty(settings.candidate_junction_fasta_file_name.c_str()))
 		{
       samtools_sort(resolved_junction_sam_file_name, junction_bam_file_name, settings.num_processors);
       samtools_index(junction_bam_file_name);
@@ -2266,7 +2269,7 @@ int breseq_default_action(int argc, char* argv[])
 	//# }
 	//#
 
-  if (!settings.skip_read_alignment_and_missing_coverage_prediction)
+  if (settings.predict_read_alignments)
   {
     
     //
@@ -2337,7 +2340,7 @@ int breseq_default_action(int argc, char* argv[])
     
     if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
     {
-      if (!settings.skip_missing_coverage_prediction) {
+      if (settings.predict_missing_coverage) {
         CoverageDistribution::analyze_unique_coverage_distributions(
                                                                     settings,
                                                                     summary,
@@ -2440,7 +2443,11 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.error_rates_done_file_name);
     }
     summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
-    if (settings.predict_soft_clipping) {
+    // Guarded as MP, PD, DP and CN are: JSONStorable::retrieve asserts on a missing file, and
+    // this one is absent for any output directory produced before SC reporting existed -- a case
+    // that stopped being exotic once SC became the default.
+    if (settings.predict_soft_clipping
+        && file_exists(settings.soft_clipping_summary_file_name.c_str())) {
       summary.soft_clipping.retrieve(settings.soft_clipping_summary_file_name);
     }
 
@@ -2501,8 +2508,12 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.discordant_pair_done_file_name);
     }
     // Restore on a restart that skipped the step above: Output reports these gates in summary.html
-    // and summary.json, and they are not recoverable from the evidence .gd alone.
-    summary.discordant_pair.retrieve(settings.discordant_pair_summary_file_name);
+    // and summary.json, and they are not recoverable from the evidence .gd alone. Guarded as MP, PD
+    // and CN are, because JSONStorable::retrieve asserts on a missing file and this one is absent
+    // for any output directory produced before DP reporting existed -- a case that stopped being
+    // exotic once DP became the default.
+    if (file_exists(settings.discordant_pair_summary_file_name.c_str()))
+      summary.discordant_pair.retrieve(settings.discordant_pair_summary_file_name);
   }
 
     //
@@ -2604,7 +2615,7 @@ int breseq_default_action(int argc, char* argv[])
       create_path(settings.evidence_path);
       
       cGenomeDiff jc_gd;
-      if (!settings.skip_new_junction_prediction) {
+      if (settings.predict_new_junctions) {
         jc_gd.read(settings.jc_genome_diff_file_name);
       }
            
@@ -2615,7 +2626,7 @@ int breseq_default_action(int argc, char* argv[])
       assign_junction_read_counts(settings, summary, jc_gd);
 
       cGenomeDiff ra_mc_gd;
-      if (!settings.skip_read_alignment_and_missing_coverage_prediction) {
+      if (settings.predict_read_alignments) {
         ra_mc_gd.read(settings.ra_mc_genome_diff_file_name);
       }
       test_RA_evidence(ra_mc_gd, ref_seq_info, settings);

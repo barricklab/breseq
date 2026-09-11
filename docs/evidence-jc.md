@@ -13,7 +13,7 @@ is on by default.
 | Metrics / gates tables | *(none — see `Junction Candidates Tested`, `Junction Skew Score Calculation` and `Final Junction Predictions`)* |
 | Banner in `index.html` | `Unassigned new junction evidence` |
 | Sort order in the GenomeDiff file | 12 |
-| Enabled by | on by default (disable with `--no-junction-prediction`) |
+| Enabled by | on by default; turn off with `--no-junction-prediction` |
 | Requires | nothing (works on single-end data) |
 | Promotes to | `MOB`, `DEL`, `INS`, `AMP`, `CON`, `INT`, `INV` |
 | Rejected items visible in HTML | yes, on `marginal.html` (top 10) |

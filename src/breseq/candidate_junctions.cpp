@@ -752,7 +752,7 @@ namespace breseq {
    *  For each read file, merges the stage1/stage2 alignment BAMs (if two-stage
    *  alignment was used) so that read order matches the original FASTQ file,
    *  writing reference_sam_file_name. If new junction prediction is enabled
-   *  (!settings.skip_new_junction_prediction), this is done in the same pass as
+   *  (settings.predict_new_junctions), this is done in the same pass as
    *  preprocessing for candidate junction identification: writing one SAM file
    *  of partial read alignments that could support junctions
    *  (preprocess_junction_split_sam_file_name) and another SAM file of the best
@@ -761,7 +761,7 @@ namespace breseq {
    */
   void PreprocessAlignments::merge_sort_and_preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
   {
-    bool do_preprocess = !settings.skip_new_junction_prediction;
+    bool do_preprocess = settings.predict_new_junctions;
     string reference_fasta_file_name = settings.reference_fasta_file_name;
 
     if (do_preprocess) {

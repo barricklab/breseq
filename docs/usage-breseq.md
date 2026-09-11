@@ -37,40 +37,52 @@ Human-readable name of the analysis run for output (DEFAULT=\<none>).
 
 Number of processors to use in multithreaded steps (DEFAULT=1).
 
-`--no-junction-prediction`
-
-Do not predict new sequence junctions.
-
 `-p, --polymorphism-prediction`
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
 
-### Evidence prediction options
+`--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`, `--no-pair-distance-prediction`
 
-Four kinds of evidence are **off by default** and must be requested. All are experimental; each links
-to a page describing what it detects, what gates it applies, and why an item is rejected.
+[Copy number (CN)](evidence-cn.md), [discordant pair (DP)](evidence-dp.md),
+[missing pair (MP)](evidence-mp.md) and [pair distance (PD)](evidence-pd.md) evidence are
+predicted by default. Each of these flags turns one of them off. The older opt-in flags
+(`--predict-copy-number`, `--predict-discordant-pairs`, `--predict-missing-pairs`,
+`--predict-pair-distance`) are deprecated: they are still accepted so that existing command lines
+keep working, but they no longer do anything.
 
-`--predict-copy-number`\
-[CN evidence](evidence-cn.md) — regions whose read depth implies a copy number other than one.
+DP, MP and PD need paired-end reads, so they are skipped for a single-end run or under
+`--no-paired-mapping`. CN prediction needs the separate
+[CNery](https://github.com/barricklab/CNery) program on your `PATH`; if it is missing, _breseq_
+warns and skips CN rather than failing.
 
-`--predict-soft-clipping`\
-[SC evidence](evidence-sc.md) — positions where reads stop aligning part-way and their tails agree
-on what follows. Note this also lowers `--require-match-fraction` from 0.9 to 0.5 unless you set it
-explicitly, which changes the alignments every other evidence type is computed from.
+[Soft clipping (SC)](evidence-sc.md) evidence is the exception: it remains opt-in via
+`--predict-soft-clipping`, because that option also lowers `--require-match-fraction` from 0.9 to 0.5
+and so changes which read alignments are accepted throughout the analysis.
 
-`--predict-discordant-pairs`\
-[DP evidence](evidence-dp.md) — breakpoints joined by read pairs that are individually mis-mapped,
-including mates on two different reference sequences. Requires paired reads.
+Each of these types has its own group of tuning options in `breseq --help`, documented on its page
+under [Evidence Types](evidence-overview.md).
 
-`--predict-missing-pairs`\
-[MP evidence](evidence-mp.md) — insertion points of sequence absent from the reference, seen as reads
-whose mates map nowhere. Requires paired reads.
+`--no-read-alignment-prediction`, `--no-missing-coverage-prediction`, `--no-junction-prediction`, `--no-homologous-deletion-prediction`
 
-`--predict-pair-distance`\
-[PD evidence](evidence-pd.md) — points where the read pairs spanning them are collectively shifted in
-mapping distance, detecting events too small for `DP` to see. Requires paired reads.
+Turn off one kind of evidence prediction — [RA](evidence-ra.md), [MC](evidence-mc.md),
+[JC](evidence-jc.md), and homologous deletions respectively.
+`--no-read-alignment-prediction` also turns off missing
+coverage, because both come from the same pileup pass (as do CN, DP, MP and PD, which read what
+that pass writes). The older `--skip-RA-MC-prediction`, `--skip-MC-prediction`,
+`--skip-JC-prediction` and `--skip-homologous-DEL-prediction` spellings are deprecated: they still
+work, but every opt-out is now spelled `--no-X-prediction`.
 
-Each has its own group of tuning options in `breseq --help`; the per-type pages document them.
+`--dry-run`
+
+Validate every option, check that the required external programs (`bowtie2`, `gnuplot`,
+`samtools`) are installed, and check that every input file exists and every output path can
+be written &mdash; then exit without running the pipeline and without creating any files.
+Exits with status 0 if everything checks out and non-zero otherwise, so it can gate a real
+run: `breseq --dry-run -r reference.gbk reads.fastq && breseq -r reference.gbk reads.fastq`.
+
+Note that the file and folder checks themselves happen on *every* run, not just this one: a
+mistyped path fails immediately rather than part way through the analysis. What `--dry-run`
+adds is stopping afterwards, and reporting each path it checked.
 
 !!! tip
     For a complete list of options (including many advanced options), please show the full command line help by running `breseq -h` or `breseq --help`.

@@ -798,10 +798,10 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   sample_name = t.sample_name;
   genbank_field_for_seq_id = t.genbank_field_for_seq_id;
   num_processors = t.num_processors;
-  skip_read_filtering = t.skip_read_filtering;
-  skip_new_junction_prediction = t.skip_new_junction_prediction;
-  skip_read_alignment_and_missing_coverage_prediction = t.skip_read_alignment_and_missing_coverage_prediction;
-  skip_missing_coverage_prediction = t.skip_missing_coverage_prediction;
+  filter_reads = t.filter_reads;
+  predict_new_junctions = t.predict_new_junctions;
+  predict_read_alignments = t.predict_read_alignments;
+  predict_missing_coverage = t.predict_missing_coverage;
   no_evidence_html = t.no_evidence_html;
   
   //! Settings: Read File
@@ -1112,10 +1112,10 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"sample_name", s.sample_name},
       {"genbank_field_for_seq_id", s.genbank_field_for_seq_id},
       {"num_processors", s.num_processors},
-      {"skip_read_filtering", s.skip_read_filtering},
-      {"skip_new_junction_prediction", s.skip_new_junction_prediction},
-      {"skip_read_alignment_and_missing_coverage_prediction", s.skip_read_alignment_and_missing_coverage_prediction},
-      {"skip_missing_coverage_prediction", s.skip_missing_coverage_prediction},
+      {"filter_reads", s.filter_reads},
+      {"predict_new_junctions", s.predict_new_junctions},
+      {"predict_read_alignments", s.predict_read_alignments},
+      {"predict_missing_coverage", s.predict_missing_coverage},
       {"no_evidence_html", s.no_evidence_html},
       }
     },

@@ -8,23 +8,35 @@ events** — the `SNP`, `DEL`, `MOB`, `AMP` and friends that appear at the top o
 This section documents the first stage. There are nine evidence types, and each sees a different
 physical signature in the data:
 
-| | Type | Signal | Paired reads only | On by default |
-|---|---|---|---|---|
-| 10 | [RA: Read alignment](evidence-ra.md) | Reads in a pileup disagree with the reference base | no | yes |
-| 11 | [MC: Missing coverage](evidence-mc.md) | A stretch of reference has no reads on it | no | yes |
-| 12 | [JC: New junction](evidence-jc.md) | A read splits across two disjoint reference locations | no | yes |
-| 13 | [CN: Copy number](evidence-cn.md) | A window's read depth departs from the genome average | no | no |
-| 14 | [UN: Unknown base](evidence-un.md) | Too little data to call a base either way | no | yes |
-| 15 | [SC: Soft clipping](evidence-sc.md) | Reads stop aligning part-way and agree on what follows | no | no |
-| 16 | [DP: Discordant pair](evidence-dp.md) | Individual read pairs map in the wrong orientation, too far apart, or on two sequences | yes | no |
-| 17 | [MP: Missing pair](evidence-mp.md) | Reads pile up facing a point, their mates mapping nowhere | yes | no |
-| 18 | [PD: Pair distance](evidence-pd.md) | Read pairs spanning a point are collectively shifted in mapping distance | yes | no |
+| | Type | Signal | Paired reads only | On by default | Turn off with |
+|---|---|---|---|---|---|
+| 10 | [RA: Read alignment](evidence-ra.md) | Reads in a pileup disagree with the reference base | no | yes | `--no-read-alignment-prediction` |
+| 11 | [MC: Missing coverage](evidence-mc.md) | A stretch of reference has no reads on it | no | yes | `--no-missing-coverage-prediction` |
+| 12 | [JC: New junction](evidence-jc.md) | A read splits across two disjoint reference locations | no | yes | `--no-junction-prediction` |
+| 13 | [CN: Copy number](evidence-cn.md) | A window's read depth departs from the genome average | no | yes | `--no-copy-number-prediction` |
+| 14 | [UN: Unknown base](evidence-un.md) | Too little data to call a base either way | no | yes | *(always on)* |
+| 15 | [SC: Soft clipping](evidence-sc.md) | Reads stop aligning part-way and agree on what follows | no | **no** | opt in with `--predict-soft-clipping` |
+| 16 | [DP: Discordant pair](evidence-dp.md) | Individual read pairs map in the wrong orientation, too far apart, or on two sequences | yes | yes | `--no-discordant-pair-prediction` |
+| 17 | [MP: Missing pair](evidence-mp.md) | Reads pile up facing a point, their mates mapping nowhere | yes | yes | `--no-missing-pair-prediction` |
+| 18 | [PD: Pair distance](evidence-pd.md) | Read pairs spanning a point are collectively shifted in mapping distance | yes | yes | `--no-pair-distance-prediction` |
 
 The leading number is the type's **sort order**. It fixes the order evidence appears in a GenomeDiff
 file, in `output/index.html`, and in this section's navigation, so all three agree.
 
-`CN`, `SC`, `DP`, `MP` and `PD` are opt-in and experimental; see each page for the `--predict-*`
-option that enables it.
+**Everything except `SC` is predicted by default.** `DP`, `MP` and `PD` additionally need paired-end
+reads, so they are skipped on a single-end run or under `--no-paired-mapping`, and `CN` needs the
+separate [CNery](https://github.com/barricklab/CNery) program on your `PATH`.
+
+!!! note "The `--predict-*` flags for CN, DP, MP and PD are deprecated"
+    `--predict-copy-number`, `--predict-discordant-pairs`, `--predict-missing-pairs` and
+    `--predict-pair-distance` are still accepted so existing command lines keep working, and are
+    hidden from `breseq --help`, but they no longer switch anything on — these four types are on
+    already. One has a lingering effect: passing `--predict-copy-number` explicitly makes a missing
+    CNery program **fatal** rather than a warning.
+
+    `--predict-soft-clipping` is not deprecated. `SC` is still opt-in, and deliberately so: that flag
+    also lowers `--require-match-fraction` from 0.9 to 0.5, which changes which alignments are
+    accepted genome-wide and so would alter every other evidence type if it were on by default.
 
 ## Accepted, rejected, ignored
 

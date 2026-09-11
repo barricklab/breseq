@@ -285,8 +285,16 @@ Evidence types: `RA` (read alignment), `MC` (missing coverage), `JC` (new juncti
 number), `UN` (unknown), `SC` (soft clipping), `DP` (discordant pair), `MP` (missing pair),
 `PD` (pair distance)
 
-The last four are experimental and opt-in (`--predict-soft-clipping`, `--predict-discordant-pairs`,
-`--predict-missing-pairs`, `--predict-pair-distance`). The three pair-based types divide the space by
+`CN`, `DP`, `MP` and `PD` are predicted by **default**; turn each off with
+`--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`,
+`--no-pair-distance-prediction`. The old `--predict-*` opt-in flags for these four are DEPRECATED:
+still parsed so existing command lines keep working, hidden from help, and inert apart from making a
+missing CNery fatal rather than a warning. `SC` remains opt-in via `--predict-soft-clipping`, and
+deliberately so: that flag also lowers `--require-match-fraction` from 0.9 to 0.5, which changes
+which alignments are accepted genome-wide. Making SC default would have made 0.5 the default too, and
+that silently loses real calls -- it drops a 330-bp large substitution in `tests/bull_2` by filling
+the substituted region with partial alignments so it no longer reads as missing coverage.
+The three pair-based types divide the space by
 what is anomalous about a read pair: `DP` fires on pairs that are individually discordant (wrong
 orientation, distance past the cutoff, **or mates on two different reference sequences**), `MP` on
 reads whose mate did not map anywhere, and `PD` on pairs that are individually unremarkable but

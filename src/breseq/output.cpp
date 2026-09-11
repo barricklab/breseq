@@ -1555,7 +1555,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Junction evidence
   ////
   
-  if (!settings.skip_new_junction_prediction) {
+  if (settings.predict_new_junctions) {
 
     HTML << h2("New Junction Evidence") << endl;
     HTML << "<p>" << endl;

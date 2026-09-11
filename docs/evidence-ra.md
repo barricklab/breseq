@@ -12,7 +12,7 @@ workhorse evidence type: it finds base substitutions and small indels, and it is
 | Metrics / gates tables | *(none — settings are listed in that section)* |
 | Banner in `index.html` | *(none — `RA` is always attached to a mutation)* |
 | Sort order in the GenomeDiff file | 10 |
-| Enabled by | on by default |
+| Enabled by | on by default; turn off with `--no-read-alignment-prediction` |
 | Requires | nothing |
 | Promotes to | `SNP`, `SUB`, `INS`, `DEL` |
 | Rejected items visible in HTML | yes, on `marginal.html` (top 20) |

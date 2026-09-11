@@ -12,7 +12,7 @@ mutations.
 | Metrics / gates tables | *(none — `MC` has no accept/reject step)* |
 | Banner in `index.html` | `Unassigned missing coverage evidence` |
 | Sort order in the GenomeDiff file | 11 |
-| Enabled by | on by default |
+| Enabled by | on by default; turn off with `--no-missing-coverage-prediction` |
 | Requires | nothing |
 | Promotes to | `DEL` |
 | Can be rejected | **no** |

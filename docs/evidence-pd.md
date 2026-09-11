@@ -3,8 +3,9 @@
 A point where the read pairs whose unsequenced middle gap spans it map at a systematically different
 distance from the one the sequencing library predicts. Pairs mapping **farther** apart than expected
 mean the sample is missing reference sequence there; pairs mapping **closer together** mean sequence
-was added. It is experimental and off by default; enable it with `--predict-pair-distance`. It is not
-currently promoted to any mutation type, so accepted `PD` items appear as unassigned evidence.
+was added. It is predicted by default on paired-end data; turn it off with
+`--no-pair-distance-prediction`. It is not currently promoted to any mutation type, so accepted `PD`
+items appear as unassigned evidence.
 
 ## At a glance
 
@@ -14,7 +15,7 @@ currently promoted to any mutation type, so accepted `PD` items appear as unassi
 | Tables in `summary.html` | `Pair distance (PD) evidence metrics` + `... gates` |
 | Banner in `index.html` | `Unassigned pair distance evidence` |
 | Sort order in the GenomeDiff file | 18 |
-| Enabled by | `--predict-pair-distance` |
+| Enabled by | on by default; turn off with `--no-pair-distance-prediction` |
 | Requires | paired reads, within a single reference sequence |
 | Promotes to | *(nothing — reported as evidence only)* |
 | Rejected items visible in HTML | yes, on `marginal.html` (top 20) |
@@ -296,13 +297,16 @@ Annotation at each side.
 
 ## Options
 
-!!! warning "Experimental"
-    `PD` prediction is experimental and off by default. Enable it with `--predict-pair-distance`.
+`PD` is predicted by default on paired-end data.
 
-`--predict-pair-distance`\
-Predict pair distance (PD) evidence: places where the read pairs whose unsequenced middle gap spans
-one point are collectively shifted to longer (a deletion) or shorter (an insertion) mapping
-distances.
+`--no-pair-distance-prediction`\
+Do not predict pair distance (PD) evidence. `PD` is also skipped automatically on a single-end run or
+under `--no-paired-mapping`, and it only considers pairs whose two mates map to the same reference
+sequence.
+
+!!! note "`--predict-pair-distance` is deprecated"
+    Still accepted so existing command lines keep working, and hidden from `breseq --help`, but it no
+    longer switches anything on.
 
 `--pair-distance-seed <int>` (default 3)\
 Minimum number of read pairs in the matching distribution tail whose gap covers a position, required

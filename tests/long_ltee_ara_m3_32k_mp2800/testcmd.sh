@@ -186,10 +186,6 @@ TESTCMD="\
     ${REFERENCE_ARG} \
     -l 80 \
     --junction-alignment-pair-limit 2000000 \
-    --predict-copy-number \
-    --predict-discordant-pairs \
-    --predict-missing-pairs \
-    --predict-pair-distance \
     ${DOWNLOADDIR}/ena_SRR098033/SRR098033_1.fastq.gz \
     ${DOWNLOADDIR}/ena_SRR098033/SRR098033_2.fastq.gz \
     "

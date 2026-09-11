@@ -579,7 +579,9 @@ sample different from one. Unlike every other evidence type, `CN` is built from 
 and never examines how an individual read aligned, so its coordinates are tile boundaries rather than
 breakpoints.
 
-Predicted only when `--predict-copy-number` is given. This functionality is experimental.
+Predicted by default. Pass `--no-copy-number-prediction` to turn it off. Requires the separate
+[CNery](https://github.com/barricklab/CNery) program on your `PATH`. This functionality is
+experimental.
 
 Line specification:
 
@@ -709,7 +711,8 @@ Because each pair is tested on its own, `DP` cannot see an event too small to ma
 pair an outlier, and it applies no cutoff at all on the short side. That band belongs to
 [`PD`](evidence-pd.md), and where a `PD` and a `DP` describe the same breakpoint the `DP` is removed.
 
-Predicted only when `--predict-discordant-pairs` is given. This functionality is experimental.
+Predicted by default. Pass `--no-discordant-pair-prediction` to turn it off. This functionality is
+experimental.
 
 Line specification:
 
@@ -788,7 +791,8 @@ over part of its length is a partially-aligning read &mdash; the signal [`SC`](e
 reports &mdash; not
 evidence that its sequence is missing from the reference.
 
-Predicted only when `--predict-missing-pairs` is given. This functionality is experimental.
+Predicted by default. Pass `--no-missing-pair-prediction` to turn it off. This functionality is
+experimental.
 
 Line specification:
 
@@ -859,7 +863,8 @@ distinguishes PD from [`JC`](evidence-jc.md) (which needs a read split across th
 from [`DP`](evidence-dp.md) (which
 tests each pair on its own, and applies no cutoff at all on the short side).
 
-Predicted only when `--predict-pair-distance` is given. This functionality is experimental.
+Predicted by default. Pass `--no-pair-distance-prediction` to turn it off. This functionality is
+experimental.
 
 Line specification:
 

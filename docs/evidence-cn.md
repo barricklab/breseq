@@ -2,8 +2,8 @@
 
 A run of reference tiles whose read depth departs from the genome-wide average by enough to imply a
 different number of copies in the sample. `CN` is the only evidence type built purely from **coverage
-depth**, with no reference to how any individual read aligned. It is experimental and off by default;
-enable it with `--predict-copy-number`.
+depth**, with no reference to how any individual read aligned. It is predicted by default; turn it
+off with `--no-copy-number-prediction`.
 
 ## At a glance
 
@@ -13,7 +13,7 @@ enable it with `--predict-copy-number`.
 | Metrics / gates tables | *(none — `CN` has no accept/reject step)* |
 | Banner in `index.html` | `Unassigned copy number evidence` |
 | Sort order in the GenomeDiff file | 13 |
-| Enabled by | `--predict-copy-number` |
+| Enabled by | on by default; turn off with `--no-copy-number-prediction` |
 | Requires | nothing (works on single-end data) |
 | Promotes to | *(nothing — reported as evidence only)* |
 | Can be rejected | **no** |
@@ -132,12 +132,22 @@ Annotation spanned by the region.
 
 ## Options
 
-!!! warning "Experimental"
-    `CN` prediction is experimental, off by default, and marked HIGHLY EXPERIMENTAL in the command
-    line help.
+!!! warning "Still marked HIGHLY EXPERIMENTAL"
+    `CN` is predicted by default, but its option group is still labelled HIGHLY EXPERIMENTAL in
+    `breseq --help`. Treat its output as provisional.
 
-`--predict-copy-number`\
-Predict copy number variation evidence.
+`--no-copy-number-prediction`\
+Do not predict copy number variation (CN) evidence.
+
+CN prediction requires the separate [CNery](https://github.com/barricklab/CNery) program on your
+`PATH`. If CNery is missing, _breseq_ warns and skips CN rather than failing — pass this flag to skip
+it silently instead.
+
+!!! note "`--predict-copy-number` is deprecated, but not inert"
+    The old opt-in flag is still accepted and hidden from help. It no longer switches CN on, since CN
+    is on already — but passing it explicitly makes a **missing CNery program fatal** rather than a
+    warning. That is the one thing it still does, and it is occasionally what you want: it turns a
+    silently-skipped CN stage into a hard error.
 
 ## Worked examples
 

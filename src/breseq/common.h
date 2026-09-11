@@ -1136,6 +1136,69 @@ inline string join(const list<string>& values, const string& separator)
     return currentout;
   }
   
+  // Filesystem predicates used to validate command-line path arguments.
+  //
+  // These exist because the two older helpers above cannot tell a file from a
+  // directory: file_exists() is ifstream-based and succeeds on a directory on
+  // both macOS and Linux, and directory_exists() only checks that stat()
+  // succeeds, so it is true for a plain file too. Validating a user's -r/-o
+  // argument needs the distinction, so these use stat() and test the mode bits.
+  //
+  // All of them follow symlinks (stat, not lstat) -- a reference or read file
+  // given as a symlink is a perfectly ordinary way to invoke breseq.
+  inline bool path_exists(const string& path)
+  {
+    struct stat st;
+    return ::stat(path.c_str(), &st) == 0;
+  }
+
+  inline bool is_regular_file(const string& path)
+  {
+    struct stat st;
+    return (::stat(path.c_str(), &st) == 0) && S_ISREG(st.st_mode);
+  }
+
+  inline bool is_directory(const string& path)
+  {
+    struct stat st;
+    return (::stat(path.c_str(), &st) == 0) && S_ISDIR(st.st_mode);
+  }
+
+  inline bool is_readable(const string& path)
+  {
+    return ::access(path.c_str(), R_OK) == 0;
+  }
+
+  inline bool is_writable_directory(const string& path)
+  {
+    return is_directory(path) && (::access(path.c_str(), W_OK) == 0);
+  }
+
+  // The closest ancestor of path that actually exists, or "" if even the
+  // filesystem root does not resolve. Used to decide whether an OUTPUT path
+  // could be created: create_path() is mkdir -p, so a deep path whose parent
+  // does not exist yet is still perfectly valid as long as some ancestor of it
+  // is a writable directory.
+  //
+  // A relative path with no '/' left resolves to "." (the current directory),
+  // matching path_to_dirname().
+  inline string nearest_existing_ancestor(string path)
+  {
+    // Strip any trailing slashes so "dir/" and "dir" behave the same.
+    while ((path.size() > 1) && (path[path.size()-1] == '/'))
+      path.resize(path.size()-1);
+
+    while (true) {
+      if (path_exists(path)) return path;
+
+      string::size_type slash = path.rfind('/');
+      if (slash == string::npos) return is_directory(".") ? "." : "";
+      if (slash == 0) return is_directory("/") ? "/" : "";   // absolute path, root is next
+
+      path.resize(slash);
+    }
+  }
+
   // Portable replacement for the Unix `which` command: returns the first entry
   // in $PATH for which "<dir>/<program>" is an executable regular file, or ""
   // if none is found. Reads $PATH fresh on every call so any PATH the caller

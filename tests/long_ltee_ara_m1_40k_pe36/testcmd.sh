@@ -29,9 +29,10 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # the ~135 bp end of the insert-size range. Compare long_ltee_ara_m3_32k_mp2800 at the
 # other end.
 #
-# EXPERIMENTAL PAIR EVIDENCE: this test deliberately turns on the four
-# experimental predictors so that DP/MP/PD/SC are covered by a real data set and
-# not only by the small lambda fixtures. Two consequences:
+# EXPERIMENTAL PAIR EVIDENCE: DP/MP/PD/CN are predicted by default, and this test
+# additionally passes --predict-soft-clipping (still opt-in), so all of DP/MP/PD/SC
+# are covered by a real data set and not only by the small lambda fixtures. Two
+# consequences:
 #   * --predict-soft-clipping lowers require-match-fraction from 0.9 to 0.5
 #     unless it is given explicitly (settings.cpp), which changes alignment
 #     acceptance globally -- so this golden is NOT comparable to
@@ -52,10 +53,6 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    --predict-copy-number \
-    --predict-discordant-pairs \
-    --predict-missing-pairs \
-    --predict-pair-distance \
     --predict-soft-clipping \
     ${DOWNLOADDIR}/ena_SRR030258/SRR030258_1.fastq.gz \
     ${DOWNLOADDIR}/ena_SRR030258/SRR030258_2.fastq.gz \

@@ -2,9 +2,9 @@
 
 A point where a **novel sequence** — one present in neither the reference nor any candidate junction
 — has been inserted into the genome. `MP` is the only evidence type that can see sequence absent from
-the reference entirely. It is experimental and off by default; enable it with
-`--predict-missing-pairs`. It is not currently promoted to any mutation type, so accepted `MP` items
-appear as unassigned evidence.
+the reference entirely. It is predicted by default on paired-end data; turn it off with
+`--no-missing-pair-prediction`. It is not currently promoted to any mutation type, so accepted `MP`
+items appear as unassigned evidence.
 
 ## At a glance
 
@@ -14,7 +14,7 @@ appear as unassigned evidence.
 | Tables in `summary.html` | `Missing pair (MP) evidence metrics` + `... gates` |
 | Banner in `index.html` | `Unassigned missing pair evidence` |
 | Sort order in the GenomeDiff file | 17 |
-| Enabled by | `--predict-missing-pairs` |
+| Enabled by | on by default; turn off with `--no-missing-pair-prediction` |
 | Requires | paired reads |
 | Promotes to | *(nothing — reported as evidence only)* |
 | Rejected items visible in HTML | yes, on `marginal.html` (top 20) |
@@ -282,13 +282,15 @@ Annotation at the insertion point.
 
 ## Options
 
-!!! warning "Experimental"
-    `MP` prediction is experimental and off by default. Enable it with `--predict-missing-pairs`.
-    It requires paired-mapping, which is the default for paired input.
+`MP` is predicted by default on paired-end data.
 
-`--predict-missing-pairs`\
-Predict missing read-pair (MP) evidence: places where reads pile up whose mates did not map anywhere,
-the signature of a novel sequence inserted into the genome.
+`--no-missing-pair-prediction`\
+Do not predict missing read-pair (MP) evidence. `MP` is also skipped automatically on a single-end run
+or under `--no-paired-mapping`.
+
+!!! note "`--predict-missing-pairs` is deprecated"
+    Still accepted so existing command lines keep working, and hidden from `breseq --help`, but it no
+    longer switches anything on.
 
 `--missing-pair-seed <int>` (default 3)\
 Minimum number of reads with unmapped mates within a paired-mapping-distance window required to seed

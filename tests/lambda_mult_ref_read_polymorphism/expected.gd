@@ -1,16 +1,16 @@
 #=GENOME_DIFF	1.0
-#=CREATED	13:24:27 30 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision 2474edd9b66f
-#=COMMAND	./src/breseq/breseq -j 4 --polymorphism-prediction -o ./tests/lambda_mult_ref_read_polymorphism -r ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk -r ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk -r ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk -r ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.A.fastq.gz ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.B.fastq.gz ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz ./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
-#=REFSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk
-#=REFSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk
-#=REFSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk
-#=REFSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk
-#=READSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.A.fastq.gz
-#=READSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.B.fastq.gz
-#=READSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz
-#=READSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz
-#=READSEQ	./tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
+#=CREATED	07:35:29 09 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=COMMAND	./src/breseq/breseq -j 4 --polymorphism-prediction -o tests/lambda_mult_ref_read_polymorphism -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.A.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.B.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
+#=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk
+#=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk
+#=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk
+#=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk
+#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.A.fastq.gz
+#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.B.fastq.gz
+#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz
+#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz
+#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
 #=CONVERTED-BASES	6998460
 #=CONVERTED-READS	199956
 #=INPUT-BASES	7000000
@@ -22,7 +22,7 @@ INS	2	47	NC_001416-1	4566	G	frequency=1	gene_name=L/K	gene_position=intergenic (
 SNP	3	48	NC_001416-2	1261	G	aa_new_seq=E|NA	aa_position=338|NA	aa_ref_seq=K|NA	codon_new_seq=GAA|NA	codon_number=338|NA	codon_position=1|NA	codon_ref_seq=AAA|NA	frequency=1	gene_name=orf-401|orf206b	gene_position=1012|noncoding (107/621 nt)	gene_product=Tail fiber protein|orf206b	gene_strand=>|<	genes_overlapping=orf-401,orf206b	locus_tag=lambdap27|lambdap90_made_noncoding	locus_tags_overlapping=lambdap27,lambdap90_made_noncoding	mutation_category=snp_nonsynonymous|noncoding	position_end=1261	position_start=1261	ref_seq=A	snp_type=nonsynonymous|noncoding	transl_table=11|NA
 INS	4	49	NC_001416-2	1435	C	frequency=1	gene_name=orf-401	gene_position=coding (1186/1206 nt)	gene_product=Tail fiber protein	gene_strand=>	genes_overlapping=orf-401	insert_position=1	locus_tag=lambdap27	locus_tags_overlapping=lambdap27	mutation_category=small_indel	position_end=1435	position_start=1435	ref_seq=C
 SNP	5	50	NC_001416-2	2314	A	aa_new_seq=N	aa_position=229	aa_ref_seq=S	codon_new_seq=AAC	codon_number=229	codon_position=2	codon_ref_seq=AGC	frequency=1	gene_name=orf-314	gene_position=686	gene_product=Tail fiber	gene_strand=>	genes_overlapping=orf-314	locus_tag=lambdap28	locus_tags_overlapping=lambdap28	mutation_category=snp_nonsynonymous	position_end=2314	position_start=2314	ref_seq=G	snp_type=nonsynonymous	transl_table=11
-DEL	6	101,102	NC_001416-2	2338	5996	frequency=1	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	genes_inactivated=orf-314,orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	locus_tags_inactivated=lambdap28,lambdap29,lambdap80,lambdap81,lambdap82	mutation_category=large_deletion	position_end=8333	position_start=2338	ref_seq=5996-bp
+DEL	6	101,102,103	NC_001416-2	2338	5996	frequency=1	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	genes_inactivated=orf-314,orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	locus_tags_inactivated=lambdap28,lambdap29,lambdap80,lambdap81,lambdap82	mutation_category=large_deletion	position_end=8333	position_start=2338	ref_seq=5996-bp
 SNP	7	51	NC_001416-3	1915	C	frequency=1	gene_name=orf61|orf63	gene_position=pseudogene (9/186 nt)|noncoding (181/192 nt)	gene_product=hypothetical protein|hypothetical protein	gene_strand=<|<	genes_overlapping=orf61,orf63	locus_tag=lambdap37_made_noncoding|lambdap38_made_noncoding	locus_tags_overlapping=lambdap37_made_noncoding,lambdap38_made_noncoding	mutation_category=snp_pseudogene|noncoding	position_end=1915	position_start=1915	ref_seq=T	snp_type=pseudogene|noncoding
 SNP	8	53	NC_001416-3	5833	G	aa_new_seq=G	aa_position=151	aa_ref_seq=G	codon_new_seq=GGG	codon_number=151	codon_position=3	codon_ref_seq=GGA	frequency=1	gene_name=lambdap48	gene_position=453	gene_product=Superinfection exclusion protein B	gene_strand=>	genes_overlapping=lambdap48	locus_tag=lambdap48	locus_tags_overlapping=lambdap48	mutation_category=snp_synonymous	position_end=5833	position_start=5833	ref_seq=A	snp_type=synonymous	transl_table=11
 DEL	9	54	NC_001416-3	8717	1	frequency=1	gene_name=cI	gene_position=coding (123/714 nt)	gene_product=repressor	gene_strand=<	genes_inactivated=cI	locus_tag=lambdap88	locus_tags_inactivated=lambdap88	mutation_category=small_indel	position_end=8717	position_start=8717	ref_seq=C
@@ -119,14 +119,15 @@ RA	99	.	NC_001416-4	9685	0	T	C	allele_frequencies=A:1.89690307e-03,C:1.22004780e
 MC	100	.	NC_001416-0	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-189)	gene_product=–/DNA packaging protein	gene_strand=–/>	left_inside_cov=0	left_outside_cov=NA	locus_tag=–/lambdap01	right_inside_cov=0	right_outside_cov=153
 MC	101	.	NC_001416-2	2338	8333	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=80	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=22	right_outside_cov=102
 JC	102	.	NC_001416-2	2337	-1	NC_001416-2	8334	1	0	alignment_overlap=5	coverage_minus=37	coverage_plus=40	flanking_left=35	flanking_right=35	frequency=9.99999997e-01	frequency_lower=9.56901429e-01	frequency_upper=1.00000000e+00	junction_effective_depth=68.00	junction_mixture_iterations=3	junction_possible_overlap_registers=25	junction_possible_overlap_registers_before_trimming=29	key=NC_001416-2__2337__-1__NC_001416-2__8329__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_pos_hash_score=58	max_right=29	max_right_minus=29	max_right_plus=27	neg_log10_pos_hash_p_value=NT	new_junction_coverage=0.86	new_junction_read_count=68	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=68.00	pos_hash_score=40	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=orf-314	side_1_gene_position=coding (709/945 nt)	side_1_gene_product=Tail fiber	side_1_gene_strand=>	side_1_locus_tag=lambdap28	side_1_overlap=5	side_1_possible_overlap_registers=25	side_1_possible_overlap_registers_before_trimming=34	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.01	side_2_gene_name=ea59/int	side_2_gene_position=intergenic (-761/+78)	side_2_gene_product=ea59/integration protein	side_2_gene_strand=</<	side_2_locus_tag=lambdap82/lambdap33	side_2_overlap=0	side_2_possible_overlap_registers=25	side_2_possible_overlap_registers_before_trimming=29	side_2_read_count=1	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=77
-UN	103	.	NC_001416-0	1	8
-UN	104	.	NC_001416-0	9699	9700
-UN	105	.	NC_001416-1	1	4
-UN	106	.	NC_001416-1	9700	9700
-UN	107	.	NC_001416-2	1	2
-UN	108	.	NC_001416-2	2338	8331
-UN	109	.	NC_001416-2	9701	9701
-UN	110	.	NC_001416-3	1	1
-UN	111	.	NC_001416-3	9700	9700
-UN	112	.	NC_001416-4	1	2
-UN	113	.	NC_001416-4	9701	9701
+CN	103	.	NC_001416-2	2301	8300	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	relative_coverage=0	tile_size=100
+UN	104	.	NC_001416-0	1	8
+UN	105	.	NC_001416-0	9699	9700
+UN	106	.	NC_001416-1	1	4
+UN	107	.	NC_001416-1	9700	9700
+UN	108	.	NC_001416-2	1	2
+UN	109	.	NC_001416-2	2338	8331
+UN	110	.	NC_001416-2	9701	9701
+UN	111	.	NC_001416-3	1	1
+UN	112	.	NC_001416-3	9700	9700
+UN	113	.	NC_001416-4	1	2
+UN	114	.	NC_001416-4	9701	9701

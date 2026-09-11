@@ -13,8 +13,9 @@ _breseq_ does not use the distance constraints available in paired-end or mate-p
 libraries during read *alignment* — each read is mapped on its own merits. It does use
 them afterwards as a source of evidence: [DP](evidence-dp.md), [MP](evidence-mp.md) and
 [PD](evidence-pd.md) are all built from how the two mates of a pair were placed relative
-to one another. Those three evidence types are experimental and off by default, so
-without them a paired data set is effectively treated as single-end reads.
+to one another. All three are predicted by default when the reads are paired; on a single-end
+run, or under `--no-paired-mapping`, they are skipped and the distance information simply is
+not there to use.
 
 _breseq_ keeps track of two kinds of read alignments:
 
@@ -340,8 +341,8 @@ detects rearrangements from pairs whose mates are individually misplaced — inc
 between two different reference sequences, which is how a translocation or plasmid
 integration is found — and [PD](evidence-pd.md) detects events too small to make any
 individual pair unusual. Neither resolves a breakpoint to the base, so the two are
-complements to `JC` rather than replacements for it. All three pair-based types are
-experimental and off by default.
+complements to `JC` rather than replacements for it. All three pair-based types are predicted by
+default on paired-end data.
 
 # Annotated bibliography
 

@@ -29,8 +29,11 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
     settings.installed["cnery"] = which("CNery");
   }
   if (settings.installed["cnery"].size() == 0) {
+    // Reachable only when the user explicitly asked for CN: Settings::check_installed() has
+    // already turned CN off with a warning for a default-on run without CNery, because by the
+    // time we got here every other stage has been computed and aborting would throw it away.
     ERROR("Could not find 'CNery' command in $PATH.\n"
-          "Install it (e.g. 'pip install CNery') to use --predict-copy-number.\n"
+          "Install it (e.g. 'pip install CNery') to predict copy number (CN) evidence.\n"
           "See https://github.com/barricklab/CNery");
   }
 
