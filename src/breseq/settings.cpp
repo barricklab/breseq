@@ -335,11 +335,11 @@ namespace breseq
     
     options
 		("help,h", "Produce help message showing advanced options (use --expert-help to also show expert options)", TAKES_NO_ARGUMENT)
-    ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
+    ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile()
     ("name,n", "Human-readable name of the analysis run for output (DEFAULT=<none>)", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
     //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, NORMAL_OPTION) @JEB - not consistently implemented
-		("output,o", "Path to breseq output", ".")
+		("output,o", "Path to breseq output", ".").isOutputDirectory()
     ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT);
 
     options.addUsage("", NORMAL_OPTION);
@@ -359,11 +359,17 @@ namespace breseq
     
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Reference File Options", NORMAL_OPTION);
+    // NOTE: the defaults of -c and -s are the empty string, NOT NULL. Passing NULL here
+    // does not select the void* "takes no argument" overload of operator(): decltype(NULL)
+    // is an integer type, which is an exact match for the template's const T& parameter and
+    // so wins overload resolution. These two therefore used to register a default VALUE of
+    // the string "0" -- which "breseq -h" printed as "(DEFAULT=0)", and which
+    // options["contig-reference"] returned whenever the option was absent.
     options
-    ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, NORMAL_OPTION)
-    ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, NORMAL_OPTION)
+    ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", "", NORMAL_OPTION).isInputFile()
+    ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", "", NORMAL_OPTION).isInputFile()
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("user-evidence-gd","User supplied Genome Diff file of JC and/or RA evidence items. The breseq output will report the support for these sequence changes even if they do not pass the normal filters for calling mutations in this sample.", "", NORMAL_OPTION)
+    ("user-evidence-gd","User supplied Genome Diff file of JC and/or RA evidence items. The breseq output will report the support for these sequence changes even if they do not pass the normal filters for calling mutations in this sample.", "", NORMAL_OPTION).isInputFile()
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -419,7 +425,8 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Discordant Pair (DP) Evidence Options", NORMAL_OPTION);
     options
-    ("predict-discordant-pairs", "Predict discordant read-pair (DP) evidence for structural variants. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("predict-discordant-pairs", "DEPRECATED: discordant read-pair (DP) evidence prediction is now the default. Use --no-discordant-pair-prediction to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("no-discordant-pair-prediction", "Do not predict discordant read-pair (DP) evidence for structural variants. DP requires paired-mapping (the default), and is silently skipped for a single-end run or under --no-paired-mapping. (DEFAULT=OFF, i.e. DP prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("discordant-pair-skew-cutoff", "Reference cutoff for the discordant-pair (DP) skew score. The DP skew marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has at least 10^(cutoff+1) non-deletion positions; smaller references fall back to a negative-binomial fit (whose parametric tail is not capped near log10(N), but is conservative). (DEFAULT = 3.0)", 3.0, NORMAL_OPTION)
     ("discordant-pair-sibling-window", "Maximum distance, in bases, between the two breakpoints of one insertion for their DP items to be judged together by the skew test. An insertion creates TWO junctions at one point and the read pairs that would have spanned that point are divided between them, so each is expected to carry only its share; without this each is tested against the full crossing expectation and the weaker one is rejected. Set to 0 to disable the pooling. (DEFAULT = 20)", 20, NORMAL_OPTION)
@@ -438,7 +445,8 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Missing Pair (MP) Evidence Options", NORMAL_OPTION);
     options
-    ("predict-missing-pairs", "Predict missing read-pair (MP) evidence: places where reads pile up whose mates did not map anywhere, the signature of a novel sequence inserted into the genome. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("predict-missing-pairs", "DEPRECATED: missing read-pair (MP) evidence prediction is now the default. Use --no-missing-pair-prediction to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("no-missing-pair-prediction", "Do not predict missing read-pair (MP) evidence: places where reads pile up whose mates did not map anywhere, the signature of a novel sequence inserted into the genome. MP requires paired-mapping (the default), and is silently skipped for a single-end run or under --no-paired-mapping. (DEFAULT=OFF, i.e. MP prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("missing-pair-seed", "Minimum number of reads with unmapped mates within a paired-mapping-distance window required to seed an MP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("missing-pair-seed-fraction", "Minimum fraction of the reads on one strand within a paired-mapping-distance window whose mates did not map, required to seed an MP candidate region. This is a sensitivity filter that keeps a fixed count from seeding continuously at any decent coverage; what DECIDES an MP call is --missing-pair-score-cutoff. (DEFAULT = 0.25)", "0.25", NORMAL_OPTION)
     ("missing-pair-minimum-reads", "Only accept MP evidence supported by at least this many reads with unmapped mates. (DEFAULT = 3)", 3, NORMAL_OPTION)
@@ -457,7 +465,8 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Pair Distance (PD) Evidence Options", NORMAL_OPTION);
     options
-    ("predict-pair-distance", "Predict pair distance (PD) evidence: places where the read pairs whose unsequenced middle gap spans one point are collectively shifted to longer (a deletion) or shorter (an insertion) mapping distances. DP only sees pairs that are outliers INDIVIDUALLY -- wrong orientation, or a distance above the discordant cutoff -- and has no lower cutoff at all, so events of a few hundred bases are invisible to it in both directions. PD tests the collective shift instead. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("predict-pair-distance", "DEPRECATED: pair distance (PD) evidence prediction is now the default. Use --no-pair-distance-prediction to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("no-pair-distance-prediction", "Do not predict pair distance (PD) evidence: places where the read pairs whose unsequenced middle gap spans one point are collectively shifted to longer (a deletion) or shorter (an insertion) mapping distances. DP only sees pairs that are outliers INDIVIDUALLY -- wrong orientation, or a distance above the discordant cutoff -- and has no lower cutoff at all, so events of a few hundred bases are invisible to it in both directions. PD tests the collective shift instead. PD requires paired-mapping (the default), and is silently skipped for a single-end run or under --no-paired-mapping. (DEFAULT=OFF, i.e. PD prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("pair-distance-seed", "Minimum number of read pairs in the matching distribution tail whose gap covers a position, required to seed a PD candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("pair-distance-seed-z", "Minimum |z| of the rank-sum statistic over all read pairs whose gap covers a position, required to seed a PD candidate region. This is the 'average quantile per pair' test: under the null each covering pair's distance quantile is uniform, so the mean quantile is a sensitive detector of a shift too small to make any single pair an outlier. 0 = derive from the reference length, so that the genome-wide false-seed rate stays near 1%. (DEFAULT = 0, derived)", 0.0, NORMAL_OPTION)
     ("pair-distance-maximum-span", "Ignore read pairs mapping farther apart than this when seeding PD. Pairs this long are DP's business, and an unbounded distance would make the seeding window unbounded. 0 = derive (twice the paired-mapping distance cutoff). (DEFAULT = 0, derived)", 0, NORMAL_OPTION)
@@ -530,13 +539,14 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Copy numnber (CN) Evidence Options (HIGHLY EXPERIMENTAL)", NORMAL_OPTION);
     options
-    ("predict-copy-number","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("predict-copy-number", "DEPRECATED: copy number (CN) evidence prediction is now the default. Use --no-copy-number-prediction to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("no-copy-number-prediction", "Do not predict copy number variation (CN) evidence. CN prediction requires the separate CNery program (https://github.com/barricklab/CNery) on your PATH; if it is missing, breseq warns and skips CN rather than failing. Pass this flag to skip it silently. (DEFAULT=OFF, i.e. CN prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Output Options", NORMAL_OPTION);
     options
-    ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", NORMAL_OPTION)
+    ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", NORMAL_OPTION).isInputFile()
     ("output-unmapped-reads", "Output unmapped reads to file: " + this->unmapped_reads_fastq_file_name, TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("no-evidence-html", "Don't create output files for evidence (e.g., read alignments and coverage plots)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("zip-html", "DEPRECATED: HTML evidence is now bundled into a ZIP archive (evidence.zip) by default. Use --unzipped-html to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
@@ -549,17 +559,21 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Masking Options", NORMAL_OPTION);
     options
-    ("mask-gd", "Mask predicted mutations that overlap MASK entries in this GenomeDiff file (mutations are marked ignore=masked, not deleted)", "", NORMAL_OPTION)
+    ("mask-gd", "Mask predicted mutations that overlap MASK entries in this GenomeDiff file (mutations are marked ignore=masked, not deleted)", "", NORMAL_OPTION).isInputFile()
     ("mask-mode", "Mode for masking mutations and evidence: 'ALL' masks all mutation and evidence types in masked regions; 'SMALL' masks only small mutations (SNP,DEL,INS,SUB <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp) and small evidence (RA,MC,CN <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp); JC and SC evidence are always treated as large and are never masked in SMALL mode", "ALL", NORMAL_OPTION)
     ;
 
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Pipeline Control Options", NORMAL_OPTION);
     options
-    ("skip-RA-MC-prediction", "Skip generating read alignment and missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("skip-JC-prediction", "Skip generating new junction evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("skip-MC-prediction", "Skip generating missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("skip-homologous-DEL-prediction", "Skip predicting large deletions between two near-identical copies of an unannotated repeat (paralogous genes, an rRNA operon) from missing coverage evidence. These deletions leave no new junction, so they are located by reading which copy the surviving reads came from.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-read-alignment-prediction", "Do not predict read alignment (RA) evidence. Missing coverage (MC) evidence comes from the same pileup pass, so it is not predicted either, and neither are the CN/DP/MP/PD evidence types that read what that pass writes. (DEFAULT=OFF, i.e. RA prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-missing-coverage-prediction", "Do not predict missing coverage (MC) evidence. Read alignment (RA) evidence is still predicted. (DEFAULT=OFF, i.e. MC prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-homologous-deletion-prediction", "Do not predict large deletions between two near-identical copies of an unannotated repeat (paralogous genes, an rRNA operon) from missing coverage evidence. These deletions leave no new junction, so they are located by reading which copy the surviving reads came from. (DEFAULT=OFF, i.e. they are predicted)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("skip-RA-MC-prediction", "DEPRECATED: use --no-read-alignment-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("skip-JC-prediction", "DEPRECATED: use --no-junction-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("skip-MC-prediction", "DEPRECATED: use --no-missing-coverage-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("skip-homologous-DEL-prediction", "DEPRECATED: use --no-homologous-deletion-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("dry-run", "Validate every option, check that all required executables are installed, and check that every input file exists and every output path can be written, then exit WITHOUT running the pipeline and without creating any files. Exits with status 0 if everything checks out and nonzero otherwise, so it can gate a real run.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -574,6 +588,9 @@ namespace breseq
     options
     ("expert-help,$", "Show the full help message, including expert-level options such as the raw bowtie2 command settings (--bowtie2-stage1/-stage2/-junction)", TAKES_NO_ARGUMENT)
     ;
+
+    // The trailing unnamed arguments are the read files (FASTQ, or SAM under --aligned-sam).
+    options.setPositionalArgumentsRole(INPUT_FILE, "Read file");
 
     options.processCommandArgs(argc, argv);
     
@@ -599,6 +616,8 @@ namespace breseq
       exit(-1);
     }
     
+    this->dry_run = options.count("dry-run");
+
     //! Settings: Global Workflow and Output
     
     this->base_output_path = options["output"];
@@ -634,37 +653,45 @@ namespace breseq
       cerr << "Input files are aligned SAM instead of FASTQ (--aligned-sam option)." << endl;
       cerr << "No junction prediction will take place." << endl;
       cerr << output_divider << endl;
-      this->skip_new_junction_prediction = true;
+      this->predict_new_junctions = false;
     }
     this->paired_mapping = !options.count("no-paired-mapping");
 
-    // Discordant-pair (DP) evidence prediction is experimental and opt-in. It needs the paired-mapping
-    // insert distribution + candidate regions, so it is ignored (with a warning) under --no-paired-mapping.
-    this->predict_discordant_pairs = options.count("predict-discordant-pairs");
+    // Discordant-pair (DP), missing-pair (MP) and pair-distance (PD) evidence prediction are all
+    // on by default and all need the paired-mapping insert distribution, so all three are skipped
+    // under --no-paired-mapping.
+    //
+    // The skip is announced ONLY if the user explicitly asked for the feature via the deprecated
+    // --predict-* flag. Warning unconditionally would scold every --no-paired-mapping run about
+    // three features it never requested.
+    this->predict_discordant_pairs = !options.count("no-discordant-pair-prediction");
     if (this->predict_discordant_pairs && !this->paired_mapping) {
-      cerr << "WARNING: --predict-discordant-pairs requires paired-mapping, but --no-paired-mapping was" << endl;
-      cerr << "         given. No discordant-pair (DP) evidence will be predicted." << endl;
-      cerr << output_divider << endl;
+      if (options.count("predict-discordant-pairs")) {
+        cerr << "WARNING: Discordant-pair (DP) evidence prediction requires paired-mapping, but" << endl;
+        cerr << "         --no-paired-mapping was given. No DP evidence will be predicted." << endl;
+        cerr << output_divider << endl;
+      }
       this->predict_discordant_pairs = false;
     }
 
-    // Missing-pair (MP) evidence prediction is experimental and opt-in. Like DP it needs the
-    // paired-mapping insert distribution, and its qualifying reads only exist in a paired run.
-    this->predict_missing_pairs = options.count("predict-missing-pairs");
+    this->predict_missing_pairs = !options.count("no-missing-pair-prediction");
     if (this->predict_missing_pairs && !this->paired_mapping) {
-      cerr << "WARNING: --predict-missing-pairs requires paired-mapping, but --no-paired-mapping was" << endl;
-      cerr << "         given. No missing-pair (MP) evidence will be predicted." << endl;
-      cerr << output_divider << endl;
+      if (options.count("predict-missing-pairs")) {
+        cerr << "WARNING: Missing-pair (MP) evidence prediction requires paired-mapping, but" << endl;
+        cerr << "         --no-paired-mapping was given. No MP evidence will be predicted." << endl;
+        cerr << output_divider << endl;
+      }
       this->predict_missing_pairs = false;
     }
 
-    // Pair-distance (PD) evidence prediction is experimental and opt-in. Like DP and MP it needs the
-    // paired-mapping insert distribution -- which IS its null model -- so it cannot run without it.
-    this->predict_pair_distance = options.count("predict-pair-distance");
+    // PD needs the distribution more than the other two do: it IS its null model.
+    this->predict_pair_distance = !options.count("no-pair-distance-prediction");
     if (this->predict_pair_distance && !this->paired_mapping) {
-      cerr << "WARNING: --predict-pair-distance requires paired-mapping, but --no-paired-mapping was" << endl;
-      cerr << "         given. No pair-distance (PD) evidence will be predicted." << endl;
-      cerr << output_divider << endl;
+      if (options.count("predict-pair-distance")) {
+        cerr << "WARNING: Pair-distance (PD) evidence prediction requires paired-mapping, but" << endl;
+        cerr << "         --no-paired-mapping was given. No PD evidence will be predicted." << endl;
+        cerr << output_divider << endl;
+      }
       this->predict_pair_distance = false;
     }
 
@@ -673,6 +700,26 @@ namespace breseq
       cerr << "WARNING: The --paired-mapping option is DEPRECATED. Paired-mapping detection is now" << endl;
       cerr << "         enabled by default, so this flag has no effect. To turn paired-mapping OFF," << endl;
       cerr << "         use --no-paired-mapping instead." << endl;
+      cerr << output_divider << endl;
+    }
+
+    // Backward compatibility: the three --predict-* flags above are now the default.
+    if (options.count("predict-discordant-pairs")) {
+      cerr << "WARNING: The --predict-discordant-pairs option is DEPRECATED. Discordant-pair (DP)" << endl;
+      cerr << "         evidence prediction is now enabled by default, so this flag has no effect." << endl;
+      cerr << "         To turn it OFF, use --no-discordant-pair-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("predict-missing-pairs")) {
+      cerr << "WARNING: The --predict-missing-pairs option is DEPRECATED. Missing-pair (MP) evidence" << endl;
+      cerr << "         prediction is now enabled by default, so this flag has no effect. To turn it" << endl;
+      cerr << "         OFF, use --no-missing-pair-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("predict-pair-distance")) {
+      cerr << "WARNING: The --predict-pair-distance option is DEPRECATED. Pair-distance (PD) evidence" << endl;
+      cerr << "         prediction is now enabled by default, so this flag has no effect. To turn it" << endl;
+      cerr << "         OFF, use --no-pair-distance-prediction instead." << endl;
       cerr << output_divider << endl;
     }
     this->read_file_sets.Init(read_file_names, this->aligned_sam_mode, this->paired_mapping);
@@ -754,7 +801,18 @@ namespace breseq
     
     this->num_processors = from_string<int32_t>(options["num-processors"]);
     
-    this->predict_copy_number = options.count("predict-copy-number");
+    this->predict_copy_number = !options.count("no-copy-number-prediction");
+    // Remembered because the decision is made later, in check_installed(): a missing CNery
+    // executable is fatal only when the user actually asked for CN. By default it is a warning
+    // and CN is turned off, so that breseq still runs on an installation without CNery.
+    this->copy_number_explicitly_requested = options.count("predict-copy-number");
+    if (this->copy_number_explicitly_requested) {
+      cerr << "WARNING: The --predict-copy-number option is DEPRECATED. Copy number (CN) evidence" << endl;
+      cerr << "         prediction is now enabled by default, so this flag has no effect, except" << endl;
+      cerr << "         that a missing CNery program remains a fatal error rather than a warning." << endl;
+      cerr << "         To turn CN prediction OFF, use --no-copy-number-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
 
     this->verbose = options.count("verbose");
     
@@ -912,7 +970,7 @@ namespace breseq
     }
 
     //! Settings: Junction Prediction
-    this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("no-junction-prediction");
+    this->predict_new_junctions = this->predict_new_junctions && !options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
     this->maximum_candidate_junctions = from_string<int32_t>(options["junction-maximum-candidates"]);
     this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);
@@ -924,10 +982,59 @@ namespace breseq
     this->junction_weight_reads = !options.count("junction-no-read-weighting");
     
     //! Settings: Pipeline Control
-    this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
-    this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("skip-JC-prediction");
-    this->skip_missing_coverage_prediction = options.count("skip-MC-prediction");
-    this->skip_homologous_deletion_prediction = options.count("skip-homologous-DEL-prediction");
+    this->predict_read_alignments = !options.count("no-read-alignment-prediction")
+                                 && !options.count("skip-RA-MC-prediction");
+    this->predict_new_junctions = this->predict_new_junctions && !options.count("skip-JC-prediction");
+    this->predict_missing_coverage = !options.count("no-missing-coverage-prediction")
+                                  && !options.count("skip-MC-prediction");
+    this->predict_homologous_deletions = !options.count("no-homologous-deletion-prediction")
+                                      && !options.count("skip-homologous-DEL-prediction");
+
+    // Backward compatibility: the four --skip-* spellings are DEPRECATED. They still work, so no
+    // existing command line breaks, but every opt-out is now spelled --no-X-prediction. Note
+    // --skip-JC-prediction was always an exact duplicate of --no-junction-prediction: both OR into
+    // the same setting, so there is no new flag for it.
+    if (options.count("skip-RA-MC-prediction")) {
+      cerr << "WARNING: The --skip-RA-MC-prediction option is DEPRECATED. It still works, but" << endl;
+      cerr << "         use --no-read-alignment-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("skip-JC-prediction")) {
+      cerr << "WARNING: The --skip-JC-prediction option is DEPRECATED. It still works, but" << endl;
+      cerr << "         use --no-junction-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("skip-MC-prediction")) {
+      cerr << "WARNING: The --skip-MC-prediction option is DEPRECATED. It still works, but" << endl;
+      cerr << "         use --no-missing-coverage-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+    if (options.count("skip-homologous-DEL-prediction")) {
+      cerr << "WARNING: The --skip-homologous-DEL-prediction option is DEPRECATED. It still works," << endl;
+      cerr << "         but use --no-homologous-deletion-prediction instead." << endl;
+      cerr << output_divider << endl;
+    }
+
+    // The stage-08 pileup writes the DP/MP/PD candidate-region CSVs, the soft-clipping counts and
+    // the per-position coverage table, but the stages that CONSUME them run outside the guard that
+    // skips it -- so without this they would run with their inputs absent and die on a missing file.
+    // Only reachable deliberately, and silent would be worse than noisy here: the user asked to skip
+    // one thing and is losing five.
+    if (!this->predict_read_alignments) {
+      if (this->predict_soft_clipping || this->predict_discordant_pairs
+          || this->predict_missing_pairs || this->predict_pair_distance || this->predict_copy_number) {
+        cerr << "WARNING: Read alignment (RA) evidence prediction is off, so the pileup that also" << endl;
+        cerr << "         produces the discordant-pair/missing-pair/pair-distance candidate" << endl;
+        cerr << "         regions, the soft-clipping counts and the coverage table does not run." << endl;
+        cerr << "         No DP, MP, PD, CN or SC evidence will be predicted either." << endl;
+        cerr << output_divider << endl;
+      }
+      this->predict_soft_clipping = false;
+      this->predict_discordant_pairs = false;
+      this->predict_missing_pairs = false;
+      this->predict_pair_distance = false;
+      this->predict_copy_number = false;
+    }
     
     //! Settings: Debugging
     this->keep_all_intermediates = options.count("keep-intermediates");
@@ -1185,7 +1292,7 @@ namespace breseq
     
     this->targeted_sequencing = options.count("targeted-sequencing");
     if (this->targeted_sequencing)
-      this->skip_missing_coverage_prediction = true;
+      this->predict_missing_coverage = false;
     
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
@@ -1251,10 +1358,25 @@ namespace breseq
     
     
     
-    // Log the command line
-    time_t stamp_time = time(NULL);
-    this->log(ctime(&stamp_time));	
-    this->log(this->full_command_line + "\n");
+    // Fail fast on bad file/folder arguments, before anything is created and before the
+    // pipeline spends minutes getting to the stage that would have opened the file. Under
+    // --dry-run this also prints a line per path that checked out.
+    //
+    // Placed after post_option_initialize() so the derived output paths exist, but BEFORE
+    // the logging below, because Settings::log() calls create_path(output_path) and would
+    // otherwise make the output directory even for a command line that cannot possibly run.
+    if (!check_option_paths(options, this->dry_run)) {
+      cerr << endl << color_red("Could not validate the file and folder arguments listed above.") << endl;
+      exit(-1);
+    }
+
+    // Log the command line. Skipped for a dry run, which must leave the filesystem untouched
+    // -- this is the call that would create the output directory.
+    if (!this->dry_run) {
+      time_t stamp_time = time(NULL);
+      this->log(ctime(&stamp_time));
+      this->log(this->full_command_line + "\n");
+    }
 	}
   
   void Settings::command_line_run_header()
@@ -1331,18 +1453,21 @@ namespace breseq
     this->read_file_long_read_split_length = 200;
     this->read_file_long_read_distribute_remainder = false;
     this->paired_mapping = true;
-    this->predict_discordant_pairs = false;
-    this->predict_missing_pairs = false;
-    this->predict_pair_distance = false;
+    this->predict_discordant_pairs = true;
+    this->predict_missing_pairs = true;
+    this->predict_pair_distance = true;
+
+    this->dry_run = false;
 
     //! Options that control which parts of the pipeline to execute
-    this->skip_read_filtering = false;
-    this->skip_new_junction_prediction = false;
-		this->skip_read_alignment_and_missing_coverage_prediction = false;
-		this->skip_missing_coverage_prediction = false;
-    this->skip_homologous_deletion_prediction = false;
+    this->filter_reads = true;
+    this->predict_new_junctions = true;
+		this->predict_read_alignments = true;
+		this->predict_missing_coverage = true;
+    this->predict_homologous_deletions = true;
     this->no_evidence_html = false;
-		this->predict_copy_number = false;
+		this->predict_copy_number = true;
+    this->copy_number_explicitly_requested = false;
 		this->do_periodicity = false;
     
     //! DEBUG options
@@ -2137,7 +2262,38 @@ namespace breseq
       cerr << color_green("---> samtools :: version " + this->installed["samtools_version_string"] + " [" + this->installed["samtools"] + "]") << endl;
     }
 
-		if (!good_to_go) exit(0);
+    // CNery is a separate program that breseq does not bundle, and copy number (CN) evidence
+    // prediction is on by default -- so its absence must not be able to stop a run. Decided HERE,
+    // before any stage executes, rather than in CNEvidence::predict: by the time that runs
+    // everything else has been computed, and the Output step later reads the per-sequence CN
+    // .gd files this stage would have written, so the flag has to be consistent from the start
+    // (including on a restart, where the CN stage itself is skipped).
+    if (this->predict_copy_number) {
+      if (this->installed.count("cnery") == 0) this->installed["cnery"] = which("CNery");
+
+      if (this->installed["cnery"].size() == 0) {
+        if (this->copy_number_explicitly_requested) {
+          good_to_go = false;
+          cerr << color_red("---> ERROR Required executable \"CNery\" not found, but copy number (CN)") << endl;
+          cerr << color_red("---> prediction was explicitly requested.") << endl;
+          cerr << color_red("---> Install it (e.g. 'pip install CNery').") << endl;
+          cerr << color_red("---> See https://github.com/barricklab/CNery") << endl;
+        } else {
+          cerr << "---> WARNING Executable \"CNery\" not found. No copy number (CN) evidence will" << endl;
+          cerr << "---> WARNING be predicted. Install it (e.g. 'pip install CNery') to enable CN," << endl;
+          cerr << "---> WARNING or pass --no-copy-number-prediction to skip it without this warning." << endl;
+          cerr << "---> See https://github.com/barricklab/CNery" << endl;
+          this->predict_copy_number = false;
+        }
+      } else {
+        cerr << color_green("---> CNery    :: [" + this->installed["cnery"] + "]") << endl;
+      }
+    }
+
+		// Nonzero: a missing or too-old bowtie2/gnuplot/samtools is a failure, and reporting
+		// it with a success status made every caller -- a shell &&, CI, and --dry-run -- believe
+		// the run had been fine.
+		if (!good_to_go) exit(-1);
 	}
 
 	bool Settings::do_step(const string& done_key, const string& message)

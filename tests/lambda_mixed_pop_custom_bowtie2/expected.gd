@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	13:24:03 30 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision 2474edd9b66f
-#=COMMAND	./src/breseq/breseq -j 4 -o ./tests/lambda_mixed_pop_custom_bowtie2 --bowtie2-stage1 --ma 1 --mp 2 --np 1 --rdg 4,1 --rfg 4,1 --local --score-min L,10,0.4 -k 20 --bowtie2-stage2 --bowtie2-junction --ma 1 --mp 2 --np 1 --rdg 4,1 --rfg 4,1 --local --score-min L,10,0.30 -k 20 -r ./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk ./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq.gz
-#=REFSEQ	./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk
-#=READSEQ	./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq.gz
+#=CREATED	07:34:44 09 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=COMMAND	./src/breseq/breseq -j 4 -o tests/lambda_mixed_pop_custom_bowtie2 --bowtie2-stage1 --ma 1 --mp 2 --np 1 --rdg 4,1 --rfg 4,1 --local --score-min L,10,0.4 -k 20 --bowtie2-stage2 --bowtie2-junction --ma 1 --mp 2 --np 1 --rdg 4,1 --rfg 4,1 --local --score-min L,10,0.30 -k 20 -r tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq.gz
+#=REFSEQ	tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk
+#=READSEQ	tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq.gz
 #=CONVERTED-BASES	6998495
 #=CONVERTED-READS	199957
 #=INPUT-BASES	7000144
@@ -70,6 +70,7 @@ RA	57	.	NC_001416	47978	0	T	C	allele_frequencies=C:9.848e-01,G:1.516e-02	fisher_
 RA	58	.	NC_001416	48160	0	T	C	allele_frequencies=C:7.838e-01,T:2.162e-01	fisher_strand_p_value=5.73702e-01	frequency=7.838e-01	frequency_lower=6.986e-01	frequency_upper=8.553e-01	gene_name=lambdap79/–	gene_position=intergenic (+216/–)	gene_product=hypothetical protein/–	gene_strand=>/–	ks_quality_p_value=7.21497e-01	locus_tag=lambdap79/–	major_base=C	major_cov=28/30	major_frequency=7.838e-01	minor_base=T	minor_cov=6/10	new_cov=28/30	prediction=consensus	ref_cov=6/10	score=150.5	snp_type=intergenic	total_cov=34/40
 MC	59	.	NC_001416	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-189)	gene_product=–/DNA packaging protein	gene_strand=–/>	left_inside_cov=0	left_outside_cov=NA	locus_tag=–/lambdap01	right_inside_cov=0	right_outside_cov=147
 MC	60	.	NC_001416	21732	27729	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=23	left_outside_cov=28	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=25	right_outside_cov=33
-UN	61	.	NC_001416	1	8
-UN	62	.	NC_001416	21730	27724
-UN	63	.	NC_001416	48502	48502
+CN	61	.	NC_001416	21701	27700	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	relative_coverage=0	tile_size=100
+UN	62	.	NC_001416	1	8
+UN	63	.	NC_001416	21730	27724
+UN	64	.	NC_001416	48502	48502

@@ -40,6 +40,38 @@ using namespace std;
 
 namespace breseq {
 
+// What kind of filesystem object an option's value names. Attached to an option
+// at DECLARATION time with one of the chainable isInputFile()/... markers below,
+// and checked by check_option_paths() right after the command line is parsed, so
+// that a mistyped path fails in a second instead of part way through a run.
+//
+// The two OUTPUT roles deliberately check only that something COULD be created at
+// the path -- see check_option_paths() for why an output option's value is very
+// often not the file finally written.
+enum PathRole { INPUT_FILE, INPUT_DIRECTORY, OUTPUT_FILE, OUTPUT_DIRECTORY };
+
+//! One path-valued option (or the positional arguments) registered for checking.
+struct PathOption
+{
+  string declared_name;   // as declared, e.g. "reference,r"; "" for positional args
+  string long_name;       // e.g. "reference"; the key for operator[]/count()
+  string label;           // human-readable noun for positional args, e.g. "Read file"
+  PathRole role;
+  bool is_positional;
+
+  PathOption() : role(INPUT_FILE), is_positional(false) {}
+
+  //! The spelling to show the user: "-r/--reference", or just "--mask-gd".
+  string usage_name() const
+  {
+    if (is_positional) return label;
+    vector<string> split_name = split(declared_name, ",");
+    if (split_name.size() > 1) return "-" + split_name[1] + "/--" + split_name[0];
+    return "--" + split_name[0];
+  }
+};
+
+
 	class AnyOption
 	{
 
@@ -195,6 +227,14 @@ namespace breseq {
       vector<string> option_name_split = split(option_name, ",");
       string default_value_string = to_string(option_default_value);
 
+      // Remember what was just declared so the chainable isInputFile()/... markers
+      // below can attach a path role to it without the caller retyping the name.
+      // Members, not locals: in real option blocks each options(...)(...)...; chain
+      // is its own statement, so "the option just declared" has to survive across
+      // statements on the same AnyOption.
+      m_last_declared_option = option_name;
+      m_last_declared_has_argument = has_argument;
+
       // assign default value to both long and short option name variants
       if (has_default_value) 
       {
@@ -280,10 +320,39 @@ namespace breseq {
 			return *this;
 		}
 
+		//! Mark the option just declared as naming a path, so that check_option_paths()
+		//! validates it. Chainable, so the role sits with the declaration:
+		//!
+		//!   options
+		//!   ("reference,r", "...").isInputFile()
+		//!   ("output,o",    "...", ".").isOutputDirectory()
+		//!   ;
+		AnyOption& isInputFile()       { return addPathRole(INPUT_FILE); }
+		AnyOption& isInputDirectory()  { return addPathRole(INPUT_DIRECTORY); }
+		AnyOption& isOutputFile()      { return addPathRole(OUTPUT_FILE); }
+		AnyOption& isOutputDirectory() { return addPathRole(OUTPUT_DIRECTORY); }
+
+		//! Mark this command's positional (unnamed) arguments as paths of the given role.
+		//! Opt-in per command, because plenty of commands take positional arguments that
+		//! are NOT paths: BAM2ALN/BAM2COV/GET-SEQUENCE take sequence regions, and
+		//! gdtools HEADER takes URLs and KEY:value download specs it only records as
+		//! metadata. `label` is the noun used in messages, e.g. "Read file".
+		void setPositionalArgumentsRole(PathRole role, const string& label);
+
+		//! Every path role registered on this object, in declaration order.
+		const vector<PathOption>& getPathOptions() const { return path_options; }
+
+		//! Whether a command line has been parsed yet. operator[]/count() are
+		//! meaningless before that, so check_option_paths() asserts on it.
+		bool commandArgsProcessed() const { return command_set; }
+
 		string operator[](const string& option_name);
 		bool count(const string& option_name);
 
 
+
+	private:
+		AnyOption& addPathRole(PathRole role);
 
 	private: /* the hidden data structure */
 		int argc;		/* commandline arg count  */
@@ -341,6 +410,11 @@ namespace breseq {
 		int terminal_width;
 		map<string, string> default_values;
 
+		/* path validation */
+		vector<PathOption> path_options;     /* options (and positional args) that name paths */
+		string m_last_declared_option;       /* name as declared, for the chainable markers */
+		bool m_last_declared_has_argument;
+
 
 
 	private: /* the hidden utils */
@@ -380,6 +454,15 @@ namespace breseq {
 		void printVerbose( );
 
 	}; // class AnyOption
+
+	//! Validate every path registered on `options` with isInputFile()/isOutputDirectory()/etc,
+	//! plus its positional arguments if setPositionalArgumentsRole() was called.
+	//!
+	//! Returns true when everything checks out. On a problem it prints one "---> ERROR ..."
+	//! line per bad path (all of them, not just the first, so one run tells the user about
+	//! every typo) and returns false; the caller decides how to exit. Pass verbose=true to
+	//! also print a line per path that passed, which is what --dry-run does.
+	bool check_option_paths(AnyOption& options, bool verbose = false);
 
 } // namespace breseq
 #endif /* ! _ANYOPTION_H */

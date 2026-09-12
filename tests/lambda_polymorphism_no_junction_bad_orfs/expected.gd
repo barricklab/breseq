@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	13:25:04 30 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision 2474edd9b66f
-#=COMMAND	./src/breseq/breseq -j 4 -p --no-junction-prediction -o ./tests/lambda_polymorphism_no_junction_bad_orfs -r ./tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_bad_orfs.gbk ./tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_mixed_population.fastq.gz
-#=REFSEQ	./tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_bad_orfs.gbk
-#=READSEQ	./tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_mixed_population.fastq.gz
+#=CREATED	07:36:33 09 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=COMMAND	./src/breseq/breseq -j 4 -p --no-junction-prediction -o tests/lambda_polymorphism_no_junction_bad_orfs -r tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_bad_orfs.gbk tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_mixed_population.fastq.gz
+#=REFSEQ	tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_bad_orfs.gbk
+#=READSEQ	tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_mixed_population.fastq.gz
 #=CONVERTED-BASES	6998495
 #=CONVERTED-READS	199957
 #=INPUT-BASES	7000144
@@ -113,6 +113,7 @@ RA	100	.	NC_001416	48295	0	C	A	allele_frequencies=A:1.24454980e-01,C:8.75544931e
 RA	101	.	NC_001416	48486	0	T	C	allele_frequencies=A:2.05941503e-03,C:1.22265818e-01,G:1.46475293e-03,T:8.74210014e-01	consensus_reject=FREQUENCY_CUTOFF	fisher_strand_p_value=4.11926e-01	frequency=1.22265818e-01	frequency_lower=9.82010780e-02	frequency_upper=1.49374412e-01	gene_name=lambdap79/–	gene_position=intergenic (+542/–)	gene_product=hypothetical protein/–	gene_strand=>/–	ks_quality_p_value=1.00000e+00	locus_tag=lambdap79/–	major_base=T	major_cov=3/386	major_frequency=8.74210014e-01	minor_base=C	minor_cov=1/54	new_cov=1/54	prediction=polymorphism	ref_cov=3/386	reject=VARIANT_STRAND_COVERAGE	score=92.9	snp_type=intergenic	total_cov=4/444
 MC	102	.	NC_001416	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-189)	gene_product=–/DNA packaging protein	gene_strand=–/>	left_inside_cov=0	left_outside_cov=NA	locus_tag=–/lambdap01	right_inside_cov=0	right_outside_cov=153
 MC	103	.	NC_001416	21732	27729	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=24	left_outside_cov=29	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=24	right_outside_cov=31
-UN	104	.	NC_001416	1	8
-UN	105	.	NC_001416	21730	27724
-UN	106	.	NC_001416	48502	48502
+CN	104	.	NC_001416	21701	27700	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	relative_coverage=0	tile_size=100
+UN	105	.	NC_001416	1	8
+UN	106	.	NC_001416	21730	27724
+UN	107	.	NC_001416	48502	48502

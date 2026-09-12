@@ -30,7 +30,7 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # the suite spans roughly 137 / 573 / 2800 bases of insert.
 #
 # EXPERIMENTAL PAIR EVIDENCE: like the other paired long tests, this one turns on
-# the four experimental predictors. Note that --predict-soft-clipping lowers
+# --predict-soft-clipping on top of the default DP/MP/PD/CN. Note that it lowers
 # require-match-fraction from 0.9 to 0.5 unless set explicitly (settings.cpp),
 # so this golden is NOT comparable to long_ltee_clone's stock-options output,
 # and it will move whenever the DP/MP/PD/SC code changes -- rebuild and review
@@ -48,10 +48,6 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    --predict-copy-number \
-    --predict-discordant-pairs \
-    --predict-missing-pairs \
-    --predict-pair-distance \
     --predict-soft-clipping \
     ${DOWNLOADDIR}/ena_SRR2588848/SRR2588848_1.fastq.gz \
     ${DOWNLOADDIR}/ena_SRR2588848/SRR2588848_2.fastq.gz \

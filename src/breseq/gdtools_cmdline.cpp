@@ -71,7 +71,7 @@ int do_intersection(int argc, char *argv[])
 {
   AnyOption options("gdtools INTERSECT [-o output.gd] input1.gd input2.gd ...");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",  "Output Genome Diff file name", "output.gd");
+  options("output,o",  "Output Genome Diff file name", "output.gd").isOutputFile();
   options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -82,6 +82,12 @@ int do_intersection(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   if (options.getArgc() < 2) {
     options.addUsage("");
@@ -111,7 +117,7 @@ int do_merge(int argc, char *argv[])
 {
   AnyOption options("gdtools MERGE/UNION [-o output.gd] input1.gd input2.gd ...");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",  "output GD file name", "output.gd");
+  options("output,o",  "output GD file name", "output.gd").isOutputFile();
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
 	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
 	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
@@ -129,6 +135,12 @@ int do_merge(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	/*
   if (options.getArgc() < 1) {
@@ -165,12 +177,12 @@ int do_apply(int argc, char *argv[])
 {
   AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 -s seq_id ] -r reference.gbk input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",    "Output file name (DEFAULT=output.*)");
+  options("output,o",    "Output file name (DEFAULT=output.*)").isOutputFile();
   options("format,f",    "Output file format (Options: FASTA, GENBANK, GFF3)", "FASTA");
-  options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+  options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
   options("seq-id,s",    "Sequence ID to keep in output. If this argument is provided, other sequences are deleted after the APPLY. May be provided multiple times.");
 	options("polymorphism-mode,p",  "Apply all mutations in GD file regardless of their frequency. By default (without this option) only mutations with 100% frequency are applied.", TAKES_NO_ARGUMENT);
-	options("applied-gd,a",  "Output file name for GD with mutations updated to coordinates in the output sequences.");
+	options("applied-gd,a",  "Output file name for GD with mutations updated to coordinates in the output sequences.").isOutputFile();
   options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -185,6 +197,12 @@ int do_apply(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff file.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   if (!options.count("reference")) {
     options.addUsage("");
@@ -308,13 +326,19 @@ int do_subtract(int argc, char *argv[])
 {
   AnyOption options("gdtools SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",  "output GD file", "output.gd");
+  options("output,o",  "output GD file", "output.gd").isOutputFile();
 	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
 	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
 	options("frequency-aware,f", "Use the frequencies of mutations when performing the subtraction. Normally an input mutation is removed if it appears at any frequency in a subtracted file. In this mode its frequency is reduced by the frequency in each subtracted file. If the resulting frequency is zero or below, then the mutation is removed.", TAKES_NO_ARGUMENT);
 
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
+
+  // The trailing unnamed arguments are the input Genome Diff files.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
   
   options.addUsage("");
 	options.addUsage("Creates a new Genome Diff file that contains all mutation entries that are still");
@@ -358,7 +382,7 @@ int do_weights(int argc, char* argv[])
 {
   AnyOption options("gdtools WEIGHTS [-o output.gd input1.gd input2.gd ...");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",    "output GD file", "output.gd");
+  options("output,o",    "output GD file", "output.gd").isOutputFile();
   options("verbose,v",   "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -372,6 +396,12 @@ int do_weights(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   if (options.getArgc() < 2) {
     options.addUsage("");
@@ -446,7 +476,7 @@ int do_validate(int argc, char *argv[])
 {
 	AnyOption options("gdtools VALIDATE -r reference.gbk input1.gd [input2.gd]");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)");
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)").isInputFile();
 	options("verbose,v",  "Verbose mode. Outputs additional information about progress. (OPTIONAL)");
 	options.addUsage("");
 	options.addUsage("Validates whether the format of the input Genome Diff files is correct.");
@@ -457,6 +487,12 @@ int do_validate(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	bool verbose = options.count("verbose");
 	
@@ -529,14 +565,20 @@ int do_check(int argc, char *argv[])
 {
   AnyOption options("gdtools CHECK [-o output.gd] control.gd test.gd");
 	options("help,h", "display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",         "output GD file", "comp.gd");
-  options("reference,r",      "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+  options("output,o",         "output GD file", "comp.gd").isOutputFile();
+  options("reference,r",      "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
   options("evidence",         "compare evidence (only JC at present)", TAKES_NO_ARGUMENT);
   options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
   options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
   options("jc-only-accepted", "when comparing JC evidence, do not score/count rejected items", TAKES_NO_ARGUMENT);
   options("verbose,v",        "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
+
+  // The trailing unnamed arguments are the input Genome Diff files.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
 
   options.addUsage("");
   options.addUsage("Compare a control input GD file with known valid mutations and a test GD file");
@@ -610,8 +652,8 @@ int do_convert(int argc, char* argv[], string forced_format = "")
 	options("help,h", "display detailed help message", TAKES_NO_ARGUMENT);
 	if (forced_format.empty())
 		options("format,f","file format to output: GD, VCF, GVF, or JSON (REQUIRED)");
-	options("output,o","name of output file (DEFAULT = <input_file>.*)", "");
-		options("reference,r",  "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED for VCF input or with annotate option)");
+	options("output,o","name of output file (DEFAULT = <input_file>.*)", "").isOutputFile();
+		options("reference,r",  "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED for VCF input or with annotate option)").isInputFile();
 	options("annotate,a","annotate mutations and evidence in input file", TAKES_NO_ARGUMENT);
 	options("snv-only","only include SNP/SNV entries in GVF output", TAKES_NO_ARGUMENT);
 
@@ -626,6 +668,12 @@ int do_convert(int argc, char* argv[], string forced_format = "")
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input file.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 
 	UserOutput uout(usage_command);
 
@@ -732,7 +780,7 @@ int do_not_evidence(int argc, char *argv[])
 {
   AnyOption options("NOT_EVIDENCE [-o output.gd] input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o","output GD file", "output.gd");
+  options("output,o","output GD file", "output.gd").isOutputFile();
   options("id,i","Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
 	
@@ -748,6 +796,12 @@ int do_not_evidence(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff file.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   if( options.getArgc() != 1 ){
     options.addUsage("");
@@ -849,8 +903,8 @@ int do_annotate(int argc, char* argv[])
   AnyOption options("gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]");
 	
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*)");
-	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*)").isOutputFile();
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
 	options("format,f", "Type of output file to generate. See options below", "HTML");
 	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
 	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD, TSV, CSV, and JSON output formats", TAKES_NO_ARGUMENT);
@@ -918,6 +972,12 @@ int do_annotate(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 
   string genbank_field_for_seq_id = to_upper(options["genbank-field-for-seq-id"]);
   if (   (genbank_field_for_seq_id != "AUTOMATIC")
@@ -1188,8 +1248,8 @@ int do_mutations(int argc, char* argv[])
 	AnyOption options("gdtools MUTATIONS [-o output.gd] -r reference.gbk input.gd");
 	
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o", "Path to output GD file with mutations predicted from evidence.", "output.gd");
-	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o", "Path to output GD file with mutations predicted from evidence.", "output.gd").isOutputFile();
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
 
 	options.addUsage("");
 	options.addUsage("Predicts mutations from the evidence entries in the input GD file. Any mutation entries (three-letter code lines) already present in the input GD file will be removed.");
@@ -1200,6 +1260,12 @@ int do_mutations(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff file.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	UserOutput uout("MUTATIONS");
 	
@@ -1243,8 +1309,8 @@ int do_phylogeny(int argc, char* argv[])
 	
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
-	options("output,o", "base name for output files.", "phylogeny");
-	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o", "base name for output files.", "phylogeny").isOutputFile();
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
 	//options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
 	options("missing-as-ancestral,a", "Count missing data (mutations in UN regions) as the ancestral allele rather than as an unknown allele (N).", TAKES_NO_ARGUMENT);
 	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
@@ -1263,6 +1329,12 @@ int do_phylogeny(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	UserOutput uout("PHYLOGENY");
 	
@@ -1439,9 +1511,9 @@ int do_count(int argc, char* argv[])
   AnyOption options("gdtools COUNT [-o count.csv] -r reference.gbk input.1.gd [input.2.gd ... ]");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
-	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o", "path to output CSV file with count data.", "count.csv");
-	options("detailed-output,d", "path to optional output tab-delimited file with detailed information about all mutations (Default = OFF)");
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
+	options("output,o", "path to output CSV file with count data.", "count.csv").isOutputFile();
+	options("detailed-output,d", "path to optional output tab-delimited file with detailed information about all mutations (Default = OFF)").isOutputFile();
 	options("calculate-genome-size,s", "use APPLY to calculate final genome sizes", TAKES_NO_ARGUMENT);
 	options("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT);
 	options("count-polymorphisms,p", "count polymorphic mutations (those with frequencies < 1). (Default = FALSE)", TAKES_NO_ARGUMENT);
@@ -1459,6 +1531,12 @@ int do_count(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   UserOutput uout("COUNT");
   
@@ -1513,8 +1591,8 @@ int do_normalize_gd(int argc, char* argv[])
   AnyOption options("gdtools NORMALIZE [-o output.gd] -r reference.gbk input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v"         , "verbose mode (flag)", TAKES_NO_ARGUMENT);
-	options("output,o"          , "output Genome Diff file.", "output.gd");
-	options("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o"          , "output Genome Diff file.", "output.gd").isOutputFile();
+	options("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
 	options("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT);
 	options("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT);
 	options("dont-check-apply,x" , "skip both the check that the input is valid against the reference sequences and the step that checks consistency of normalize using APPLY.", TAKES_NO_ARGUMENT);
@@ -1554,6 +1632,12 @@ int do_normalize_gd(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff file.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   if (!options.count("reference")) {
     options.addUsage("");
@@ -1691,7 +1775,7 @@ int do_remove_gd(int argc, char* argv[])
 {
   AnyOption options("gdtools FILTER/REMOVE [-o output.gd] -c condition1 [-c condition2] [-m SNP] input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o", "Output Genome Diff file.", "output.gd");
+  options("output,o", "Output Genome Diff file.", "output.gd").isOutputFile();
 	options("condition,c", "Condition for removing entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". Both field names and field values are case-sensitive. You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed.");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
 	options("renumber,n","Renumber IDs of entries that remain after performing filtering.", TAKES_NO_ARGUMENT);
@@ -1699,6 +1783,12 @@ int do_remove_gd(int argc, char* argv[])
 	options("verbose,v","Print information about why entries were removed to the console.", TAKES_NO_ARGUMENT);
 
   options.processCommandArgs(argc, argv);
+
+  // The trailing unnamed arguments are the input Genome Diff file.
+  options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+  // Fail fast on any missing input file or unwritable output path.
+  if (!check_option_paths(options)) return -1;
 
   options.addUsage("");
   options.addUsage("Removes entries from a GD file for which ALL of the provided conditions evaluate to true.");
@@ -1937,8 +2027,8 @@ int do_mummer2mask(int argc, char* argv[])
 {
 	AnyOption options("gdtools MUMMER2MASK [-o output.gd -p 36] -r reference.fna input.coords");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o", "Output Genome Diff file.", "output.gd");
+	options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
+	options("output,o", "Output Genome Diff file.", "output.gd").isOutputFile();
 	options("padding,p", "Additional padding to add to each end of every MASK region.", 0);
 	options("merge,g", "Merge regions if they are within this distance (before adding padding).", 0);
 	options("minimum,m", "Minimum size of a region after padding and merging to remain in the MASK list.", 0);
@@ -1956,6 +2046,12 @@ int do_mummer2mask(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input MUMmer coords file.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input coords file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	if (options.getArgc() != 1) {
 		options.addUsage("");
@@ -2014,7 +2110,7 @@ int do_mask_gd(int argc, char* argv[])
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("mask-mode", "Masking mode: 'ALL' masks all mutations in masked regions; 'SMALL' masks only small mutations (SNP; INS, DEL, and SUB mutations with sizes ≤ 50 bp; and all INS and DEL mutations causing expansion or contraction of simple sequence repeats (SSRs)). If these mutations are marked as 'mediated' or 'between' repeats, then they are NOT masked. In SMALL mode, RA evidence is always masked; MC and CN evidence ≤ 50 bp are masked; SC and JC evidence are never masked.", "ALL");
 	options("mark,m", "Mark masked mutations and their orphaned evidence with ignore=masked instead of deleting them. Masked regions are converted to UN evidence in the default (delete) mode.", TAKES_NO_ARGUMENT);
-	options("output,o", "Output Genome Diff file.", "output.gd");
+	options("output,o", "Output Genome Diff file.", "output.gd").isOutputFile();
 	options("verbose,v","Verbose mode", TAKES_NO_ARGUMENT);
 
 	options.addUsage("");
@@ -2026,6 +2122,12 @@ int do_mask_gd(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input and mask Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 
 	UserOutput uout("MASK");
 
@@ -2068,8 +2170,8 @@ int do_read_count(int argc, char* argv[])
 	
 	AnyOption options("gdtools READ-COUNT [-i input.gd -o output.gd] input1.fastq input2.fastq ... ");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("input,i", "Input GenomeDiff file", "input.gd");
-	options("output,o", "Output GenomeDiff file containing read counts", "output.gd");
+	options("input,i", "Input GenomeDiff file", "input.gd").isInputFile();
+	options("output,o", "Output GenomeDiff file containing read counts", "output.gd").isOutputFile();
 	options.addUsage("");
 	options.addUsage("Counts the number of reads and bases in the input FASTQ files and adds them as ORIGINAL-READS and ORIGINAL-BASES header information in the output GenomeDiff file.");
 	
@@ -2079,6 +2181,12 @@ int do_read_count(int argc, char* argv[])
 		options.printNormalUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input read files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input read file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	if (options.getArgc() == 0) {
 		options.addUsage("");
@@ -2128,11 +2236,11 @@ int do_simulate_mutations(int argc, char *argv[])
 {
   AnyOption options("Usage: gdtools SIMULATE-MUTATIONS [-n 100] -r <reference> -o <output.gd> -t <type>");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  options("output,o","Output file");
+  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
+  options("output,o","Output file").isOutputFile();
   options("type,t","Type of mutation to generate");
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
-  options("exclude,e","Exclusion file containing regions no mutations will overlap, usually repeats");
+  options("exclude,e","Exclusion file containing regions no mutations will overlap, usually repeats").isInputFile();
   options("buffer,b","Buffer distance between mutations and excluded intervals", static_cast<uint32_t>(50));
   options("seq,s","Reference sequence id to use from reference file");  
   options("seed","Seed for the random number generator");
@@ -2164,16 +2272,18 @@ int do_simulate_mutations(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
-	
+
   if(argc <= 1)  {
     options.printUsage();
     return -1;  }
   
-  if (!options.count("reference") || !file_exists(options["reference"].c_str())) {
+  // Presence only. Whether the file EXISTS is checked below by check_option_paths(),
+  // which also handles a repeated -r correctly -- the file_exists() call that used to be
+  // folded into this condition tested the newline-joined value, so "-r a -r b" looked for
+  // a single file literally named "a\nb".
+  if (!options.count("reference")) {
     options.addUsage("");
     options.addUsage("You must supply the --reference option for input.");
-    options.addUsage("If you feel you've received this message in error, please");
-    options.addUsage("check to see that the reference file you supplied exists.");
     options.printUsage();
     return -1;
   }
@@ -2184,6 +2294,9 @@ int do_simulate_mutations(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
   
   if (!options.count("type")) {
     options.addUsage("");
@@ -2226,8 +2339,8 @@ int do_mutations_to_evidence(int argc, char *argv[])
 {
   AnyOption options("Usage: gdtools MUTATIONS-TO-EVIDENCE -r <reference> -o <output.gd> input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");  
-  options("output,o","Output file");
+  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
+  options("output,o","Output file").isOutputFile();
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 	
@@ -2235,6 +2348,12 @@ int do_mutations_to_evidence(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff file.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   if(argc == 1)  {
     options.printUsage();
@@ -2278,10 +2397,10 @@ int do_header(int argc, char* argv[])
 {
   AnyOption options("gdtools HEADER [-o output.gd] [-r reference] file1.fastq file2.fastq ...");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",      "output GD file");
+  options("output,o",      "output GD file").isOutputFile();
   options("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("tag,t",         "header tag to add to GenomeDiff file, input as <key>=<value> will produce #=<key> <value>");
-  options("input,i",       "modify input GenomeDiff file inplace");
+  options("input,i",       "modify input GenomeDiff file inplace").isInputFile();
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -2294,6 +2413,9 @@ int do_header(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   if (!options.count("reference") && !options.count("tag") && !options.getArgc()) {
     options.printUsage();
@@ -2368,7 +2490,7 @@ int do_reheader(int argc, char* argv[])
 {
 	AnyOption options("gdtools REHEADER [-o output.gd] header.gd input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o", "output GD file", "output.gd");
+	options("output,o", "output GD file", "output.gd").isOutputFile();
 	options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
 	options.processCommandArgs(argc, argv);
 	
@@ -2379,6 +2501,12 @@ int do_reheader(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	if (options.getArgc() != 2) {
 		cout << "Must supply exactly two GenomeDiff files as input." << endl;
@@ -2407,7 +2535,7 @@ int do_download(int argc, char *argv[])
   AnyOption options(ss.str());
 	options("help,h",            "Display detailed help message", TAKES_NO_ARGUMENT);
   options("login,l",           "Login user:password information for private server access.");
-  options("download-dir,d",    "Output directory to download file to.", "02_Downloads");
+  options("download-dir,d",    "Output directory to download file to.", "02_Downloads").isOutputDirectory();
   options("genome-diff-dir,g", "Directory to search for genome diff files.", "01_Data");
   options("test"           ,   "Test urls in genome diff files, doesn't download the file", TAKES_NO_ARGUMENT);
   options("reference-only",    "Only downloads the reference sequence files for this file", TAKES_NO_ARGUMENT);
@@ -2423,6 +2551,12 @@ int do_download(int argc, char *argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
   //! Step: Confirm genome diff files have been input.
   list<string> file_names;
@@ -2666,8 +2800,8 @@ int do_gd2coverage(int argc, char* argv[])
 	
 	AnyOption options("gdtools GD2COV [-o output -r reference.gbk] input1.gd input2.gd ... ");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o","Base name of output files", "output");
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
+	options("output,o","Base name of output files", "output").isOutputFile();
 	options("tile-size,t","Size of tiling for coverage graph", 1000);
 
 
@@ -2680,6 +2814,12 @@ int do_gd2coverage(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	if (!options.count("reference")) {
 		options.addUsage("");
@@ -2706,8 +2846,8 @@ int do_deleted_genes(int argc, char* argv[])
 	
 	AnyOption options("gdtools deleted-genes [-o output.csv -r reference.gbk] input1.gd input2.gd ... ");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o","Name of output table file", "output.csv");
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile();
+	options("output,o","Name of output table file", "output.csv").isOutputFile();
 	
 	
 	options.addUsage("");
@@ -2719,6 +2859,12 @@ int do_deleted_genes(int argc, char* argv[])
 		options.printUsage();
 		return 0;
 	}
+
+	// The trailing unnamed arguments are the input Genome Diff files.
+	options.setPositionalArgumentsRole(INPUT_FILE, "Input Genome Diff file");
+
+	// Fail fast on any missing input file or unwritable output path.
+	if (!check_option_paths(options)) return -1;
 	
 	if (!options.count("reference")) {
 		options.addUsage("");

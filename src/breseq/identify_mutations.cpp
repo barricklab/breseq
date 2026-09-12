@@ -1017,8 +1017,9 @@ identify_mutations_pileup::identify_mutations_pileup(
       _pd_ring_short.assign(_pd_ring_w, 0);
       _pd_ring_u.assign(_pd_ring_w, 0);
     } else {
-      cerr << "WARNING: --predict-pair-distance was given, but no paired read group has a usable" << endl;
-      cerr << "         mapping-distance histogram. No pair-distance (PD) evidence will be predicted." << endl;
+      cerr << "WARNING: No paired read group has a usable mapping-distance histogram, so no" << endl;
+      cerr << "         pair-distance (PD) evidence will be predicted. Pass" << endl;
+      cerr << "         --no-pair-distance-prediction to skip PD without this warning." << endl;
     }
   }
 
@@ -1939,7 +1940,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // reference sequence, however well covered.
       write_coverage_row(position, ref_base_char, this_position_coverage, this_position_coverage_by_rg);
 
-      if(!_settings.skip_missing_coverage_prediction)
+      if(_settings.predict_missing_coverage)
         check_deletion_completion(p.target(), position, this_position_coverage, consensus_bonferroni_score);
     }
 
@@ -2316,7 +2317,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" Missing Coverahge and Unknown intervals
-  if (!_settings.skip_missing_coverage_prediction) {
+  if (_settings.predict_missing_coverage) {
     check_deletion_completion(tid, target_length(tid)+1, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   }
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
@@ -2339,7 +2340,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
   double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
   // if the propagation cutoff is -1 then the coverage distribution failed
-  if (!_settings.skip_missing_coverage_prediction && (_this_deletion_propagation_cutoff < 0.0))
+  if (_settings.predict_missing_coverage && (_this_deletion_propagation_cutoff < 0.0))
   {
     cDiffEntry del(MC);
     del[SEQ_ID] = target_name(tid);

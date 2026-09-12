@@ -904,10 +904,10 @@ namespace breseq{
     string sample_name;
     string genbank_field_for_seq_id;
     int32_t num_processors;
-    bool skip_read_filtering;
-    bool skip_new_junction_prediction;
-    bool skip_read_alignment_and_missing_coverage_prediction;
-    bool skip_missing_coverage_prediction;
+    bool filter_reads;
+    bool predict_new_junctions;
+    bool predict_read_alignments;
+    bool predict_missing_coverage;
     bool no_evidence_html;
 
     //! Settings: Read File
