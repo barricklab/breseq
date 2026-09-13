@@ -1,7 +1,7 @@
 #=GENOME_DIFF	1.0
-#=CREATED	07:47:11 31 Aug 2026
-#=PROGRAM	breseq 0.50.0 revision 4ff75f7e1fd2
-#=COMMAND	./src/breseq/breseq -j 7 -o tests/long_ltee_ara_m3_32k_mp2800 -r tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ltee_REL606/REL606.gbk -l 80 --junction-alignment-pair-limit 2000000 --predict-copy-number --predict-discordant-pairs --predict-missing-pairs --predict-pair-distance tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ena_SRR098033/SRR098033_1.fastq.gz tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ena_SRR098033/SRR098033_2.fastq.gz
+#=CREATED	18:40:27 13 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision ab1f45113c04
+#=COMMAND	./src/breseq/breseq -j 7 -o tests/long_ltee_ara_m3_32k_mp2800 -r tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ltee_REL606/REL606.gbk -l 80 --junction-alignment-pair-limit 2000000 tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ena_SRR098033/SRR098033_1.fastq.gz tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ena_SRR098033/SRR098033_2.fastq.gz
 #=REFSEQ	tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ltee_REL606/REL606.gbk
 #=READSEQ	tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ena_SRR098033/SRR098033_1.fastq.gz
 #=READSEQ	tests/long_ltee_ara_m3_32k_mp2800/../data/downloads/ena_SRR098033/SRR098033_2.fastq.gz
@@ -194,7 +194,7 @@ CN	180	.	REL606	1609201	1615400	0	gene_name=ybcW–ECB_01523	gene_product=ybcW,g
 CN	181	.	REL606	2032801	2055500	0	gene_name=manC–[cpsG]	gene_product=manC,insB-14,insA-14,wbbD,wbbC,wzy,wbbB,wbbA,vioB,vioA,wzx,rmlC,rfbA,rfbD,rfbB,galF,wcaM,wcaL,wcaK,wzxC,wcaJ,[cpsG]	locus_tag=[ECB_01933]–[ECB_01954]	relative_coverage=0	tile_size=100
 CN	182	.	REL606	2087001	2122400	0	gene_name=yegM–ECB_02012	gene_product=yegM,yegN,yegO,yegB,baeS,baeR,yegP,yegQ,ogrK,yegZ,ECB_01989,ECB_01990,ECB_01991,ECB_01992,ECB_01993,ECB_01994,ECB_01995,ECB_01996,ECB_01997,ECB_01998,ECB_01999,ECB_02000,ECB_02001,ECB_02002,ECB_02003,ECB_02004,ECB_02005,ECB_02006,ECB_02007,ECB_02008,ECB_02009,ECB_02010,ECB_02011,ECB_02012	locus_tag=[ECB_01979]–[ECB_02012]	relative_coverage=0	tile_size=100
 CN	183	.	REL606	3015801	3035100	0	gene_name=[ECB_02816]–[ECB_02836]	gene_product=[ECB_02816],ECB_02817,ECB_02818,ECB_02819,ECB_02820,ECB_02821,ECB_02822,insB-22,insA-22,ECB_02825,ECB_02826,ECB_02827,ECB_02828,yghD,yghE,ECB_02831,ECB_02832,ECB_02833,ECB_02834,ECB_02835,[ECB_02836]	locus_tag=[ECB_02816]–[ECB_02836]	relative_coverage=0	tile_size=100
-CN	184	.	REL606	3742001	3742200	0	gene_name=waaT	gene_position=pseudogene (166-365/405 nt)	gene_product=UDP-galactose:(Glucosyl) LPS alpha1,2-galactosyltransferase WaaT	gene_strand=<	locus_tag=ECB_03483	relative_coverage=0.0631	tile_size=100
+CN	184	.	REL606	3742001	3742200	0	gene_name=waaT	gene_position=pseudogene (166-365/405 nt)	gene_product=UDP-galactose:(Glucosyl) LPS alpha1,2-galactosyltransferase WaaT	gene_strand=<	locus_tag=ECB_03483	relative_coverage=0.0636	tile_size=100
 CN	185	.	REL606	3895001	3901500	0	gene_name=rbsD–[yieO]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,rbsR,[yieO]	locus_tag=[ECB_03634]–[ECB_03640]	relative_coverage=0	tile_size=100
 CN	186	.	REL606	4522401	4561300	0	gene_name=[fimB]–[hsdR]	gene_product=[fimB],fimE,fimA,fimI,fimC,fimD,fimF,fimG,fimH,gntP,uxuA,uxuB,uxuR,yjiC,yjiD,yjiE,iadA,yjiG,yjiH,kptA,yjiJ,yjiK,yjiL,yjiM,yjiN,yjiO,yjiPQ,insA-28,insB-28,yjiV,mcrC,mcrB,yjiW,hsdS,hsdM,[hsdR]	locus_tag=[ECB_04179]–[ECB_04216]	relative_coverage=0	tile_size=100
 UN	187	.	REL606	274	283

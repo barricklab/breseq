@@ -58,6 +58,26 @@ Soft clipping (SC) evidence is the exception: it remains opt-in via `--predict-s
 because that option also lowers `--require-match-fraction` from 0.9 to 0.5 and so changes which
 read alignments are accepted throughout the analysis.
 
+`--copy-number-resolution <float>`
+
+Spacing of the copy-number grid, in copies (DEFAULT=0.1). **Polymorphism mode only.** In consensus
+mode copy number is always called on the integers. Under `-p` it is called on a continuous grid
+instead, so a region carried by part of the population is reported at the depth it was measured at —
+a `CN` entry may read `copy_number=1.4`. This option sets how finely that grid is spaced; larger
+values call fewer, coarser levels. CNery rounds the value to a spacing that divides 1.0 exactly, so
+that single copy is always on the grid, and requires it to be above 0.02, the coverage a deleted
+region is modeled as retaining.
+
+Note that an `AMP` mutation predicted from a fractional `CN` still carries a whole number of copies
+in its `new_copy_number` field — it is a count of copies in a genome, not a measured depth — so a
+`CN` reading 2.4 beside an `AMP` reading 3 is expected rather than a discrepancy.
+
+Because a level is only called when it beats the cost of a state change, the grid spacing is also
+what keeps ordinary coverage noise from being reported as a copy-number change. It cannot suppress
+everything: on a short or heavily fragmented reference, where there is too little data to pin the
+single-copy level down, residual mapping and GC bias can still be called as a level slightly off 1.
+Treat a `CN` entry near single copy on a small contig with suspicion.
+
 `--no-read-alignment-prediction`, `--no-missing-coverage-prediction`, `--no-junction-prediction`, `--no-homologous-deletion-prediction`
 
 Turn off one kind of evidence prediction. `--no-read-alignment-prediction` also turns off missing

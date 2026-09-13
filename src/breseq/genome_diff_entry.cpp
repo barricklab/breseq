@@ -206,6 +206,10 @@ namespace breseq {
   (RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
   (MC,make_vector<string> (SEQ_ID)(START)(END)(START_RANGE)(END_RANGE))
   (JC,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP))
+  // COPY_NUMBER is deliberately absent from diff_entry_field_variable_types below, i.e. it is NOT
+  // typed as a positive integer the way AMP's NEW_COPY_NUMBER is. In polymorphism mode breseq calls
+  // copy number on a continuous grid (CNery's --polymorphism-mode) and writes levels like 1.05 here,
+  // so typing this field would make every such entry fail validation the moment it was read back.
   (CN,make_vector<string> (SEQ_ID)(START)(END)(COPY_NUMBER))
   (UN,make_vector<string> (SEQ_ID)(START)(END))
   (SC,make_vector<string> (SEQ_ID)(POSITION)(STRAND))

@@ -541,6 +541,7 @@ namespace breseq
     options
     ("predict-copy-number", "DEPRECATED: copy number (CN) evidence prediction is now the default. Use --no-copy-number-prediction to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("no-copy-number-prediction", "Do not predict copy number variation (CN) evidence. CN prediction requires the separate CNery program (https://github.com/barricklab/CNery) on your PATH; if it is missing, breseq warns and skips CN rather than failing. Pass this flag to skip it silently. (DEFAULT=OFF, i.e. CN prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("copy-number-resolution", "Spacing of the copy-number grid, in copies. POLYMORPHISM MODE ONLY: with --polymorphism-prediction, copy number is called on a continuous grid rather than on the integers, so a region can be reported at 1.4 copies, and this sets how finely that grid is spaced. Larger values call fewer, coarser levels; this is also what keeps residual coverage bias from being reported as a copy-number change, since a level is only called when it beats the cost of a state change. Rounded to the nearest spacing that divides 1.0 exactly, so single copy is always on the grid, and it must exceed the coverage a deleted region still shows (0.02). (DEFAULT = 0.1)", "", NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -813,6 +814,31 @@ namespace breseq
       cerr << "         To turn CN prediction OFF, use --no-copy-number-prediction instead." << endl;
       cerr << output_divider << endl;
     }
+
+    // Validated against options.count() rather than against this->polymorphism_prediction, which is
+    // not assigned until further down. Both of these mirror a check CNery makes in its own argparse:
+    // reporting them here means a bad combination is rejected before any read is aligned, rather
+    // than by a Python traceback at stage 09 with every other stage already computed.
+    if (options.count("copy-number-resolution")) {
+      ASSERT(options.count("polymorphism-prediction"),
+             "Argument --copy-number-resolution applies only in polymorphism mode (-p/--polymorphism-prediction).\n"
+             "In consensus mode copy number is called on the integers, so there is no grid to space.")
+      this->copy_number_resolution = from_string<double>(options["copy-number-resolution"]);
+    }
+    // The copy-number-0 state sits at kCNeryDeletionCoverageFraction of the single-copy level
+    // (CNery's -z default, which breseq never overrides). A grid finer than that puts a real level
+    // on top of the deletion state, so the two compete to explain the same coverage -- a modelling
+    // collision rather than a preference.
+    const double kCNeryDeletionCoverageFraction = 0.02;
+    ASSERT(this->copy_number_resolution > kCNeryDeletionCoverageFraction,
+           "Argument --copy-number-resolution (" + to_string<double>(this->copy_number_resolution) +
+           ") must be greater than " + to_string<double>(kCNeryDeletionCoverageFraction) +
+           ", the coverage a deleted region still shows,\nor the copy-number-0 state collides with the first level of the grid.")
+    // And the other end: CNery snaps the spacing to one that divides 1.0 exactly, so anything above
+    // 0.5 leaves no level at all between the deletion state and single copy.
+    ASSERT(this->copy_number_resolution <= 0.5,
+           "Argument --copy-number-resolution (" + to_string<double>(this->copy_number_resolution) +
+           ") must be 0.5 or less, or the grid has no level between zero and single copy.")
 
     this->verbose = options.count("verbose");
     
@@ -1468,6 +1494,8 @@ namespace breseq
     this->no_evidence_html = false;
 		this->predict_copy_number = true;
     this->copy_number_explicitly_requested = false;
+    // Polymorphism mode only -- see settings.h for why 0.1 rather than CNery's own 0.05.
+    this->copy_number_resolution = 0.1;
 		this->do_periodicity = false;
     
     //! DEBUG options
@@ -2155,6 +2183,19 @@ namespace breseq
 
 	}
 
+  // Whether the CNery on $PATH understands --polymorphism-mode, which breseq passes whenever it is
+  // itself run with -p. Asked of --help rather than of --version, because CNery has no --version
+  // flag at all -- and asked of the flag rather than of a version number anyway, since the flag IS
+  // what is needed and a version comparison would have to be maintained alongside it.
+  //
+  // Failure is reported as "no" rather than as an error: a CNery that cannot even print its help is
+  // not one this run can use, and the two callers already have the right words for that.
+  static bool cnery_has_polymorphism_mode(const string& cnery_path)
+  {
+    string help_text = SYSTEM_CAPTURE(double_quote(cnery_path) + " --help", true);
+    return help_text.find("--polymorphism-mode") != string::npos;
+  }
+
 	void Settings::check_installed()
 	{
     // Developer's Note
@@ -2282,6 +2323,29 @@ namespace breseq
           cerr << "---> WARNING Executable \"CNery\" not found. No copy number (CN) evidence will" << endl;
           cerr << "---> WARNING be predicted. Install it (e.g. 'pip install CNery') to enable CN," << endl;
           cerr << "---> WARNING or pass --no-copy-number-prediction to skip it without this warning." << endl;
+          cerr << "---> See https://github.com/barricklab/CNery" << endl;
+          this->predict_copy_number = false;
+        }
+      } else if (this->polymorphism_prediction && !cnery_has_polymorphism_mode(this->installed["cnery"])) {
+        // Same fork as a missing CNery, for the same reason: in polymorphism mode breseq hands CNery
+        // --polymorphism-mode, which older builds reject in their own argparse. Left to run, that is
+        // a Python usage error at stage 09 -- after alignment, junction resolution and mutation
+        // identification have all been paid for -- so the capability is probed here instead, where
+        // the answer still costs nothing. CNery has no --version to ask, hence a --help probe.
+        if (this->copy_number_explicitly_requested) {
+          good_to_go = false;
+          cerr << color_red("---> ERROR Installed \"CNery\" does not support --polymorphism-mode, which") << endl;
+          cerr << color_red("---> breseq passes in polymorphism mode (-p), but copy number (CN)") << endl;
+          cerr << color_red("---> prediction was explicitly requested.") << endl;
+          cerr << color_red("---> For found executable installed at [" + this->installed["cnery"] + "]") << endl;
+          cerr << color_red("---> Upgrade CNery, or drop -p to call copy number on the integers.") << endl;
+          cerr << color_red("---> See https://github.com/barricklab/CNery") << endl;
+        } else {
+          cerr << "---> WARNING Installed \"CNery\" does not support --polymorphism-mode, which breseq" << endl;
+          cerr << "---> WARNING passes in polymorphism mode (-p). No copy number (CN) evidence will be" << endl;
+          cerr << "---> WARNING predicted. Upgrade CNery to enable CN, drop -p to call copy number on" << endl;
+          cerr << "---> WARNING the integers, or pass --no-copy-number-prediction to skip it silently." << endl;
+          cerr << "---> For found executable installed at [" << this->installed["cnery"] << "]" << endl;
           cerr << "---> See https://github.com/barricklab/CNery" << endl;
           this->predict_copy_number = false;
         }

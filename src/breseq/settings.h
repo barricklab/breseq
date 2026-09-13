@@ -268,6 +268,29 @@ namespace breseq
     //! getting it by default. A missing CNery program is fatal only then; by default
     //! CNEvidence::predict warns and skips, so breseq still runs without CNery installed.
     bool copy_number_explicitly_requested;  // Default = false
+    //! Spacing of the copy-number grid CNery decodes over in POLYMORPHISM MODE, in copies.
+    //! Only reaches CNery alongside --polymorphism-mode, which breseq passes when it is itself
+    //! run with -p; consensus runs call CNery exactly as before and never send this.
+    //!
+    //! It is the only thing keeping near-baseline bias out of the CN evidence, because nothing
+    //! downstream applies a tolerance -- a segment is dropped as baseline only when its call is
+    //! exactly 1. That is deliberate: the filter belongs in the HMM's prior, where a level has to
+    //! beat the cost of a state change to be called at all, not in a threshold applied after the
+    //! fact to numbers that already claim to be measurements. At CNery's own default of 0.05 the
+    //! lambda test data calls its right arm 1.05 across 20.8 kb, which is residual GC/ori-ter bias
+    //! (the two arms still differ by 8% after both corrections) rather than copy number; 0.1 puts
+    //! that 0.04 from 1.0 and 0.06 from 1.1, so it holds at single copy.
+    //!
+    //! A grid spacing decides WHERE a level lands, not WHETHER a departure from single copy gets
+    //! called, so do not expect this to suppress everything. tests/lambda_mult_ref_read_polymorphism
+    //! has a 9.7 kb reference split by a 6 kb hole into 23 windows at 0.85 and 14 at 1.03: too
+    //! little data to pin the single-copy level down, so the HMM anchors on the larger arm and reads
+    //! the smaller one as a fifth of a copy higher. That 20% departure is called at every spacing
+    //! measured (0.1 -> 1.2, 0.15 -> 1.14, 0.2 -> 1.2, 0.25 -> 1.25); coarsening only relabels it.
+    //! Such a call is reported rather than filtered, which is the right default for a mode whose
+    //! whole point is small departures from single copy -- but it is why a CN entry near 1 on a
+    //! short contig deserves suspicion.
+    double copy_number_resolution;          // Default = 0.1 COMMAND-LINE OPTION
     bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
     //! Validate options and all file/folder arguments, then exit without doing any work.
     //! A dry run creates nothing -- in particular it skips the command-line logging that

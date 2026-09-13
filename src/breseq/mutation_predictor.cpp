@@ -3588,8 +3588,11 @@ namespace breseq {
       cDiffEntry& cn = **it;
       if (cn.entry_exists(REJECT)) continue;
       if (cn.entry_exists(IGNORE)) continue;
-      // copy_number is a positional field on CN, so it is always present.
-      if (from_string<int32_t>(cn[COPY_NUMBER]) != 0) continue;
+      // copy_number is a positional field on CN, so it is always present. Read as a double because
+      // in polymorphism mode it need not be a whole number; the test stays exact zero, which is the
+      // only call that says the region is absent from every cell -- which is what a DEL asserts, and
+      // what gdtools APPLY will act on. A region at 0.4 is a real observation and stays CN evidence.
+      if (from_string<double>(cn[COPY_NUMBER]) != 0.0) continue;
       cns.push_back(*it);
     }
     // Leaves a run without --predict-copy-number bit-identical.
@@ -3668,6 +3671,28 @@ namespace breseq {
       if (overlap > best_overlap) { best_overlap = overlap; best = &c; }
     }
     return best;
+  }
+
+  // A CN entry's copy number as the whole number of copies an AMP can assert.
+  //
+  // In consensus mode this is the value itself and the rounding never fires. In polymorphism mode
+  // CNery calls a continuous level, and the two are then different kinds of statement: a level of
+  // 2.4 is a measured relative depth, which may be three copies in most of the population or two in
+  // all of it and some repeat spill, while an AMP's new_copy_number says how many copies of the
+  // block the genome has. So the fractional value stays on the CN evidence, where it is what was
+  // measured, and only a whole number crosses into the mutation.
+  //
+  // It has to be whole. new_copy_number is declared a positive integer in the Genome Diff format
+  // (genome_diff_entry.cpp), and it is read as one by everything that acts on an AMP: it is the loop
+  // bound that builds the duplicated sequence in gdtools APPLY and in GD2VCF, and the multiplier in
+  // the mutation's own size change. A fractional value there would not be rejected -- it would be
+  // truncated, silently, in each of those places separately.
+  //
+  // round(), so 2.5 becomes 3 rather than 2. Exact halves are on the grid at the default
+  // --copy-number-resolution, so this is a case that happens rather than a limit.
+  static int32_t cn_copies(cDiffEntry& cn_item)
+  {
+    return static_cast<int32_t>(round(from_string<double>(cn_item[COPY_NUMBER])));
   }
 
   // Orientation, in reference coordinates, of the NEW element copy a junction reports. This is the
@@ -3824,7 +3849,7 @@ namespace breseq {
 
       cDiffEntry* cn_item = cn_covering(cn, seq_id, side_1_position, side_2_position);
       if (cn_item == NULL) { jc_it++; continue; }
-      int32_t copies = from_string<int32_t>((*cn_item)[COPY_NUMBER]);
+      int32_t copies = cn_copies(*cn_item);
       if (copies < 2) { jc_it++; continue; }
 
       // Right-shift to the highest coordinates that describe the same duplication, which is what
@@ -3877,7 +3902,7 @@ namespace breseq {
 
     for (diff_entry_list_t::iterator ci = cn.begin(); ci != cn.end(); ci++) {
       cDiffEntry& c = **ci;
-      int32_t copies = from_string<int32_t>(c[COPY_NUMBER]);
+      int32_t copies = cn_copies(c);
       if (copies < 2) continue;
 
       const string& seq_id = c[SEQ_ID];
@@ -4107,7 +4132,9 @@ namespace breseq {
 
       // copy_number is a POSITIONAL field on CN, so it is always present; only a call of zero says
       // the region is deleted outright, which is the only thing that licenses bridging an island.
-      if (from_string<int32_t>(cn[COPY_NUMBER]) != 0) continue;
+      // A double, since polymorphism mode can call a fractional level -- but still exactly zero
+      // here: a region at 0.4 has coverage across it, so the islands are not one missing region.
+      if (from_string<double>(cn[COPY_NUMBER]) != 0.0) continue;
 
       const string& seq_id = cn[SEQ_ID];
       int32_t cn_start = from_string<int32_t>(cn[START]);

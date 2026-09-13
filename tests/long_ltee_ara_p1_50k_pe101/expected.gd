@@ -1,7 +1,7 @@
 #=GENOME_DIFF	1.0
-#=CREATED	07:32:50 31 Aug 2026
-#=PROGRAM	breseq 0.50.0 revision 4ff75f7e1fd2
-#=COMMAND	./src/breseq/breseq -j 7 -o tests/long_ltee_ara_p1_50k_pe101 -r tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ltee_REL606/REL606.gbk --predict-copy-number --predict-discordant-pairs --predict-missing-pairs --predict-pair-distance --predict-soft-clipping tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_1.fastq.gz tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_2.fastq.gz
+#=CREATED	18:29:50 13 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision ab1f45113c04
+#=COMMAND	./src/breseq/breseq -j 7 -o tests/long_ltee_ara_p1_50k_pe101 -r tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ltee_REL606/REL606.gbk --predict-soft-clipping tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_1.fastq.gz tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_2.fastq.gz
 #=REFSEQ	tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ltee_REL606/REL606.gbk
 #=READSEQ	tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_1.fastq.gz
 #=READSEQ	tests/long_ltee_ara_p1_50k_pe101/../data/downloads/ena_SRR2584534/SRR2584534_2.fastq.gz
@@ -297,20 +297,20 @@ CN	283	.	REL606	1974101	1982300	0	gene_name=[yedU]–[yeeI]	gene_product=[yedU],
 CN	284	.	REL606	2035101	2053800	0	gene_name=[wbbD]–[wcaJ]	gene_product=[wbbD],wbbC,wzy,wbbB,wbbA,vioB,vioA,wzx,rmlC,rfbA,rfbD,rfbB,galF,wcaM,wcaL,wcaK,wzxC,[wcaJ]	locus_tag=[ECB_01936]–[ECB_01953]	relative_coverage=0	tile_size=100
 CN	285	.	REL606	2087001	2093000	0	gene_name=yegM–[yegO]	gene_product=yegM,yegN,[yegO]	locus_tag=[ECB_01979]–[ECB_01981]	relative_coverage=0	tile_size=100
 CN	286	.	REL606	2263601	2267000	0	gene_name=rcsC–[atoS]	gene_product=rcsC,[atoS]	locus_tag=[ECB_02145]–[ECB_02146]	relative_coverage=0	tile_size=100
-CN	287	.	REL606	2453901	2454100	2	gene_name=valX–[valY]	gene_product=valX,[valY]	locus_tag=[ECB_t00042]–[ECB_t00043]	relative_coverage=1.99	tile_size=100
+CN	287	.	REL606	2453901	2454100	2	gene_name=valX–[valY]	gene_product=valX,[valY]	locus_tag=[ECB_t00042]–[ECB_t00043]	relative_coverage=2	tile_size=100
 CN	288	.	REL606	2655701	2655800	0	gene_name=[yfiH]	gene_product=[yfiH]	locus_tag=[ECB_02483]	relative_coverage=0	tile_size=100
-CN	289	.	REL606	2712501	2725800	2	gene_name=argQ–[ygaA]	gene_product=argQ,argZ,argY,argV,serV,csrA,alaS,recX,recA,ygaD,mltB,srlA,srlE,srlB,srlD,gutM,srlR,gutQ,[ygaA]	locus_tag=[ECB_t00046]–[ECB_02559]	relative_coverage=1.7	tile_size=100
+CN	289	.	REL606	2712501	2725800	2	gene_name=argQ–[ygaA]	gene_product=argQ,argZ,argY,argV,serV,csrA,alaS,recX,recA,ygaD,mltB,srlA,srlE,srlB,srlD,gutM,srlR,gutQ,[ygaA]	locus_tag=[ECB_t00046]–[ECB_02559]	relative_coverage=1.71	tile_size=100
 CN	290	.	REL606	2726301	2738900	2	gene_name=[ygaA]–[hycG]	gene_product=[ygaA],norV,ygbD,hypF,hydN,ascG,ascF,ascB,hycI,hycH,[hycG]	locus_tag=[ECB_02559]–[ECB_02569]	relative_coverage=1.67	tile_size=100
 CN	291	.	REL606	2739201	2739900	2	gene_name=[hycF]–[hycE]	gene_product=[hycF],[hycE]	locus_tag=[ECB_02570]–[ECB_02571]	relative_coverage=1.72	tile_size=100
-CN	292	.	REL606	2740301	2772800	2	gene_name=[hycE]–iap	gene_product=[hycE],hycD,hycC,hycB,hycA,hypA,hypB,hypC,hypD,hypE,fhlA,ygbA,mutS,pphB,ygbI,ygbJ,ygbK,ygbL,ygbM,ygbN,rpoS,nlpD,pcm,surE,ygbO,ispF,ispD,ftsB,ygbE,cysC,cysN,cysD,iap	locus_tag=[ECB_02571]–[ECB_02603]	relative_coverage=1.64	tile_size=100
-CN	293	.	REL606	2842101	2842300	0	gene_name=metW–[metV]	gene_product=metW,[metV]	locus_tag=[ECB_t00052]–[ECB_t00053]	relative_coverage=0.111	tile_size=100
+CN	292	.	REL606	2740301	2772800	2	gene_name=[hycE]–iap	gene_product=[hycE],hycD,hycC,hycB,hycA,hypA,hypB,hypC,hypD,hypE,fhlA,ygbA,mutS,pphB,ygbI,ygbJ,ygbK,ygbL,ygbM,ygbN,rpoS,nlpD,pcm,surE,ygbO,ispF,ispD,ftsB,ygbE,cysC,cysN,cysD,iap	locus_tag=[ECB_02571]–[ECB_02603]	relative_coverage=1.65	tile_size=100
+CN	293	.	REL606	2842101	2842300	0	gene_name=metW–[metV]	gene_product=metW,[metV]	locus_tag=[ECB_t00052]–[ECB_t00053]	relative_coverage=0.112	tile_size=100
 CN	294	.	REL606	2999601	3048500	0	gene_name=[flu]–yghK	gene_product=[flu],yeeR,ECB_02802,yafZ,ECB_02804,yeeS,yeeT,yeeU,yeeV,yeeW,ECB_02810,ECB_02811,ECB_02812,ECB_02813,ECB_02814,ECB_02815,ECB_02816,ECB_02817,ECB_02818,ECB_02819,ECB_02820,ECB_02821,ECB_02822,insB-22,insA-22,ECB_02825,ECB_02826,ECB_02827,ECB_02828,yghD,yghE,ECB_02831,ECB_02832,ECB_02833,ECB_02834,ECB_02835,ECB_02836,ECB_02837,ECB_02838,yghF,yghG,pppA,yghJ,yghK	locus_tag=[ECB_02800]–[ECB_02843]	relative_coverage=0	tile_size=100
 CN	295	.	REL606	3895001	3901100	0	gene_name=rbsD–[yieO]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,rbsR,[yieO]	locus_tag=[ECB_03634]–[ECB_03640]	relative_coverage=0	tile_size=100
 CN	296	.	REL606	3944201	3944600	2	gene_name=[argX]–[proM]	gene_product=[argX],hisR,leuT,[proM]	locus_tag=[ECB_t00067]–[ECB_t00070]	relative_coverage=1.74	tile_size=100
-CN	297	.	REL606	4034701	4035000	2	gene_name=[glnA]	gene_product=[glnA]	locus_tag=[ECB_03755]	relative_coverage=2.18	tile_size=100
+CN	297	.	REL606	4034701	4035000	2	gene_name=[glnA]	gene_product=[glnA]	locus_tag=[ECB_03755]	relative_coverage=2.19	tile_size=100
 CN	298	.	REL606	4047701	4049600	0	gene_name=[yihR]–[yihS]	gene_product=[yihR],[yihS]	locus_tag=[ECB_03764]–[ECB_03765]	relative_coverage=0	tile_size=100
 CN	299	.	REL606	4275701	4333200	0	gene_name=[yjcO]–[lysU]	gene_product=[yjcO],fdhF,yjcP,yjcQ,yjcR,yjcS,alsK,alsE,alsC,alsA,alsB,rpiR,rpiB,yjdP,phnP,phnO,phnN,phnM,phnL,phnK,phnJ,phnI,phnH,phnG,phnF,phnE,phnD,phnC,phnB,phnA,yjdA,yjcZ,proP,basS,basR,yjdB,yjdE,adiY,adiA,melR,melA,melB,yjdF,fumB,dcuB,dcuR,dcuS,dcuS,yjdI,yjdJ,yjdK,[lysU]	locus_tag=[ECB_03950]–[ECB_04000]	relative_coverage=0	tile_size=100
-CN	300	.	REL606	4370501	4370800	2	gene_name=glyV–[glyY]	gene_product=glyV,glyX,[glyY]	locus_tag=[ECB_t00080]–[ECB_t00082]	relative_coverage=1.77	tile_size=100
+CN	300	.	REL606	4370501	4370800	2	gene_name=glyV–[glyY]	gene_product=glyV,glyX,[glyY]	locus_tag=[ECB_t00080]–[ECB_t00082]	relative_coverage=1.78	tile_size=100
 UN	301	.	REL606	15616	15616
 UN	302	.	REL606	15618	15619
 UN	303	.	REL606	15621	15621

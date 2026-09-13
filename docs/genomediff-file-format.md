@@ -530,6 +530,54 @@ Line specification:
 Essentially this is evidence of missing coverage between two positions
 in the ranges \[start, start+start_range\] \[end-end_range, end\].
 
+### CN: Copy number evidence
+
+Line specification:
+
+4.  **seq_id** *\<string>*
+
+    id of reference sequence fragment containing mutation, evidence, or
+    validation.
+
+5.  **start** *\<uint32>*
+
+    start position in reference sequence fragment.
+
+6.  **end** *\<uint32>*
+
+    end position in reference sequence of region.
+
+7.  **copy_number** *\<float>*
+
+    copy number of the region relative to the single-copy level of this
+    reference sequence. A whole number in consensus mode. In polymorphism
+    mode (`-p`) copy number is called on a continuous grid, so this may be
+    fractional — 1.4 means the region was measured at 1.4 times single-copy
+    depth, which may be a subpopulation carrying a duplication, a mixed
+    sample, or aneuploidy. It does not distinguish between them.
+
+    Unlike an `AMP` mutation's **new_copy_number**, which is a count of
+    copies in a genome and is always a positive integer, this field is a
+    measurement. An `AMP` predicted from a fractional `CN` carries the
+    rounded value.
+
+Named fields:
+
+-   **tile_size** *\<uint32>*
+
+    width in bases of the sliding window the copy number was called over.
+
+-   **relative_coverage** *\<float>*
+
+    average bias-corrected coverage across the region, on the same scale as
+    **copy_number**: 1.0 is this reference sequence's own single-copy level.
+    It is the measurement, where **copy_number** is the level the model
+    settled on, so the two are close but need not be equal. (How a whole
+    reference sequence compares to the rest of the analysis is a different
+    question, reported per sequence in the summary rather than here.)
+
+Only regions whose copy number differs from 1 are reported.
+
 ### JC: New junction evidence
 
 4.  **side_1\_seq_id** *\<string>*

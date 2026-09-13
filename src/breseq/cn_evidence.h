@@ -71,7 +71,9 @@ namespace breseq {
       double  gc_corr_fact;      // gc_corr_fact          (the LOWESS GC curve that was divided out)
       double  corrected_cov;     // otr_gc_corr_norm_cov  (normalized, GC- and ori-ter-corrected)
       double  otr_fit_cov;       // otr_gc_corr_fact      (the ori-ter ramp that was divided out)
-      int32_t copy_number;       // prob_copy_number      (HMM Viterbi state)
+      // prob_copy_number (HMM Viterbi state). A double, not an integer: under --polymorphism-mode
+      // CNery decodes over a continuous grid and writes levels like 1.05 here. -1 = no call.
+      double  copy_number;
 
       // is_redundant: CNery flagged this window as overlapping repeat coverage (its
       // mask_coverage_windows() sets it for pct_redundant > 0, i.e. ANY redundant base among the
@@ -108,10 +110,17 @@ namespace breseq {
     // It is not: a run whose first window is called CN != 1 -- a deletion at the start of a contig,
     // or a library so thin that CNery calls the whole genome CN 0 -- wrote start = 0 into the .gd and
     // then died parsing it back at the Output stage.
+    //
+    // copy_number is a double because CNery's State is only an integer in CONSENSUS mode. Under
+    // --polymorphism-mode -- which breseq passes whenever it is itself run with -p -- the HMM
+    // decodes over a continuous grid and writes levels like 1.05, and reading those with
+    // from_string<int32_t> is not a failure but a silent truncation (it is istringstream >> int,
+    // which stops at the '.' and never sets failbit), so 0.9 would arrive as copy number 0 and be
+    // read downstream as a full deletion.
     struct cnery_segment {
       int32_t start;
       int32_t end;           // Startpos + Segment_Size - 1
-      int32_t copy_number;   // CNery's State
+      double  copy_number;   // CNery's State
     };
 
     // The origin and terminus of replication CNery inferred, and used to build its OTR correction.
@@ -166,10 +175,15 @@ namespace breseq {
     // cases. Where no tent fired the two divisors are equal anyway -- corrected_cov IS
     // gc_corrected_cov there -- so this splits only where CNery already split it.
     //
-    // `gc` is CNery's own censored_median_coverage: the median of the GC-corrected coverage, which
-    // is what its "Relative copy number" is built from and the closest thing the run has to a
-    // definition of this sequence's single-copy level. 1.0 is the neutral value, so a series with
-    // nothing to measure is left exactly as it arrives.
+    // `gc` is CNery's own censored_median_coverage narrowed to the windows the HMM actually called
+    // single copy (select_single_copy_windows): the median of the GC-corrected coverage over them,
+    // which is this sequence's single-copy level stated in the units CNery's numbers arrive in. 1.0
+    // is the neutral value, so a series with nothing to measure is left exactly as it arrives.
+    //
+    // This is also what every CN entry's relative_coverage is divided by, so the number quoted on
+    // the evidence page and the height it is drawn at cannot disagree. It is deliberately NOT what
+    // "Relative copy number" in the summary reports -- that one compares a whole reference sequence
+    // to the rest of the run, which is a question about the sequence and not about a region of it.
     struct cn_plot_scale {
       double gc;          // divides raw_cov, gc_corrected_cov, otr_fit_cov, ori/ter marker heights
       double corrected;   // divides corrected_cov, and equals gc wherever no ori-ter tent fired
@@ -211,18 +225,33 @@ namespace breseq {
     // CNery reports. See the definition for why its per-window column cannot be drawn as a line.
     static double otr_ramp_at(const cnery_otr& otr, int32_t position, int32_t seq_length);
 
-    // The windows a per-sequence statistic is measured over: every correction stage positive, then
-    // restricted to copy number 1 when there are at least 100 of those. Shared by summarize() and
-    // compute_plot_scale() so that the spread reported in summary.html and the scale the plots are
-    // drawn on cannot drift into describing different parts of the sequence.
+    // The windows the per-sequence coverage SPREAD is measured over: every correction stage
+    // positive, then restricted to copy number 1 when there are at least 100 of those.
+    //
+    // The hundred-window floor is what makes this a spread's rule rather than a scale's. A robust CV
+    // over a couple of dozen windows is noisy enough to mislead, so below that it is better to
+    // describe the whole sequence and say so (single_copy_only) than to quote a precise-looking
+    // number measured on almost nothing. A scale cannot make that trade -- falling back folds the
+    // amplified and deleted windows into the level they are supposed to be measured against -- which
+    // is why compute_plot_scale() uses select_single_copy_windows() below and only falls through to
+    // this when the HMM called no window single copy at all.
     static void select_measured_windows(const vector<cnery_window>& windows,
                                         vector<size_t>& selected,
                                         bool& single_copy_only);
 
-    // The median of each coverage series over those windows -- see cn_plot_scale for why the plots
-    // need them. Must be computed over the FULL UNBINNED window list of the whole sequence: binning
-    // discards the HMM state this selects on, and a per-CN-item plot covers a subset that is
-    // typically inside an amplification, so neither can be allowed to derive a scale of its own.
+    // The windows that define this sequence's SINGLE-COPY level: the measurable ones the HMM called
+    // copy number 1, however few of them there are. Distinct from select_measured_windows() on
+    // purpose -- see the definition for why a scale must not fall back to the whole sequence the way
+    // a spread statistic can.
+    static void select_single_copy_windows(const vector<cnery_window>& windows,
+                                           vector<size_t>& selected);
+
+    // The median of each coverage series over this sequence's single-copy windows -- see
+    // cn_plot_scale for why the plots need them, and ingest_csv_for_seq_id() for why every CN
+    // entry's relative_coverage is divided by the same thing. Must be computed over the FULL
+    // UNBINNED window list of the whole sequence: binning discards the HMM state this selects on,
+    // and a per-CN-item plot covers a subset that is typically inside an amplification, so neither
+    // can be allowed to derive a scale of its own.
     static cn_plot_scale compute_plot_scale(const vector<cnery_window>& windows);
 
     // Distills the fit and the per-window coverage into the numbers summary.html and summary.json
@@ -235,7 +264,10 @@ namespace breseq {
 
     // Turns CNery's segments into CN evidence entries. The per-window list supplies only each
     // entry's displayed relative_coverage, averaged over that segment's NON-redundant windows --
-    // see the definition for what a redundant one would otherwise contribute.
+    // see the definition for what a redundant one would otherwise contribute -- and, through
+    // compute_plot_scale(), the single-copy level of THIS sequence that the average is quoted
+    // against. CNery's own numbers are pooled across every reference sequence in the run, which is
+    // not a scale on which a statement about one region of one sequence means anything.
     static void ingest_csv_for_seq_id(
                                       const string& seq_id,
                                       const vector<cnery_window>& windows,

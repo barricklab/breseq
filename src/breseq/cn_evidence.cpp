@@ -108,6 +108,26 @@ void CNEvidence::run_cnery(Settings& settings, Summary& summary, cReferenceSeque
   command += " -o " + double_quote(cnery_output_prefix);
   //command += " --frag-size " + to_string<uint32_t>(fragment_length);
 
+  // A sample breseq is treating as non-clonal should not have its copy number rounded to the
+  // integers on the way in. In polymorphism mode CNery decodes over a continuous grid instead, so a
+  // region carried by part of the population is reported at the depth it was measured at (1.4
+  // copies) rather than forced to the nearest whole genotype.
+  //
+  // The long spelling, not -p: this command line is also what a user reads out of the log, and it
+  // is the short flag that a future CNery could reassign. --copy-number-resolution goes with it and
+  // ONLY with it -- CNery rejects the option on its own, which is why Settings does too.
+  //
+  // The resolution is written out with an explicit stream rather than with to_string(), which for a
+  // double is the non-template overload in common.h -- fixed at ONE decimal place. That would send
+  // 0.05 to CNery as "0.1" and 0.025 as "0.0": not a formatting blemish but a different grid, or an
+  // invalid one, with nothing in the log to say so.
+  if (settings.polymorphism_prediction) {
+    ostringstream resolution;
+    resolution << setprecision(10) << settings.copy_number_resolution;
+    command += " --polymorphism-mode";
+    command += " --copy-number-resolution " + resolution.str();
+  }
+
   SYSTEM(command, false, false, false);
 }
 
@@ -128,6 +148,36 @@ void CNEvidence::run_cnery(Settings& settings, Summary& summary, cReferenceSeque
 static bool cnery_bool(const string& field)
 {
   return (field == "True") || (field == "true") || (field == "TRUE") || (field == "1");
+}
+
+// A copy number out of CNery's break_pts.csv, with the parse actually checked.
+//
+// strtod with its end pointer inspected, rather than from_string<double>, which is
+// `istringstream >> double` and does not report failure -- since C++11 a failed extraction leaves
+// the value at 0. Zero is the one copy number that means something drastic: it is what attaches a
+// CN to a deletion and what licenses merging missing-coverage fragments across an island. A State
+// column breseq cannot read must therefore be an error, not silently a deletion.
+//
+// Returns false for empty input, trailing garbage, an out-of-range magnitude, and any non-finite
+// value -- so "nan" and "inf", which CNery has no reason to write and every reason not to be
+// believed about, are rejected here rather than propagated into a .gd.
+static bool cnery_double(const string& field, double& value)
+{
+  if (field.empty()) return false;
+
+  errno = 0;
+  const char* begin = field.c_str();
+  char* end = NULL;
+  double parsed = strtod(begin, &end);
+
+  if (end == begin) return false;                 // nothing numeric at all
+  while ((*end == ' ') || (*end == '\t') || (*end == '\r')) end++;
+  if (*end != '\0') return false;                 // trailing garbage
+  if (errno == ERANGE) return false;
+  if (!std::isfinite(parsed)) return false;
+
+  value = parsed;
+  return true;
 }
 
 bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_window>& windows)
@@ -188,7 +238,8 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
     w.gc_percent = (gc_percent_col != string::npos) ? from_string<double>(fields[gc_percent_col]) : 0.0;
     w.gc_corrected_cov = (gc_cov_col != string::npos) ? from_string<double>(fields[gc_cov_col]) : 0.0;
     w.gc_corr_fact = (gc_fit_col != string::npos) ? from_string<double>(fields[gc_fit_col]) : 0.0;
-    w.copy_number = (copy_number_col != string::npos) ? from_string<int32_t>(fields[copy_number_col]) : -1;
+    // As a double: integral in consensus mode, a continuous level under --polymorphism-mode.
+    w.copy_number = (copy_number_col != string::npos) ? from_string<double>(fields[copy_number_col]) : -1.0;
     w.is_redundant = (redundant_col != string::npos) ? cnery_bool(fields[redundant_col]) : false;
     windows.push_back(w);
   }
@@ -319,7 +370,17 @@ bool CNEvidence::read_cnery_segments(const string& break_pts_file_name, vector<c
     int32_t raw_start = from_string<int32_t>(fields[0]);
 
     cnery_segment s;
-    s.copy_number = from_string<int32_t>(fields[1]);
+    // A DOUBLE parse, and that is load-bearing rather than defensive. Under --polymorphism-mode
+    // CNery writes this column as a float -- "1.0", "0.0", "1.05" -- and from_string<int32_t> would
+    // read every one of those without complaint, because it is istringstream >> int, which stops at
+    // the '.' and leaves failbit clear. The damage is not the lost fraction but the direction it is
+    // lost in: a segment called 0.9 would arrive here as copy number 0, and copy number 0 is what
+    // mutation prediction reads as a full deletion.
+    //
+    // Checked as it is read, for the same reason -- see cnery_double().
+    ASSERT(cnery_double(fields[1], s.copy_number),
+           "Unreadable copy number (\"" + fields[1] + "\") on row " + to_string<size_t>(row) +
+           " of CNery output file: " + break_pts_file_name);
     s.start       = raw_start;
     s.end         = raw_start + from_string<int32_t>(fields[2]) - 1;
 
@@ -347,6 +408,15 @@ bool CNEvidence::read_cnery_segments(const string& break_pts_file_name, vector<c
            to_string<int32_t>(s.start) + ") on row " + to_string<size_t>(row) +
            " of CNery output file: " + break_pts_file_name);
 
+    // Checked here for the same reason the coordinates are: this is where CNery's numbers become
+    // breseq's, and a negative copy number is not something to clamp. It would also not announce
+    // itself downstream -- the field is written into the .gd verbatim and COPY_NUMBER has no entry
+    // in diff_entry_field_variable_types, so nothing validates it on load. Non-negative rather than
+    // positive: 0 is a real and load-bearing value, it is what a deletion looks like.
+    ASSERT(s.copy_number >= 0.0,
+           "Segment with a negative copy number (" + fields[1] + ") on row " +
+           to_string<size_t>(row) + " of CNery output file: " + break_pts_file_name);
+
     // Running past the end of the contig is recoverable in a way the two above are not -- the .gd
     // parses either way and every plot clamps to its own range -- so trim it and say so instead of
     // ending the run. CNery stops its last window short of the sequence end rather than overrunning
@@ -370,6 +440,46 @@ bool CNEvidence::read_cnery_segments(const string& break_pts_file_name, vector<c
   return true;
 }
 
+// A copy number as it is written into the .gd: a whole number with no decimal point when the call
+// is integral, and the fraction CNery measured when it is not.
+//
+// The first half is what keeps every consensus result in the tree byte-identical -- copy_number has
+// always read "0" and "2" there, and always will, because consensus mode calls nothing else.
+//
+// Fixed decimals with the trailing zeros stripped, NOT setprecision() in the default format, which
+// counts SIGNIFICANT digits and so gets both ends wrong: three of them would render copy number
+// 1265 as "1.26e+03", and enough of them to keep a large integer intact would render 1.05 as
+// "1.0500000000000000444".
+//
+// Six decimals is a deliberate budget rather than a round number. CNery snaps the grid spacing to
+// one that divides 1.0 exactly and refuses anything at or below the deletion coverage fraction, so
+// the finest spacing it can be asked for is 1/49; its refinement bands only ever widen that above
+// copy number 2. Six decimals separates every level the model can express with orders of magnitude
+// to spare, and -- unlike relative_coverage two lines below, which is a scipy FIT whose trailing
+// digits moved on nothing but a fresh conda env -- a level is a grid point chosen by a Viterbi
+// decode, not a number that drifts. It either lands on the same level or on a different one, and a
+// test noticing THAT is the test doing its job. So this field deliberately does not get
+// relative_coverage's noise margin; do not "fix" the inconsistency.
+// Six decimals also puts a floor under what can be distinguished from zero, and zero is not just
+// another value here: mutation prediction reads copy_number == 0 as "absent from every cell" and
+// lets it attach to a deletion and bridge missing-coverage islands. Nothing on CNery's grid lands in
+// that gap -- snap_cn_resolution() forces a spacing of at least 1/49, and refine_step() only ever
+// widens it -- so the smallest non-zero level expressible is about 0.02, four orders of magnitude
+// clear. Worth knowing if the grid ever gains a level near zero.
+static string cn_copy_number_string(double copy_number)
+{
+  // Also disposes of a negative zero, which would otherwise print as "-0".
+  if (copy_number == 0.0) return "0";
+
+  ostringstream ss;
+  ss << fixed << setprecision(6) << copy_number;
+  string s = ss.str();
+
+  string::size_type last = s.find_last_not_of('0');
+  if (s[last] == '.') last--;
+  return s.substr(0, last + 1);
+}
+
 // Turn each merged range into a CN evidence entry, using the per-window file only to compute a
 // representative relative coverage value to display for that range.
 void CNEvidence::ingest_csv_for_seq_id(
@@ -386,16 +496,39 @@ void CNEvidence::ingest_csv_for_seq_id(
   ASSERT(read_cnery_segments(break_pts_file_name, segments, sequence_length),
          "Could not open CNery output file: " + break_pts_file_name);
 
+  // THIS sequence's single-copy level, which is what every relative_coverage below is divided by.
+  //
+  // CNery's coverage columns do not arrive on that scale: it normalizes against ONE pooled median
+  // across every reference sequence it was handed, and refits single copy per sequence afterwards
+  // for the HMM. Reported as they arrive, a CN entry's relative_coverage answers a question nobody
+  // asked -- how this region compares to the run as a whole -- while the copy_number beside it
+  // answers the one they did, so a region the HMM called 1.2 copies could report 1.02. The pooled
+  // comparison still has a place, as each sequence's "relative copy number" in the summary table;
+  // it has none on an entry describing one region of one sequence.
+  //
+  // The same divisor the plots of this sequence use (compute_plot_scale), so the number in the .gd
+  // and the height of the trace on the evidence page are one statement rather than two.
+  const double single_copy_level = compute_plot_scale(windows).corrected;
+
   cGenomeDiff gd;
 
   for (size_t seg_i = 0; seg_i < segments.size(); seg_i++) {
     int32_t start_pos = segments[seg_i].start;
     int32_t end_pos = segments[seg_i].end;
-    int32_t copy_number = segments[seg_i].copy_number;
+    double copy_number = segments[seg_i].copy_number;
 
     // Copy number 1 is the baseline (haploid, single-copy) state -- only
     // regions CNery calls as different from that are evidence-worthy.
-    if (copy_number == 1) continue;
+    //
+    // An exact floating-point comparison, deliberately, and the only one in this file that decides
+    // anything. 1.0 is exactly representable and CNery writes single copy as the literal "1" or
+    // "1.0", so the decimal-to-binary conversion is exact and there is nothing here to be within a
+    // tolerance OF. Nor should there be: in polymorphism mode the grid spacing
+    // (--copy-number-resolution) is what keeps residual coverage bias from being called as a level
+    // at all, because a level has to beat the cost of a state change before the HMM will call it. A
+    // band applied here instead would be a threshold on numbers that already claim to be
+    // measurements, and it would silently discard the small real events the mode exists to find.
+    if (copy_number == 1.0) continue;
 
     // Averaged over the segment's NON-redundant windows. A window overlapping repeat coverage
     // measures how many REFERENCE copies collapsed onto that locus, not how many this sample
@@ -417,7 +550,10 @@ void CNEvidence::ingest_csv_for_seq_id(
       for (size_t i = 0; i < windows.size(); i++) {
         if (windows[i].is_redundant && !allow_redundant) continue;
         if ((windows[i].start >= start_pos) && (windows[i].start <= end_pos)) {
-          coverage_sum += windows[i].corrected_cov;
+          // On this sequence's single-copy level, not CNery's pooled one -- see single_copy_level.
+          // Dividing each window rather than the mean is the same arithmetic, and keeps it obvious
+          // that every value entering the sum is already on the scale the result is quoted in.
+          coverage_sum += windows[i].corrected_cov / single_copy_level;
           coverage_n++;
         }
       }
@@ -428,9 +564,10 @@ void CNEvidence::ingest_csv_for_seq_id(
     item[START] = to_string<int32_t>(start_pos);
     item[END] = to_string<int32_t>(end_pos);
     item["tile_size"] = to_string<uint32_t>(window_size);
-    item["copy_number"] = to_string<int32_t>(copy_number);
+    item["copy_number"] = cn_copy_number_string(copy_number);
     // Three significant figures, deliberately. This number is CNery's, fitted with scipy and
-    // statsmodels, and its trailing digits move whenever that stack is re-resolved -- 0.035776 became
+    // statsmodels (and now divided by a median of its values), and its trailing digits move whenever
+    // that stack is re-resolved -- 0.035776 became
     // 0.0357757 on long_ltee_ara_m3_32k_mp2800 from nothing but a fresh conda env, failing the test on
     // a difference of 2e-7. Nothing consumes that precision: the only reader is the CN evidence page,
     // which renders this at two decimal places (output.cpp), and mutation prediction reads
@@ -504,7 +641,12 @@ void CNEvidence::select_measured_windows(const vector<cnery_window>& windows,
     if (w.is_redundant) continue;
     if ((w.raw_cov <= 0.0) || (w.gc_corrected_cov <= 0.0) || (w.corrected_cov <= 0.0)) continue;
     usable.push_back(i);
-    if (w.copy_number == 1) single_copy.push_back(i);
+    // Exactly single copy, with no tolerance -- see the matching comment in ingest_csv_for_seq_id().
+    // In polymorphism mode this subset is genuinely smaller, because a window called 1.1 is not
+    // single copy and its spread would not describe single-copy coverage. That is what the fallback
+    // below is for: under kMinimumSpreadWindows the statistic is measured over every usable window
+    // instead, and single_copy_only says which happened so the report can too.
+    if (w.copy_number == 1.0) single_copy.push_back(i);
   }
 
   const size_t kMinimumSpreadWindows = 100;
@@ -592,18 +734,55 @@ void CNEvidence::summarize(const cnery_otr& otr, const vector<cnery_window>& win
 // against each other, so the axes have to land in the same place.
 // ---------------------------------------------------------------------------------------------
 
+// The windows that define this sequence's SINGLE-COPY level: non-redundant, measurable at every
+// correction stage, and called copy number 1.
+//
+// Deliberately not select_measured_windows(), even though that starts from the same set. That
+// function is measuring a coverage SPREAD, and a spread taken over a couple of dozen windows is
+// noisy enough to mislead, so it falls back to every usable window once the single-copy subset
+// drops below a hundred. A scale is a different quantity: the fallback folds the sequence's
+// amplified and deleted windows into the very level they are supposed to be measured against, and
+// on a short or fragmented reference -- exactly where the fallback fires -- that is most of the
+// sequence. On one 9.7 kb fragment with 37 usable windows it put the single-copy level at 1.01
+// when the 23 windows the HMM actually called single copy sat at 0.85, which is why a region the
+// HMM called 1.2 copies was reporting a relative coverage of 1.02.
+//
+// So: however few there are, the windows called single copy are what single copy means here.
+void CNEvidence::select_single_copy_windows(const vector<cnery_window>& windows,
+                                            vector<size_t>& selected)
+{
+  selected.clear();
+  for (size_t i = 0; i < windows.size(); i++) {
+    const cnery_window& w = windows[i];
+    if (w.is_redundant) continue;
+    if ((w.raw_cov <= 0.0) || (w.gc_corrected_cov <= 0.0) || (w.corrected_cov <= 0.0)) continue;
+    if (w.copy_number != 1.0) continue;
+    selected.push_back(i);
+  }
+}
+
 // The scale each of this sequence's plotted coverage series is drawn on -- see cn_plot_scale for
-// why the plots cannot use CNery's numbers as they arrive. One median per series, over the one
-// window set select_measured_windows() picks, so the traces land on the same axis as each other and
-// as the copy-number line. A median that is not positive leaves its field at the neutral 1.0, which
-// draws exactly what this function not existing would have drawn.
+// why the plots cannot use CNery's numbers as they arrive. One median per series, over ONE window
+// set, so the traces land on the same axis as each other and as the copy-number line. A median that
+// is not positive leaves its field at the neutral 1.0, which draws exactly what this function not
+// existing would have drawn.
+//
+// The same scale divides the relative_coverage reported on every CN evidence entry of this sequence
+// (see ingest_csv_for_seq_id), which is what stops the number in the .gd and the height on the plot
+// being two different statements about the same region.
 CNEvidence::cn_plot_scale CNEvidence::compute_plot_scale(const vector<cnery_window>& windows)
 {
   cn_plot_scale scale;
 
+  // Single copy where the HMM found any, and only otherwise the broader set -- which covers a
+  // sequence with no copy-number column at all, and one called entirely non-single-copy, where
+  // there is no single-copy level to be had and every window is the best available answer.
   vector<size_t> selected;
-  bool single_copy_only = false;
-  select_measured_windows(windows, selected, single_copy_only);
+  select_single_copy_windows(windows, selected);
+  if (selected.empty()) {
+    bool single_copy_only = false;
+    select_measured_windows(windows, selected, single_copy_only);
+  }
 
   // No median of raw_cov: the uncorrected trace is deliberately drawn on the GC-corrected series'
   // scale, so that its distance from single copy IS the size of the GC correction.
@@ -732,7 +911,7 @@ vector<CNEvidence::cnery_window> CNEvidence::bin_cnery_windows(const vector<cner
     w.otr_fit_cov = otr_fit_sum / n;
     // The struct's "no call" sentinel: a bin spans many windows and has no one HMM state, and
     // nothing reads a binned copy number now.
-    w.copy_number = -1;
+    w.copy_number = -1.0;
 
     out.push_back(w);
   }
@@ -783,11 +962,14 @@ vector<CNEvidence::cnery_region> CNEvidence::redundant_regions(const vector<cner
 // where a piece does not open exactly where the last one closed, which covers both a gap between
 // segments and a repeat clipped out of the middle of one, and nothing else.
 //
+// `y` is a double rather than an integer copy number, because under --polymorphism-mode a segment's
+// level need not be a whole number and the line has to step to 1.4 as readily as to 2.
+//
 // Returns true if anything was written, so the caller can tell whether the series exists at all.
 static bool write_clipped_run(ostream& out,
                               int32_t from,
                               int32_t to,
-                              int32_t y,
+                              double y,
                               const vector<pair<int32_t, int32_t> >& regions,
                               int32_t& last_x,
                               bool& have_any)

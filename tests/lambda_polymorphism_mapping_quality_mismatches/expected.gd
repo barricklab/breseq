@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	07:36:24 09 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=CREATED	18:08:40 13 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision ab1f45113c04
 #=COMMAND	./src/breseq/breseq -j 4 --polymorphism-prediction --minimum-mapping-quality 40 --maximum-read-mismatches 1 -o tests/lambda_polymorphism_mapping_quality_mismatches -r tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq.gz
 #=REFSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq.gz
@@ -71,10 +71,11 @@ MC	58	.	NC_001416	47969	47985	0	0	gene_name=lambdap79/–	gene_position=intergen
 MC	59	.	NC_001416	48468	48502	0	0	gene_name=lambdap79/–	gene_position=intergenic (+524/–)	gene_product=hypothetical protein/–	gene_strand=>/–	left_inside_cov=20	left_outside_cov=25	locus_tag=lambdap79/–	right_inside_cov=0	right_outside_cov=NA
 JC	60	.	NC_001416	21737	-1	NC_001416	27734	1	0	alignment_overlap=5	coverage_minus=32	coverage_plus=37	flanking_left=35	flanking_right=35	frequency=1.00000000e+00	frequency_lower=9.52076048e-01	frequency_upper=1.00000000e+00	junction_effective_depth=61.00	junction_mixture_iterations=1	junction_possible_overlap_registers=25	junction_possible_overlap_registers_before_trimming=29	key=NC_001416__21737__-1__NC_001416__27729__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_pos_hash_score=58	max_right=29	max_right_minus=29	max_right_plus=27	neg_log10_pos_hash_p_value=NT	new_junction_coverage=0.79	new_junction_read_count=61	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=61.00	pos_hash_score=38	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=orf-314	side_1_gene_position=coding (709/945 nt)	side_1_gene_product=Tail fiber	side_1_gene_strand=>	side_1_locus_tag=lambdap28	side_1_overlap=5	side_1_possible_overlap_registers=25	side_1_possible_overlap_registers_before_trimming=34	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ea59/int	side_2_gene_position=intergenic (-761/+78)	side_2_gene_product=ea59/integration protein	side_2_gene_strand=</<	side_2_locus_tag=lambdap82/lambdap33	side_2_overlap=0	side_2_possible_overlap_registers=25	side_2_possible_overlap_registers_before_trimming=29	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=69
 CN	61	.	NC_001416	21701	27700	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	relative_coverage=0	tile_size=100
-UN	62	.	NC_001416	1	8
-UN	63	.	NC_001416	21738	27731
-UN	64	.	NC_001416	46989	46997
-UN	65	.	NC_001416	47311	47318
-UN	66	.	NC_001416	47972	47983
-UN	67	.	NC_001416	48490	48490
-UN	68	.	NC_001416	48492	48502
+CN	62	.	NC_001416	46301	48500	0.7	gene_name=[Rz]–lambdap79	gene_product=[Rz],[Rz1],bor,lambdap78,lambdap79	locus_tag=[lambdap76]–[lambdap79]	relative_coverage=0.71	tile_size=100
+UN	63	.	NC_001416	1	8
+UN	64	.	NC_001416	21738	27731
+UN	65	.	NC_001416	46989	46997
+UN	66	.	NC_001416	47311	47318
+UN	67	.	NC_001416	47972	47983
+UN	68	.	NC_001416	48490	48490
+UN	69	.	NC_001416	48492	48502

@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	07:35:29 09 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=CREATED	18:09:02 13 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision ab1f45113c04
 #=COMMAND	./src/breseq/breseq -j 4 --polymorphism-prediction -o tests/lambda_mult_ref_read_polymorphism -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.A.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.B.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk
@@ -120,14 +120,15 @@ MC	100	.	NC_001416-0	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-18
 MC	101	.	NC_001416-2	2338	8333	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=80	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=22	right_outside_cov=102
 JC	102	.	NC_001416-2	2337	-1	NC_001416-2	8334	1	0	alignment_overlap=5	coverage_minus=37	coverage_plus=40	flanking_left=35	flanking_right=35	frequency=9.99999997e-01	frequency_lower=9.56901429e-01	frequency_upper=1.00000000e+00	junction_effective_depth=68.00	junction_mixture_iterations=3	junction_possible_overlap_registers=25	junction_possible_overlap_registers_before_trimming=29	key=NC_001416-2__2337__-1__NC_001416-2__8329__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_pos_hash_score=58	max_right=29	max_right_minus=29	max_right_plus=27	neg_log10_pos_hash_p_value=NT	new_junction_coverage=0.86	new_junction_read_count=68	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=68.00	pos_hash_score=40	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=orf-314	side_1_gene_position=coding (709/945 nt)	side_1_gene_product=Tail fiber	side_1_gene_strand=>	side_1_locus_tag=lambdap28	side_1_overlap=5	side_1_possible_overlap_registers=25	side_1_possible_overlap_registers_before_trimming=34	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.01	side_2_gene_name=ea59/int	side_2_gene_position=intergenic (-761/+78)	side_2_gene_product=ea59/integration protein	side_2_gene_strand=</<	side_2_locus_tag=lambdap82/lambdap33	side_2_overlap=0	side_2_possible_overlap_registers=25	side_2_possible_overlap_registers_before_trimming=29	side_2_read_count=1	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=77
 CN	103	.	NC_001416-2	2301	8300	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	relative_coverage=0	tile_size=100
-UN	104	.	NC_001416-0	1	8
-UN	105	.	NC_001416-0	9699	9700
-UN	106	.	NC_001416-1	1	4
-UN	107	.	NC_001416-1	9700	9700
-UN	108	.	NC_001416-2	1	2
-UN	109	.	NC_001416-2	2338	8331
-UN	110	.	NC_001416-2	9701	9701
-UN	111	.	NC_001416-3	1	1
-UN	112	.	NC_001416-3	9700	9700
-UN	113	.	NC_001416-4	1	2
-UN	114	.	NC_001416-4	9701	9701
+CN	104	.	NC_001416-2	8301	9700	1.2	gene_name=int–xis	gene_product=int,xis	locus_tag=[lambdap33]–[lambdap34]	relative_coverage=1.2	tile_size=100
+UN	105	.	NC_001416-0	1	8
+UN	106	.	NC_001416-0	9699	9700
+UN	107	.	NC_001416-1	1	4
+UN	108	.	NC_001416-1	9700	9700
+UN	109	.	NC_001416-2	1	2
+UN	110	.	NC_001416-2	2338	8331
+UN	111	.	NC_001416-2	9701	9701
+UN	112	.	NC_001416-3	1	1
+UN	113	.	NC_001416-3	9700	9700
+UN	114	.	NC_001416-4	1	2
+UN	115	.	NC_001416-4	9701	9701
