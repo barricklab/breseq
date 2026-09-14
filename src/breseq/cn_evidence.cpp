@@ -274,6 +274,27 @@ static bool cnery_double(const string& field, double& value)
   return true;
 }
 
+// One numeric cell of a CNV.csv row, where AN EMPTY CELL MEANS THE SAME AS A COLUMN THAT IS NOT
+// THERE. Both are "CNery did not tell us this", and the reader already had a neutral value ready for
+// the second; there is no reason for the first to be more serious.
+//
+// It was, and fatally. pandas writes a NaN as an empty field, so a single NaN anywhere in a column
+// breseq reads -- which CNery has reason to produce, and guards against internally with
+// np.nan_to_num -- reached from_string<double>(""), whose ASSERT(!s.empty()) ends the run. A
+// completed pipeline was thrown away over one missing number in one window of a diagnostic column,
+// at the last stage, with everything it had computed still on disk and no way to use it.
+//
+// Built on cnery_double() rather than a second parser, so an empty cell, a truncated file and a
+// "nan" written out literally are all one decision made in one place.
+static double cnery_field(const vector<string>& fields, size_t col, double absent)
+{
+  if (col == string::npos) return absent;
+
+  double value = absent;
+  if (!cnery_double(fields[col], value)) return absent;
+  return value;
+}
+
 bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_window>& windows)
 {
   windows.clear();
@@ -303,8 +324,16 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
     else if (header_fields[i] == "gc_corr_fact") gc_fit_col = i;
     else if (header_fields[i] == "is_redundant") redundant_col = i;
   }
-  ASSERT((win_st_col != string::npos) && (win_len_col != string::npos) && (rel_cov_col != string::npos),
+  // The geometry is genuinely required -- a window with no start or length is not a window. The
+  // corrected coverage is not: it is one of three coverage columns that say the same thing after
+  // different corrections, and CNery itself falls back along exactly this chain, assigning
+  // otr_gc_corr_norm_cov = gc_corr_norm_cov whenever it declines the ori-ter fit (a --bias mode that
+  // excludes it, or a reference group, whose contigs have no coordinate for a replication ramp to
+  // run along). Requiring the most-corrected one turned that ordinary situation into a dead run.
+  ASSERT((win_st_col != string::npos) && (win_len_col != string::npos),
          "Unexpected column layout in CNery output file: " + cnv_file_name);
+  ASSERT((rel_cov_col != string::npos) || (gc_cov_col != string::npos) || (raw_cov_col != string::npos),
+         "No coverage column in CNery output file: " + cnv_file_name);
 
   // Highest column index actually read, so a truncated row can be skipped rather than indexed past.
   size_t max_needed_col = 0;
@@ -316,28 +345,54 @@ bool CNEvidence::read_cnery_windows(const string& cnv_file_name, vector<cnery_wi
   }
 
   string line;
+  uint32_t unusable_rows = 0;
   while (getline(cnv_file, line)) {
     if (line.size() == 0) continue;
     vector<string> fields = split(line, ",");
     if (fields.size() <= max_needed_col) continue;
 
     cnery_window w;
-    w.start = from_string<int32_t>(fields[win_st_col]);
-    w.length = from_string<int32_t>(fields[win_len_col]);
+
+    // No neutral value exists for these two, so a row missing either is dropped rather than given a
+    // made-up geometry. Counted, because a file where that happens a lot is a file to look at.
+    double start = 0, length = 0;
+    if (!cnery_double(fields[win_st_col], start) || !cnery_double(fields[win_len_col], length)) {
+      unusable_rows++;
+      continue;
+    }
+    w.start = static_cast<int32_t>(start);
+    w.length = static_cast<int32_t>(length);
     // CNery computes win_len as win_end - win_st, so the fallback needs no +/-1 correction.
-    w.end = (win_end_col != string::npos) ? from_string<int32_t>(fields[win_end_col]) : (w.start + w.length);
-    w.corrected_cov = from_string<double>(fields[rel_cov_col]);
-    w.raw_cov = (raw_cov_col != string::npos) ? from_string<double>(fields[raw_cov_col]) : 0.0;
-    w.otr_fit_cov = (otr_fit_col != string::npos) ? from_string<double>(fields[otr_fit_col]) : 0.0;
-    w.gc_percent = (gc_percent_col != string::npos) ? from_string<double>(fields[gc_percent_col]) : 0.0;
-    w.gc_corrected_cov = (gc_cov_col != string::npos) ? from_string<double>(fields[gc_cov_col]) : 0.0;
-    w.gc_corr_fact = (gc_fit_col != string::npos) ? from_string<double>(fields[gc_fit_col]) : 0.0;
+    w.end = static_cast<int32_t>(cnery_field(fields, win_end_col, w.start + w.length));
+
+    w.raw_cov = cnery_field(fields, raw_cov_col, 0.0);
+    w.gc_corrected_cov = cnery_field(fields, gc_cov_col, 0.0);
+
+    // Down the same chain CNery walks when it declines a correction: the ori-ter-corrected coverage,
+    // else the GC-corrected one, else the raw one. This value is not only plotted -- it is what
+    // relative_coverage on a CN entry is averaged from -- so the neutral 0.0 the other columns fall
+    // back to would be actively wrong here, reading on the evidence page as a full deletion.
+    //
+    // Its own chain rather than gc_corrected_cov's value, because that field keeps 0.0 as its
+    // "nothing here" sentinel: the GC-correction scatter plots test it to decide which windows to
+    // draw, and handing them raw coverage under a corrected label would draw a plot that is wrong
+    // rather than one that is empty.
+    w.corrected_cov = cnery_field(fields, rel_cov_col, cnery_field(fields, gc_cov_col, w.raw_cov));
+
+    w.otr_fit_cov = cnery_field(fields, otr_fit_col, 0.0);
+    w.gc_percent = cnery_field(fields, gc_percent_col, 0.0);
+    w.gc_corr_fact = cnery_field(fields, gc_fit_col, 0.0);
     // As a double: integral in consensus mode, a continuous level under --polymorphism-mode.
-    w.copy_number = (copy_number_col != string::npos) ? from_string<double>(fields[copy_number_col]) : -1.0;
+    // -1 is "no call", which is why it is the value an absent or empty cell lands on.
+    w.copy_number = cnery_field(fields, copy_number_col, -1.0);
     w.is_redundant = (redundant_col != string::npos) ? cnery_bool(fields[redundant_col]) : false;
     windows.push_back(w);
   }
   cnv_file.close();
+
+  if (unusable_rows != 0)
+    WARN("Skipped " + to_string<uint32_t>(unusable_rows) + " window(s) with no readable start or "
+         "length in CNery output file: " + cnv_file_name);
 
   return true;
 }

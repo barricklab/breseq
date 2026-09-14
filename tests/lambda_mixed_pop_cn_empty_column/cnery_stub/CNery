@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# A CNery that leaves an empty cell behind, to stand in for one pandas would write for a NaN.
+#
+# It is the REAL CNery plus one edit: everything downstream -- break_pts.csv, the ori-ter JSON, the
+# plots -- is genuine, so the test measures what breseq does with a hole in an otherwise ordinary
+# run, not what it does with a file nobody would ever produce.
+#
+# Reached because testcmd.sh puts this directory first on PATH and breseq resolves CNery through it.
+
+set -e
+
+# The real CNery is this one's namesake further down PATH. Drop this directory before looking, or the
+# lookup finds this script and recurses.
+SELFDIR=`cd "\`dirname "$0"\`" && pwd`
+PATH=`echo "${PATH}" | tr ':' '\n' | grep -v -x -F "${SELFDIR}" | paste -s -d: -`
+export PATH
+
+REAL=`command -v CNery`
+[ -n "${REAL}" ] || { echo "stub CNery: no real CNery on PATH" >&2; exit 1; }
+
+"${REAL}" "$@"
+
+# Recover the output prefix, which is where the CSVs to edit are.
+OUT=""
+prev=""
+for arg in "$@"; do
+    if [ "${prev}" = "-o" ]; then OUT="${arg}"; fi
+    prev="${arg}"
+done
+[ -n "${OUT}" ] || { echo "stub CNery: no -o in arguments" >&2; exit 1; }
+
+# Blank the ori-ter-corrected coverage of the SECOND window, and the GC-correction factor of the
+# third. The first is the column breseq used to require, so it is the crash being pinned; the second
+# is one of the optional ones, which took the same path through from_string<double>("") and would
+# have died just as hard.
+edited=0
+for csv in "${OUT}"/CNV_csv/*_CNV.csv; do
+    [ -f "${csv}" ] || continue
+    awk -F, -v OFS=, '
+        NR == 1 {
+            for (i = 1; i <= NF; i++) {
+                if ($i == "otr_gc_corr_norm_cov") cov = i
+                if ($i == "gc_corr_fact")         fit = i
+            }
+            print
+            next
+        }
+        NR == 3 && cov { $cov = "" }
+        NR == 4 && fit { $fit = "" }
+        { print }
+    ' "${csv}" > "${csv}.stub" && mv "${csv}.stub" "${csv}"
+    edited=`expr ${edited} + 1`
+done
+
+# If the edit silently stopped landing -- a renamed directory, a changed file suffix -- the test
+# would still pass while pinning nothing at all.
+[ "${edited}" -gt 0 ] || { echo "stub CNery: no CNV.csv found under ${OUT}" >&2; exit 1; }
