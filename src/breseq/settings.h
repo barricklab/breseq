@@ -724,6 +724,13 @@ namespace breseq
 		string mutation_identification_done_file_name;    
 		string mutation_identification_per_position_file_name;
 		string complete_coverage_text_file_name;
+    // Handoff to CNery: one row per analyzed reference sequence, naming its coverage table and the
+    // reference group it belongs to (breseq's -c). Lives BESIDE the coverage tables because CNery
+    // resolves a row's `file` against the table's own directory, so the rows can be plain basenames
+    // and the file stays valid wherever it is read from. Written in stage 09, not 08, since that is
+    // where it is used and the grouping is known throughout; removed with the rest of the directory
+    // when the run completes.
+    string cnery_reference_groups_file_name;
     string ra_mc_genome_diff_file_name;
     string dp_candidate_regions_file_name;
     string discordant_pair_done_file_name;

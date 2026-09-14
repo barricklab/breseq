@@ -68,10 +68,111 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
   }
 }
 
-// CNery takes coverage tables and nothing else: no BAM, no reference FASTA, no breseq output folder.
-// It reads the reference sequence out of the table's own ref_base column, and derives each sequence
-// id from the table's file name (basename minus ".coverage.tsv") -- which is what makes its output
-// land at the cnery_<seq_id>_* paths Settings already expects.
+// Write the reference group table CNery is handed, and return its path.
+//
+// The table answers two questions at once, which is why it replaced a command line listing every
+// coverage table. WHICH TABLES TO READ: CNery reads exactly the files the rows name when no
+// positional input is given, so a junction-only reference (-s/--junction-only-reference) is kept
+// out of the analysis simply by having no row -- it is excluded from mutation calling, so stage 08
+// never pileups it and no coverage table exists to name. Naming one anyway used to make CNery raise
+// FileNotFoundError before it read a single table, and SYSTEM() does not ignore errors, so one
+// junction-only reference took the whole run down. Copy number on a reference used only to call
+// junctions means nothing anyway.
+//
+// AND HOW THEY GROUP: contigs of one draft assembly (-c/--contig-reference) share one background
+// coverage distribution in CNery, exactly as they already share one in breseq. Without that, CNery
+// refits a baseline per contig, so every contig of an assembly comes out at copy number 1 however
+// amplified it really is -- a plasmid at three times the chromosome's depth included.
+//
+// Rows are plain basenames, and CNery resolves them against the TABLE'S own directory, which is why
+// this is written beside the coverage tables rather than in 09_copy_number_variation/. The match is
+// by resolved path and is required to be exact in both directions -- every row naming a file read,
+// every file read named by a row -- so a table that has drifted out of step with the run is an
+// error rather than a silently ungrouped analysis. That is also the check the old explicit path
+// list performed implicitly, so nothing is given up by no longer listing them.
+string CNEvidence::write_reference_group_table(Settings& settings, cReferenceSequences& ref_seq_info)
+{
+  const string& group_table_file_name = settings.cnery_reference_groups_file_name;
+  const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
+
+  // breseq's own coverage grouping, which is already precisely "these sequences came from one -c
+  // file": reuse it rather than re-deriving the grouping from the file names, so the two tools
+  // cannot disagree about what a group is.
+  //
+  // A group is labelled only once it has two or more ANALYZED members. CNery treats a group of one
+  // as ungrouped and writes a null group for it either way, so a label there would be noise; and
+  // dropping junction-only members first is what keeps a group that is only nominally plural -- one
+  // analyzed contig beside a junction-only one -- from being labelled as though it were pooled.
+  map<string, string> group_label_by_seq_id;
+  set<string> used_labels;
+  const vector< vector<string> > coverage_groups = settings.seq_ids_by_coverage_group();
+  for (size_t g = 0; g < coverage_groups.size(); g++) {
+
+    vector<string> members;
+    for (size_t m = 0; m < coverage_groups[g].size(); m++) {
+      if (analyzed_seq_ids.count(coverage_groups[g][m]) != 0) members.push_back(coverage_groups[g][m]);
+    }
+    if (members.size() < 2) continue;
+
+    // Named for the -c file the group came from, because that is what a person reading CNery's
+    // "Reference group" in summary.html or its ori-ter JSON needs to recognize. The basename and not
+    // the path: the label is reported in output the tests compare, and a path would differ between a
+    // run started from the repository root and one started anywhere else. Two -c files in different
+    // directories can therefore share a basename, and merging two of breseq's groups into one of
+    // CNery's would be silent, so a repeat is suffixed rather than allowed to collide.
+    string label = path_to_filename(ref_seq_info[members[0]].get_file_name());
+    if (label.empty()) label = "reference_group";
+    if (used_labels.count(label) != 0) {
+      string unique_label;
+      for (uint32_t n = 2; ; n++) {
+        unique_label = label + "_" + to_string(n);
+        if (used_labels.count(unique_label) == 0) break;
+      }
+      label = unique_label;
+    }
+    used_labels.insert(label);
+
+    for (size_t m = 0; m < members.size(); m++) group_label_by_seq_id[members[m]] = label;
+  }
+
+  ofstream group_table(group_table_file_name.c_str());
+  ASSERT(!group_table.fail(), "Could not open output file: " + group_table_file_name);
+
+  // `file` and `group` are the two columns CNery reads; it ignores the rest, which are here because
+  // this file is the only record of what breseq handed over once 08_mutation_identification/ is
+  // deleted, and "which contigs did it think were one genome" is the first question asked of a
+  // copy-number result that looks wrong.
+  group_table << "file" << "\t" << "group" << "\t" << "length" << "\t" << "source" << endl;
+
+  // In reference order, so the tables reach CNery in the order the old command line named them.
+  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
+
+    if (analyzed_seq_ids.count(it->m_seq_id) == 0) continue;
+
+    const string coverage_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", it->m_seq_id);
+    ASSERT(file_exists(coverage_file_name.c_str()),
+           "Missing coverage table needed for copy number prediction: " + coverage_file_name);
+
+    // A blank group means "this sequence stands alone", which is what an ordinary reference is.
+    const string label = group_label_by_seq_id.count(it->m_seq_id)
+                         ? group_label_by_seq_id[it->m_seq_id] : "";
+
+    group_table << path_to_filename(coverage_file_name) << "\t"
+                << label << "\t"
+                << it->m_length << "\t"
+                << path_to_filename(it->get_file_name()) << endl;
+  }
+
+  group_table.close();
+
+  return group_table_file_name;
+}
+
+// CNery takes coverage tables and nothing else: no BAM, no reference FASTA, no breseq output
+// folder. It reads the reference sequence out of the table's own ref_base column, and derives each
+// sequence id from the table's file name (basename minus ".coverage.tsv") -- which is what makes its
+// output land at the cnery_<seq_id>_* paths Settings already expects. The tables it reads, and how
+// they group, both come from the reference group table written above.
 void CNEvidence::run_cnery(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const string& cnery_output_prefix)
 {
   (void)summary;
@@ -88,22 +189,15 @@ void CNEvidence::run_cnery(Settings& settings, Summary& summary, cReferenceSeque
   //}
   //fragment_length = trunc(total_bases/total_reads);
 
-  string command = double_quote(settings.installed["cnery"]);
+  // The reference group table is the whole handoff: it declares which coverage tables are contigs
+  // of one molecule, and -- with no positional INPUT -- it also names the tables to read. So this
+  // one argument replaces the list that named every coverage table on the command line, which on a
+  // draft assembly was unreadable in a log at 137 contigs and long enough to approach the shell's
+  // argument limit. Shortening it is the lesser half: that list could not say how the tables group.
+  const string group_table_file_name = write_reference_group_table(settings, ref_seq_info);
 
-  // Name every table explicitly rather than handing over 08_mutation_identification/. A directory
-  // argument would make the input set whatever happens to match CNery's file endings in there;
-  // listing the files means a missing one is an error instead of a silently smaller analysis.
-  //
-  // The set is the one stage 08 pileups, NOT every reference sequence: a junction-only reference
-  // (-s/--junction-only-reference) is deliberately excluded from mutation calling, so no coverage
-  // table is written for it. Naming one anyway made CNery raise FileNotFoundError before it read a
-  // single table, and SYSTEM() below does not ignore errors -- one junction-only reference took the
-  // whole run down. Copy number on a reference used only to call junctions means nothing anyway.
-  const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
-  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
-    if (analyzed_seq_ids.count(it->m_seq_id) == 0) continue;
-    command += " " + double_quote(settings.file_name(settings.complete_coverage_text_file_name, "@", it->m_seq_id));
-  }
+  string command = double_quote(settings.installed["cnery"]);
+  command += " --group-table " + double_quote(group_table_file_name);
 
   command += " -o " + double_quote(cnery_output_prefix);
   //command += " --frag-size " + to_string<uint32_t>(fragment_length);

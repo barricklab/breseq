@@ -192,6 +192,14 @@ namespace breseq {
 
     static void run_cnery(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const string& cnery_output_prefix);
 
+    //! Write CNery's reference group table, and return its path.
+    //
+    // The single argument CNery is given: it both names the coverage tables to read -- which is how
+    // a junction-only reference is kept out of the analysis, by having no row -- and declares which
+    // of them are contigs of one draft assembly (breseq's -c) and must therefore share one
+    // background coverage distribution rather than each refitting its own.
+    static string write_reference_group_table(Settings& settings, cReferenceSequences& ref_seq_info);
+
     // Reads CNery's <prefix><seq_id>_otr_results.json. Returns false (leaving otr.detected false)
     // if the file is missing/unparseable or CNery reported no ori-ter bias.
     static bool read_cnery_otr(const string& otr_file_name, cnery_otr& otr);
