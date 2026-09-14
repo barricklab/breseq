@@ -86,6 +86,29 @@ that pass writes). The older `--skip-RA-MC-prediction`, `--skip-MC-prediction`,
 `--skip-JC-prediction` and `--skip-homologous-DEL-prediction` spellings are deprecated: they still
 work, but every opt-out is now spelled `--no-X-prediction`.
 
+`--max-percent-divergence <float>`, `--max-evidence-items <int>`
+
+Stop with an error, and a non-zero exit status, when the sample looks too different from the
+reference sequence to be worth analyzing. Both are off by default (0 = OFF).
+
+breseq already prints a warning at this point in the run: once the evidence is merged but before
+any mutation is predicted, it divides the number of accepted evidence items (`RA`, `MC`, `JC`, `CN`,
+not counting rejected or ignored ones) by the total length of the reference sequences and reports
+that as an approximate percent sequence divergence. These two options test that same pair of
+numbers &mdash; the percent and the raw count &mdash; against a limit you set, and turn the warning
+into a fatal error when it is exceeded.
+
+The usual reason to set one is an automated pipeline. A sample run against the wrong reference (the
+wrong strain, or the wrong species entirely) does not fail; it predicts 100,000s of spurious
+mutations and spends hours annotating them and writing HTML for them. A limit makes that run fail
+fast instead, at the point where the problem is already visible:
+
+    breseq --max-percent-divergence 1.0 -r reference.gbk reads.fastq
+
+Use `--max-evidence-items` when what the downstream steps cannot afford is the number of items
+rather than the divergence &mdash; the count scales the output and the annotation time directly,
+while the percent additionally depends on genome size.
+
 `--dry-run`
 
 Validate every option, check that the required external programs (`bowtie2`, `gnuplot`,

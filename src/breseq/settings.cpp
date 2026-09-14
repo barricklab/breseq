@@ -575,6 +575,8 @@ namespace breseq
     ("skip-MC-prediction", "DEPRECATED: use --no-missing-coverage-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("skip-homologous-DEL-prediction", "DEPRECATED: use --no-homologous-deletion-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("dry-run", "Validate every option, check that all required executables are installed, and check that every input file exists and every output path can be written, then exit WITHOUT running the pipeline and without creating any files. Exits with status 0 if everything checks out and nonzero otherwise, so it can gate a real run.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("max-percent-divergence", "Exit with an error instead of continuing if the sample appears to diverge from the reference sequence by more than this percentage. The estimate is the number of accepted evidence items (RA, MC, JC, CN) divided by the total length of the reference sequences, expressed as a percent -- the same quantity breseq always reports in its 'Large number of differences detected' warning, which stays a warning when this option is off. Use it to make a run against the wrong reference fail fast rather than spend hours annotating 100,000s of spurious mutations. 0 = OFF. (DEFAULT = 0, OFF)", 0.0, NORMAL_OPTION)
+    ("max-evidence-items", "Exit with an error instead of continuing if more than this many evidence items (RA, MC, JC, CN) were accepted. This is the raw count behind --max-percent-divergence, tested at the same point in the run, for when the number of items rather than the divergence is what the downstream steps cannot afford. 0 = OFF. (DEFAULT = 0, OFF)", 0, NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -1015,6 +1017,10 @@ namespace breseq
                                   && !options.count("skip-MC-prediction");
     this->predict_homologous_deletions = !options.count("no-homologous-deletion-prediction")
                                       && !options.count("skip-homologous-DEL-prediction");
+
+    this->max_percent_divergence = from_string<double>(options["max-percent-divergence"]);
+    ASSERT(this->max_percent_divergence >= 0, "Argument --max-percent-divergence must be >= 0")
+    this->max_evidence_items = from_string<uint64_t>(options["max-evidence-items"]);
 
     // Backward compatibility: the four --skip-* spellings are DEPRECATED. They still work, so no
     // existing command line breaks, but every opt-out is now spelled --no-X-prediction. Note
@@ -1484,6 +1490,8 @@ namespace breseq
     this->predict_pair_distance = true;
 
     this->dry_run = false;
+    this->max_percent_divergence = 0;   // 0 = OFF
+    this->max_evidence_items = 0;       // 0 = OFF
 
     //! Options that control which parts of the pipeline to execute
     this->filter_reads = true;

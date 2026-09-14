@@ -296,6 +296,13 @@ namespace breseq
     //! A dry run creates nothing -- in particular it skips the command-line logging that
     //! would otherwise create the output directory (see Settings::log).
     bool dry_run;                           // Default = false COMMAND-LINE OPTION
+    //! Sanity checks on how far the sample has drifted from the reference sequence. Both are OFF
+    //! (0) by default and are tested in MutationPredictor::predict at exactly the point where
+    //! breseq has always WARNed about a large number of differences -- so they turn that advisory
+    //! warning into a fatal error for a pipeline that would rather stop than spend hours
+    //! annotating 100,000s of mutations called against the wrong reference.
+    double max_percent_divergence;          // Default = 0 (OFF) COMMAND-LINE OPTION
+    uint64_t max_evidence_items;            // Default = 0 (OFF) COMMAND-LINE OPTION
     
     //! Settings: Read File Options
     vector<string> read_file_names;             // REQUIRED COMMAND-LINE OPTION

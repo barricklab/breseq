@@ -2923,8 +2923,24 @@ namespace breseq {
       uint64_t num_evidence_items = ev.size();
       uint64_t total_ref_seq_length = summary.sequence_conversion.total_reference_sequence_length;
       double maximum_sequence_divergence = static_cast<double>(num_evidence_items)*100/static_cast<double>(total_ref_seq_length);
+      // What was found, phrased once and shared by the warning and the two optional errors below.
+      string divergence_description = to_string<uint64_t>(num_evidence_items) + " evidence items, suggesting approximately " + to_string(formatted_double(maximum_sequence_divergence,2)) + "% sequence divergence";
+      string divergence_advice = "If this is unexpected, check that you are using the closest available reference sequence for this sample (for example, the correct strain of a bacterial species).";
+
       if ( (num_evidence_items > 0) && (maximum_sequence_divergence > 0.2) ) {
-        WARN("Large number of differences detected between the sample and the reference sequence (" + to_string<uint64_t>(num_evidence_items) + " evidence items, suggesting approximately " +  to_string(formatted_double(maximum_sequence_divergence,2)) + "% sequence divergence). If this is unexpected, check that you are using the closest available reference sequence for this sample (for example, the correct strain of a bacterial species). Mutation prediction can become less accurate with too much divergence from the reference sequence. It may also take a long time to predict mutations and generate output files.");
+        WARN("Large number of differences detected between the sample and the reference sequence (" + divergence_description + "). " + divergence_advice + " Mutation prediction can become less accurate with too much divergence from the reference sequence. It may also take a long time to predict mutations and generate output files.");
+      }
+
+      // Optional hard limits on the same two quantities (both 0 = OFF). These exist so that an
+      // automated pipeline can fail fast on a sample run against the wrong reference instead of
+      // spending hours predicting and annotating 100,000s of spurious mutations. No backtrace:
+      // this is a statement about the data, not a bug in breseq.
+      if ( (settings.max_percent_divergence > 0) && (num_evidence_items > 0) && (maximum_sequence_divergence > settings.max_percent_divergence) ) {
+        ERROR_NO_BACKTRACE("Sequence divergence from the reference sequence (" + divergence_description + ") is greater than the maximum allowed by --max-percent-divergence (" + to_string(formatted_double(settings.max_percent_divergence,2)) + "%). " + divergence_advice);
+      }
+
+      if ( (settings.max_evidence_items > 0) && (num_evidence_items > settings.max_evidence_items) ) {
+        ERROR_NO_BACKTRACE("The number of evidence items (" + to_string<uint64_t>(num_evidence_items) + ") is greater than the maximum allowed by --max-evidence-items (" + to_string<uint64_t>(settings.max_evidence_items) + "). " + divergence_advice);
       }
     }
     
