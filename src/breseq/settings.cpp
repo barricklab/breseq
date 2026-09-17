@@ -2193,9 +2193,9 @@ namespace breseq
 	}
 
   // Whether the CNery on $PATH understands --polymorphism-mode, which breseq passes whenever it is
-  // itself run with -p. Asked of --help rather than of --version, because CNery has no --version
-  // flag at all -- and asked of the flag rather than of a version number anyway, since the flag IS
-  // what is needed and a version comparison would have to be maintained alongside it.
+  // itself run with -p. Asked of --help rather than of --version, because older CNery builds have no
+  // --version flag at all -- and asked of the flag rather than of a version number anyway, since the
+  // flag IS what is needed and a version comparison would have to be maintained alongside it.
   //
   // Failure is reported as "no" rather than as an error: a CNery that cannot even print its help is
   // not one this run can use, and the two callers already have the right words for that.
@@ -2203,6 +2203,23 @@ namespace breseq
   {
     string help_text = SYSTEM_CAPTURE(double_quote(cnery_path) + " --help", true);
     return help_text.find("--polymorphism-mode") != string::npos;
+  }
+
+  // The version the CNery on $PATH reports, for display only. `CNery --version` prints
+  // "CNery <version>". Older builds have no --version flag, and their argparse usage error just
+  // fails to match, so they report "unknown" -- not an error, since nothing is gated on the number.
+  static string cnery_version_string(const string& cnery_path)
+  {
+    string version_output = SYSTEM_CAPTURE(double_quote(cnery_path) + " --version", true);
+    vector<string> version_lines = split_on_any(version_output, "\n\r");
+    for (vector<string>::iterator it=version_lines.begin(); it!=version_lines.end(); it++) {
+      vector<string> version_words = split_on_whitespace(*it);
+      if (version_words.size() < 2) continue;
+      if (version_words[0] != "CNery") continue;
+      if (version_words[1].find_first_of("0123456789") != 0) continue;
+      return version_words[1];
+    }
+    return "unknown";
   }
 
 	void Settings::check_installed()
@@ -2320,6 +2337,8 @@ namespace breseq
     // (including on a restart, where the CN stage itself is skipped).
     if (this->predict_copy_number) {
       if (this->installed.count("cnery") == 0) this->installed["cnery"] = which("CNery");
+      if (this->installed["cnery"].size() > 0)
+        this->installed["cnery_version_string"] = cnery_version_string(this->installed["cnery"]);
 
       if (this->installed["cnery"].size() == 0) {
         if (this->copy_number_explicitly_requested) {
@@ -2340,13 +2359,13 @@ namespace breseq
         // --polymorphism-mode, which older builds reject in their own argparse. Left to run, that is
         // a Python usage error at stage 09 -- after alignment, junction resolution and mutation
         // identification have all been paid for -- so the capability is probed here instead, where
-        // the answer still costs nothing. CNery has no --version to ask, hence a --help probe.
+        // the answer still costs nothing. Older CNery has no --version to ask, hence a --help probe.
         if (this->copy_number_explicitly_requested) {
           good_to_go = false;
           cerr << color_red("---> ERROR Installed \"CNery\" does not support --polymorphism-mode, which") << endl;
           cerr << color_red("---> breseq passes in polymorphism mode (-p), but copy number (CN)") << endl;
           cerr << color_red("---> prediction was explicitly requested.") << endl;
-          cerr << color_red("---> For found executable installed at [" + this->installed["cnery"] + "]") << endl;
+          cerr << color_red("---> For found executable version " + this->installed["cnery_version_string"] + " installed at [" + this->installed["cnery"] + "]") << endl;
           cerr << color_red("---> Upgrade CNery, or drop -p to call copy number on the integers.") << endl;
           cerr << color_red("---> See https://github.com/barricklab/CNery") << endl;
         } else {
@@ -2354,12 +2373,12 @@ namespace breseq
           cerr << "---> WARNING passes in polymorphism mode (-p). No copy number (CN) evidence will be" << endl;
           cerr << "---> WARNING predicted. Upgrade CNery to enable CN, drop -p to call copy number on" << endl;
           cerr << "---> WARNING the integers, or pass --no-copy-number-prediction to skip it silently." << endl;
-          cerr << "---> For found executable installed at [" << this->installed["cnery"] << "]" << endl;
+          cerr << "---> For found executable version " << this->installed["cnery_version_string"] << " installed at [" << this->installed["cnery"] << "]" << endl;
           cerr << "---> See https://github.com/barricklab/CNery" << endl;
           this->predict_copy_number = false;
         }
       } else {
-        cerr << color_green("---> CNery    :: [" + this->installed["cnery"] + "]") << endl;
+        cerr << color_green("---> CNery    :: version " + this->installed["cnery_version_string"] + " [" + this->installed["cnery"] + "]") << endl;
       }
     }
 
