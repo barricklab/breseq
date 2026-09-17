@@ -262,6 +262,13 @@ namespace breseq {
     // can be allowed to derive a scale of its own.
     static cn_plot_scale compute_plot_scale(const vector<cnery_window>& windows);
 
+    // compute_plot_scale() over each REFERENCE GROUP's pooled windows, keyed by member seq_id. CNery
+    // fits one baseline per group (breseq's -c contigs), so a member's single-copy level is the
+    // group's, not its own: a contig the HMM called entirely at copy number 4 has no single-copy
+    // windows of its own, and scaling it by its own median would report it at 1. A group of one is
+    // exactly the per-sequence scale. Sequences whose CNV.csv cannot be read get no entry.
+    static map<string, cn_plot_scale> compute_group_plot_scales(const Settings& settings);
+
     // Distills the fit and the per-window coverage into the numbers summary.html and summary.json
     // report. Must happen in stage 09: everything it reads is deleted when the pipeline finishes.
     static void summarize(
@@ -273,15 +280,17 @@ namespace breseq {
     // Turns CNery's segments into CN evidence entries. The per-window list supplies only each
     // entry's displayed relative_coverage, averaged over that segment's NON-redundant windows --
     // see the definition for what a redundant one would otherwise contribute -- and, through
-    // compute_plot_scale(), the single-copy level of THIS sequence that the average is quoted
-    // against. CNery's own numbers are pooled across every reference sequence in the run, which is
-    // not a scale on which a statement about one region of one sequence means anything.
+    // single_copy_level (from compute_group_plot_scales()), the single-copy level of this sequence's
+    // reference group that the average is quoted against. CNery's own numbers are pooled across
+    // every reference sequence in the run, which is not a scale on which a statement about one
+    // region of one sequence means anything.
     static void ingest_csv_for_seq_id(
                                       const string& seq_id,
                                       const vector<cnery_window>& windows,
                                       const string& break_pts_file_name,
                                       const string& gd_file_name,
-                                      int32_t sequence_length
+                                      int32_t sequence_length,
+                                      double single_copy_level
                                       );
 
     // Emits one gnuplot SVG over [plot_start, plot_end]. Windows outside that range are ignored.

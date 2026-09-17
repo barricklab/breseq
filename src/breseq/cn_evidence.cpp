@@ -41,6 +41,10 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
 
   const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
 
+  // Before any sequence is ingested: a member's relative_coverage is quoted against its whole
+  // reference group's single-copy level, which needs every member's windows.
+  map<string, cn_plot_scale> group_scales = compute_group_plot_scales(settings);
+
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
 
     cAnnotatedSequence& seq = *it;
@@ -57,8 +61,11 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
     ASSERT(read_cnery_windows(cnv_file_name, windows),
            "Could not open CNery output file: " + cnv_file_name);
 
+    // The read above succeeded, so the group pass read this file too and has an entry for it.
     ingest_csv_for_seq_id(seq.m_seq_id, windows, break_pts_file_name, gd_file_name,
-                          static_cast<int32_t>(seq.m_length));
+                          static_cast<int32_t>(seq.m_length),
+                          group_scales.count(seq.m_seq_id) ? group_scales[seq.m_seq_id].corrected
+                                                          : compute_plot_scale(windows).corrected);
 
     // Recorded now because none of what it is derived from survives the run: this whole directory is
     // deleted once the pipeline completes, but Output still has to report how the analysis went.
@@ -636,7 +643,8 @@ void CNEvidence::ingest_csv_for_seq_id(
                                        const vector<cnery_window>& windows,
                                        const string& break_pts_file_name,
                                        const string& gd_file_name,
-                                       int32_t sequence_length
+                                       int32_t sequence_length,
+                                       double single_copy_level
                                        )
 {
   uint32_t window_size = windows.size() ? static_cast<uint32_t>(windows[0].length) : 0;
@@ -645,19 +653,24 @@ void CNEvidence::ingest_csv_for_seq_id(
   ASSERT(read_cnery_segments(break_pts_file_name, segments, sequence_length),
          "Could not open CNery output file: " + break_pts_file_name);
 
-  // THIS sequence's single-copy level, which is what every relative_coverage below is divided by.
+  // single_copy_level is this sequence's REFERENCE GROUP's single-copy level, which is what every
+  // relative_coverage below is divided by.
   //
   // CNery's coverage columns do not arrive on that scale: it normalizes against ONE pooled median
-  // across every reference sequence it was handed, and refits single copy per sequence afterwards
+  // across every reference sequence it was handed, and refits single copy per group afterwards
   // for the HMM. Reported as they arrive, a CN entry's relative_coverage answers a question nobody
   // asked -- how this region compares to the run as a whole -- while the copy_number beside it
   // answers the one they did, so a region the HMM called 1.2 copies could report 1.02. The pooled
   // comparison still has a place, as each sequence's "relative copy number" in the summary table;
   // it has none on an entry describing one region of one sequence.
   //
-  // The same divisor the plots of this sequence use (compute_plot_scale), so the number in the .gd
-  // and the height of the trace on the evidence page are one statement rather than two.
-  const double single_copy_level = compute_plot_scale(windows).corrected;
+  // The group's, not this sequence's own: the HMM called every contig of a -c assembly against one
+  // shared baseline, so that is the only level its copy_number can be read against. Taken per
+  // contig, a 214-bp contig called copy number 4 across both of its windows had no single-copy
+  // windows, fell back to its own median, and reported relative_coverage 1 beside copy_number 4.
+  //
+  // The same divisor the plots of this sequence use (compute_group_plot_scales), so the number in
+  // the .gd and the height of the trace on the evidence page are one statement rather than two.
 
   cGenomeDiff gd;
 
@@ -954,12 +967,47 @@ CNEvidence::cn_plot_scale CNEvidence::compute_plot_scale(const vector<cnery_wind
   return scale;
 }
 
+// Pooling the windows is all it takes, because compute_plot_scale() selects by each window's own
+// flags and HMM state and then takes medians, none of which depends on which member a window came
+// from. A group of one pools one sequence's windows, so a single-reference run is unchanged.
+map<string, CNEvidence::cn_plot_scale> CNEvidence::compute_group_plot_scales(const Settings& settings)
+{
+  map<string, cn_plot_scale> scales;
+  const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
+  const vector< vector<string> > coverage_groups = settings.seq_ids_by_coverage_group();
+
+  for (size_t g = 0; g < coverage_groups.size(); g++) {
+
+    vector<string> members;
+    vector<cnery_window> pooled;
+    for (size_t m = 0; m < coverage_groups[g].size(); m++) {
+      const string& seq_id = coverage_groups[g][m];
+      // Junction-only members were never handed to CNery -- see write_reference_group_table().
+      if (analyzed_seq_ids.count(seq_id) == 0) continue;
+
+      vector<cnery_window> windows;
+      if (!read_cnery_windows(settings.file_name(settings.cnery_cnv_csv_file_name, "@", seq_id), windows))
+        continue;
+      members.push_back(seq_id);
+      pooled.insert(pooled.end(), windows.begin(), windows.end());
+    }
+    if (members.empty()) continue;
+
+    const cn_plot_scale scale = compute_plot_scale(pooled);
+    for (size_t m = 0; m < members.size(); m++) scales[members[m]] = scale;
+  }
+
+  return scales;
+}
+
 // The one sentence saying what scale everything on these plots is drawn on. The relative copy number
 // is appended only when it would not print as "1.00x": on a single-sequence run, and on the longest
 // sequence of any run, it is 1.0 by construction and saying so is noise.
 static string cn_scale_label(double relative_copy_number)
 {
-  string label = "coverage normalized to this sequence's own median";
+  // The single-copy median of this sequence's reference group -- its own, unless it is one of -c's
+  // contigs. See compute_group_plot_scales().
+  string label = "coverage normalized to the single-copy median of this sequence's reference group";
   if ((relative_copy_number > 0.0) && (fabs(relative_copy_number - 1.0) >= 0.005)) {
     label += " (" + to_string(relative_copy_number, 2, false) + "x the longest reference sequence)";
   }
@@ -1648,6 +1696,10 @@ void CNEvidence::draw_evidence_plots(
   // is not a missing plot, and warning about one would be noise on every run that uses -s.
   const set<string> analyzed_seq_ids = settings.call_mutations_seq_id_set();
 
+  // Every member of a reference group is drawn on the group's single-copy level -- the one its
+  // copy-number line was called against. See compute_group_plot_scales().
+  map<string, cn_plot_scale> group_scales = compute_group_plot_scales(settings);
+
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
 
     cAnnotatedSequence& seq = *it;
@@ -1667,11 +1719,12 @@ void CNEvidence::draw_evidence_plots(
     cnery_otr otr;
     read_cnery_otr(settings.file_name(settings.cnery_otr_results_file_name, "@", seq.m_seq_id), otr);
 
-    // Over the FULL window list, before binning and before any per-item subsetting: every plot drawn
-    // for this sequence has to be on one scale or they cannot be read against each other, and only
-    // the whole sequence can say where its single-copy level is. bin_cnery_windows() below also
-    // drops the HMM state this selects on.
-    const cn_plot_scale scale = compute_plot_scale(windows);
+    // Over the FULL window lists of the whole reference group, before binning and before any
+    // per-item subsetting: every plot drawn for this sequence has to be on one scale or they cannot
+    // be read against each other, and only the whole group can say where its single-copy level is.
+    // bin_cnery_windows() below also drops the HMM state this selects on.
+    const cn_plot_scale scale = group_scales.count(seq.m_seq_id) ? group_scales[seq.m_seq_id]
+                                                                 : compute_plot_scale(windows);
 
     // The copy-number calls as CNery merged them. Drawn instead of the per-window HMM column, whose
     // boundaries are only known to a window and which goes missing wherever CNery dropped one.

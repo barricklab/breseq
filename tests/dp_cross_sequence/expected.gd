@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	18:08:24 13 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision ab1f45113c04
+#=CREATED	14:48:17 17 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision 354e18bf3201
 #=COMMAND	./src/breseq/breseq -j 4 --predict-discordant-pairs -o tests/dp_cross_sequence -c tests/dp_cross_sequence/../data/lambda/lambda-contig.gbk tests/dp_cross_sequence/output.simulated_1.fastq tests/dp_cross_sequence/output.simulated_2.fastq
 #=REFSEQ	tests/dp_cross_sequence/../data/lambda/lambda-contig.gbk
 #=READSEQ	tests/dp_cross_sequence/output.simulated_1.fastq
@@ -15,7 +15,7 @@ MC	1	.	NC_001416-0	1	373	0	0	gene_name=[nu1]	gene_product=[nu1]	ignore=CONTIG_EN
 MC	2	.	NC_001416-2	1261	1261	0	0	gene_name=orf-401|orf206b	gene_position=coding (1012/1206 nt)|coding (107/621 nt)	gene_product=Tail fiber protein|hypothetical protein	gene_strand=>|<	left_inside_cov=0	left_outside_cov=53	locus_tag=lambdap27|lambdap90	right_inside_cov=0	right_outside_cov=56	snp_type=|
 MC	3	.	NC_001416-4	8516	8516	0	0	gene_name=lambdap78	gene_position=coding (259/534 nt)	gene_product=putative envelope protein	gene_strand=<	left_inside_cov=0	left_outside_cov=65	locus_tag=lambdap78	right_inside_cov=0	right_outside_cov=68
 MC	4	.	NC_001416-4	9201	9701	0	0	gene_name=lambdap79/–	gene_position=intergenic (+58/–)	gene_product=hypothetical protein/–	gene_strand=>/–	ignore=CONTIG_END	left_inside_cov=35	left_outside_cov=36	locus_tag=lambdap79/–	right_inside_cov=0	right_outside_cov=NA
-CN	5	.	NC_001416-4	9201	9700	0	gene_name=lambdap79/–	gene_position=intergenic (+58/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	relative_coverage=0.362	tile_size=100
+CN	5	.	NC_001416-4	9201	9700	0	gene_name=lambdap79/–	gene_position=intergenic (+58/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	relative_coverage=0.364	tile_size=100
 UN	6	.	NC_001416-0	1	11
 UN	7	.	NC_001416-0	17	17
 UN	8	.	NC_001416-0	9699	9700
