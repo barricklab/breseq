@@ -1534,7 +1534,14 @@ void bam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
       if (op == 'I') {
         if (debug) cout << "Testing insertion.." << endl;
         uint32_t tid = a.reference_target_id();
+        // The extension must also stop at the end of the reference sequence. The reference left
+        // after the insertion is only the alignment's trailing match, but the extension can consume
+        // the inserted bases as well, so an alignment ending at a contig end walks off it. Past the
+        // end get_sequence_1() warns and clamps to the LAST base, so a chance match there would
+        // also lengthen the M op and write a record that extends beyond the reference.
+        const uint32_t ref_length = ref_seq_info[tid].get_sequence_length();
         while ( (ins_updated_qpos < a.query_end_1() )
+               && (ins_updated_rpos <= ref_length)
                && (qseq_string[ins_updated_qpos - 1] == ref_seq_info[tid].get_sequence_1(ins_updated_rpos))  )  {
           ins_updated_qpos++;
           ins_updated_rpos++;
