@@ -484,7 +484,8 @@ namespace breseq
     int32_t pair_distance_maximum_span;                   // Default = 0 (derive: 2 * distance_cutoff);  COMMAND-LINE OPTION
     int32_t pair_distance_minimum_pairs;                  // Default = 3;         COMMAND-LINE OPTION
     int32_t pair_distance_minimum_distinct;               // Default = 2;         COMMAND-LINE OPTION
-    int32_t pair_distance_minimum_shift;                  // Default = 0 (derive from the distribution width); COMMAND-LINE OPTION
+    int32_t pair_distance_minimum_shift;                  // Default = 0 (no absolute floor, unless derived for long-read pairs); COMMAND-LINE OPTION
+    double pair_distance_long_read_minimum_shift_fraction; // Default = 0.03;     COMMAND-LINE OPTION (expert)
     double pair_distance_frequency_cutoff;                // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
     //! Genome-wide e-value gate on PD, as -log10(e-value): bigger is stricter, 0 = OFF. The e-value
     //! is the expected number of PD regions anywhere in this reference that would score at least this

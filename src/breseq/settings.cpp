@@ -473,7 +473,8 @@ namespace breseq
     ("pair-distance-maximum-span", "Ignore read pairs mapping farther apart than this when seeding PD. Pairs this long are DP's business, and an unbounded distance would make the seeding window unbounded. 0 = derive (twice the paired-mapping distance cutoff). (DEFAULT = 0, derived)", 0, NORMAL_OPTION)
     ("pair-distance-minimum-pairs", "Only accept PD evidence supported by at least this many shifted read pairs. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("pair-distance-minimum-distinct", "Only accept PD evidence whose supporting pairs start at at least this many distinct positions, so that PCR duplicates of one molecule cannot carry a prediction. (DEFAULT = 2)", 2, NORMAL_OPTION)
-    ("pair-distance-minimum-shift", "Only accept PD evidence whose estimated size shift is at least this many bases. 0 = derive from the width of the paired-mapping distance distribution. (DEFAULT = 0, derived)", 0, NORMAL_OPTION)
+    ("pair-distance-minimum-shift", "Only accept PD evidence whose estimated size shift is at least this many bases. 0 = no absolute floor (a shift must still differ significantly from zero), except with --long-read-pair-distance, where the floor is derived: see --pair-distance-long-read-minimum-shift-fraction. (DEFAULT = 0)", 0, NORMAL_OPTION)
+    ("pair-distance-long-read-minimum-shift-fraction", "With --long-read-pair-distance and no explicit --pair-distance-minimum-shift, only accept PD evidence whose estimated size shift is at least this fraction of the median distance between the mates of the synthetic read pairs. The distance between two pieces of one long read carries that read's net insertion/deletion error, which grows with the distance and varies with local sequence content, so small apparent shifts are not evidence of a mutation. Lower it for more accurate long reads. 0 = OFF. (DEFAULT = 0.03)", "0.03", EXPERT_OPTION)
     // NOTE: defaults needing more than one decimal place must be STRINGS -- see the DP block
     // above. Here the default is mode-dependent, so it is registered empty and only read back
     // when the user actually supplied it.
@@ -918,6 +919,8 @@ namespace breseq
     ASSERT(this->pair_distance_minimum_distinct >= 0, "Argument --pair-distance-minimum-distinct must be >= 0")
     this->pair_distance_minimum_shift = from_string<int32_t>(options["pair-distance-minimum-shift"]);
     ASSERT(this->pair_distance_minimum_shift >= 0, "Argument --pair-distance-minimum-shift must be >= 0")
+    this->pair_distance_long_read_minimum_shift_fraction = from_string<double>(options["pair-distance-long-read-minimum-shift-fraction"]);
+    ASSERT((this->pair_distance_long_read_minimum_shift_fraction >= 0) && (this->pair_distance_long_read_minimum_shift_fraction < 1), "Argument --pair-distance-long-read-minimum-shift-fraction must be >= 0 and < 1")
     this->pair_distance_log10_e_value_cutoff = from_string<double>(options["pair-distance-score-cutoff"]);
     ASSERT(this->pair_distance_log10_e_value_cutoff >= 0, "Argument --pair-distance-score-cutoff must be >= 0")
 
@@ -1623,7 +1626,8 @@ namespace breseq
     this->pair_distance_maximum_span = 0;    // 0 = derive (2 * paired-mapping distance cutoff)
     this->pair_distance_minimum_pairs = 3;
     this->pair_distance_minimum_distinct = 2;
-    this->pair_distance_minimum_shift = 0;   // 0 = derive from the distribution width
+    this->pair_distance_minimum_shift = 0;   // 0 = no absolute floor, unless derived for long-read pairs
+    this->pair_distance_long_read_minimum_shift_fraction = 0.03;
     this->pair_distance_log10_e_value_cutoff = 3.0;
     // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
     this->pair_distance_frequency_cutoff = 0.1;

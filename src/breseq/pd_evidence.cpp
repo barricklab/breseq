@@ -673,6 +673,24 @@ namespace breseq {
       return;
     }
 
+    // The absolute floor on a PD's size shift. For synthetic pairs made from long reads
+    // (--long-read-pair-distance) it is derived when not given, because there the distance between
+    // two mates is not a fragment length but the long read's own length between them, and that
+    // carries the read's net indel error: a smear of tens of bases that grows with the pair
+    // distance, differs from region to region with sequence content, and so is NOT captured by the
+    // single genome-wide distance distribution the score is computed against. Measured on two
+    // nanopore datasets at a pair distance of 5000 it produced 96 and 167 spurious accepted PD
+    // items, every one with a shift <= 138 bases (2.8% of the distance) at a frequency <= 0.33,
+    // while every real event -- IS insertions, deletions -- had a shift >= 383 bases at a frequency
+    // near 1. A shift below this floor also fits inside a single read piece, where RA and JC
+    // evidence already see it, so the floor does not take away calls that only PD could make.
+    // The fraction is --pair-distance-long-read-minimum-shift-fraction (default 0.03; 0 = OFF).
+    int32_t minimum_shift = settings.pair_distance_minimum_shift;
+    if ((minimum_shift == 0) && (settings.read_file_long_read_pair_distance != 0)) {
+      minimum_shift = static_cast<int32_t>(ceil(settings.pair_distance_long_read_minimum_shift_fraction * pair_median));
+      cerr << "  PD minimum size shift derived for synthetic long-read pairs: " << minimum_shift << endl;
+    }
+
     // Use the read group with the most mapped pairs, matching how dp_evidence picks its model.
     const PairedMappingDistanceDistributionSummaries& pmdd = summary.preliminary_paired_mapping_distance_distribution;
     string base;
@@ -1145,7 +1163,7 @@ namespace breseq {
       // absolute floor on top of that.
       if ((c.delta_lower <= 0) && (c.delta_upper >= 0))
         pd.add_reject_reason("PAIR_DISTANCE_SIZE");
-      if ((settings.pair_distance_minimum_shift > 0) && (abs(c.delta) < settings.pair_distance_minimum_shift))
+      if ((minimum_shift > 0) && (abs(c.delta) < minimum_shift))
         pd.add_reject_reason("PAIR_DISTANCE_SIZE");
       if ((settings.pair_distance_frequency_cutoff > 0.0) && (freq_lower < settings.pair_distance_frequency_cutoff))
         pd.add_reject_reason("PAIR_DISTANCE_FREQUENCY");
