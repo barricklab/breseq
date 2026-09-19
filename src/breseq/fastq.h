@@ -52,7 +52,20 @@ class cAnnotatedSequence;
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
-                                        const uint32_t num_threads = 1
+                                        const uint32_t num_threads = 1,
+                                        // EXPERIMENTAL synthetic pairs from long reads. When
+                                        // long_read_pair_distance is nonzero, a split piece is
+                                        // paired with the piece that many bases downstream on the
+                                        // same long read. Mate 1 goes to lp1_convert_file_name with
+                                        // read-name prefix file_index+1; mate 2 is REVERSE
+                                        // COMPLEMENTED, so the pair is an ordinary FR pair, and goes
+                                        // to lp2_convert_file_name with prefix file_index+2. Pieces
+                                        // without a partner stay in convert_file_name as before.
+                                        const uint32_t long_read_pair_distance = 0,
+                                        const string &lp1_convert_file_name = "",
+                                        const string &lp2_convert_file_name = "",
+                                        AnalyzeFastqSummary* lp1_summary = NULL,
+                                        AnalyzeFastqSummary* lp2_summary = NULL
                                         );
 
   pair<AnalyzeFastqSummary, AnalyzeFastqSummary> normalize_fastq_paired(

@@ -46,10 +46,26 @@ namespace breseq {
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
-                                        const uint32_t num_threads
+                                        const uint32_t num_threads,
+                                        const uint32_t long_read_pair_distance,
+                                        const string &lp1_convert_file_name,
+                                        const string &lp2_convert_file_name,
+                                        AnalyzeFastqSummary* lp1_summary,
+                                        AnalyzeFastqSummary* lp2_summary
                                         )
 {
     cerr << "    Converting/filtering FASTQ file..." << endl;
+
+    // EXPERIMENTAL: synthetic read pairs from long reads (see fastq.h)
+    const bool make_long_read_pairs = (long_read_pair_distance != 0) && (_long_read_split_length != 0)
+                                      && !lp1_convert_file_name.empty() && !lp2_convert_file_name.empty();
+    // Stride between the two mates of a pair, in pieces. The outer span of a pair is
+    // (stride + 1) pieces, so this is the stride whose span is closest to the requested distance.
+    uint32_t long_read_pair_stride = 1;
+    if (make_long_read_pairs) {
+      uint32_t spanned_pieces = (long_read_pair_distance + _long_read_split_length / 2) / _long_read_split_length;
+      long_read_pair_stride = (spanned_pieces > 2) ? (spanned_pieces - 1) : 1;
+    }
 
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -101,6 +117,11 @@ namespace breseq {
       uint32_t read_length_max = 0;
       bool     file_has_split_reads = false;
       bool     reached_eof = true;
+      // Synthetic long-read pairs: [0] is mate 1, [1] is mate 2. NOT included in num_reads/num_bases.
+      uint64_t lp_num_reads[2] = {0, 0};
+      uint64_t lp_num_bases[2] = {0, 0};
+      uint32_t lp_read_length_min[2] = {numeric_limits<uint32_t>::max(), numeric_limits<uint32_t>::max()};
+      uint32_t lp_read_length_max[2] = {0, 0};
     };
 
     auto run_pass = [&](const string& pass_quality_format,
@@ -111,6 +132,14 @@ namespace breseq {
 
       cFastqQualityConverter fqc(pass_quality_format, "SANGER");
       cFastqFile output_fastq_file(convert_file_name.c_str(), fstream::out, num_threads);
+      unique_ptr<cFastqFile> lp1_fastq_file, lp2_fastq_file;
+      if (make_long_read_pairs) {
+        lp1_fastq_file.reset(new cFastqFile(lp1_convert_file_name.c_str(), fstream::out, num_threads));
+        lp2_fastq_file.reset(new cFastqFile(lp2_convert_file_name.c_str(), fstream::out, num_threads));
+      }
+      // Pieces of the current long read that passed the filters, by piece index (pairing mode only)
+      vector<cFastqSequence> kept_pieces;
+      vector<bool> piece_was_kept;
 
       uint64_t local_current_read_file_bases = starting_read_file_bases;
       uint32_t on_read = 1;
@@ -168,6 +197,35 @@ namespace breseq {
             // Update the chunk size (can be fractional) if we are distributing the remainder
             chunk_size = static_cast<double>(original_sequence.m_sequence.length()) / static_cast<double>(num_split_read_pieces);
           }
+        }
+
+        // Counts and writes one read to a given output. Mate 2 of a synthetic pair is reverse
+        // complemented here, so that the two mates face each other like an ordinary FR pair.
+        auto emit_single = [&](const cFastqSequence& seq) {
+          r.num_reads++;
+          r.num_bases += seq.m_sequence.length();
+          r.read_length_min = min<size_t>(seq.m_sequence.length(), r.read_length_min);
+          r.read_length_max = max<size_t>(seq.m_sequence.length(), r.read_length_max);
+          output_fastq_file.write_sequence(seq);
+        };
+        auto emit_mate = [&](const cFastqSequence& piece, uint32_t mate_index, const string& mate_name) {
+          cFastqSequence seq = piece;
+          if (mate_index == 1) {
+            seq.m_sequence = reverse_complement(seq.m_sequence);
+            seq.m_qualities = reverse_string(seq.m_qualities);
+          }
+          seq.m_name = mate_name;
+          r.lp_num_reads[mate_index]++;
+          r.lp_num_bases[mate_index] += seq.m_sequence.length();
+          r.lp_read_length_min[mate_index] = min<size_t>(seq.length(), r.lp_read_length_min[mate_index]);
+          r.lp_read_length_max[mate_index] = max<size_t>(seq.length(), r.lp_read_length_max[mate_index]);
+          ((mate_index == 0) ? lp1_fastq_file : lp2_fastq_file)->write_sequence(seq);
+        };
+
+        const bool pair_this_read = make_long_read_pairs && read_was_split;
+        if (pair_this_read) {
+          kept_pieces.assign(num_split_read_pieces, cFastqSequence());
+          piece_was_kept.assign(num_split_read_pieces, false);
         }
 
         for (uint32_t i=0; i<num_split_read_pieces; i++) {
@@ -238,17 +296,51 @@ namespace breseq {
             }
 
           } // end filter read block
-          r.num_reads++;
-          r.num_bases += on_sequence.m_sequence.length();
 
+          // The coverage limit counts every analyzed base, whichever output it ends up in
           if (read_file_base_limit) {
             local_current_read_file_bases += on_sequence.m_sequence.length();
           }
 
-          r.read_length_min = min<size_t>(on_sequence.length(), r.read_length_min);
-          r.read_length_max = max<size_t>(on_sequence.length(), r.read_length_max);
+          if (pair_this_read) {
+            // Held back until we know which pieces of this read have a partner
+            kept_pieces[i] = on_sequence;
+            piece_was_kept[i] = true;
+          } else {
+            emit_single(on_sequence);
+          }
+        }
 
-          output_fastq_file.write_sequence(on_sequence);
+        // Pair up the pieces of a long read. Pieces are taken in blocks of 2*stride: within a
+        // block, piece i pairs with piece i+stride, so each piece belongs to at most one pair and
+        // every pair spans the same distance (for 4 pieces and a stride of 2: 1-3 and 2-4). A
+        // final partial block pairs whatever still has a partner that far downstream. Anything
+        // left over -- no partner, or a partner that was filtered -- is written as a single.
+        if (pair_this_read) {
+          vector<int32_t> partner(num_split_read_pieces, -1);
+          for (uint32_t block_start = 0; block_start < num_split_read_pieces; block_start += 2 * long_read_pair_stride) {
+            for (uint32_t i = block_start; (i < block_start + long_read_pair_stride) && (i + long_read_pair_stride < num_split_read_pieces); i++) {
+              uint32_t j = i + long_read_pair_stride;
+              if (piece_was_kept[i] && piece_was_kept[j]) {
+                partner[i] = static_cast<int32_t>(j);
+                partner[j] = static_cast<int32_t>(i);
+              }
+            }
+          }
+
+          // Both mates are named for the pair's FIRST piece, so that they share one (read, piece)
+          // index -- that tuple is what re-joins them after alignment -- and both files stay in
+          // increasing order of it. The prefixes are the two files' indices.
+          for (uint32_t i=0; i<num_split_read_pieces; i++) {
+            if (!piece_was_kept[i]) continue;
+            if (partner[i] == -1) {
+              emit_single(kept_pieces[i]);
+            } else if (partner[i] > static_cast<int32_t>(i)) {
+              string pair_suffix = original_sequence.m_name.substr(original_sequence.m_name.find(':')) + "S" + to_string(i+1);
+              emit_mate(kept_pieces[i], 0, to_string(file_index + 1) + pair_suffix);
+              emit_mate(kept_pieces[partner[i]], 1, to_string(file_index + 2) + pair_suffix);
+            }
+          }
         }
 
         // check to see if we've reached the limit
@@ -435,6 +527,33 @@ namespace breseq {
                                  "SANGER",
                                  convert_file_name
                                  );
+
+    // Synthetic long-read pairs get a summary per mate file. The original-read and filtered
+    // counts stay with the file the reads came from (retval), so nothing is counted twice.
+    if (make_long_read_pairs) {
+      cerr << "    >> Long-read pairs: " << result.lp_num_reads[0] << " (mates " << (long_read_pair_stride + 1) * _long_read_split_length
+           << " bases apart, outer span) bases: " << (result.lp_num_bases[0] + result.lp_num_bases[1]) << endl;
+      AnalyzeFastqSummary* lp_summaries[2] = {lp1_summary, lp2_summary};
+      const string lp_convert_file_names[2] = {lp1_convert_file_name, lp2_convert_file_name};
+      for (uint32_t m = 0; m < 2; m++) {
+        if (lp_summaries[m] == NULL) continue;
+        *lp_summaries[m] = AnalyzeFastqSummary(
+                                 (result.lp_num_reads[m] > 0) ? result.lp_read_length_min[m] : 0,
+                                 result.lp_read_length_max[m],
+                                 (result.lp_num_reads[m] > 0) ? static_cast<double>(result.lp_num_bases[m]) / static_cast<double>(result.lp_num_reads[m]) : 0,
+                                 0, 0, 0, 0, 0,
+                                 result.lp_num_reads[m],
+                                 min_quality_score,
+                                 max_quality_score,
+                                 0,
+                                 result.lp_num_bases[m],
+                                 true,
+                                 quality_format,
+                                 "SANGER",
+                                 lp_convert_file_names[m]
+                                 );
+      }
+    }
     return retval;
   }
   

@@ -162,6 +162,13 @@ namespace breseq{
     string quality_format_original;
     string quality_format;
     string converted_fastq_name;
+    // EXPERIMENTAL synthetic pairs from long reads. A mate file made from a long-read file names
+    // the base name of that file here and says which mate it holds (1 or 2; 0 = not a mate file).
+    // The read file sets are rebuilt from these on every (re)start -- see breseq_cmdline.cpp.
+    string long_read_pair_source;
+    uint32_t long_read_pair_mate = 0;
+    // The file index that prefixes this file's read names ("<index>:<read>"); 0 = not recorded.
+    uint32_t read_name_file_index = 0;
     
     AnalyzeFastqSummary()
     : read_length_min(0)

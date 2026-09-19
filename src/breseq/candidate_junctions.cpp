@@ -455,7 +455,12 @@ namespace breseq {
     }
 
     bool has_current() const { return not_done_1 || not_done_2; }
-    int64_t current_read_number() const { return take_1() ? index_1a : index_2a; }
+    // (read number, piece number). The piece number is 0 except for pieces of a split long read,
+    // where it is what tells apart the several synthetic pairs made from one read
+    // (--long-read-pair-distance); mates carry the same tuple and both files are ordered by it.
+    pair<int64_t,int64_t> current_read_number() const {
+      return take_1() ? make_pair(index_1a, index_1b) : make_pair(index_2a, index_2b);
+    }
     alignment_list& current_group() { return take_1() ? group1 : group2; }
     bam_hdr_t* header() { return in1.bam_header; }
 

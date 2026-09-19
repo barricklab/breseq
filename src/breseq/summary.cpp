@@ -183,6 +183,9 @@ void to_json(json& j, const AnalyzeFastqSummary& s)
     {"quality_format_original", s.quality_format_original},
     {"quality_format", s.quality_format},
     {"converted_fastq_name", s.converted_fastq_name},
+    {"long_read_pair_source", s.long_read_pair_source},
+    {"long_read_pair_mate", s.long_read_pair_mate},
+    {"read_name_file_index", s.read_name_file_index},
   };
 }
 
@@ -205,6 +208,10 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
   s.quality_format_original = j.at("quality_format_original").get<string>();
   s.quality_format = j.at("quality_format").get<string>();
   s.converted_fastq_name = j.at("converted_fastq_name").get<string>();
+  // Absent from summaries written before synthetic long-read pairs existed
+  s.long_read_pair_source = j.count("long_read_pair_source") ? j.at("long_read_pair_source").get<string>() : "";
+  s.long_read_pair_mate = j.count("long_read_pair_mate") ? j.at("long_read_pair_mate").get<uint32_t>() : 0;
+  s.read_name_file_index = j.count("read_name_file_index") ? j.at("read_name_file_index").get<uint32_t>() : 0;
 }
   
 // PreprocessAlignmentsSummary

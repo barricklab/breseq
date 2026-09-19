@@ -1621,6 +1621,7 @@ int breseq_default_action(int argc, char* argv[])
           cerr << "  ::SKIPPED DUE TO REACHING COVERAGE LIMIT::" << endl;
           set_index++;
           flat_file_counter += rfs.m_files.size();
+          if (!rfs.is_paired() && settings.read_file_long_read_pair_distance) flat_file_counter += 2;
           continue;
         }
 
@@ -1681,6 +1682,17 @@ int breseq_default_action(int argc, char* argv[])
           string fastq_file_name = settings.base_name_to_read_file_name(base_name);
           string convert_file_name = settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
+          // EXPERIMENTAL synthetic pairs from long reads: an unpaired file may also produce two
+          // mate files. It always reserves their two file indices, whether or not it turns out to
+          // hold long reads, so that read-name prefixes do not depend on the content of the files.
+          const bool make_long_read_pairs = (settings.read_file_long_read_pair_distance != 0);
+          const string lp_base_names[2] = { base_name + ".LP1", base_name + ".LP2" };
+          const string lp_convert_file_names[2] = {
+            make_long_read_pairs ? settings.file_name(settings.converted_fastq_file_name, "#", lp_base_names[0]) : "",
+            make_long_read_pairs ? settings.file_name(settings.converted_fastq_file_name, "#", lp_base_names[1]) : ""
+          };
+          AnalyzeFastqSummary s_lp[2];
+
           AnalyzeFastqSummary s_rf = normalize_fastq(fastq_file_name,
                                                        convert_file_name,
                                                        flat_file_counter + 1,
@@ -1694,9 +1706,35 @@ int breseq_default_action(int argc, char* argv[])
                                                        settings.read_file_long_read_trigger_length,
                                                        settings.read_file_long_read_split_length,
                                                        settings.read_file_long_read_distribute_remainder,
-                                                       settings.num_processors
+                                                       settings.num_processors,
+                                                       settings.read_file_long_read_pair_distance,
+                                                       lp_convert_file_names[0],
+                                                       lp_convert_file_names[1],
+                                                       &s_lp[0],
+                                                       &s_lp[1]
                                                        );
           settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
+          s_rf.read_name_file_index = flat_file_counter + 1;
+
+          if (make_long_read_pairs) {
+            for (uint32_t m = 0; m < 2; m++) {
+              settings.track_intermediate_file(settings.alignment_correction_done_file_name, lp_convert_file_names[m]);
+              s_lp[m].long_read_pair_source = base_name;
+              s_lp[m].long_read_pair_mate = m + 1;
+              s_lp[m].read_name_file_index = flat_file_counter + 2 + m;
+
+              // A file with no long reads makes no pairs: leave no trace of its empty mate files
+              if (s_lp[m].num_reads == 0) continue;
+              if ((overall_read_length_min == UNDEFINED_UINT32) || (s_lp[m].read_length_min < overall_read_length_min))
+                overall_read_length_min = s_lp[m].read_length_min;
+              if ((overall_read_length_max == UNDEFINED_UINT32) || (s_lp[m].read_length_max > overall_read_length_max))
+                overall_read_length_max = s_lp[m].read_length_max;
+              s.num_reads += s_lp[m].num_reads;
+              s.num_bases += s_lp[m].num_bases;
+              s.reads[lp_base_names[m]] = s_lp[m];
+            }
+            flat_file_counter += 2;
+          }
 
           if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
             overall_read_length_min = s_rf.read_length_min;
@@ -1800,6 +1838,30 @@ int breseq_default_action(int argc, char* argv[])
         if (new_rfs.m_files.size() == 1 && rfs.is_paired())
           new_rfs.m_base_name = new_rfs.m_files[0].m_base_name;
         surviving_sets.push_back(new_rfs);
+      }
+
+      // EXPERIMENTAL synthetic pairs from long reads: an unpaired long-read file that produced mate
+      // files gains a PAIRED set holding them, right after its own (now leftovers-only) set. This
+      // is driven entirely by the stored summary, so it is identical on a restart.
+      if (!rfs.is_paired()) {
+        const string source_base_name = rfs.m_files[0].base_name();
+        cReadFileSet lp_rfs;
+        lp_rfs.m_base_name = source_base_name + ".LPX";
+        for (uint32_t mate = 1; mate <= 2; mate++) {
+          const string lp_base_name = source_base_name + ".LP" + to_string(mate);
+          map<string, AnalyzeFastqSummary>::iterator lp_it = summary.sequence_conversion.reads.find(lp_base_name);
+          if ( (lp_it == summary.sequence_conversion.reads.end()) || (lp_it->second.num_reads == 0)
+              || (lp_it->second.long_read_pair_source != source_base_name) || (lp_it->second.long_read_pair_mate != mate) )
+            break;
+          cReadFile lp_rf = rfs.m_files[0];   // same original file and error group as its source
+          lp_rf.m_base_name = lp_base_name;
+          lp_rf.m_converted_file_name = lp_it->second.converted_fastq_name;
+          // m_id + 1 is how DP/MP rebuild a mate's read name, so it must be this file's prefix
+          lp_rf.m_id = lp_it->second.read_name_file_index - 1;
+          lp_rfs.m_files.push_back(lp_rf);
+          surviving_sets.read_file_to_fastq_file_name_map[lp_base_name] = lp_rf.m_original_file_name;
+        }
+        if (lp_rfs.m_files.size() == 2) surviving_sets.push_back(lp_rfs);
       }
     }
     settings.read_file_sets = surviving_sets;
