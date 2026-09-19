@@ -1832,11 +1832,89 @@ namespace breseq {
       
 			// mutation will always be after this position
 			// Special case of circular chromosome
-			if ( (side_1_position == 1) && ( side_2_position== ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
+			const cAnnotatedSequence& this_ref_seq = ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])];
+			const int32_t seq_length = static_cast<int32_t>(this_ref_seq.m_length);
+			if ( (side_1_position == 1) && (side_2_position == seq_length) && !j.entry_exists("unique_read_sequence") )
 			{
 				j[IGNORE] = "CIRCULAR_CHROMOSOME";
 				continue;
 			}
+
+      // A junction that joins the two ends of a circular sequence but is NOT flush to both of them
+      // (or carries unique read sequence) is a small mutation sitting on the origin, e.g.
+      //
+      //   CM189243 1 +1 / CM189243 5056683 -1   (length 5056684, resolved from a 1-bp overlap)
+      //
+      // is the deletion of one T from the TTT run made by the last base and the first two. Read as
+      // an ordinary within-sequence junction it looks like a tandem duplication of the entire
+      // chromosome, which the size cutoff below throws away, leaving the JC unassigned -- neither a
+      // mutation nor CIRCULAR_CHROMOSOME. predictMCplusJCtoDEL's case (4) covers the same geometry
+      // but needs missing coverage on each non-flush end, which a deletion this short never has.
+      // Coordinates follow case (4): the mutation starts after the high side and runs past the end.
+      {
+        const bool side_1_is_low = (side_1_position <= side_2_position);
+        const int32_t low_position = side_1_is_low ? side_1_position : side_2_position;
+        const int32_t high_position = side_1_is_low ? side_2_position : side_1_position;
+        const int32_t low_strand = side_1_is_low ? side_1_strand : side_2_strand;
+        const int32_t origin_size = (low_position - 1) + (seq_length - high_position);
+        const int32_t within_size = high_position - low_position + 1;
+
+        // The junction alone cannot tell a deletion across the origin from a duplication of
+        // everything else, so take whichever is the smaller event.
+        if ( this_ref_seq.is_circular() && (low_strand == +1)
+            && (origin_size <= kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation)
+            && (origin_size < within_size) )
+        {
+          cDiffEntry mut;
+          mut._evidence = make_vector<string>(j._id);
+
+          string new_seq;
+          if (j.entry_exists("unique_read_sequence")) {
+            new_seq = j["unique_read_sequence"];
+            // Same convention as below: decided by the strand of the ORIGINAL side 1
+            if (side_1_strand == 1) new_seq = reverse_complement(new_seq);
+          }
+
+          int32_t position = high_position + 1;
+          if (position > seq_length) position -= seq_length;
+
+          if (origin_size == 0) {
+            // Flush to both ends, so there must be unique read sequence: inserted at the origin
+            mut._type = INS;
+            mut
+            ("seq_id", seq_id)
+            ("position", s(seq_length))
+            ("new_seq", new_seq)
+            ;
+          } else if (new_seq.empty()) {
+            mut._type = DEL;
+            mut
+            ("seq_id", seq_id)
+            ("position", s(position))
+            ("size", s(origin_size))
+            ;
+          } else {
+            mut._type = SUB;
+            mut
+            ("seq_id", seq_id)
+            ("position", s(position))
+            ("size", s(origin_size))
+            ("new_seq", new_seq)
+            ;
+          }
+
+          // Neither side of a junction on the origin has countable reference reads (they would
+          // have to run off the end of the sequence), so its frequency is NA. Like case (4),
+          // report the mutation at 1 rather than propagating that.
+          if (settings.polymorphism_prediction) {
+            string frequency = j.mutation_frequency();
+            mut[FREQUENCY] = ((frequency == "NA") || frequency.empty()) ? "1" : frequency;
+          }
+
+          gd.add(mut);
+          continue;
+        }
+      }
       
       // If we are predicting a very big insertion (longer than read length), 
       // it is likely spurious. Require other evidence to convert to a mutation.

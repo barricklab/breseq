@@ -1,3 +1,9 @@
 These data files have two overlapping deletions, both with junctions.
 Currently the test only finds the majority one, but they could be used
 to test improved polymorphism prediction algorithms.
+
+tmv-plasmid-origin-extra-base.gbk is tmv-plasmid.gbk rotated so that its base
+8501 is base 1 (putting the origin in a region the reads cover), with one extra
+T added at the end. The TTT run that spans the new origin becomes TTTT, so the
+reads show a 1-bp deletion ON the origin that leaves no missing coverage: it is
+supported only by a junction from base 1 to base (length - 1). No annotation.
