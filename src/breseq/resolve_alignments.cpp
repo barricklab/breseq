@@ -1861,6 +1861,32 @@ void load_junction_alignments(
     discordant_csv_out << "read_number,orientation,seq_id_1,start_1,seq_id_2,start_2,distance" << endl;
 #endif
 
+    // The concordant-crossing accumulator counts MOLECULES (read_pair_molecule_id, alignment.h), since
+    // it is the expectation DP's bridging support -- also counted in molecules -- is compared with.
+    // Synthetic pairs cut from one long read (--long-read-pair-distance) are consecutive here and
+    // their inner gaps overlap heavily, so a molecule's gaps are buffered and their UNION is added
+    // when the molecule changes: one long read then crosses a position once, however many of its
+    // pairs do. An ordinary pair is its own molecule with a single gap, so nothing changes for it.
+    string crossing_molecule;
+    vector<pair<int32_t, pair<int32_t,int32_t> > > crossing_gaps;   // (tid, (gap_lo, gap_hi))
+    auto flush_crossing_gaps = [&]() {
+      sort(crossing_gaps.begin(), crossing_gaps.end());
+      size_t g = 0;
+      while (g < crossing_gaps.size()) {
+        int32_t tid = crossing_gaps[g].first;
+        int32_t lo = crossing_gaps[g].second.first, hi = crossing_gaps[g].second.second;
+        size_t h = g + 1;
+        while ((h < crossing_gaps.size()) && (crossing_gaps[h].first == tid) && (crossing_gaps[h].second.first <= hi + 1)) {
+          hi = max(hi, crossing_gaps[h].second.second);
+          h++;
+        }
+        crossing_diff[tid][lo]++;
+        crossing_diff[tid][hi + 1]--;
+        g = h;
+      }
+      crossing_gaps.clear();
+    };
+
     cFastqSequence seq1, seq2;
     while (in_fastq_1.read_sequence(seq1, fqc) && in_fastq_2.read_sequence(seq2, fqc)) // READ PAIR
     {
@@ -1976,8 +2002,12 @@ void load_junction_alignments(
             int32_t gap_hi = ((s1 <= s2) ? s2 : s1) - 1;   // start of the later-starting read - 1
             vector<int32_t>& d = crossing_diff[tid];
             if (gap_hi >= gap_lo && gap_lo >= 1 && static_cast<size_t>(gap_hi) + 1 < d.size()) {
-              d[gap_lo]++;
-              d[gap_hi + 1]--;
+              string this_molecule = read_pair_molecule_id(seq1.m_name);
+              if (this_molecule != crossing_molecule) {
+                flush_crossing_gaps();
+                crossing_molecule = this_molecule;
+              }
+              crossing_gaps.push_back(make_pair(tid, make_pair(gap_lo, gap_hi)));
             }
           }
         }
@@ -2066,6 +2096,8 @@ void load_junction_alignments(
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, rg_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
       }
     } // End loop through every read pair
+    flush_crossing_gaps();
+    crossing_molecule.clear();
 
     {
       ostringstream progress_message;

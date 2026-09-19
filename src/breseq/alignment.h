@@ -35,6 +35,29 @@ namespace breseq {
 class cReferenceSequences;
 class pileup;
 class bam_alignment;
+
+//! The MOLECULE a paired read came from, as a string shared by every read pair sequenced from it.
+//!
+//! Read names are "<file>:<read>" and the two mates of a pair share <read>, so ordinarily a pair IS a
+//! molecule and this returns exactly what follows the colon -- the same string dp_read_num() returns.
+//! The exception is --long-read-pair-distance: there one long read is cut into several synthetic
+//! pairs named "<file>:<read>S<piece>", which are NOT independent observations. A single chimeric
+//! long read yields up to a stride's worth of mutually consistent discordant pairs, enough to pass
+//! a minimum-pairs gate by itself. For those names this returns <read> alone, so that anything
+//! counting evidence can count source reads instead of pairs.
+//!
+//! An 'S' suffix on a PAIRED read can only mean a synthetic pair, because read files given as a pair
+//! are never split (normalize_fastq_paired ignores the long-read options). So for every ordinary
+//! library molecule id == pair number, and counting by molecule changes nothing.
+inline string read_pair_molecule_id(const string& read_name)
+{
+  size_t colon = read_name.find(':');
+  size_t start = (colon == string::npos) ? 0 : colon + 1;
+  size_t i = start;
+  while ((i < read_name.size()) && (read_name[i] >= '0') && (read_name[i] <= '9')) i++;
+  if ((i > start) && (i < read_name.size()) && (read_name[i] == 'S')) return read_name.substr(start, i - start);
+  return read_name.substr(start);
+}
   
 /*! class alignment
     Represents a single alignment within a pileup.

@@ -263,7 +263,9 @@ namespace breseq {
               int32_t ovl_p, int32_t ovl_other_p)
     {
       set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, ovl_p, ovl_other_p);
-      m_supporting = 0; m_concordant = 0; m_unpaired = 0;
+      m_supporting = 0;
+      m_concordant_molecules.clear(); m_unpaired_molecules.clear();
+      m_concordant_records = 0; m_unpaired_records = 0;
       m_supporting_nums.clear();
       m_collect_outside = false;
 
@@ -397,8 +399,24 @@ namespace breseq {
         int32_t rend   = static_cast<int32_t>(a.reference_end_1());
         m_supporting_nums[dp_read_num(a.read_name())] = (m_ctx.s == -1) ? rstart : rend;
       }
-      else if (cat == 2) m_concordant++;
-      else if (cat == 3) m_unpaired++;
+      // Concordant and unpaired reads are counted as MOLECULES (read_pair_molecule_id, alignment.h),
+      // because the bridging support they are compared with is: the frequency is k / (k + concordant),
+      // and collapsing only k would deflate it by up to the stride of --long-read-pair-distance. For an
+      //
+      // ONLY synthetic-pair reads are collapsed. An ordinary read is counted per alignment record,
+      // exactly as it always was -- a read with two records in the window counts twice -- so that
+      // this change cannot move any number for an ordinary library. (Unpaired reads keep their file
+      // prefix in the key: the leftover pieces and the two mate files are different reads.)
+      else if ((cat == 2) || (cat == 3)) {
+        const string& name = a.read_name();
+        const string molecule = read_pair_molecule_id(name);
+        const bool synthetic = (molecule != dp_read_num(name));
+        if (cat == 2) {
+          if (synthetic) m_concordant_molecules.insert(molecule); else m_concordant_records++;
+        } else {
+          if (synthetic) m_unpaired_molecules.insert(name.substr(0, name.find(':') + 1) + molecule); else m_unpaired_records++;
+        }
+      }
     }
 
     int supporting() const { return m_supporting; }
@@ -408,8 +426,8 @@ namespace breseq {
     // junction appears on only one side and is excluded); the paired-up values give the distinct-fragment
     // count.
     const map<string, int32_t>& supporting_nums() const { return m_supporting_nums; }
-    int concordant() const { return m_concordant; }
-    int unpaired()   const { return m_unpaired; }
+    int concordant() const { return m_concordant_records + static_cast<int>(m_concordant_molecules.size()); }
+    int unpaired()   const { return m_unpaired_records + static_cast<int>(m_unpaired_molecules.size()); }
 
   private:
     void set_ctx(int32_t p, int32_t s, bool crossing_is_forward,
@@ -422,7 +440,10 @@ namespace breseq {
     }
     dp_side_ctx m_ctx;
     const dp_mate_index* m_mates;
-    int     m_supporting, m_concordant, m_unpaired;
+    int     m_supporting;
+    // Ordinary reads are counted per record; synthetic-pair reads per source long read (see scan).
+    int     m_concordant_records, m_unpaired_records;
+    set<string> m_concordant_molecules, m_unpaired_molecules;
     map<string, int32_t> m_supporting_nums;   // pair number -> that side's outside coordinate
     bool    m_collect_outside;
     // Supporting reads' outside (away-from-junction) coordinates, accumulated during the collect pass,
@@ -1502,15 +1523,24 @@ namespace breseq {
     // The keys behind each edge's weight are kept alongside it: they are the pairs that SEED that
     // candidate junction, and each side's starting coordinate is taken from their aligned extents
     // (dp_seed_side_position) rather than from the region span.
+    //
+    // The WEIGHT counts molecules, not pair keys (read_pair_molecule_id, alignment.h). The two are the
+    // same thing for an ordinary library. For synthetic pairs cut from long reads they are not: one
+    // chimeric long read contributes a stride's worth of keys to a single edge, which on its own
+    // cleared the minimum-pairs gate below and also inflated the over-dispersion the background fit
+    // sees. edge_keys still holds every key, since all of them are valid seeds for placement.
     map<pair<int, int>, int> edge_weight;
     map<pair<int, int>, vector<string> > edge_keys;
+    map<pair<int, int>, set<string> > edge_molecules;
     for (map<string, set<int> >::const_iterator it = key_to_regions.begin(); it != key_to_regions.end(); it++) {
       if (it->second.size() == 2) {
         set<int>::const_iterator si = it->second.begin();
         int a = *si; ++si;
         int b = *si;
         pair<int, int> ab = make_pair(min(a, b), max(a, b));
-        edge_weight[ab]++;
+        // A key is "<read1_name>__<read2_name>__<insert>"; the two mates share their molecule
+        edge_molecules[ab].insert(read_pair_molecule_id(it->first.substr(0, it->first.find("__"))));
+        edge_weight[ab] = static_cast<int>(edge_molecules[ab].size());
         edge_keys[ab].push_back(it->first);
       }
     }
@@ -2012,12 +2042,21 @@ namespace breseq {
         // share both outer coordinates, so they collapse to one. Every statistical test below uses
         // k_distinct; k_support is kept for reporting and for downstream IS-copy tie-breaking.
         // (Strand adds nothing here: dp_classify_side_read already restricts each side to one strand.)
+        //
+        // Synthetic pairs cut from one long read (--long-read-pair-distance) are one molecule too, but
+        // each is shifted a piece along, so their outer ends all differ and the collapse above would
+        // keep every one. They are therefore reduced to ONE representative per source read first --
+        // the first in the map's (string) order, which is arbitrary but deterministic -- and the
+        // distinct-ends collapse is applied to the representatives. For an ordinary library every
+        // pair is its own molecule and this is the same computation as before.
         set<pair<int32_t, int32_t> > distinct_ends;
+        set<string> molecules_seen;
         k_support = 0;
         for (map<string, int32_t>::const_iterator n = support_nums_1.begin(); n != support_nums_1.end(); n++) {
           map<string, int32_t>::const_iterator m = support_nums_2.find(n->first);
           if (m == support_nums_2.end()) continue;
           k_support++;
+          if (!molecules_seen.insert(read_pair_molecule_id(n->first)).second) continue;
           distinct_ends.insert(make_pair(n->second, m->second));
         }
         k_distinct = static_cast<int>(distinct_ends.size());
