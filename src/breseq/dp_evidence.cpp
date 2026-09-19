@@ -263,9 +263,7 @@ namespace breseq {
               int32_t ovl_p, int32_t ovl_other_p)
     {
       set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, ovl_p, ovl_other_p);
-      m_supporting = 0;
-      m_concordant_molecules.clear(); m_unpaired_molecules.clear();
-      m_concordant_records = 0; m_unpaired_records = 0;
+      m_supporting_reads.clear(); m_concordant_reads.clear(); m_unpaired_reads.clear();
       m_supporting_nums.clear();
       m_collect_outside = false;
 
@@ -389,45 +387,42 @@ namespace breseq {
         }
         return;
       }
+      // Every category is counted per READ, keyed by read name, not per alignment record. A read
+      // that matches two copies of a short tandem repeat equally well (X1 = 2) has two records a few
+      // dozen bases apart, both inside one side's window, and per record it was two observations of
+      // the same thing: in tests/tmv_plasmid_circular_deletion that was 5 of 609 unpaired reads.
+      //
+      // On top of that, the pieces of one long read (--long-read-pair-distance) are one MOLECULE
+      // (read_pair_molecule_id, alignment.h) and collapse to a single key. Concordant and unpaired
+      // counts must collapse the same way the bridging support does, because the frequency is
+      // k / (k + concordant), and collapsing only k would deflate it by up to the stride. The file
+      // prefix stays in the key, so that the two mates of an ordinary pair -- which can both sit
+      // unpaired at one side -- remain two reads. For an ordinary read the key is its whole name.
+      const string& name = a.read_name();
+      const string read_key = name.substr(0, name.find(':') + 1) + read_pair_molecule_id(name);
       if      (cat == 1) {
-        m_supporting++;
+        m_supporting_reads.insert(read_key);
         // Remember each supporting read's OUTSIDE (away-from-junction) coordinate alongside its pair
         // number. Intersecting the two sides then yields not just how many pairs bridge the junction but
         // how many DISTINCT (outer_1, outer_2) fragment starts they represent -- the DP analogue of JC's
         // pos_hash_score, so PCR duplicates of one molecule cannot inflate the support count.
         int32_t rstart = static_cast<int32_t>(a.reference_start_1());
         int32_t rend   = static_cast<int32_t>(a.reference_end_1());
-        m_supporting_nums[dp_read_num(a.read_name())] = (m_ctx.s == -1) ? rstart : rend;
+        m_supporting_nums[dp_read_num(name)] = (m_ctx.s == -1) ? rstart : rend;
       }
-      // Concordant and unpaired reads are counted as MOLECULES (read_pair_molecule_id, alignment.h),
-      // because the bridging support they are compared with is: the frequency is k / (k + concordant),
-      // and collapsing only k would deflate it by up to the stride of --long-read-pair-distance. For an
-      //
-      // ONLY synthetic-pair reads are collapsed. An ordinary read is counted per alignment record,
-      // exactly as it always was -- a read with two records in the window counts twice -- so that
-      // this change cannot move any number for an ordinary library. (Unpaired reads keep their file
-      // prefix in the key: the leftover pieces and the two mate files are different reads.)
-      else if ((cat == 2) || (cat == 3)) {
-        const string& name = a.read_name();
-        const string molecule = read_pair_molecule_id(name);
-        const bool synthetic = (molecule != dp_read_num(name));
-        if (cat == 2) {
-          if (synthetic) m_concordant_molecules.insert(molecule); else m_concordant_records++;
-        } else {
-          if (synthetic) m_unpaired_molecules.insert(name.substr(0, name.find(':') + 1) + molecule); else m_unpaired_records++;
-        }
-      }
+      else if (cat == 2) m_concordant_reads.insert(read_key);
+      else if (cat == 3) m_unpaired_reads.insert(read_key);
     }
 
-    int supporting() const { return m_supporting; }
+    int supporting() const { return static_cast<int>(m_supporting_reads.size()); }
     // Read-pair numbers of the discordant (supporting) reads at the last-scanned side, each mapped to
     // that read's outside (away-from-junction) coordinate. Intersecting the two sides' key sets gives the
     // true count of pairs that bridge THIS junction (a read at a breakpoint shared with a neighboring
     // junction appears on only one side and is excluded); the paired-up values give the distinct-fragment
     // count.
     const map<string, int32_t>& supporting_nums() const { return m_supporting_nums; }
-    int concordant() const { return m_concordant_records + static_cast<int>(m_concordant_molecules.size()); }
-    int unpaired()   const { return m_unpaired_records + static_cast<int>(m_unpaired_molecules.size()); }
+    int concordant() const { return static_cast<int>(m_concordant_reads.size()); }
+    int unpaired()   const { return static_cast<int>(m_unpaired_reads.size()); }
 
   private:
     void set_ctx(int32_t p, int32_t s, bool crossing_is_forward,
@@ -440,10 +435,8 @@ namespace breseq {
     }
     dp_side_ctx m_ctx;
     const dp_mate_index* m_mates;
-    int     m_supporting;
-    // Ordinary reads are counted per record; synthetic-pair reads per source long read (see scan).
-    int     m_concordant_records, m_unpaired_records;
-    set<string> m_concordant_molecules, m_unpaired_molecules;
+    // Reads in each category at the last-scanned side, by read key (see where they are filled)
+    set<string> m_supporting_reads, m_concordant_reads, m_unpaired_reads;
     map<string, int32_t> m_supporting_nums;   // pair number -> that side's outside coordinate
     bool    m_collect_outside;
     // Supporting reads' outside (away-from-junction) coordinates, accumulated during the collect pass,
