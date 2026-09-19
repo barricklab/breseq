@@ -1296,10 +1296,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Write paired-end mapping distance information
   ////
 
-  bool any_paired_read_file_sets = false;
-  for (const auto& rfs : settings.read_file_sets) if (rfs.is_paired()) any_paired_read_file_sets = true;
-
-  if (any_paired_read_file_sets) {
+  if (settings.read_file_sets.any_paired()) {
     HTML << h2("Paired-End Mapping Distance Information") << endl;
     HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
     HTML << start_tr() << th() << th(ALIGN_LEFT, "paired read set") << th(ALIGN_CENTER, "mapped") << th(ALIGN_CENTER, "orientation") << th(ALIGN_CENTER, "median") << th(ALIGN_CENTER, "upper MAD") << th(ALIGN_CENTER, "distance cutoff") << th(ALIGN_CENTER, "concordant") << "</tr>" << endl;
@@ -1378,9 +1375,26 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << h2("Reference Sequence Information") << endl;
   HTML << "<p>" << endl;
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
+
+  // The "crossing pairs" plot-link column only exists if at least one of those plots was drawn.
+  // None is for unpaired reads, --no-paired-mapping or --no-discordant-pair-prediction, and the
+  // column has no heading, so it would otherwise show as an unexplained blank. Keyed on the files
+  // rather than on those options so that it is right whatever the reason.
+  bool show_crossing_pairs_column = false;
+  for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
+    if (file_exists(settings.file_name(settings.concordant_pair_crossing_seq_plot_file_name, "#", it->m_seq_id).c_str())) {
+      show_crossing_pairs_column = true;
+      break;
+    }
+  }
+
+  // Leading plot-link columns: coverage, distribution, then the two optional ones. The junction-only
+  // and total rows span or pad exactly this many.
+  const size_t num_plot_link_columns = 2 + (show_crossing_pairs_column ? 1 : 0) + (settings.predict_copy_number ? 1 : 0);
+
   HTML << "<tr>" << th() <<
                     th() <<
-                    th() <<
+                    (show_crossing_pairs_column ? th() : "") <<
                     // The extra plot-link column only exists under --predict-copy-number, so that
                     // every other run's summary.html is unchanged.
                     (settings.predict_copy_number ? th() : "") <<
@@ -1456,7 +1470,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
 
       // Per-sequence concordant-pair crossing plot: this sequence's empirical crossing distribution
       // overlaid with the run-wide reference projected to its coverage (the DP null actually used).
-      {
+      if (show_crossing_pairs_column) {
         string cross_plot = settings.file_name(settings.concordant_pair_crossing_seq_plot_file_name, "#", it->m_seq_id);
         if (file_exists(cross_plot.c_str())) {
           string cross_basename = cString(cross_plot).get_base_name();
@@ -1490,7 +1504,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     }
     // Junction-Only reference sequence
     else {
-      HTML << td(string("colspan=\"") + (settings.predict_copy_number ? "4" : "3") + "\" align=\"center\"", nonbreaking("junction-only"));
+      HTML << td("colspan=\"" + to_string(num_plot_link_columns) + "\" align=\"center\"", nonbreaking("junction-only"));
     }
         
     HTML << td(it->m_seq_id);
@@ -1521,9 +1535,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   }
 
   HTML << "<tr class=\"highlight_table_row\">";
-  HTML << td();
-  HTML << td();
-  HTML << td();
+  for (size_t i = 0; i < num_plot_link_columns; i++) HTML << td();
   HTML << td(b("total"));
   HTML << td(ALIGN_RIGHT, b(commify(to_string(total_length))) );
   HTML << td();

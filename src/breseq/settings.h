@@ -162,6 +162,15 @@ namespace breseq
           return_value.push_back(rf);
       return return_value;
     }
+
+    // True if any set is paired. Ask this after sets have been rebuilt for read files dropped by
+    // conversion or --limit-fold-coverage, which can turn a paired set into an unpaired one.
+    bool any_paired() const
+    {
+      for (const auto& rfs : *this)
+        if (rfs.is_paired()) return true;
+      return false;
+    }
 	};
 
   //
@@ -1084,7 +1093,12 @@ namespace breseq
     string bam_pg_header_line() const;
 
 		void check_installed();
-    
+
+    // Whether pair-based analysis has anything to work on. paired_mapping alone only says that
+    // --no-paired-mapping was not given; it is true for a run of nothing but single-end reads.
+    // Steps that need pairs gate on this so such a run skips them without a banner or a warning.
+    bool have_paired_reads() const { return paired_mapping && read_file_sets.any_paired(); }
+
     bool do_step(const string& done_key, const string& message);
     void set_current_step_done_key(const string& done_key) { current_step_done_key = done_key; }
     string get_current_step_done_key() {return current_step_done_key; };
