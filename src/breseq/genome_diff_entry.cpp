@@ -144,6 +144,10 @@ namespace breseq {
   //For MP
   const char* MP_READ_COUNT = "unpaired_read_count";
   const char* MP_DISTINCT_COUNT = "distinct_read_count";
+  // Written INSTEAD of MP_DISTINCT_COUNT with --long-read-pair-distance, where the count is of source
+  // long reads while every other MP count on the item is of the pieces cut from them. A different
+  // name keeps the unit visible, and stops it being read as a de-duplication of MP_READ_COUNT.
+  const char* MP_DISTINCT_SOURCE_READ_COUNT = "distinct_source_read_count";
   const char* MP_CONCORDANT_COUNT = "spanning_pair_count";
   const char* MP_TOTAL_COUNT = "total_read_count";
   const char* MP_CANDIDATE_COUNT = "candidate_unpaired_count";

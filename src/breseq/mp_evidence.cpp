@@ -144,10 +144,10 @@ namespace breseq {
   // stops). The window arithmetic below is the same, but the classification is MP's own.
   class mp_side_scanner : public pileup_base {
   public:
-    mp_side_scanner(const string& bam, const string& fasta)
+    mp_side_scanner(const string& bam, const string& fasta, bool by_molecule)
       : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_fwd(true),
         m_window(0.0), m_collect(false), m_ext(NULL), m_supporting(0), m_spanning(0), m_window_total(0),
-        m_have_inner(false), m_inner_edge(0)
+        m_by_molecule(by_molecule), m_have_inner(false), m_inner_edge(0)
       { set_print_progress(false); }
 
     //! Exact mate extents for the position about to be scanned. Not owned; must outlive the scan.
@@ -201,6 +201,7 @@ namespace breseq {
       set_ctx(p, s, cross_fwd, W);
       m_supporting = 0; m_spanning = 0; m_window_total = 0;
       m_distinct.clear();
+      m_distinct_molecules.clear();
       m_collect = false;
       fetch_side_window(seq_id, p, s, W);
     }
@@ -208,7 +209,15 @@ namespace breseq {
     int supporting() const { return m_supporting; }
     int spanning() const { return m_spanning; }
     int window_total() const { return m_window_total; }
-    size_t distinct() const { return m_distinct.size(); }
+    //! With --long-read-pair-distance this is distinct SOURCE READS, not distinct outer coordinates.
+    //  The pieces cut from one long read each have a different outer end, so a single read with a
+    //  stretch that aligns nowhere supplies several "distinct" supporting reads on its own -- on a
+    //  9x nanopore run 59 of 93 candidate regions came from two source reads or fewer, with up to
+    //  nine reads apiece. Only --missing-pair-minimum-distinct is affected. The supporting and
+    //  window counts, and the null they are scored against, deliberately stay in READS: that null
+    //  is fitted to this run in those units, over-dispersion included, so it already accounts for
+    //  the clumping, and changing the units on one side of the comparison would break it.
+    size_t distinct() const { return m_by_molecule ? m_distinct_molecules.size() : m_distinct.size(); }
 
     void fetch_callback(const alignment_wrapper& a)
     {
@@ -229,7 +238,11 @@ namespace breseq {
       // and the genome-wide null is tabulated over exactly this definition in the stage-08 pileup,
       // so k/m_window_total is the quantity the score's null describes.
       m_window_total++;
-      if      (cat == 1) { m_supporting++; m_distinct.insert(outer); }
+      if      (cat == 1) {
+        m_supporting++;
+        m_distinct.insert(outer);
+        if (m_by_molecule) m_distinct_molecules.insert(read_pair_molecule_id(a.read_name()));
+      }
       else if (cat == 2) m_spanning++;
     }
 
@@ -321,6 +334,8 @@ namespace breseq {
     const mp_extent_index* m_ext;
     int     m_supporting, m_spanning, m_window_total;
     set<int32_t> m_distinct;
+    bool    m_by_molecule;
+    set<string> m_distinct_molecules;
     vector<int32_t> m_outside;
     bool    m_have_inner;
     int32_t m_inner_edge;
@@ -864,7 +879,8 @@ namespace breseq {
       return;
     }
     mp_side_scanner* scanner =
-      new mp_side_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name);
+      new mp_side_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name,
+                          settings.read_file_long_read_pair_distance != 0);
     mp_extent_indexer indexer(settings.reference_bam_file_name, settings.reference_fasta_file_name);
 
     //
@@ -1090,7 +1106,10 @@ namespace breseq {
       double n = k + static_cast<double>(c.spanning);
 
       mp[MP_READ_COUNT] = to_string(c.supporting);
-      mp[MP_DISTINCT_COUNT] = to_string(c.distinct);
+      // In source long reads, and named for it, when the reads are synthetic pairs (see
+      // mp_side_scanner::distinct and MP_DISTINCT_SOURCE_READ_COUNT); distinct outer ends otherwise.
+      const bool by_molecule = (settings.read_file_long_read_pair_distance != 0);
+      mp[by_molecule ? MP_DISTINCT_SOURCE_READ_COUNT : MP_DISTINCT_COUNT] = to_string(c.distinct);
       mp[MP_CONCORDANT_COUNT] = to_string(c.spanning);
       mp[MP_TOTAL_COUNT] = to_string(static_cast<uint32_t>(n));
       mp[MP_WINDOW_COUNT] = to_string(c.window_total);
@@ -1107,12 +1126,23 @@ namespace breseq {
       // standing in for a null of "the background is zero" -- which holds in a clean simulation and
       // in nothing else. On a real 2x150 bacterial library the background is about 2%, and it is
       // spread unevenly enough that 4% of all windows in the genome sit above 10%.
+      //
+      // The BOUNDS are computed from an effective sample size for synthetic pairs. k and n count
+      // pieces, and the pieces cut from one long read are not independent, so an interval taken at
+      // face value is too narrow. The supporting pieces came from c.distinct source reads, so the
+      // counts are scaled by distinct / supporting -- the number of molecules per piece, measured at
+      // this site -- before the interval is taken. The point estimate is left alone: clumping
+      // inflates the supporting and spanning counts alike, so their ratio is unaffected. The score
+      // needs no such correction, since its null is fitted to this run in piece units.
+      double effective = 1.0;
+      if (by_molecule && (c.supporting > 0) && (c.distinct < static_cast<size_t>(c.supporting)))
+        effective = static_cast<double>(c.distinct) / static_cast<double>(c.supporting);
       double freq_lower = 0.0;
       if (n > 0.0) {
-        freq_lower = binomial_frequency_lower_bound(k, n, kMPFrequencyAlpha);
+        freq_lower = binomial_frequency_lower_bound(k * effective, n * effective, kMPFrequencyAlpha);
         mp[FREQUENCY] = to_string(formatted_double(k / n, 4));
         mp[FREQUENCY_LOWER] = to_string(formatted_double(freq_lower, 4));
-        mp[FREQUENCY_UPPER] = to_string(formatted_double(binomial_frequency_upper_bound(k, n, kMPFrequencyAlpha), 4));
+        mp[FREQUENCY_UPPER] = to_string(formatted_double(binomial_frequency_upper_bound(k * effective, n * effective, kMPFrequencyAlpha), 4));
       } else {
         mp[FREQUENCY] = "NA";
       }

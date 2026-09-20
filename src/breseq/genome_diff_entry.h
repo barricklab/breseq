@@ -161,6 +161,7 @@ namespace breseq {
   //For MP
   extern const char* MP_READ_COUNT;
   extern const char* MP_DISTINCT_COUNT;
+  extern const char* MP_DISTINCT_SOURCE_READ_COUNT;
   extern const char* MP_CONCORDANT_COUNT;
   extern const char* MP_TOTAL_COUNT;
   extern const char* MP_CANDIDATE_COUNT;

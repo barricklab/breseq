@@ -3856,7 +3856,8 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
     ss << td(ALIGN_CENTER, dir_str) << endl;
 
     ss << td(ALIGN_RIGHT, nonbreaking(c[MP_READ_COUNT])) << endl;
-    ss << td(ALIGN_RIGHT, nonbreaking(c[MP_DISTINCT_COUNT])) << endl;
+    // Source long reads rather than distinct outer ends for synthetic pairs: see MP_DISTINCT_SOURCE_READ_COUNT
+    ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(MP_DISTINCT_SOURCE_READ_COUNT) ? c[MP_DISTINCT_SOURCE_READ_COUNT] : c[MP_DISTINCT_COUNT])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[MP_CONCORDANT_COUNT])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[MP_TOTAL_COUNT])) << endl;
     // "window" column: the denominator the SCORE uses -- every crossing-strand read on the kept
