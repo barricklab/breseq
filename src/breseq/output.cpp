@@ -24,6 +24,7 @@
 #include "coverage_output.h"
 #include "coverage_distribution.h"
 #include "dp_evidence.h"
+#include "pd_evidence.h"
 #include "pileup_base.h"
 // MINIZ_NO_ZLIB_COMPATIBLE_NAMES is set via MINIZ_CFLAGS in AM_CPPFLAGS
 // (configure.ac) to avoid clashing with the system libz that is also linked.
@@ -1289,7 +1290,16 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   
   if (show_read_split_legend) {
     HTML << "<p><sup>&Dagger;</sup> Read and base numbers are after long reads in this file were split to " << (settings.read_file_long_read_distribute_remainder ? "&le;": "exactly ");
-    HTML << to_string(settings.read_file_long_read_split_length) << " bases" << (settings.read_file_long_read_distribute_remainder ? "" : " (extra bases discarded)") << endl;
+    HTML << to_string(settings.read_file_long_read_split_length) << " bases" << (settings.read_file_long_read_distribute_remainder ? "" : " (extra bases discarded)");
+    // (appended before the line ends, so that the sentence break is not preceded by whitespace; without
+    // synthetic pairs the bytes written are exactly what they were)
+    if (settings.read_file_long_read_pair_distance != 0) {
+      HTML << ". Each piece was paired with the piece " << settings.read_file_long_read_pair_distance
+           << " bases downstream on the same long read (--long-read-pair-distance; the second mate is reverse"
+           << " complemented, so pairs are FR). These synthetic pairs are the .LP1 / .LP2 files; pieces without a"
+           << " partner stay in the file the long reads came from.";
+    }
+    HTML << endl;
   }
 
   ////
@@ -2832,6 +2842,17 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
                    ? " &mdash; fragments are shorter than two reads, so most pairs have no gap for a breakpoint to fall in"
                    : ""))) << endl;
 
+  // What a count IS, when the pairs are synthetic. Without this row every number in the DP tables
+  // reads as a count of pairs, and for long reads none of them is except discordant_count.
+  if (settings.read_file_long_read_pair_distance != 0) {
+    ss << tr(td("counting unit")
+             + td("source long reads")
+             + td("the synthetic pairs cut from one long read are one molecule, not independent observations"
+                  " &mdash; a single chimeric read would otherwise pass the minimum below by itself. Shared pairs,"
+                  " distinct bridging support, concordant and unpaired counts and the expected crossing are all per"
+                  " source read; only the raw <i>discordant_count</i> is still in pairs")) << endl;
+  }
+
   // Gate 1: minimum shared pairs, derived from the background fit.
   string bg = (d.background_mean > 0.0)
     ? ((d.background_size > 0.0)
@@ -2918,6 +2939,19 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
                 + (d.pair_distance_median < 2.0 * d.read_length_avg
                    ? " &mdash; fragments are shorter than two reads, so only the minority of pairs with a gap can carry PD evidence"
                    : ""))) << endl;
+
+  if (settings.read_file_long_read_pair_distance != 0) {
+    int32_t floor_shift = pd_minimum_shift(settings, d.pair_distance_median);
+    ss << tr(td("counting unit")
+             + td("source long reads")
+             + td("sibling pairs cut from one long read share its indel noise, so each source read gives ONE"
+                  " observation per column (the mean quantile of its covering pairs). The seed, the score, the"
+                  " shifted / normal / distinct counts and the size range are all per source read"
+                  + (floor_shift > 0
+                     ? ("; the seed tests for a shift beyond the minimum of " + to_string(floor_shift)
+                        + " bases rather than beyond zero, so small regional shifts cannot seed")
+                     : string("")))) << endl;
+  }
 
   ss << tr(td("effective tests")
            + td(to_string(d.n_effective_tests, 0, false))
@@ -3127,6 +3161,17 @@ string html_missing_pair_gates_string(const Settings& settings, Summary& summary
            + td(to_string(d.window_width, 0, false) + " bases")
            + td("one median fragment length &mdash; beyond that a read has no mate that could have"
                 " reached the breakpoint, so it says nothing about it either way")) << endl;
+
+  // MP is the one pair-based type that does NOT count source reads throughout, so say exactly where
+  // it does -- an MP item otherwise looks like it mixes units by accident.
+  if (settings.read_file_long_read_pair_distance != 0) {
+    ss << tr(td("counting unit")
+             + td("pieces; source reads for <i>distinct</i>")
+             + td("unpaired, spanning, total and window counts, the score and the background below are in the pieces"
+                  " long reads were split into &mdash; that background is fitted to this run in pieces, over-dispersion"
+                  " included, so it already accounts for several pieces coming from one read. The distinct count is of"
+                  " source long reads, and the frequency range is taken at that effective sample size")) << endl;
+  }
 
   // The load-bearing number, and the one that did not exist before: what fraction of reads lose
   // their mate ANYWHERE in this sample. Every MP decision is relative to it.
@@ -3825,7 +3870,9 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
   ss << th("position") << endl;
   ss << th("direction") << endl;
   ss << th("unpaired") << endl;
-  ss << th("distinct") << endl;
+  // Source long reads, not distinct outer ends, when the reads are synthetic pairs -- the item says so
+  // by which key it carries (MP_DISTINCT_SOURCE_READ_COUNT), and the other columns are still pieces.
+  ss << th(test_item.entry_exists(MP_DISTINCT_SOURCE_READ_COUNT) ? nonbreaking("source reads") : string("distinct")) << endl;
   ss << th("spanning") << endl;
   ss << th("total") << endl;
   ss << th("window") << endl;
