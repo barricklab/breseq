@@ -4223,13 +4223,16 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
             vector<string> transl_table_list_i = split(i["transl_table"], multiple_separator);
             vector<string> transl_table_list_j = split(j["transl_table"], multiple_separator);
 
+            // The explicit <uint32_t> matters: a bare from_string() used to pick a bool overload, turning
+            // both the table and the codon number into 1, so that every combined codon was translated
+            // with the *initiation* codon table (CTG/TTG => M) no matter where it was in the gene.
             if (transl_table_list_i[ii] != "NA") {
               codon_new_seq_list_i[ii] = new_codon;
-              aa_new_seq_list_i[ii] =  translate_codon(new_codon, from_string(transl_table_list_i[ii]), from_string(i["aa_position"]));
+              aa_new_seq_list_i[ii] =  translate_codon(new_codon, from_string<uint32_t>(transl_table_list_i[ii]), static_cast<uint32_t>(i_codon_number));
             }
-            if (transl_table_list_i[jj] != "NA") {
+            if (transl_table_list_j[jj] != "NA") {
               codon_new_seq_list_j[jj] = new_codon;
-              aa_new_seq_list_j[jj] =  translate_codon(new_codon, from_string(transl_table_list_i[jj]), from_string(j["aa_position"]));
+              aa_new_seq_list_j[jj] =  translate_codon(new_codon, from_string<uint32_t>(transl_table_list_j[jj]), static_cast<uint32_t>(j_codon_number));
             }
             i["codon_new_seq"] = join(codon_new_seq_list_i, multiple_separator);
             j["codon_new_seq"] = join(codon_new_seq_list_j, multiple_separator);

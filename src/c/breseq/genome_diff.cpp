@@ -4678,7 +4678,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       // Strand
       gvf[6] = "+";
       // Attributes - Reference base
-      string ref_base = ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]),  from_string(de[POSITION]));
+      string ref_base = ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]),  from_string<uint32_t>(de[POSITION]));
       gvf[8].append(";Reference_seq=").append( ref_base );
       // Attributes - New base
       gvf[8].append("Variant_seq=").append( de[NEW_SEQ] );
@@ -4729,15 +4729,15 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
     else if( de._type == SUB ){
       gvf[2] = "indel";
       // End
-      gvf[4] = to_string(from_string(de[POSITION]) + from_string(de[SIZE])); 
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1));
+      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE])); 
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1));
       gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
     }
     
     else if( de._type == DEL ){
       gvf[2] = "deletion";
       gvf[4] = gvf[3];
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1) );
       gvf[8].append(";Variant_seq=").append( "." );
     }
     
@@ -4752,7 +4752,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       gvf[2] = "mobile_element_insertion";
       gvf[4] = gvf[3];
       //Strand
-      if( from_string(de["strand"]) > 0 )
+      if( from_string<int32_t>(de["strand"]) > 0 )
         gvf[6] = "+";
       else
         gvf[6] = "-";
@@ -4766,11 +4766,11 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
        stringstream ss;
        gvf[4] = gvf[3];
        gvf[8].append("Reference_seq=").append( "." );
-       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
+       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1) );
     }
     else if( de._type == INV ){
       gvf[2] = "inversion";
-      gvf[4] = to_string(from_string(de[POSITION]) + from_string(de[SIZE]) - 1);
+      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1);
     }
     else if(( de._type == CON ) || ( de._type == INT )){
       gvf[2] = "substitution";
@@ -4779,7 +4779,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       uint32_t tid, start_pos, end_pos;
       ref_seq_info.parse_region(de["region"], tid, start_pos, end_pos);
       
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1) );
       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(tid, start_pos, end_pos ));
     }
     

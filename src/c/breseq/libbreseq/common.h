@@ -842,8 +842,9 @@ inline string join(const list<string>& values, const string& separator)
 
   // handle bool as either TRUE/FALSE or zero/non-zero number
   // Does not handle single-character T/F correctly 
-  // @JEB this is never called??
-  inline bool from_string(const string& s)
+  // Deliberately NOT an overload of from_string<T>(): when it was, a call that forgot the template
+  // argument, from_string(x), compiled silently and turned any number into 0/1.
+  inline bool bool_from_string(const string& s)
   {
     bool t = false;
     istringstream iss1(s);
@@ -877,7 +878,7 @@ inline string join(const list<string>& values, const string& separator)
   //! Short aliases to conversions
   inline int32_t n(string input) { return from_string<int32_t>(input); }
   inline uint32_t un(string input) { return from_string<uint32_t>(input); }
-	inline bool b(string input) { return from_string(input); }
+	inline bool b(string input) { return bool_from_string(input); }
 	inline string s(int32_t input) { return to_string(input); }
   
 	inline string to_upper(const string& input)
