@@ -1,0 +1,14 @@
+#=GENOME_DIFF	1.0
+SNP	1	20	REL606-5	2000	A
+SNP	2	21	REL606-5	2002	C
+SNP	3	.	REL606-5	2004	T
+SUB	4	.	REL606-5	5000	4	GG
+DEL	5	.	REL606-5	3000	10
+INS	6	.	REL606-5	7000	ACGT
+INS	7	.	REL606-5	7000	TT	insert_position=2
+MOB	8	.	REL606-5	15000	IS1	-1	9
+AMP	9	.	REL606-5	20000	12	2
+INV	10	.	REL606-5	22000	50
+CON	11	.	REL606-5	24000	6	REL606-5:26000-26008
+RA	20	.	REL606-5	2000	0	G	A	consensus_score=120.5	frequency=1	new_cov=20/22	prediction=consensus	total_cov=21/23
+RA	21	.	REL606-5	2002	0	A	C	frequency=2.5000e-01	new_cov=5/6	polymorphism_score=35.2	prediction=polymorphism	total_cov=21/23
