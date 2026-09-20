@@ -4226,13 +4226,23 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
             // The explicit <uint32_t> matters: a bare from_string() used to pick a bool overload, turning
             // both the table and the codon number into 1, so that every combined codon was translated
             // with the *initiation* codon table (CTG/TTG => M) no matter where it was in the gene.
+            //
+            // The first codon of a gene whose start is indeterminate is not an initiation codon, so, as
+            // when annotating a single SNP, it is translated as codon 2. The gene is not in scope here,
+            // but [codon_position_is_indeterminate] is "1" for exactly the genes with such a start (and
+            // the field is empty when that is none of them).
+            vector<string> start_is_indeterminate_list_i = split(i["codon_position_is_indeterminate"], multiple_separator);
+            vector<string> start_is_indeterminate_list_j = split(j["codon_position_is_indeterminate"], multiple_separator);
+
             if (transl_table_list_i[ii] != "NA") {
+              bool start_is_indeterminate = (ii < start_is_indeterminate_list_i.size()) && (start_is_indeterminate_list_i[ii] == "1");
               codon_new_seq_list_i[ii] = new_codon;
-              aa_new_seq_list_i[ii] =  translate_codon(new_codon, from_string<uint32_t>(transl_table_list_i[ii]), static_cast<uint32_t>(i_codon_number));
+              aa_new_seq_list_i[ii] =  translate_codon(new_codon, from_string<uint32_t>(transl_table_list_i[ii]), ( start_is_indeterminate && (i_codon_number == 1) ) ? 2 : static_cast<uint32_t>(i_codon_number));
             }
             if (transl_table_list_j[jj] != "NA") {
+              bool start_is_indeterminate = (jj < start_is_indeterminate_list_j.size()) && (start_is_indeterminate_list_j[jj] == "1");
               codon_new_seq_list_j[jj] = new_codon;
-              aa_new_seq_list_j[jj] =  translate_codon(new_codon, from_string<uint32_t>(transl_table_list_j[jj]), static_cast<uint32_t>(j_codon_number));
+              aa_new_seq_list_j[jj] =  translate_codon(new_codon, from_string<uint32_t>(transl_table_list_j[jj]), ( start_is_indeterminate && (j_codon_number == 1) ) ? 2 : static_cast<uint32_t>(j_codon_number));
             }
             i["codon_new_seq"] = join(codon_new_seq_list_i, multiple_separator);
             j["codon_new_seq"] = join(codon_new_seq_list_j, multiple_separator);

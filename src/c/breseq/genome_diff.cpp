@@ -4728,8 +4728,8 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
     
     else if( de._type == SUB ){
       gvf[2] = "indel";
-      // End
-      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE])); 
+      // End (inclusive, so that it spans the same bases as Reference_seq)
+      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1);
       gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1));
       gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
     }
