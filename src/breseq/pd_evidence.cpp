@@ -685,11 +685,9 @@ namespace breseq {
     // near 1. A shift below this floor also fits inside a single read piece, where RA and JC
     // evidence already see it, so the floor does not take away calls that only PD could make.
     // The fraction is --pair-distance-long-read-minimum-shift-fraction (default 0.03; 0 = OFF).
-    int32_t minimum_shift = settings.pair_distance_minimum_shift;
-    if ((minimum_shift == 0) && (settings.read_file_long_read_pair_distance != 0)) {
-      minimum_shift = static_cast<int32_t>(ceil(settings.pair_distance_long_read_minimum_shift_fraction * pair_median));
+    int32_t minimum_shift = pd_minimum_shift(settings, pair_median);
+    if ((settings.pair_distance_minimum_shift == 0) && (minimum_shift > 0))
       cerr << "  PD minimum size shift derived for synthetic long-read pairs: " << minimum_shift << endl;
-    }
 
     // Use the read group with the most mapped pairs, matching how dp_evidence picks its model.
     const PairedMappingDistanceDistributionSummaries& pmdd = summary.preliminary_paired_mapping_distance_distribution;

@@ -28,6 +28,18 @@
 
 namespace breseq {
 
+  //! The absolute floor on a PD size shift, in bases: --pair-distance-minimum-shift when given, and
+  //! otherwise -- only for synthetic pairs cut from long reads (--long-read-pair-distance) -- a
+  //! fraction of the median pair distance (--pair-distance-long-read-minimum-shift-fraction). 0 means
+  //! no floor. Shared by the stage-8 seed, which TESTS AGAINST this floor, and by pd_evidence, which
+  //! gates the final estimate on it, so that the two can never disagree about what it is.
+  inline int32_t pd_minimum_shift(const Settings& settings, double pair_distance_median)
+  {
+    if (settings.pair_distance_minimum_shift > 0) return settings.pair_distance_minimum_shift;
+    if (settings.read_file_long_read_pair_distance == 0) return 0;
+    return static_cast<int32_t>(ceil(settings.pair_distance_long_read_minimum_shift_fraction * pair_distance_median));
+  }
+
   //! Load the null distribution that pair-distance (PD) evidence tests against.
   //
   //  Reads the majority-orientation pair distance histogram written by the stage-03 fit

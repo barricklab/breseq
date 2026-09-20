@@ -803,6 +803,10 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _pd_short(0)
 , _pd_u(0)
 , _pd_last_b(0)
+, _pd_by_molecule(settings.read_file_long_read_pair_distance != 0)
+, _pd_u_long(0)
+, _pd_u_short(0)
+, _pd_tail_lower(0)
 , _pd_mean_covering_gap(0.0)
 {
 
@@ -976,6 +980,7 @@ identify_mutations_pileup::identify_mutations_pileup(
       // The orientation the null was built from. Pairs of any other orientation are not scored
       // against it; see dp_group::pd_orientation.
       _dp_groups[group_index].pd_orientation = it->second.majority_orientation;
+      _dp_groups[group_index].pd_minimum_shift = _pd_by_molecule ? pd_minimum_shift(settings, it->second.median) : 0;
       _pd_mean_covering_gap = max(_pd_mean_covering_gap, group_gap);
       usable_groups++;
     }
@@ -1016,6 +1021,10 @@ identify_mutations_pileup::identify_mutations_pileup(
       _pd_ring_long.assign(_pd_ring_w, 0);
       _pd_ring_short.assign(_pd_ring_w, 0);
       _pd_ring_u.assign(_pd_ring_w, 0);
+      if (_pd_by_molecule) {
+        _pd_ring_events.assign(_pd_ring_w, vector<pd_molecule_event>());
+        _pd_tail_lower = static_cast<int64_t>(_settings.pair_distance_tail_quantile * static_cast<double>(kPDuScale));
+      }
     } else {
       cerr << "WARNING: No paired read group has a usable mapping-distance histogram, so no" << endl;
       cerr << "         pair-distance (PD) evidence will be predicted. Pass" << endl;
@@ -1743,7 +1752,19 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
               if (u >= kPDuScale - lower_tail)   bin = kPDbinLong;
               else if (u <= lower_tail)          bin = kPDbinShort;
 
-              pd_add_interval(lo, hi, bin, u);
+              if (_pd_by_molecule) {
+                // One key per source read of one read group (see read_pair_molecule_id, alignment.h)
+                uint64_t molecule = (static_cast<uint64_t>(gi) << 48)
+                                  | (from_string<uint64_t>(read_pair_molecule_id(i->read_name())) & 0xFFFFFFFFFFFFULL);
+                // The same distance ranked in the null moved up, and down, by the floor
+                int32_t floor_shift = _dp_groups[gi].pd_minimum_shift;
+                int32_t d_long = max(0, d - floor_shift), d_short = d + floor_shift;
+                int64_t u_long  = (d_long  < static_cast<int32_t>(cdf.size())) ? cdf[d_long]  : kPDuScale;
+                int64_t u_short = (d_short < static_cast<int32_t>(cdf.size())) ? cdf[d_short] : kPDuScale;
+                pd_add_molecule_interval(lo, hi, molecule, u, u_long, u_short);
+              } else {
+                pd_add_interval(lo, hi, bin, u);
+              }
             }
           }
         }
@@ -2291,7 +2312,13 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     _pd_ring_long.assign(_pd_ring_w, 0);
     _pd_ring_short.assign(_pd_ring_w, 0);
     _pd_ring_u.assign(_pd_ring_w, 0);
+    if (_pd_by_molecule) {
+      _pd_ring_events.assign(_pd_ring_w, vector<pd_molecule_event>());
+      _pd_molecules.clear();
+    }
     _pd_n = 0;
+    _pd_u_long = 0;
+    _pd_u_short = 0;
     _pd_long = 0;
     _pd_short = 0;
     _pd_u = 0;
@@ -2955,6 +2982,55 @@ void identify_mutations_pileup::pd_add_interval(int32_t lo, int32_t hi, int bin,
 }
 
 
+/*! The molecule-mode counterpart of pd_add_interval: queue the pair's gap as two EVENTS, one at the
+ column where it starts covering and one just past where it stops. Same ring, same range guarantee.
+ */
+void identify_mutations_pileup::pd_add_molecule_interval(int32_t lo, int32_t hi, uint64_t molecule, int64_t u, int64_t u_long, int64_t u_short)
+{
+  int32_t next_b = static_cast<int32_t>(_pd_last_b) + 1;
+  ASSERT((lo >= next_b) && (hi + 1 <= next_b + _pd_max_span),
+         "Pair-distance ring write out of range: [" + to_string(lo) + "," + to_string(hi) +
+         "] with next column " + to_string(next_b) + " and span " + to_string(_pd_max_span));
+
+  pd_molecule_event enter = { molecule, +1, u, u_long, u_short };
+  pd_molecule_event leave = { molecule, -1, u, u_long, u_short };
+  _pd_ring_events[lo % _pd_ring_w].push_back(enter);
+  _pd_ring_events[(hi + 1) % _pd_ring_w].push_back(leave);
+}
+
+/*! Apply one queued event as its column is drained. The molecule's old contribution to the running
+ totals is removed, its state updated, and its new contribution added, so the totals always describe
+ one observation per molecule: n = 1, u = the mean quantile of its covering pairs, and a tail count
+ if that mean lies in the tail. Order of events within a column does not matter.
+ */
+void identify_mutations_pileup::pd_apply_molecule_event(uint64_t molecule, int32_t delta, int64_t u, int64_t u_long, int64_t u_short)
+{
+  pd_molecule_state& m = _pd_molecules[molecule];
+
+  // sign = -1 removes the molecule's current contribution, +1 adds it back after the update. A
+  // molecule is in the long tail if its mean quantile AGAINST THE RAISED NULL is, and in the short
+  // tail if its mean against the lowered one is -- each tail count belongs to its own test.
+  for (int sign = -1; sign <= +1; sign += 2) {
+    if (m.count > 0) {
+      int64_t mean_long = m.sum_u_long / m.count, mean_short = m.sum_u_short / m.count;
+      _pd_n       += sign;
+      _pd_u       += sign * (m.sum_u / m.count);
+      _pd_u_long  += sign * mean_long;
+      _pd_u_short += sign * mean_short;
+      if (mean_long >= kPDuScale - _pd_tail_lower) _pd_long  += sign;
+      if (mean_short <= _pd_tail_lower)            _pd_short += sign;
+    }
+    if (sign == -1) {
+      m.count       += delta;
+      m.sum_u       += delta * u;
+      m.sum_u_long  += delta * u_long;
+      m.sum_u_short += delta * u_short;
+    }
+  }
+  if (m.count <= 0) _pd_molecules.erase(molecule);
+}
+
+
 /*! Helper method to track pair-distance (PD) candidate regions.
 
  Called once per reference column (including empty columns), and once past the end of each reference
@@ -2998,6 +3074,12 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
     _pd_long  += _pd_ring_long[i];   _pd_ring_long[i] = 0;
     _pd_short += _pd_ring_short[i];  _pd_ring_short[i] = 0;
     _pd_u     += _pd_ring_u[i];      _pd_ring_u[i] = 0;
+    if (_pd_by_molecule) {
+      vector<pd_molecule_event>& events = _pd_ring_events[i];
+      for (size_t e = 0; e < events.size(); e++)
+        pd_apply_molecule_event(events[e].molecule, events[e].delta, events[e].u, events[e].u_long, events[e].u_short);
+      events.clear();
+    }
   }
   _pd_last_b = position;
 
@@ -3026,8 +3108,19 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
     }
   }
 
+  // In molecule mode each direction is tested against the null moved by the floor (see the comment
+  // on pd_molecule_event); the plain z above remains what the dispersion diagnostic records.
+  double z_long = z, z_short = z;
+  if (_pd_by_molecule && (_pd_n > 0)) {
+    double half = static_cast<double>(_pd_n) * static_cast<double>(kPDuScale) / 2.0;
+    double scale = sqrt(12.0 / static_cast<double>(_pd_n)) / static_cast<double>(kPDuScale);
+    z_long  = (static_cast<double>(_pd_u_long)  - half) * scale;
+    z_short = (static_cast<double>(_pd_u_short) - half) * scale;
+  }
+
   for (int bin = 0; bin < kPDnBins; bin++) {
     int32_t tail = (bin == kPDbinLong) ? _pd_long : _pd_short;
+    double z = (bin == kPDbinLong) ? z_long : z_short;   // deliberately shadows the plain z from here on
     bool right_way = (bin == kPDbinLong) ? (z >= _pd_z_seed) : (z <= -_pd_z_seed);
 
     // Never "above" once past the end of the sequence: closes an open region at the flush sentinel

@@ -322,6 +322,8 @@ namespace breseq {
       //! -- and their apparent distances are systematically long, so a local handful of them
       //! fabricates exactly the collective shift PD is looking for.
       string          pd_orientation;
+      //! The floor the molecule-mode seed tests against (pd_minimum_shift, pd_evidence.h); 0 = none.
+      int32_t         pd_minimum_shift;
     };
     //! A completed candidate region: discordant read pairs of a single focal strand and orientation.
     struct dp_candidate_region {
@@ -530,6 +532,8 @@ namespace breseq {
 
 		//! Add one read pair's gap interval [lo,hi] (in between-base coordinates) to the PD ring.
 		void pd_add_interval(int32_t lo, int32_t hi, int bin, int64_t u_scaled);
+		void pd_add_molecule_interval(int32_t lo, int32_t hi, uint64_t molecule, int64_t u, int64_t u_long, int64_t u_short);
+		void pd_apply_molecule_event(uint64_t molecule, int32_t delta, int64_t u, int64_t u_long, int64_t u_short);
 
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
@@ -679,6 +683,46 @@ namespace breseq {
 		int32_t _pd_long;                                   //!< running total of _pd_ring_long
 		int32_t _pd_short;                                  //!< running total of _pd_ring_short
 		int64_t _pd_u;                                      //!< running total of _pd_ring_u
+
+		// Synthetic pairs cut from long reads (--long-read-pair-distance) are NOT independent: the
+		// sibling pairs of one long read have inner gaps that overlap almost entirely, so they share
+		// the read's indel noise, and several of them cover any one column. Summed as independent
+		// observations they inflated the rank-sum z about threefold (its genome-wide sd was 3.6
+		// where the model says 1, and 1.4 once collapsed), and at a pair distance of 5000 that
+		// pushed the seed null past the range its tail fit can handle, so PD lost its calibration
+		// and accepted a flood of small spurious shifts.
+		//
+		// In this mode a column's statistic is therefore taken over MOLECULES: each source read
+		// contributes ONE observation, the mean quantile of its pairs covering the column, and is in
+		// a tail if that mean is. A difference array cannot express that -- a molecule's
+		// contribution changes as its pairs enter and leave -- so the ring holds events instead and
+		// the per-molecule state is updated as each column is drained. Everything stays integer.
+		// The running totals above (_pd_n, _pd_long, _pd_short, _pd_u) keep their meaning, in
+		// molecules, so nothing downstream of them changes.
+		//
+		// The seed also TESTS AGAINST THE FLOOR rather than against zero. Even counted in molecules
+		// the measured null stayed about twice as wide as the model (sigma 2.06), because a rank-sum
+		// test has the power to detect the shift of a few bases that sequence-dependent indel error
+		// puts on every read crossing a region -- a real difference that is not a mutation. Meanwhile
+		// z cannot exceed about sqrt(3n), and n is now tens of molecules rather than hundreds of
+		// pairs, so against that widened null a complete, unanimous 1.3-kb insertion scored below the
+		// cutoff. So each pair carries two more quantiles: u_long, its distance ranked in the null
+		// moved UP by the floor (the long seed asks "longer than the floor allows?"), and u_short,
+		// ranked in the null moved DOWN by it. A regional shift smaller than the floor then pulls
+		// both statistics AWAY from their thresholds and cannot produce an excursion, so the null is
+		// no longer inflated by them; a real event, far beyond the floor, is unaffected. With no
+		// floor the three quantiles are equal and this is the plain test.
+		struct pd_molecule_event { uint64_t molecule; int32_t delta; int64_t u, u_long, u_short; };
+		struct pd_molecule_state {
+		  int32_t count; int64_t sum_u, sum_u_long, sum_u_short;
+		  pd_molecule_state() : count(0), sum_u(0), sum_u_long(0), sum_u_short(0) {}
+		};
+		int64_t _pd_u_long;                                  //!< running total of molecules' mean u_long
+		int64_t _pd_u_short;                                 //!< running total of molecules' mean u_short
+		bool _pd_by_molecule;                                //!< true with --long-read-pair-distance
+		vector<vector<pd_molecule_event> > _pd_ring_events;  //!< per column: pairs whose gap starts / ended here
+		map<uint64_t, pd_molecule_state> _pd_molecules;      //!< molecules with a pair covering the current column
+		int64_t _pd_tail_lower;                              //!< lower-tail quantile bound, kPDuScale fixed point
 		uint32_t _pd_last_b;                                //!< last column drained (0 = nothing drained yet)
 		uint32_t _pd_region_start[kPDnBins];                //!< UNDEFINED_UINT32 = not currently in a region, per bin
 		uint32_t _pd_region_peak_position[kPDnBins];        //!< column of largest |z| while the region is open
