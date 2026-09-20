@@ -281,6 +281,19 @@ namespace breseq {
     int32_t s2;           // mate's aligned start          -- gap runs to s2 - 1
     int32_t d;            // reference distance (breseq's outer span)
 
+    //! The molecule this pair came from, and the weight it carries in the likelihood.
+    //
+    //  For an ordinary library every pair is its own molecule and the weight is 1, so nothing here
+    //  changes. With --long-read-pair-distance several sibling pairs cut from ONE long read cover the
+    //  same point; they are one molecule, and treating them as independent both multiplied the
+    //  reported counts by the number of siblings and made the size-shift interval too narrow by the
+    //  square root of it. So the molecule is the source read (read_pair_molecule_id, alignment.h),
+    //  counts are taken over molecules, and each pair's log-likelihood is weighted by 1/m, where m is
+    //  how many of its molecule's pairs are in the sample -- a molecule then contributes one
+    //  observation's worth of information however many pairs it was cut into.
+    uint64_t molecule;
+    double   weight;
+
     //! Does this pair's gap reach position b at all? This is the denominator condition: the molecule
     //  was sampled across b, so it has something to say about what is there.
     bool covers(int32_t b) const { return (e1 <= b) && (b <= s2 - 1); }
@@ -300,8 +313,8 @@ namespace breseq {
   //  has to see those too, both to measure them and to be able to supersede the DP they produce.
   class pd_pair_scanner : public pileup_base {
   public:
-    pd_pair_scanner(const string& bam, const string& fasta, int32_t max_span, const string& orientation)
-      : pileup_base(bam, fasta), m_max_span(max_span), m_orientation(orientation), m_out(NULL)
+    pd_pair_scanner(const string& bam, const string& fasta, int32_t max_span, const string& orientation, bool by_molecule)
+      : pileup_base(bam, fasta), m_max_span(max_span), m_orientation(orientation), m_by_molecule(by_molecule), m_out(NULL)
       { set_print_progress(false); }
 
     int32_t tid_for_seq_id(const string& seq_id) const {
@@ -348,12 +361,17 @@ namespace breseq {
       p.d  = a.insert_size();
       if (p.s2 - 1 < p.e1) return;        // mates overlap: no gap, so no positional information
       if (p.d > m_max_span) return;
+      // Every pair is its own molecule unless synthetic pairs are in use (see pd_pair::molecule)
+      p.molecule = m_by_molecule ? from_string<uint64_t>(read_pair_molecule_id(a.read_name()))
+                                 : static_cast<uint64_t>(m_out->size());
+      p.weight = 1.0;
       m_out->push_back(p);
     }
 
   private:
     int32_t m_max_span;
     string m_orientation;
+    bool m_by_molecule;
     vector<pd_pair>* m_out;
   };
 
@@ -377,15 +395,16 @@ namespace breseq {
     // actually being profiled -- is held fixed here.
     double f = 0.5;
     for (int iter = 0; iter < 12; iter++) {
-      double sum_post = 0.0;
+      double sum_post = 0.0, sum_weight = 0.0;
       for (size_t i = 0; i < pairs.size(); i++) {
         double hs = null.supporting(pairs[i].d, delta) / H;
         double hn = null.at(pairs[i].d);
         double num = f * hs;
         double den = num + (1.0 - f) * hn;
-        if (den > 0.0) sum_post += num / den;
+        if (den > 0.0) sum_post += pairs[i].weight * (num / den);
+        sum_weight += pairs[i].weight;
       }
-      double f_new = sum_post / static_cast<double>(pairs.size());
+      double f_new = sum_post / sum_weight;
       if (f_new < 1e-9) f_new = 1e-9;
       if (f_new > 1.0 - 1e-9) f_new = 1.0 - 1e-9;
       if (fabs(f_new - f) < 1e-9) { f = f_new; break; }
@@ -397,7 +416,7 @@ namespace breseq {
       double hs = null.supporting(pairs[i].d, delta) / H;
       double hn = null.at(pairs[i].d);
       double mix = f * hs + (1.0 - f) * hn;
-      logL += log(mix > 0.0 ? mix : 1e-300);
+      logL += pairs[i].weight * log(mix > 0.0 ? mix : 1e-300);
     }
     f_hat = f;
     return logL;
@@ -461,11 +480,17 @@ namespace breseq {
   static void pd_classify_pairs(const vector<pd_pair>& pairs, const pd_null& null,
                                 int32_t b, int32_t delta,
                                 int& supporting, int& against, int& ambiguous,
-                                size_t& distinct, vector<int>& category)
+                                size_t& distinct, vector<int>& category, int& supporting_pairs)
   {
-    supporting = 0; against = 0; ambiguous = 0;
+    supporting = 0; against = 0; ambiguous = 0; supporting_pairs = 0;
     category.assign(pairs.size(), 0);
     set<pair<int32_t, int32_t> > ends;
+    // The three counts are over MOLECULES (see pd_pair::molecule); `category` stays per pair, since
+    // it is what the plot and the localization step read. A molecule is supporting if any of its
+    // pairs is and none is against, against the other way round, and ambiguous otherwise -- which
+    // includes the molecule whose pairs disagree. bit 1 = has a supporting pair, bit 2 = an against.
+    map<uint64_t, int> molecule_votes;
+    map<uint64_t, pair<int32_t, int32_t> > molecule_ends;
 
     double H = null.H(delta);
     if (H <= 0.0) { distinct = 0; return; }
@@ -479,24 +504,33 @@ namespace breseq {
       // A pair whose gap cannot hold the whole removed span is not evidence for the call however
       // well its distance fits, so it is never counted as supporting. Without this a deletion draws
       // support from pairs that demonstrably straddle only part of it.
+      int& votes = molecule_votes[pairs[i].molecule];
       if (!pairs[i].accommodates(b, deleted) && (lr >= kPDSupportOdds)) {
         category[i] = 3;
-        ambiguous++;
         continue;
       }
       if (lr >= kPDSupportOdds) {
         category[i] = 1;
+        supporting_pairs++;
+        votes |= 1;
+        // One representative pair per molecule (the first seen) for the distinct-ends count below
+        molecule_ends.insert(make_pair(pairs[i].molecule, make_pair(pairs[i].read_start, pairs[i].s2)));
+      } else if (lr <= 1.0 / kPDSupportOdds) {
+        category[i] = 2;
+        votes |= 2;
+      } else {
+        category[i] = 3;
+      }
+    }
+    for (map<uint64_t, int>::const_iterator m = molecule_votes.begin(); m != molecule_votes.end(); m++) {
+      if (m->second == 1) {
         supporting++;
         // Distinct FRAGMENT ends, so PCR duplicates of one molecule cannot carry a prediction --
         // the same guard JC's pos_hash score and MP's distinct read count provide.
-        ends.insert(make_pair(pairs[i].read_start, pairs[i].s2));
-      } else if (lr <= 1.0 / kPDSupportOdds) {
-        category[i] = 2;
-        against++;
-      } else {
-        category[i] = 3;
-        ambiguous++;
+        ends.insert(molecule_ends[m->first]);
       }
+      else if (m->second == 2) against++;
+      else ambiguous++;
     }
     distinct = ends.size();
   }
@@ -838,7 +872,7 @@ namespace breseq {
 
     pd_pair_scanner* scanner =
       new pd_pair_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name,
-                          max_span, required_orientation);
+                          max_span, required_orientation, settings.read_file_long_read_pair_distance != 0);
 
     //
     // Step 2: rescan, estimate, localize.
@@ -865,6 +899,13 @@ namespace breseq {
       for (size_t i = 0; i < pairs.size(); i++)
         if (pairs[i].covers(static_cast<int32_t>(r.peak_position))) covering.push_back(pairs[i]);
       if (covering.empty()) continue;
+      {
+        // 1/m per pair, m = its molecule's pairs in THIS sample (see pd_pair::weight)
+        map<uint64_t, int32_t> pairs_per_molecule;
+        for (size_t i = 0; i < covering.size(); i++) pairs_per_molecule[covering[i].molecule]++;
+        for (size_t i = 0; i < covering.size(); i++)
+          covering[i].weight = 1.0 / static_cast<double>(pairs_per_molecule[covering[i].molecule]);
+      }
 
       int32_t delta = 0, delta_lower = 0, delta_upper = 0;
       double f_hat = 0.0, logL_hat = 0.0;
@@ -883,16 +924,17 @@ namespace breseq {
 
       // Count at the placed position, again over the whole window -- pd_classify_pairs applies the
       // coverage test itself, so the denominator is every molecule sampled across the breakpoint.
-      int supporting = 0, against = 0, ambiguous = 0;
+      int supporting = 0, against = 0, ambiguous = 0, supporting_pairs = 0;
       size_t distinct = 0;
       vector<int> category;
-      pd_classify_pairs(pairs, null, b, delta, supporting, against, ambiguous, distinct, category);
+      pd_classify_pairs(pairs, null, b, delta, supporting, against, ambiguous, distinct, category, supporting_pairs);
       if (supporting == 0) continue;
 
       // The estimated size and the pairs' geometry disagree when most of the pairs whose distance
       // fits the event cannot all be describing one position. Recorded and rejected rather than
       // silently repaired.
-      bool inconsistent = (2 * overlap_depth < supporting);
+      // (overlap_depth is a count of PAIRS, so it is compared with the supporting pairs)
+      bool inconsistent = (2 * overlap_depth < supporting_pairs);
 
       // Snap onto a validated split-read breakpoint inside the interval whose implied size also
       // agrees. Where split reads exist they locate the event to the base, which PD cannot.
@@ -932,7 +974,7 @@ namespace breseq {
       // supporting / (supporting + against), every call comes out looking clonal. It also disagreed
       // with the evidence plot, which filters on b alone and therefore drew pairs the table did not
       // count.
-      pd_classify_pairs(pairs, null, b, delta, supporting, against, ambiguous, distinct, category);
+      pd_classify_pairs(pairs, null, b, delta, supporting, against, ambiguous, distinct, category, supporting_pairs);
 
       pd_call c;
       c.seq_id = r.seq_id;
