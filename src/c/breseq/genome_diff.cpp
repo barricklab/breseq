@@ -4679,29 +4679,42 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       gvf[6] = "+";
       // Attributes - Reference base
       string ref_base = ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]),  from_string<uint32_t>(de[POSITION]));
-      gvf[8].append(";Reference_seq=").append( ref_base );
+      gvf[8].append("Reference_seq=").append( ref_base );
       // Attributes - New base
-      gvf[8].append("Variant_seq=").append( de[NEW_SEQ] );
+      gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
       
+      // The read counts come from the supporting RA evidence. A SNP need not have any (e.g. a
+      // hand-written GD file), in which case they are simply left out.
       diff_entry_list_t ev_list = in_evidence_list(de);
-      ASSERT(ev_list.size() == 1, "Did not find RA evidence supporting SNP\n" + to_string(de))
-      cDiffEntry& ev = *(ev_list.front());
-      
-      // Score
-      gvf[5] = ev[CONSENSUS_SCORE];
-        
-      // Attributes - Total Reads 
-      vector<string> covs = split( ev[TOTAL_COV], "/" );
-      uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
-      gvf[8] = gvf[8].append(";Total_reads=").append(to_string(cov));
-      
-      // Attributes - Variant Reads
-      vector<string> variant_covs = split( ev[NEW_COV], "/" );
-      uint32_t variant_cov = from_string<uint32_t>(variant_covs[0]) + from_string<uint32_t>(variant_covs[1]);
-      gvf[8] = gvf[8].append(";Variant_reads=").append(to_string(variant_cov));
-        
-      // Attributes - Frequency 
-      gvf[8].append(";Variant_freq=").append( ev[FREQUENCY] );
+      if ((ev_list.size() == 1) && (ev_list.front()->_type == RA)) {
+        cDiffEntry& ev = *(ev_list.front());
+
+        // Score
+        if (ev.entry_exists(CONSENSUS_SCORE))
+          gvf[5] = ev[CONSENSUS_SCORE];
+
+        // Attributes - Total Reads
+        if (ev.entry_exists(TOTAL_COV)) {
+          vector<string> covs = split( ev[TOTAL_COV], "/" );
+          if (covs.size() == 2) {
+            uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
+            gvf[8].append(";Total_reads=").append(to_string(cov));
+          }
+        }
+
+        // Attributes - Variant Reads
+        if (ev.entry_exists(NEW_COV)) {
+          vector<string> variant_covs = split( ev[NEW_COV], "/" );
+          if (variant_covs.size() == 2) {
+            uint32_t variant_cov = from_string<uint32_t>(variant_covs[0]) + from_string<uint32_t>(variant_covs[1]);
+            gvf[8].append(";Variant_reads=").append(to_string(variant_cov));
+          }
+        }
+
+        // Attributes - Frequency
+        if (ev.entry_exists(FREQUENCY))
+          gvf[8].append(";Variant_freq=").append( ev[FREQUENCY] );
+      }
       
 
       if (de.entry_exists("snp_type")) {
@@ -4736,7 +4749,8 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
     
     else if( de._type == DEL ){
       gvf[2] = "deletion";
-      gvf[4] = gvf[3];
+      // End (inclusive, so that it spans the same bases as Reference_seq)
+      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1);
       gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1) );
       gvf[8].append(";Variant_seq=").append( "." );
     }
@@ -4774,7 +4788,8 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
     }
     else if(( de._type == CON ) || ( de._type == INT )){
       gvf[2] = "substitution";
-      gvf[4] = gvf[3];
+      // End (inclusive, so that it spans the same bases as Reference_seq)
+      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1);
       
       uint32_t tid, start_pos, end_pos;
       ref_seq_info.parse_region(de["region"], tid, start_pos, end_pos);
@@ -4783,12 +4798,13 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(tid, start_pos, end_pos ));
     }
     
-    // ID attribute
-    if( gvf[8].compare( "" ) == 0 || ( gvf[8].size()>8 && (gvf[8].substr(0,3).compare("ID=") == 0)) ){
+    // ID attribute: required on every line and unique within the file, hence the GD entry id
+    // (two mutations can share a type and position, e.g. INS that differ in insert_position).
+    {
       string s = "";
       s.append("ID=").append(gvf[0]).append(":").append(gvf[1]).append(":");
-      s.append(gvf[2]).append(":").append(gvf[3]).append(";");
-      s.append(gvf[8]);
+      s.append(gvf[2]).append(":").append(gvf[3]).append(":").append(de._id);
+      if (!gvf[8].empty()) s.append(";").append(gvf[8]);
       gvf[8] = s;
     }
     
@@ -4804,10 +4820,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
   output << "##source-method Source=breseq;Type=SNV;Dbxref=http://barricklab.org/breseq;Comment=Mapping and variant calling with breseq;" << endl;
   output << "" << endl;
   for( size_t i=0; i<featuresGVF.size(); i++ ){
-    for( size_t j=0; j<featuresGVF[i].size(); j++ ){
-      output << featuresGVF[i][j] << "\t";
-    }
-    output << "\n";
+    output << join(featuresGVF[i], "\t") << "\n";
   }
   output.close();
   
