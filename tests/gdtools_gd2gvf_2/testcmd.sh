@@ -9,9 +9,13 @@ DIFF_IGNORE='^##(file-date|source-method)'
 CURRENT_OUTPUTS[0]="${SELF}/output.gvf"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gvf"
 
+# Annotated (adds Variant_effect and the codon attributes), and with every sequence in full
 TESTCMD="\
     ${GDTOOLS} \
-        GD2GVF \
+        CONVERT \
+        -f GVF \
+        --annotate \
+        --gvf-max-sequence-length 0 \
         -o ${SELF}/output.gvf \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
         ${SELF}/input.gd \

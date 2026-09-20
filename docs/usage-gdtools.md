@@ -72,3 +72,68 @@ Output file containing the mutated reference genome. DEFAULT: "output.\*"
 
 Output format. Possible values: `GENBANK`, `FASTA`, or `GFF3`.
 
+### gdtools CONVERT
+
+Usage:
+
+    gdtools CONVERT -f GVF [ -o output.gvf -a ] -r reference.gbk input.gd
+
+Convert a GenomeDiff file to another format (`GD`, `VCF`, `GVF`, or `JSON`), or a
+VCF file to GenomeDiff. `gdtools GD2VCF`, `VCF2GD` and `GD2GVF` are older names
+for the same conversions.
+
+`-r <file_path>, --reference=<file_path>`
+
+Reference sequence files (Genbank, GFF, or FASTA). This option may be
+entered multiple times. REQUIRED for VCF and GVF output
+
+`-a, --annotate`
+
+Annotate the mutations first. In GVF output this adds `Variant_effect` and the
+codon and amino acid attributes to SNPs.
+
+`--gvf-max-sequence-length=<bases>`
+
+In GVF output, a `Reference_seq` or `Variant_seq` longer than this is written as
+`~<length>`. Zero means always write the full sequence. DEFAULT: 50
+
+#### How mutations are written as GVF
+
+Output follows [Genome Variation Format 1.10](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gvf.md).
+Each line says that `Variant_seq` replaces the reference bases from `start` to
+`end`, which are `Reference_seq`. It describes exactly the change that
+`gdtools APPLY` makes for the same entry.
+
+| GenomeDiff | GVF type | start..end | Reference_seq | Variant_seq |
+|---|---|---|---|---|
+| SNP | `SNV` | position | the base | new base |
+| SUB, same length | `MNV` | replaced bases | those bases | new bases |
+| SUB, otherwise | `indel` | replaced bases | those bases | new bases |
+| DEL | `deletion` | deleted bases | those bases | `-` |
+| INS | `insertion` | position (the site is 3' of it) | `-` | inserted bases |
+| AMP, new copy number 2 | `tandem_duplication` | amplified bases | one copy | two copies |
+| AMP, otherwise | `copy_number_gain` | amplified bases | one copy | all of the copies |
+| MOB | `mobile_element_insertion` | the base before the target site duplication | `-` | new copy of the target site, then the element |
+| MOB that deletes target site bases | `indel` | deleted bases | those bases | the element |
+| INV | `inversion` | inverted bases | those bases | their reverse complement |
+| CON, INT | `substitution` if the same length, otherwise `indel` | replaced bases | those bases | the donor sequence |
+
+- Sequences are always on the reference strand, so the strand column is always
+  `+`. The orientation of a mobile element is in `repeat_strand`.
+- `-` means no sequence. `~<length>` stands in for a sequence that is longer
+  than `--gvf-max-sequence-length`.
+- A mutation that is not at 100% frequency lists both alleles, the new one
+  first: `Variant_seq=C,A;Variant_freq=0.2500,0.7500;Variant_reads=11:33`.
+- The score is the average score of the evidence supporting the mutation. It is
+  not Phred scaled.
+- `gd_type` and `gd_id` give the type and ID of the GenomeDiff entry. `AMP`
+  lines have `copy_number`, `MOB` lines `repeat_name`, `repeat_strand` and
+  `duplication_size`, and `CON`/`INT` lines a `Breakpoint_detail` for the donor
+  region.
+- A feature that crosses the origin of a circular sequence has an `end` past the
+  length of the sequence, as in GFF3.
+- Several lines at one site (e.g., `INS` entries that differ in
+  `insert_position`) are in 5' to 3' order.
+- A mutation `within` another one is omitted with a warning. Its position counts
+  bases of the new sequence, so it has no reference coordinate.
+

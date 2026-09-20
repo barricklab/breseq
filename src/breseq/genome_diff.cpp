@@ -4518,6 +4518,33 @@ void cGenomeDiff::write_table_file(
 //
 // IMPORTANT: Although it doesn't seem to specify -- ALL columns must be separated by TABS, not spaces
   
+// Average score of the evidence items supporting a mutation, for the VCF QUAL and GVF score
+// columns. Returns false when none of them has a score.
+static bool average_evidence_score(const diff_entry_list_t& ev, double& average_score)
+{
+  double num_evidence(0.0);
+  double quality(0.0);
+  for(diff_entry_list_t::const_iterator it=ev.begin(); it != ev.end(); it++) {
+    // One score now covers both prediction kinds, so the branch on PREDICTION that used to
+    // pick which of two scores to read is gone.
+    if ((*it)->entry_exists(SCORE)) {
+      num_evidence++;
+      quality += from_string<double>((*it)->get(SCORE));
+    } else if ((*it)->entry_exists(CONSENSUS_SCORE) || (*it)->entry_exists(POLYMORPHISM_SCORE)) {
+      // Evidence written before the scores were merged.
+      const char* legacy = ((*it)->entry_exists(PREDICTION) && ((*it)->get(PREDICTION) == "consensus")) ? CONSENSUS_SCORE : POLYMORPHISM_SCORE;
+      if ((*it)->entry_exists(legacy)) {
+        num_evidence++;
+        quality += from_string<double>((*it)->get(legacy));
+      }
+    }
+  }
+  if (num_evidence == 0.0) return false;
+  average_score = quality / num_evidence;
+  return true;
+}
+
+
 void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_info)
 {  
   ofstream output( vcffile.c_str() );
@@ -4580,31 +4607,10 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
     }
     
     // Quality
-    // Gets carried forward from RA lines (and averaged if multiple apply)
-    
-    // Carry forward quality from related RA evidence
-    diff_entry_list_t ev = in_evidence_list(mut);
-    if ((ev.size() >= 1)) {
-      double num_evidence(0.0);
-      double quality(0.0);
-      for(diff_entry_list_t::iterator it=ev.begin(); it != ev.end(); it++) {
-        // One score now covers both prediction kinds, so the branch on PREDICTION that used to
-        // pick which of two scores to read is gone.
-        if ((*it)->entry_exists(SCORE)) {
-          num_evidence++;
-          quality += from_string<double>((*it)->get(SCORE));
-        } else if ((*it)->entry_exists(CONSENSUS_SCORE) || (*it)->entry_exists(POLYMORPHISM_SCORE)) {
-          // Evidence written before the scores were merged.
-          const char* legacy = ((*it)->get(PREDICTION) == "consensus") ? CONSENSUS_SCORE : POLYMORPHISM_SCORE;
-          if ((*it)->entry_exists(legacy)) {
-            num_evidence++;
-            quality += from_string<double>((*it)->get(legacy));
-          }
-        }
-      }
-      if (num_evidence != 0.0) {
-        qual = formatted_double(quality/num_evidence, 1).to_string();
-      }
+    // Gets carried forward from the supporting evidence (and averaged if multiple apply)
+    double average_score(0.0);
+    if (average_evidence_score(in_evidence_list(mut), average_score)) {
+      qual = formatted_double(average_score, 1).to_string();
     }
     
     switch (mut._type) 
@@ -4747,208 +4753,325 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
   output.close();
 }
   
-// Convert GD file to GVF file
-void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_info, bool snv_only)
-{  
+// ---- GVF output -------------------------------------------------------------------------------
+//
+// Genome Variation Format 1.10
+//   https://github.com/The-Sequence-Ontology/Specifications/blob/master/gvf.md
+//
+// The points of the specification that decide how a GD mutation has to be written:
+//
+//  * Reference_seq and Variant_seq are required on every line, and Variant_seq is what REPLACES
+//    Reference_seq between start and end. "-" means no sequence (an insertion has Reference_seq=-,
+//    a deletion Variant_seq=-); "." means unknown, which is never true of a breseq prediction.
+//    "~<length>" stands in for a sequence that is too long to be worth writing out.
+//  * A zero-length feature has start == end and its site is 3' of that base. This is the same
+//    convention as the position of a GD INS.
+//  * Sequences are given on the strand in column 7. Everything here is reference (+) strand, so
+//    that column is always "+", including for a MOB whose repeat is in the reverse orientation.
+//  * A mixed sample lists every allele that is present, the reference allele included, with a
+//    Variant_freq for each. Variant_reads separates the per-allele counts with ":".
+//  * The type (column 3) is an SO sequence_alteration term. SO substitution/MNV mean the two
+//    sequences have the same length; "indel" is the term for a replacement that changes length.
+//
+// Each case below has to describe exactly the change that gdtools APPLY makes for that entry.
 
-  diff_entry_list_t diff_entry_list = this->get_list();
-  diff_entry_list_t::iterator it = diff_entry_list.begin();
-  
-  // Stores the features
-  vector< vector<string> > features;
-  vector< vector<string> > featuresGVF;
-  
+// Reserved characters in column 9 are URL-escaped.
+static string gvf_escape(const string& s)
+{
+  string escaped;
+  for (size_t i = 0; i < s.size(); i++) {
+    unsigned char c = static_cast<unsigned char>(s[i]);
+    if ((c == ';') || (c == '=') || (c == '%') || (c == '&') || (c == ',') || (c < 0x20) || (c == 0x7F)) {
+      char buffer[4];
+      snprintf(buffer, sizeof(buffer), "%%%02X", c);
+      escaped += buffer;
+    } else {
+      escaped += s[i];
+    }
+  }
+  return escaped;
+}
+
+// How one allele is written: "-" for no sequence, "~<length>" when it is longer than the cutoff
+// (a cutoff of zero means never abbreviate).
+static string gvf_allele(const string& seq, uint32_t max_sequence_length)
+{
+  if (seq.empty()) return "-";
+  if ((max_sequence_length != 0) && (seq.size() > max_sequence_length)) return "~" + to_string(seq.size());
+  return seq;
+}
+
+// Reference bases [start_1, end_1]. A feature that crosses the origin of a circular sequence is
+// written the GFF3 way, with an end that is past the length of the sequence, so wrap around for it
+// (get_sequence_1 would stop at the last base).
+static string gvf_reference_bases(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start_1, int32_t end_1)
+{
+  int32_t length = static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length());
+  if ((end_1 > length) && ref_seq_info.is_circular(seq_id) && (start_1 <= length) && (end_1 - length < start_1)) {
+    return ref_seq_info.get_sequence_1(seq_id, start_1, length) + ref_seq_info.get_sequence_1(seq_id, 1, end_1 - length);
+  }
+  return ref_seq_info.get_sequence_1(seq_id, start_1, end_1);
+}
+
+static string gvf_file_date()
+{
+  time_t now = time(NULL);
+  char buffer[32];
+  strftime(buffer, sizeof(buffer), "%Y-%m-%d", localtime(&now));
+  return buffer;
+}
+
+// Convert GD file to GVF file
+void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_info, bool snv_only, uint32_t max_sequence_length)
+{
+  vector<string> lines;
+
   // We only write entries for mutations
   diff_entry_list_t mut_list = this->mutation_list();
-  
-  // Processes the features
-  // gvf[0]: ID of reference
-  // gvf[1]: Source
-  // gvf[2]: Type
-  // gvf[3]: Start
-  // gvf[4]: End
-  // gvf[5]: Score
-  // gvf[6]: Strand
-  // gvf[7]: Phase
-  // gvf[8]: Attributes    
-  
+
   for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); it++)
   {
     cDiffEntry& de = **it;
-    
-    vector<string> gvf(9,"");
-    
-    for( int j=5; j<8; j++ ){
-      gvf[j] = ".";
+
+    if (snv_only && (de._type != SNP)) continue;
+
+    // The position of a mutation inside of a newly inserted sequence (e.g., within a new MOB copy)
+    // counts bases of that insertion. It cannot be written as a reference coordinate.
+    if (de.entry_exists(WITHIN)) {
+      WARN("Mutation 'within' another mutation cannot be written as GVF (will be omitted):\n" + de.as_string());
+      continue;
     }
-    
-    // Common to all entries
-    // SeqID
-    gvf[0] = de[SEQ_ID];
-    // Source
-    gvf[1] = "breseq";
-    // Position
-    gvf[3] = de[POSITION];
-    
-    if( de._type == SNP )
+
+    const string seq_id = de[SEQ_ID];
+    const int32_t pos = from_string<int32_t>(de[POSITION]);
+    const int32_t size = de.entry_exists(SIZE) ? from_string<int32_t>(de[SIZE]) : 0;
+
+    // What has to be decided for each type: the SO term, the reference bases [start, end] that are
+    // replaced (none of them when is_insertion, which goes 3' of start), and what replaces them.
+    string type;
+    int32_t start(pos), end(pos);
+    bool is_insertion(false);
+    string variant_seq;
+    vector<string> extra_attributes;
+
+    switch (de._type)
     {
-      // Type
-      gvf[2] = "SNV";
-      // End
-      gvf[4] = de[POSITION];
-      // Strand
-      gvf[6] = "+";
-      // Attributes - Reference base
-      string ref_base = ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]),  from_string<uint32_t>(de[POSITION]));
-      gvf[8].append("Reference_seq=").append( ref_base );
-      // Attributes - New base
-      gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
-      
-      // The read counts come from the supporting RA evidence. A SNP need not have any (e.g. a
-      // hand-written GD file), in which case they are simply left out.
-      diff_entry_list_t ev_list = in_evidence_list(de);
-      if ((ev_list.size() == 1) && (ev_list.front()->_type == RA)) {
-        cDiffEntry& ev = *(ev_list.front());
+      case SNP:
+      {
+        type = "SNV";
+        variant_seq = de[NEW_SEQ];
+      } break;
 
-        // Score
-        if (ev.entry_exists(SCORE))
-          gvf[5] = ev[SCORE];
-        else if (ev.entry_exists(CONSENSUS_SCORE))
-          gvf[5] = ev[CONSENSUS_SCORE];
+      case SUB:
+      {
+        variant_seq = de[NEW_SEQ];
+        type = (static_cast<int32_t>(variant_seq.size()) == size) ? "MNV" : "indel";
+        end = pos + size - 1;
+      } break;
 
-        // Attributes - Total Reads
-        if (ev.entry_exists(TOTAL_COV)) {
-          vector<string> covs = split( ev[TOTAL_COV], "/" );
-          if (covs.size() == 2) {
-            uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
-            gvf[8].append(";Total_reads=").append(to_string(cov));
+      case DEL:
+      {
+        type = "deletion";
+        end = pos + size - 1;
+      } break;
+
+      case INS:
+      {
+        type = "insertion";
+        is_insertion = true;
+        variant_seq = de[NEW_SEQ];
+      } break;
+
+      case AMP:
+      {
+        uint32_t new_copy_number = from_string<uint32_t>(de[NEW_COPY_NUMBER]);
+        type = (new_copy_number == 2) ? "tandem_duplication" : "copy_number_gain";
+        end = pos + size - 1;
+        string one_copy = gvf_reference_bases(ref_seq_info, seq_id, start, end);
+        for (uint32_t i = 0; i < new_copy_number; i++) variant_seq += one_copy;
+        extra_attributes.push_back("copy_number=" + to_string(new_copy_number));
+      } break;
+
+      case MOB:
+      {
+        int32_t duplication_size = from_string<int32_t>(de["duplication_size"]);
+
+        // Includes everything but the target site duplication (ins_start, del_start, ...)
+        variant_seq = mob_replace_sequence(ref_seq_info, de);
+
+        if (duplication_size > 0) {
+          // The position is the first duplicated base. The new copy of the target site and then
+          // the element go in before it, leaving the original copy of the target site after them.
+          type = "mobile_element_insertion";
+          is_insertion = true;
+          start = end = pos - 1;
+          variant_seq = gvf_reference_bases(ref_seq_info, seq_id, pos, pos + duplication_size - 1) + variant_seq;
+        } else if (duplication_size == 0) {
+          type = "mobile_element_insertion";
+          is_insertion = true;
+        } else {
+          // Target site bases are deleted rather than duplicated: the element replaces them, which
+          // is not an insertion as SO defines one. [gd_type] still says what this is.
+          type = "indel";
+          end = pos - duplication_size - 1;
+        }
+
+        extra_attributes.push_back("repeat_name=" + gvf_escape(de["repeat_name"]));
+        extra_attributes.push_back("repeat_strand=" + string((from_string<int32_t>(de["strand"]) > 0) ? "+" : "-"));
+        extra_attributes.push_back("duplication_size=" + to_string(duplication_size));
+      } break;
+
+      case INV:
+      {
+        type = "inversion";
+        end = pos + size - 1;
+        variant_seq = reverse_complement(gvf_reference_bases(ref_seq_info, seq_id, start, end));
+      } break;
+
+      case CON:
+      case INT:
+      {
+        uint32_t donor_target_id, donor_start, donor_end;
+        ref_seq_info.parse_region(de["region"], donor_target_id, donor_start, donor_end);
+        ASSERT(donor_start != donor_end, "Cannot process CON/INT mutation with end == start. ID:" + de._id);
+
+        // A region given high..low means the donor sequence goes in reverse complemented
+        bool donor_is_reversed = (donor_start > donor_end);
+        if (donor_is_reversed) swap(donor_start, donor_end);
+        variant_seq = ref_seq_info[donor_target_id].get_sequence_1(donor_start, donor_end);
+        if (donor_is_reversed) variant_seq = reverse_complement(variant_seq);
+
+        if (size == 0) {
+          type = "insertion";
+          is_insertion = true;
+        } else {
+          type = (static_cast<int32_t>(variant_seq.size()) == size) ? "substitution" : "indel";
+          end = pos + size - 1;
+        }
+
+        extra_attributes.push_back("Breakpoint_detail=" + gvf_escape(ref_seq_info[donor_target_id].m_seq_id)
+                                   + ":" + to_string(donor_start) + "-" + to_string(donor_end) + ":" + (donor_is_reversed ? "-" : "+"));
+      } break;
+
+      default:
+        WARN("Mutation type cannot be written as GVF (will be omitted):\n" + de.as_string());
+        continue;
+    }
+
+    string reference_seq;
+    if (is_insertion && (start == 0)) {
+      // There is no base for an insertion before the first base to be 3' of. Write it as the
+      // first base being replaced by the inserted bases followed by itself.
+      type = "indel";
+      start = end = 1;
+      reference_seq = ref_seq_info.get_sequence_1(seq_id, 1, 1);
+      variant_seq += reference_seq;
+    } else if (!is_insertion) {
+      reference_seq = gvf_reference_bases(ref_seq_info, seq_id, start, end);
+    }
+
+    // A mutation that is not at 100% frequency is a mixed sample: the reference allele is there too.
+    double frequency = de.entry_exists(FREQUENCY) ? from_string<double>(de[FREQUENCY]) : 1.0;
+    bool is_mixed = (frequency < 1.0);
+
+    vector<string> attributes;
+    attributes.push_back("ID=" + gvf_escape(seq_id) + ":breseq:" + type + ":" + to_string(start) + ":" + gvf_escape(de._id));
+    attributes.push_back("Reference_seq=" + gvf_allele(reference_seq, max_sequence_length));
+    attributes.push_back("Variant_seq=" + gvf_allele(variant_seq, max_sequence_length)
+                         + (is_mixed ? "," + gvf_allele(reference_seq, max_sequence_length) : ""));
+    attributes.push_back("Variant_freq=" + (is_mixed ? formatted_double(frequency, 4).to_string() + "," + formatted_double(1.0 - frequency, 4).to_string() : string("1")));
+
+    // Read counts and score come from whatever evidence supports the mutation. There need not be
+    // any (e.g. a hand-written GD file), in which case they are left out.
+    double new_read_count(0.0), total_read_count(0.0);
+    if (read_counts_for_entry(de, new_read_count, total_read_count) && (total_read_count > 0.0)) {
+      int64_t total_reads = static_cast<int64_t>(floor(total_read_count + 0.5));
+      int64_t variant_reads = min(total_reads, static_cast<int64_t>(floor(new_read_count + 0.5)));
+      attributes.push_back("Total_reads=" + to_string(total_reads));
+      attributes.push_back("Variant_reads=" + to_string(variant_reads)
+                           + (is_mixed ? ":" + to_string(total_reads - variant_reads) : ""));
+    }
+
+    string score = ".";
+    double average_score(0.0);
+    if (average_evidence_score(in_evidence_list(de), average_score))
+      score = formatted_double(average_score, 1).to_string();
+
+    // Effects on genes are only known for a SNP in an annotated GD file. The lists have one item
+    // per overlapping gene.
+    if ((de._type == SNP) && de.entry_exists("snp_type") && !de["snp_type"].empty()) {
+      vector<string> snp_type_list = split(de["snp_type"], cReferenceSequences::multiple_separator);
+      vector<string> locus_tag_list = split(de["locus_tag"], cReferenceSequences::multiple_separator);
+
+      vector<string> effects;
+      for (size_t i = 0; i < snp_type_list.size(); i++) {
+        string term, feature_type("CDS");
+        if (snp_type_list[i] == "nonsynonymous") term = "missense_variant";
+        else if (snp_type_list[i] == "synonymous") term = "synonymous_variant";
+        else if (snp_type_list[i] == "nonsense") term = "stop_gained";
+        else if ((snp_type_list[i] == "noncoding") || (snp_type_list[i] == "RNA")) { term = "non_coding_transcript_variant"; feature_type = "ncRNA_gene"; }
+        else if (snp_type_list[i] == "pseudogene") { term = "non_coding_transcript_variant"; feature_type = "pseudogene"; }
+        else if (snp_type_list[i] == "intergenic") { term = "intergenic_variant"; feature_type = "intergenic_region"; }
+        else continue;
+
+        // sequence_variant, index of the allele in Variant_seq, feature type, feature ID
+        string effect = term + " 0 " + feature_type;
+        // Feature IDs are separated by spaces: an intergenic mutation has the gene on either side,
+        // except where there is none before the end of the sequence.
+        if (i < locus_tag_list.size()) {
+          vector<string> feature_ids = split(locus_tag_list[i], cReferenceSequences::intergenic_separator);
+          for (size_t j = 0; j < feature_ids.size(); j++) {
+            if (feature_ids[j].empty() || (feature_ids[j] == cReferenceSequences::no_gene_name)) continue;
+            effect += " " + gvf_escape(feature_ids[j]);
           }
         }
-
-        // Attributes - Variant Reads
-        if (ev.entry_exists(NEW_COV)) {
-          vector<string> variant_covs = split( ev[NEW_COV], "/" );
-          if (variant_covs.size() == 2) {
-            uint32_t variant_cov = from_string<uint32_t>(variant_covs[0]) + from_string<uint32_t>(variant_covs[1]);
-            gvf[8].append(";Variant_reads=").append(to_string(variant_cov));
-          }
-        }
-
-        // Attributes - Frequency
-        // Through mutation_frequency(), since this describes the mutation: the RA entry holds its
-        // fitted estimate, and a consensus call is reported as 1 here as it always has been.
-        if (ev.entry_exists(FREQUENCY))
-          gvf[8].append(";Variant_freq=").append( ev.mutation_frequency() );
+        effects.push_back(effect);
       }
-      
+      if (!effects.empty()) attributes.push_back("Variant_effect=" + join(effects, ","));
 
-      if (de.entry_exists("snp_type")) {
-        if (de["snp_type"] == "nonsynonymous") {
-          gvf[8].append(";Variant_effect=non_synonymous_codon");
-        }
-        else if (de["snp_type"] == "synonymous") {
-          gvf[8].append(";Variant_effect=synonymous_codon");
-        }
-        else if (de["snp_type"] == "nonsense") {
-          gvf[8].append(";Variant_effect=nonsense_codon");
-        }
-        else if (de["snp_type"] == "intergenic") {
-          gvf[8].append(";Variant_effect=intergenic_variant");
-        }
-        else if (de["snp_type"] == "RNA") {
-          gvf[8].append(";Variant_effect=nc_transcript_variant");
-        }
-        else if (de["snp_type"] == "pseudogene") {
-          gvf[8].append(";Variant_effect=nc_transcript_variant");
-        }
+      // These take one value per allele, so they can only be given when there is a single gene
+      if ((snp_type_list.size() == 1) && de.entry_exists("codon_ref_seq") && !de["codon_ref_seq"].empty()
+          && de.entry_exists("codon_new_seq") && de.entry_exists("aa_ref_seq") && de.entry_exists("aa_new_seq")) {
+        attributes.push_back("Reference_codon=" + de["codon_ref_seq"]);
+        attributes.push_back("Variant_codon=" + de["codon_new_seq"] + (is_mixed ? "," + de["codon_ref_seq"] : ""));
+        attributes.push_back("Reference_aa=" + de["aa_ref_seq"]);
+        attributes.push_back("Variant_aa=" + de["aa_new_seq"] + (is_mixed ? "," + de["aa_ref_seq"] : ""));
       }
-    } // END of SNP
-    
-    else if( de._type == SUB ){
-      gvf[2] = "indel";
-      // End (inclusive, so that it spans the same bases as Reference_seq)
-      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1); 
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1));
-      gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
     }
-    
-    else if( de._type == DEL ){
-      gvf[2] = "deletion";
-      // End (inclusive, so that it spans the same bases as Reference_seq)
-      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1);
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1) );
-      gvf[8].append(";Variant_seq=").append( "." );
-    }
-    
-    else if( de._type == INS ){
-      gvf[2] = "insertion";
-      gvf[4] = gvf[3];
-      gvf[8].append("Reference_seq=").append( "." );
-      gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
-    }
-    
-    else if( de._type == MOB ){
-      gvf[2] = "mobile_element_insertion";
-      gvf[4] = gvf[3];
-      //Strand
-      if( from_string<int32_t>(de["strand"]) > 0 )
-        gvf[6] = "+";
-      else
-        gvf[6] = "-";
-      gvf[8].append("Reference_seq=").append( "." );
-      gvf[8].append(";Variant_seq=").append( mob_replace_sequence(ref_seq_info, de) );
-    }
-    
-    else if( de._type == AMP )
-    {
-       gvf[2] = "copy_number_gain";
-       stringstream ss;
-       gvf[4] = gvf[3];
-       gvf[8].append("Reference_seq=").append( "." );
-       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1) );
-    }
-    else if( de._type == INV ){
-      gvf[2] = "inversion";
-      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1);
-    }
-    else if(( de._type == CON ) || ( de._type == INT )){
-      gvf[2] = "substitution";
-      // End (inclusive, so that it spans the same bases as Reference_seq)
-      gvf[4] = to_string(from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1);
-      
-      uint32_t tid, start_pos, end_pos;
-      ref_seq_info.parse_region(de["region"], tid, start_pos, end_pos);
-      
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string<uint32_t>(de[POSITION]), from_string<uint32_t>(de[POSITION]) + from_string<uint32_t>(de[SIZE]) - 1) );
-      gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(tid, start_pos, end_pos ));
-    }
-    
-    // ID attribute: required on every line and unique within the file, hence the GD entry id
-    // (two mutations can share a type and position, e.g. INS that differ in insert_position).
-    {
-      string s = "";
-      s.append("ID=").append(gvf[0]).append(":").append(gvf[1]).append(":");
-      s.append(gvf[2]).append(":").append(gvf[3]).append(":").append(de._id);
-      if (!gvf[8].empty()) s.append(";").append(gvf[8]);
-      gvf[8] = s;
-    }
-    
-    if (!snv_only || (de._type == SNP))
-      featuresGVF.push_back(gvf);
+
+    attributes.insert(attributes.end(), extra_attributes.begin(), extra_attributes.end());
+
+    // Attributes that begin with a lowercase letter are free for an application to define
+    attributes.push_back("gd_type=" + to_string(de._type));
+    attributes.push_back("gd_id=" + gvf_escape(de._id));
+
+    vector<string> columns;
+    columns.push_back(seq_id);
+    columns.push_back("breseq");
+    columns.push_back(type);
+    columns.push_back(to_string(start));
+    columns.push_back(to_string(end));
+    columns.push_back(score);
+    columns.push_back("+");
+    columns.push_back(".");
+    columns.push_back(join(attributes, ";"));
+    lines.push_back(join(columns, "\t"));
   }
-  
+
   // Write results to file
   ofstream output( gvffile.c_str() );
   output << "##gff-version 3" << endl;
-  output << "##gvf-version 1.0" << endl;
-  output << "" << endl;
-  output << "##source-method Source=breseq;Type=SNV;Dbxref=http://barricklab.org/breseq;Comment=Mapping and variant calling with breseq;" << endl;
-  output << "" << endl;
-  for( size_t i=0; i<featuresGVF.size(); i++ ){
-    output << join(featuresGVF[i], "\t") << "\n";
+  output << "##gvf-version 1.10" << endl;
+  output << "##file-date " << gvf_file_date() << endl;
+  output << "##source-method Source=breseq;Dbxref=https://github.com/barricklab/breseq;Comment=Mutations predicted by " << PACKAGE_STRING << " and converted from Genome Diff format;" << endl;
+  output << "##score-method Source=breseq;Comment=Average of the breseq scores of the evidence items supporting a mutation. Not Phred scaled;" << endl;
+  for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
+    output << "##sequence-region " << it->m_seq_id << " 1 " << it->get_sequence_length() << endl;
+  }
+  for (size_t i = 0; i < lines.size(); i++) {
+    output << lines[i] << "\n";
   }
   output.close();
-  
 }
   
 // Convert GD file to json file
