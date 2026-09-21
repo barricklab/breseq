@@ -55,6 +55,15 @@ Usage:
 
 Apply the mutations described in the input to the reference sequence(s).
 
+A mutation can cross the origin of a circular reference sequence: its position is
+near the end of the sequence and its size runs past the last base. The new
+sequence is divided at the origin, keeping as many of its bases before the
+origin as there were, so a change that does not alter the length (`SUB`, `INV`)
+leaves every other coordinate where it was. Features inside an `INV` that
+crosses the origin are not carried over to the new sequence (a warning says so).
+On a linear sequence, a mutation that runs past the end is cut off there, with a
+warning.
+
 `-r <file_path>, --reference=<file_path>`
 
 Reference sequence files (Genbank, GFF, or FASTA). This option may be
@@ -109,9 +118,11 @@ are not used.
 - `INS` entries at one site that differ in `insert_position` are written as one
   record when they are at the same frequency. Separate records with the same
   `POS` would be read as alternatives to one another.
-- A `DEL` that crosses the origin of a circular sequence is written as two
-  records, one on each side of it. Other mutations that do are omitted with a
-  warning, as is a mutation `within` another one.
+- A mutation that crosses the origin of a circular sequence is written as two
+  records, one on each side of it, with the new sequence divided between them
+  as `gdtools APPLY` divides it: as many of its bases as there were before the
+  origin stay there.
+- A mutation `within` another one is omitted with a warning.
 
 #### How mutations are written as GVF
 

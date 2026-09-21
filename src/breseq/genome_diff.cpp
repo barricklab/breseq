@@ -280,6 +280,9 @@ typedef struct  {
   
 // Checks to see whether seq_ids and coordinates make sense
 // Overlaps and before/after consistence are only checked if polymorphism_mode=true
+// Defined with the other helpers for mutations that cross the origin of a circular sequence
+static string wrapped_reference_bases(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start_1, int32_t end_1);
+
 cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors)
 {
   // For now we do rather generic checking... nothing specific to certain kind of entries
@@ -655,7 +658,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       } else if (de._type == SUB) {
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         uint32_t size = from_string<uint32_t>(de[SIZE]);
-        if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position+size-1)) {
+        if (de[NEW_SEQ] == wrapped_reference_bases(ref_seq, de[SEQ_ID], position, position+size-1)) {
           parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified positions.", false);
         }
       }
@@ -2686,6 +2689,56 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 //
 // Finally, it will set bases added, bases changed, bases deleted in the GD header
 //
+// ---- Mutations that cross the origin of a circular sequence -------------------------------------
+//
+// Such a mutation has a position near the end of the sequence and a size that runs past the last
+// base. Asking the sequence for that range gets it cut off at the last base (with a warning), so
+// everything that reads or replaces the bases of a mutation goes through these.
+
+// Reference bases [start_1, end_1], wrapping around on a circular sequence
+static string wrapped_reference_bases(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start_1, int32_t end_1)
+{
+  int32_t length = static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length());
+  if ((end_1 > length) && ref_seq_info.is_circular(seq_id) && (start_1 <= length) && (end_1 - length < start_1)) {
+    return ref_seq_info.get_sequence_1(seq_id, start_1, length) + ref_seq_info.get_sequence_1(seq_id, 1, end_1 - length);
+  }
+  return ref_seq_info.get_sequence_1(seq_id, start_1, end_1);
+}
+
+// The replacement for a range that crosses the origin goes partly before it and partly after it.
+// As many of its bases as there were before the origin stay there, so that a change that keeps
+// the length (SUB, INV, MASK) leaves the origin and every other coordinate where they were.
+static void split_replacement_at_origin(const string& replacement, int32_t bases_before_origin, string& before_origin, string& after_origin)
+{
+  size_t n = min(replacement.size(), static_cast<size_t>(max(bases_before_origin, 0)));
+  before_origin = replacement.substr(0, n);
+  after_origin = replacement.substr(n);
+}
+
+// replace_sequence_1() for a range that may cross the origin
+static void replace_sequence_across_origin_1(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start_1, int32_t end_1,
+                                             const string& replacement_seq, const string& mut_type, const cDiffEntry& mut)
+{
+  int32_t length = static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length());
+  if (end_1 <= length) {
+    ref_seq_info.replace_sequence_1(seq_id, start_1, end_1, replacement_seq, mut_type);
+    return;
+  }
+
+  int32_t overhang = end_1 - length;
+  if (!ref_seq_info.is_circular(seq_id) || (start_1 > length) || (overhang >= start_1)) {
+    WARN("Mutation extends past the end of the reference sequence. Only the bases up to its end are replaced.\n" + mut.as_string());
+    ref_seq_info.replace_sequence_1(seq_id, start_1, length, replacement_seq, mut_type);
+    return;
+  }
+
+  string before_origin, after_origin;
+  split_replacement_at_origin(replacement_seq, length - start_1 + 1, before_origin, after_origin);
+  // The end of the sequence first, which does not move the bases at its start
+  ref_seq_info.replace_sequence_1(seq_id, start_1, length, before_origin, mut_type);
+  ref_seq_info.replace_sequence_1(seq_id, 1, overhang, after_origin, mut_type);
+}
+
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
 {
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_INT = 0, count_MASK = 0;
@@ -2789,7 +2842,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq_id = mut[SEQ_ID];
         replace_start = position - 1;
         replace_end = position - 1 + size;
-        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        replace_seq = wrapped_reference_bases(new_ref_seq_info, replace_seq_id, replace_start, replace_end);
         replace_seq.insert(0,"(");
         replace_seq.insert(2,")");
         
@@ -2798,7 +2851,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         result_end = position - 1 + mut[NEW_SEQ].size();
         result_seq = replace_seq.substr(0,3) + mut[NEW_SEQ];
 
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
+        replace_sequence_across_origin_1(new_ref_seq_info, mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), mut);
 
         bases_changed += min(size, static_cast<int32_t>(mut[NEW_SEQ].size()));
         mutation_bases_deleted  = max(0, size - static_cast<int32_t>(mut[NEW_SEQ].size()));
@@ -2932,14 +2985,14 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq_id = mut[SEQ_ID];
         replace_start = position;
         replace_end = position + size - 1;
-        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        replace_seq = wrapped_reference_bases(new_ref_seq_info, replace_seq_id, replace_start, replace_end);
         
         result_seq_id = mut[SEQ_ID];
         result_start = position;
         result_end = position + size - 1;
         result_seq = mask_string;
         
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mask_string, (to_string(mut._type) + " " + mut._id));
+        replace_sequence_across_origin_1(new_ref_seq_info, mut[SEQ_ID], position, position + size - 1, mask_string, (to_string(mut._type) + " " + mut._id), mut);
         
       } break;
         
@@ -3040,7 +3093,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq_id = mut[SEQ_ID];
         replace_start = position;
         replace_end = position + size - 1;
-        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        replace_seq = wrapped_reference_bases(new_ref_seq_info, replace_seq_id, replace_start, replace_end);
 
         result_seq_id = mut[SEQ_ID];
         result_start = position;
@@ -3064,7 +3117,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq_id = mut[SEQ_ID];
         replace_start = position;
         replace_end = position + size - 1;
-        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        replace_seq = wrapped_reference_bases(new_ref_seq_info, replace_seq_id, replace_start, replace_end);
         
         string inv_seq = reverse_complement(replace_seq);
 
@@ -3081,7 +3134,14 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         with_end = result_start;
 
         count_INV++;
-        new_ref_seq_info.invert_sequence_1(mut[SEQ_ID], position, position + size - 1, (to_string(mut._type) + " " + mut._id));
+        if (position + size - 1 > static_cast<int32_t>(new_ref_seq_info[mut[SEQ_ID]].get_sequence_length())) {
+          // invert_sequence_1() moves the features inside of the inversion to where they end up, which it
+          // cannot do for a range that crosses the origin. The sequence is still right.
+          WARN("INV crosses the origin of a circular sequence. Features inside of it are not carried over to the new sequence.\n" + mut.as_string());
+          replace_sequence_across_origin_1(new_ref_seq_info, mut[SEQ_ID], position, position + size - 1, inv_seq, (to_string(mut._type) + " " + mut._id), mut);
+        } else {
+          new_ref_seq_info.invert_sequence_1(mut[SEQ_ID], position, position + size - 1, (to_string(mut._type) + " " + mut._id));
+        }
         
       } break;
         
@@ -3115,7 +3175,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // A MOB at the first base has no base before it to show. Asking for position zero gets a
         // string that is one base short, and the bracket positions below then ran off of its end.
         if (position > 1) {
-          replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+          replace_seq = wrapped_reference_bases(new_ref_seq_info, replace_seq_id, replace_start, replace_end);
         } else {
           replace_seq = "-" + ((iDupLen != 0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, 1, abs(iDupLen)) : "");
         }
@@ -3143,7 +3203,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           // A negative duplication length indicates that this many bases were deleted from the
           // original genome starting at the specified base. Note that is does not affect the later insert
           // which occurs prior to this location.
-          new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + abs(iDupLen)-1, "");
+          // When these cross the origin of a circular sequence, the ones that go from its start move
+          // everything else back, including where the element goes in (now the end of the sequence).
+          int32_t bases_deleted_after_origin = static_cast<int32_t>(position) + abs(iDupLen) - 1 - static_cast<int32_t>(new_ref_seq_info[mut[SEQ_ID]].get_sequence_length());
+          if ((bases_deleted_after_origin < 0) || (bases_deleted_after_origin >= static_cast<int32_t>(position)) || !new_ref_seq_info.is_circular(mut[SEQ_ID])) bases_deleted_after_origin = 0;
+          replace_sequence_across_origin_1(new_ref_seq_info, mut[SEQ_ID], position, position + abs(iDupLen)-1, "", (to_string(mut._type) + " " + mut._id), mut);
+          position -= bases_deleted_after_origin;
           mutation_bases_deleted = abs(iDupLen);
         }
         
@@ -3158,7 +3223,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // Duplicated region must be from new ref seq, b/c the position
         // of the mutation has been shifted at this point.
         string new_seq_string;
-        if (iDupLen > 0) new_seq_string = new_ref_seq_info.get_sequence_1(replace_seq_id, position, position + iDupLen - 1);
+        if (iDupLen > 0) new_seq_string = wrapped_reference_bases(new_ref_seq_info, replace_seq_id, position, position + iDupLen - 1);
         
         // This includes all but the duplicated target site bases --
         // notice we pass the original reference sequence in case
@@ -3189,7 +3254,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           result_seq.insert(4 + iDupLen, "]");
           // The duplicated target site also leaves a second, original copy right
           // after the inserted repeat -- extend the range to cover it too.
-          result_seq += "[" + new_ref_seq_info.get_sequence_1(replace_seq_id, position, position + iDupLen - 1) + "]";
+          result_seq += "[" + wrapped_reference_bases(new_ref_seq_info, replace_seq_id, position, position + iDupLen - 1) + "]";
           result_end += iDupLen;
         }
 
@@ -3260,12 +3325,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq_id = mut[SEQ_ID];
         replace_start = position - 1;
         replace_end = position - 1 + size;
-        replace_seq = (size>0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end) : " ";
+        replace_seq = (size>0) ? wrapped_reference_bases(new_ref_seq_info, replace_seq_id, replace_start, replace_end) : " ";
         replace_seq.insert(0,"(");
         replace_seq.insert(2,")");
 
         if (size > 0) {
-          new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id));
+          replace_sequence_across_origin_1(new_ref_seq_info, mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id), mut);
         } else {
           new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, replacing_sequence, (to_string(mut._type) + " " + mut._id));
         }
@@ -4587,18 +4652,6 @@ static string gvf_escape(const string& s)
   return escaped;
 }
 
-// Reference bases [start_1, end_1]. A mutation that crosses the origin of a circular sequence has
-// an end that is past the length of the sequence, so wrap around for it (get_sequence_1 would stop
-// at the last base).
-static string wrapped_reference_bases(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start_1, int32_t end_1)
-{
-  int32_t length = static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length());
-  if ((end_1 > length) && ref_seq_info.is_circular(seq_id) && (start_1 <= length) && (end_1 - length < start_1)) {
-    return ref_seq_info.get_sequence_1(seq_id, start_1, length) + ref_seq_info.get_sequence_1(seq_id, 1, end_1 - length);
-  }
-  return ref_seq_info.get_sequence_1(seq_id, start_1, end_1);
-}
-
 static string file_date(const char* format)
 {
   time_t now = time(NULL);
@@ -4875,11 +4928,15 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
 
     int32_t length = static_cast<int32_t>(ref_seq_info[r.seq_id].get_sequence_length());
     if (r.end > length) {
-      // VCF has no way to write a record that crosses the origin of a circular sequence. A deletion
-      // that does is the same thing as two deletions, one on each side of it.
-      if ((mut._type == DEL) && ref_seq_info.is_circular(r.seq_id) && (r.start <= length) && (r.end - length < r.start - 1)) {
-        output << vcf_record(ref_seq_info, r.seq_id, 1, r.end - length, false, r.reference_seq.substr(length - r.start + 1), "", qual, info) << endl;
-        output << vcf_record(ref_seq_info, r.seq_id, r.start, length, false, r.reference_seq.substr(0, length - r.start + 1), "", qual, info) << endl;
+      // VCF has no way to write a record that crosses the origin of a circular sequence. It becomes
+      // two records, for the bases on each side of it, with the replacement divided between them
+      // in the same way that gdtools APPLY does.
+      int32_t bases_before_origin = length - r.start + 1;
+      if (ref_seq_info.is_circular(r.seq_id) && (r.start <= length) && (r.end - length < r.start - 1)) {
+        string before_origin, after_origin;
+        split_replacement_at_origin(r.variant_seq, bases_before_origin, before_origin, after_origin);
+        output << vcf_record(ref_seq_info, r.seq_id, 1, r.end - length, false, r.reference_seq.substr(bases_before_origin), after_origin, qual, info) << endl;
+        output << vcf_record(ref_seq_info, r.seq_id, r.start, length, false, r.reference_seq.substr(0, bases_before_origin), before_origin, qual, info) << endl;
       } else {
         WARN("Mutation cannot be written as VCF (will be omitted). It extends past the end of the reference sequence.\n" + mut.as_string());
       }
