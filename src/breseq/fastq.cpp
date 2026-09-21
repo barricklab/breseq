@@ -51,7 +51,8 @@ namespace breseq {
                                         const string &lp1_convert_file_name,
                                         const string &lp2_convert_file_name,
                                         AnalyzeFastqSummary* lp1_summary,
-                                        AnalyzeFastqSummary* lp2_summary
+                                        AnalyzeFastqSummary* lp2_summary,
+                                        const bool long_read_pairs_ff
                                         )
 {
     cerr << "    Converting/filtering FASTQ file..." << endl;
@@ -210,7 +211,7 @@ namespace breseq {
         };
         auto emit_mate = [&](const cFastqSequence& piece, uint32_t mate_index, const string& mate_name) {
           cFastqSequence seq = piece;
-          if (mate_index == 1) {
+          if ((mate_index == 1) && !long_read_pairs_ff) {
             seq.m_sequence = reverse_complement(seq.m_sequence);
             seq.m_qualities = reverse_string(seq.m_qualities);
           }

@@ -65,7 +65,10 @@ class cAnnotatedSequence;
                                         const string &lp1_convert_file_name = "",
                                         const string &lp2_convert_file_name = "",
                                         AnalyzeFastqSummary* lp1_summary = NULL,
-                                        AnalyzeFastqSummary* lp2_summary = NULL
+                                        AnalyzeFastqSummary* lp2_summary = NULL,
+                                        // true = leave mate 2 on the long read's strand (FF pairs)
+                                        // instead of reverse complementing it (FR pairs)
+                                        const bool long_read_pairs_ff = false
                                         );
 
   pair<AnalyzeFastqSummary, AnalyzeFastqSummary> normalize_fastq_paired(

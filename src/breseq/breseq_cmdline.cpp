@@ -1711,7 +1711,8 @@ int breseq_default_action(int argc, char* argv[])
                                                        lp_convert_file_names[0],
                                                        lp_convert_file_names[1],
                                                        &s_lp[0],
-                                                       &s_lp[1]
+                                                       &s_lp[1],
+                                                       settings.read_file_long_read_pairs_ff
                                                        );
           settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
           s_rf.read_name_file_index = flat_file_counter + 1;
