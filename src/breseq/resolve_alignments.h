@@ -319,6 +319,7 @@ namespace breseq {
     string   unique_seq_id;
     int32_t  unique_position;              // reference_start_1 of the unique mate (clustering key)
     double   window;                       // per-read-set clustering window (paired distance cutoff)
+    string   majority_orientation;         // of this pair's read set: decides how its orientation is recorded
   };
 
   void load_junction_alignments(

@@ -399,15 +399,8 @@ namespace breseq {
         // mapped coordinate. Leftmost coordinate ties for short/overlapping fragments and would
         // mislabel normal FR fragments as RF; the 5' end gives the correct read geometry regardless
         // of overlap.
-        const uint32_t a_5p = a->reversed ? a->end_1 : a->start_1;
-        const uint32_t b_5p = b->reversed ? b->end_1 : b->start_1;
-        const AlignmentSummary& lower = (a_5p <= b_5p) ? *a : *b;
-        const AlignmentSummary& higher = (a_5p <= b_5p) ? *b : *a;
-
-        string orientation;
-        orientation += lower.reversed ? 'R' : 'F';
-        orientation += higher.reversed ? 'R' : 'F';
-        if (orientation == "RR") orientation = "FF";
+        // a is R1's alignment and b is R2's, so this is mate order (read_pair_orientation, alignment.h)
+        string orientation = read_pair_orientation(a->reversed, a->start_1, a->end_1, b->reversed, b->start_1, b->end_1);
 
         int64_t distance = static_cast<int64_t>(max(a->end_1, b->end_1)) - static_cast<int64_t>(min(a->start_1, b->start_1));
 
@@ -1102,16 +1095,12 @@ namespace breseq {
     for (vector<MateAln>::const_iterator m = mate_positions.begin(); m != mate_positions.end(); m++) {
       if (m->seq_id != piece_seq_id) continue;
 
-      int32_t a_5p = rev ? v_end : v_start;
-      int32_t b_5p = m->reversed ? m->end_1 : m->start_1;
-      bool a_lower = (a_5p <= b_5p);
-      bool lower_rev = a_lower ? rev : m->reversed;
-      bool higher_rev = a_lower ? m->reversed : rev;
-
-      string orientation;
-      orientation += lower_rev ? 'R' : 'F';
-      orientation += higher_rev ? 'R' : 'F';
-      if (orientation == "RR") orientation = "FF";
+      // In mate order. The piece knows which mate it is: the split BAM it was read from stamps
+      // BAM_FREAD1 / BAM_FREAD2 on every record from the read group that BAM was opened with.
+      const bool piece_is_read2 = (piece.flag() & BAM_FREAD2) != 0;
+      string orientation = piece_is_read2
+        ? read_pair_orientation(m->reversed, m->start_1, m->end_1, rev, v_start, v_end)
+        : read_pair_orientation(rev, v_start, v_end, m->reversed, m->start_1, m->end_1);
 
       int64_t distance = static_cast<int64_t>(max(v_end, m->end_1)) - static_cast<int64_t>(min(v_start, m->start_1));
 

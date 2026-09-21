@@ -1245,6 +1245,7 @@ struct ConcordancePairing
 // not reuse classify_pair's "best" combo -- see mark_pair_info call site for why).
 struct OrientationDistance { string orientation; int64_t distance; };
 
+// The two alignments must be given IN MATE ORDER: see read_pair_orientation() in alignment.h.
 static OrientationDistance compute_orientation_and_distance(bam_alignment* a, bam_alignment* b)
 {
   uint32_t a_start = a->reference_start_1();
@@ -1252,19 +1253,7 @@ static OrientationDistance compute_orientation_and_distance(bam_alignment* a, ba
   uint32_t b_start = b->reference_start_1();
   uint32_t b_end = b->reference_end_1();
 
-  // Order by each mate's 5' end (forward -> start, reverse -> end), NOT by leftmost mapped
-  // coordinate. Leftmost coordinate ties for short/overlapping fragments and would mislabel
-  // normal FR fragments as RF; the 5' end gives the correct read geometry regardless of overlap.
-  uint32_t a_5p = a->reversed() ? a_end : a_start;
-  uint32_t b_5p = b->reversed() ? b_end : b_start;
-  bool a_is_lower = (a_5p <= b_5p);
-  bam_alignment* lower_alignment = a_is_lower ? a : b;
-  bam_alignment* higher_alignment = a_is_lower ? b : a;
-
-  string orientation;
-  orientation += lower_alignment->reversed() ? 'R' : 'F';
-  orientation += higher_alignment->reversed() ? 'R' : 'F';
-  if (orientation == "RR") orientation = "FF";
+  string orientation = read_pair_orientation(a->reversed(), a_start, a_end, b->reversed(), b_start, b_end);
 
   int64_t distance = static_cast<int64_t>(max(a_end, b_end)) - static_cast<int64_t>(min(a_start, b_start));
 
@@ -1985,6 +1974,7 @@ void load_junction_alignments(
           bam_alignment* a2 = m2.this_reference_alignments.front().get();
           bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
           OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
+          od.orientation = read_pair_orientation_as_recorded(od.orientation, majority_orientation);
           mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, pairing.any_concordant_combo_exists,
                          m1_placements, m2_placements);
 
@@ -2035,6 +2025,7 @@ void load_junction_alignments(
             h.unique_seq_id = ref_seq_info[ua->reference_target_id()].m_seq_id;
             h.unique_position = ua->reference_start_1();
             h.window = distance_cutoff;
+            h.majority_orientation = majority_orientation;
             held_discordant_pairs.push_back(h);
             held_aside = true;
           } else {
@@ -2044,6 +2035,7 @@ void load_junction_alignments(
             bam_alignment* a2 = pick_lowest_alignment(m2.this_reference_alignments);
             bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
             OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
+            od.orientation = read_pair_orientation_as_recorded(od.orientation, majority_orientation);
             // Both mates redundant, and the copy is picked arbitrarily (pick_lowest_alignment), so
             // this pair's distance is selected by construction.
             mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, /*is_concordant=*/false,
@@ -2425,7 +2417,11 @@ void write_held_discordant_pairs(Settings& settings, Summary& summary, cReferenc
       if (chosen == NULL) chosen = pick_lowest_alignment(h.redundant_alignments);
 
       bool same_tid = (ua->reference_target_id() == chosen->reference_target_id());
-      OrientationDistance od = same_tid ? compute_orientation_and_distance(ua, chosen) : OrientationDistance{"NA", 0};
+      // In mate order, which (unique, redundant) is not -- the unique mate can be either one
+      OrientationDistance od = !same_tid ? OrientationDistance{"NA", 0}
+                             : (h.unique_rg.is_read2 ? compute_orientation_and_distance(chosen, ua)
+                                                     : compute_orientation_and_distance(ua, chosen));
+      od.orientation = read_pair_orientation_as_recorded(od.orientation, h.majority_orientation);
       // The redundant mate's coordinate here is not measured, it is the CLUSTER VOTE's chosen_copy --
       // so every held pair at this locus gets the same copy and any error is coherent across all of
       // them, in one direction. That is precisely the shape PD's region seeder is built to detect,

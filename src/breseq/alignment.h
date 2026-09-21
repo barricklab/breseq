@@ -36,6 +36,58 @@ class cReferenceSequences;
 class pileup;
 class bam_alignment;
 
+//! The relative orientation of the two mates of a read pair, GIVEN IN MATE ORDER.
+//!
+//!   "FR"  opposite strands, the mate whose 5' end is lower is forward  (an ordinary paired-end library)
+//!   "RF"  opposite strands, the mate whose 5' end is lower is reverse  (a mate-pair library)
+//!   "FF"  same strand, mate 1 upstream of mate 2 along that strand
+//!   "EV"  same strand, mate 2 upstream of mate 1 ("everted")
+//!
+//! The two opposite-strand tokens do not depend on which mate is which, and are ordered by each
+//! mate's 5' end rather than its leftmost coordinate -- that ties for short, overlapping fragments
+//! and would mislabel ordinary FR fragments as RF.
+//!
+//! The two same-strand tokens DO depend on it, and that is why the mates must be given in order.
+//! Two strand letters cannot tell them apart: a pair with both mates forward reads "FF" whichever
+//! mate is on the left. For a library whose concordant pairs are same-strand -- the synthetic pairs
+//! --long-read-pair-distance cuts from long reads, with --long-read-pair-orientation FF -- that
+//! difference is the whole signature of a tandem duplication, which puts mate 2 upstream of mate 1.
+//! Under one token such a pair passed the concordance test and was never seen by DP. (There used to
+//! be three copies of this recipe, each folding "RR" into "FF"; the strand itself still carries no
+//! information, only the mate order along it does.)
+inline string read_pair_orientation(bool mate_1_reversed, int64_t mate_1_start_1, int64_t mate_1_end_1,
+                                    bool mate_2_reversed, int64_t mate_2_start_1, int64_t mate_2_end_1)
+{
+  const int64_t mate_1_5p = mate_1_reversed ? mate_1_end_1 : mate_1_start_1;
+  const int64_t mate_2_5p = mate_2_reversed ? mate_2_end_1 : mate_2_start_1;
+
+  if (mate_1_reversed != mate_2_reversed) {
+    const bool lower_is_reversed = (mate_1_5p <= mate_2_5p) ? mate_1_reversed : mate_2_reversed;
+    return lower_is_reversed ? "RF" : "FR";
+  }
+  // Along a reverse strand "upstream" is the HIGHER coordinate
+  const bool mate_1_upstream = mate_1_reversed ? (mate_1_5p >= mate_2_5p) : (mate_1_5p <= mate_2_5p);
+  return mate_1_upstream ? "FF" : "EV";
+}
+
+//! True for the two same-strand orientations.
+inline bool read_pair_orientation_is_same_strand(const string& orientation)
+{
+  return (orientation == "FF") || (orientation == "EV");
+}
+
+//! What a pair's orientation is RECORDED as, given the orientation most pairs of its library have.
+//!
+//! In an FR or RF library the mate order of a same-strand pair means nothing -- either mate can be
+//! the upstream one at an inversion breakpoint -- so "EV" is recorded as "FF", exactly what was
+//! always written. Splitting those pairs by an arbitrary label would halve the support each
+//! inversion breakpoint shows. Only a library that is itself same-strand keeps the distinction.
+inline string read_pair_orientation_as_recorded(const string& orientation, const string& majority_orientation)
+{
+  if ((orientation == "EV") && !read_pair_orientation_is_same_strand(majority_orientation)) return "FF";
+  return orientation;
+}
+
 //! The MOLECULE a paired read came from, as a string shared by every read pair sequenced from it.
 //!
 //! Read names are "<file>:<read>" and the two mates of a pair share <read>, so ordinarily a pair IS a
