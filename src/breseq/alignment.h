@@ -82,9 +82,17 @@ inline bool read_pair_orientation_is_same_strand(const string& orientation)
 //! the upstream one at an inversion breakpoint -- so "EV" is recorded as "FF", exactly what was
 //! always written. Splitting those pairs by an arbitrary label would halve the support each
 //! inversion breakpoint shows. Only a library that is itself same-strand keeps the distinction.
+//!
+//! The mirror image holds for a same-strand library. There an OPPOSITE-strand pair is the inversion
+//! signature, and which of its mates has the lower 5' end means nothing, so "RF" is recorded as "FR"
+//! -- the counterpart of the "RR" to "FF" fold that was always made for FR libraries. Without it the
+//! pairs of one inversion breakpoint split across two orientation slots: on a nanopore run 152 DP
+//! candidate regions became 185, which moved the background fit and its minimum-pairs floor.
 inline string read_pair_orientation_as_recorded(const string& orientation, const string& majority_orientation)
 {
-  if ((orientation == "EV") && !read_pair_orientation_is_same_strand(majority_orientation)) return "FF";
+  const bool same_strand_library = read_pair_orientation_is_same_strand(majority_orientation);
+  if ((orientation == "EV") && !same_strand_library) return "FF";
+  if ((orientation == "RF") && same_strand_library) return "FR";
   return orientation;
 }
 

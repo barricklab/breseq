@@ -254,7 +254,7 @@ namespace breseq {
     //! two mates by reference target id, which makes the bin depend on the order the -r files were given
     //! on the command line; and a multi-replicon library carries a diffuse background of chimeric
     //! cross-sequence pairs that must not extend or merge the intra-sequence regions at a locus.
-    static const int kDPnOrientations = 4;
+    static const int kDPnOrientations = 5;
     static const int kDPnBins = 2 * kDPnOrientations;
     //! One discordant read currently inside a bin's sliding window.
     struct dp_read {

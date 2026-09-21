@@ -78,9 +78,10 @@ namespace breseq {
   // Geometry of one junction side being scanned (plus the other side, for the supporting test).
   struct dp_side_ctx {
     int32_t p, s;                 // this side's position (1-based) and strand (+/-1)
-    bool    cross_fwd;            // crossing-read strand on this side (true = forward)
+    pair_geometry geometry;       // which way each read of the library faces
+    bool    cross_fwd;            // the reads crossing this side FACE RIGHT (true exactly when s == -1)
     int32_t other_tid, other_p;   // the mate/other side
-    bool    other_cross_fwd;      // crossing-read strand on the other side
+    bool    other_cross_fwd;      // ...and the same for the other side
     double  D;                    // distance_cutoff (window half-width / mate-proximity)
     int32_t ovl_p, ovl_other_p;   // reference positions for the overlapping-mate exclusion (the current
                                   // best breakpoint estimate: the initial region estimate during the
@@ -135,9 +136,10 @@ namespace breseq {
     if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) return 0;
     if (a.unmapped()) return 0;
 
-    // Only reads on this side's crossing strand.
-    bool is_forward = !a.reversed();
-    if (is_forward != c.cross_fwd) return 0;
+    // Only reads that FACE this side: see pair_geometry (alignment.h). For FR and RF that is one
+    // strand; for a same-strand library it is a forward mate 1 and a reverse mate 2 (or the reverse).
+    const bool is_read2 = (a.flag() & BAM_FREAD2) != 0;
+    if (c.geometry.faces_right(a.reversed(), is_read2) != c.cross_fwd) return 0;
 
     int32_t rstart = static_cast<int32_t>(a.reference_start_1());
     int32_t rend   = static_cast<int32_t>(a.reference_end_1());
@@ -155,8 +157,9 @@ namespace breseq {
       if (static_cast<int32_t>(a.mate_reference_target_id()) != c.other_tid) return 0;
       int32_t mpos = a.mate_start_1();
       if (mpos < c.other_p - c.D || mpos > c.other_p + c.D) return 0;
-      bool mate_forward = (a.flag() & BAM_FMREVERSE) == 0;
-      if (mate_forward != c.other_cross_fwd) return 0;
+      // The mate's strand is BAM_FMREVERSE and its mate number is the complement of this read's
+      const bool mate_reversed = (a.flag() & BAM_FMREVERSE) != 0;
+      if (c.geometry.faces_right(mate_reversed, !is_read2) != c.other_cross_fwd) return 0;
       // A mate pair whose two reads OVERLAP cannot support a discordant junction: the fragment is shorter
       // than the two reads combined, so there is no un-sequenced gap for a breakpoint to sit in. Measure
       // the inner gap when the pair is joined across the junction = (this read's aligned inner end to p) +
@@ -168,7 +171,10 @@ namespace breseq {
       {
         int32_t matelen = dp_mate_reference_span(a, c.mates);
         int32_t g_this  = (c.s == -1) ? (c.ovl_p - rend) : (rstart - c.ovl_p);
-        int32_t g_other = mate_forward ? (c.ovl_other_p - (mpos + matelen - 1)) : (mpos - c.ovl_other_p);
+        // The mate's junction-facing end follows which way the OTHER side's reads face, not the
+        // mate's strand: facing right, it is the mate's right end. (Strand gave the same answer for
+        // FR only; gather_pairs below has always taken it from the other side.)
+        int32_t g_other = c.other_cross_fwd ? (c.ovl_other_p - (mpos + matelen - 1)) : (mpos - c.ovl_other_p);
         if (g_this + g_other < 0) return 0;
       }
       return 1;
@@ -349,19 +355,20 @@ namespace breseq {
         // never set) -- and be counted as a supporting pair. dp_classify_side_read already screens
         // these out (category 3, unpaired); this branch bypasses it, so it needs its own guard.
         if (a.unmapped() || !a.is_paired() || a.proper_pair() || (a.flag() & BAM_FMUNMAP)) return;
-        if ((!a.reversed()) != m_ctx.cross_fwd) return;
+        const bool is_read2 = (a.flag() & BAM_FREAD2) != 0;
+        if (m_ctx.geometry.faces_right(a.reversed(), is_read2) != m_ctx.cross_fwd) return;
         if (static_cast<int32_t>(a.mate_reference_target_id()) != m_ctx.other_tid) return;
         int32_t mpos = a.mate_start_1();
         if (mpos < m_ctx.other_p - m_ctx.D || mpos > m_ctx.other_p + m_ctx.D) return;
-        bool mate_forward = (a.flag() & BAM_FMREVERSE) == 0;
-        if (mate_forward != m_ctx.other_cross_fwd) return;
+        const bool mate_reversed = (a.flag() & BAM_FMREVERSE) != 0;
+        if (m_ctx.geometry.faces_right(mate_reversed, !is_read2) != m_ctx.other_cross_fwd) return;
         int32_t rs = static_cast<int32_t>(a.reference_start_1()), re = static_cast<int32_t>(a.reference_end_1());
         int32_t matelen = dp_mate_reference_span(a, m_ctx.mates);
         // Overlapping-mate exclusion, referenced to the current best breakpoint estimate (ovl_p/
         // ovl_other_p), mirroring dp_classify_side_read: drop a pair whose two reads would overlap.
         {
           int32_t g_this  = (m_ctx.s == -1) ? (m_ctx.ovl_p - re) : (rs - m_ctx.ovl_p);
-          int32_t g_other = mate_forward ? (m_ctx.ovl_other_p - (mpos + matelen - 1)) : (mpos - m_ctx.ovl_other_p);
+          int32_t g_other = m_ctx.other_cross_fwd ? (m_ctx.ovl_other_p - (mpos + matelen - 1)) : (mpos - m_ctx.ovl_other_p);
           if (g_this + g_other < 0) return;
         }
         dp_pair_ends e;
@@ -421,6 +428,8 @@ namespace breseq {
     // junction appears on only one side and is excluded); the paired-up values give the distinct-fragment
     // count.
     const map<string, int32_t>& supporting_nums() const { return m_supporting_nums; }
+    //! Which way each read of the library faces; set once, before any scan.
+    void set_geometry(const pair_geometry& geometry) { m_ctx.geometry = geometry; }
     int concordant() const { return static_cast<int>(m_concordant_reads.size()); }
     int unpaired()   const { return static_cast<int>(m_unpaired_reads.size()); }
 
@@ -466,6 +475,9 @@ namespace breseq {
       : pileup_base(bam, fasta) { set_print_progress(false); }
 
     int32_t tid_for_seq_id(const string& seq_id) const { return dp_tid_for_seq_id(*this, seq_id); }
+
+    //! Which way each read of the library faces; set once, before any gather.
+    void set_geometry(const pair_geometry& geometry) { m_ctx.geometry = geometry; }
 
     void gather(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
                 int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D)
@@ -543,7 +555,8 @@ namespace breseq {
   // Convert one DP region into a JC-style junction side (position, strand).
   static void dp_region_to_side(const dp_region_row& r, bool inner3p, int32_t& position, int32_t& strand)
   {
-    paired_region_to_side(r.strand, r.start, r.end, inner3p, position, strand);
+    (void)inner3p;
+    paired_region_facing_to_side(r.strand == '>', r.start, r.end, position, strand);
   }
 
   // Starting coordinate for one side of a candidate junction, taken from the aligned extents of the
@@ -650,12 +663,12 @@ namespace breseq {
   }
 
   // DP's wrapper: the shared geometry plus DP's own warning.
-  static bool dp_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median, bool warn)
+  static bool dp_library_params(const Summary& summary, pair_geometry& geometry, double& D, double& pair_median, bool warn)
   {
-    if (paired_library_params(summary, inner3p, D, pair_median)) return true;
+    if (paired_library_geometry(summary, geometry, D, pair_median)) return true;
     if (warn) {
-      WARN("Discordant pair (DP) evidence prediction currently supports only FR- and RF-concordant "
-           "libraries. The library concordant orientation is '" +
+      WARN("Discordant pair (DP) evidence prediction needs paired read groups with a majority "
+           "orientation of FR, RF or FF. The library concordant orientation is '" +
            paired_library_orientation_name(summary) +
            "'; no DP evidence will be predicted.");
     }
@@ -1448,7 +1461,8 @@ namespace breseq {
     bool inner3p = true;
     double distance_cutoff = 0.0;
     double pair_median = 0.0;
-    if (!dp_library_params(summary, inner3p, distance_cutoff, pair_median, /*warn=*/true)) {
+    pair_geometry geometry;
+    if (!dp_library_params(summary, geometry, distance_cutoff, pair_median, /*warn=*/true)) {
       dp_gd.write(settings.dp_genome_diff_file_name);
       return;
     }
@@ -1499,7 +1513,7 @@ namespace breseq {
         r.seq_id = f[0];
         r.start  = from_string<uint32_t>(f[1]);
         r.end    = from_string<uint32_t>(f[2]);
-        r.strand = f[3].empty() ? 'F' : f[3][0];
+        r.strand = f[3].empty() ? '>' : f[3][0];   // facing: '>' right, '<' left
 
         // 'redundant' is column index 7 (1 = tie-broken multicopy side). Absent in older CSVs.
         r.redundant = (f.size() >= 8 && f[7] == "1");
@@ -1665,6 +1679,7 @@ namespace breseq {
         && file_exists(settings.reference_bam_file_name.c_str())
         && file_exists(settings.reference_fasta_file_name.c_str())) {
       scanner = new dp_side_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name);
+      scanner->set_geometry(geometry);
     }
 
     // One pass over the BAM to index every discordant alignment, so each mate's aligned extent is
@@ -1725,8 +1740,9 @@ namespace breseq {
       int32_t init1 = s1_pos, init2 = s2_pos;
 
       // Each side's crossing-read strand (same as the region strand that produced it).
-      bool s1_fwd = (inner3p == (s1_strand == -1));
-      bool s2_fwd = (inner3p == (s2_strand == -1));
+      // The reads crossing a side that keeps its LEFT flank (strand -1) are the ones facing right
+      bool s1_fwd = (s1_strand == -1);
+      bool s2_fwd = (s2_strand == -1);
       int32_t s1_tid = scanner ? scanner->tid_for_seq_id(s1_seq_id) : -1;
       int32_t s2_tid = scanner ? scanner->tid_for_seq_id(s2_seq_id) : -1;
 
@@ -2708,7 +2724,8 @@ namespace breseq {
     bool inner3p = true;
     double D = 0.0;
     double pair_median = 0.0;
-    if (!dp_library_params(summary, inner3p, D, pair_median, /*warn=*/false)) return;  // predict already warned
+    pair_geometry geometry;
+    if (!dp_library_params(summary, geometry, D, pair_median, /*warn=*/false)) return;  // predict already warned
     if (D <= 0.0) return;
     if (!file_exists(settings.reference_bam_file_name.c_str()) ||
         !file_exists(settings.reference_fasta_file_name.c_str())) return;
@@ -2718,6 +2735,7 @@ namespace breseq {
 
     create_path(settings.evidence_path);
     dp_side_plot_gatherer g(settings.reference_bam_file_name, settings.reference_fasta_file_name);
+    g.set_geometry(geometry);
 
     // Map a read-name file prefix (m_id + 1, as written by identify_mutations) to its mate's, so a
     // concordant lane can be labeled with both read names.
@@ -2740,8 +2758,8 @@ namespace breseq {
       int32_t s2_pos = from_string<int32_t>(dp[SIDE_2_POSITION]);
       int32_t s2_str = from_string<int32_t>(dp[SIDE_2_STRAND]);
 
-      bool s1_fwd = (inner3p == (s1_str == -1));
-      bool s2_fwd = (inner3p == (s2_str == -1));
+      bool s1_fwd = (s1_str == -1);
+      bool s2_fwd = (s2_str == -1);
       int32_t s1_tid = g.tid_for_seq_id(s1_seq);
       int32_t s2_tid = g.tid_for_seq_id(s2_seq);
 

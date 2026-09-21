@@ -1569,11 +1569,19 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         if (i->is_paired() && !i->unmapped() && !i->proper_pair() &&
             !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP))) {
           int gi = dp_group_for(p, *i);
-          if (gi >= 0) {
+          if ((gi >= 0) && _dp_groups[gi].has_geometry) {
             const dp_group& g = _dp_groups[gi];
 
-            // Bin by (focal-read strand) x (pair orientation). Strand: 0 = forward, 1 = reverse.
-            int s = i->reversed() ? 1 : 0;
+            // Bin by (which way the focal read FACES) x (pair orientation). Facing: 0 = right, 1 = left.
+            //
+            // Facing, not strand, because a region becomes a junction side from it: reads facing right
+            // sit on the left flank of the breakpoint they reach across. For an FR library a read faces
+            // right exactly when it is forward, so this is the binning there always was. For a
+            // same-strand library it is not -- both mates of a pair share a strand, so binned by
+            // strand the two flanks of one junction land in ONE bin and come out with the same side
+            // strand, while the forward-mate-1 and reverse-mate-2 reads that support one flank are
+            // split across two. See pair_geometry (alignment.h).
+            int s = g.geometry.faces_right(i->reversed(), (i->flag() & BAM_FREAD2) != 0) ? 0 : 1;
             int o;
             if (i->mate_reference_target_id() != i->reference_target_id()) {
               // The two mates are on DIFFERENT reference sequences, so the pair has no within-sequence
@@ -1595,9 +1603,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
               // Orientation from the XP tag written by mark_pair_info: FR / RF / FF (RR folded to FF).
               string orientation;
               if (!i->aux_get_Z("XP", orientation)) continue;  // no orientation -> not a countable DP read
+              // "EV" is only ever recorded for a same-strand library (read_pair_orientation_as_recorded),
+              // where it is the tandem-duplication signature and must not pool with "FF" pairs that
+              // are merely too far apart. Its slot is LAST so that the bins of every other library
+              // keep their order.
               if      (orientation == "FR") o = 0;
               else if (orientation == "RF") o = 1;
               else if (orientation == "FF") o = 2;
+              else if (orientation == "EV") o = 4;
               else continue;                                    // unexpected orientation -> skip
             }
             int bin = s * kDPnOrientations + o;
@@ -2592,7 +2605,7 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
   // The fourth name is the cross-sequence slot, which is not an orientation at all (see
   // kDPnOrientations). It only reaches the CSV's `orientation` column, which is diagnostic: the reader
   // in dp_evidence.cpp takes columns 0-3, 7 and 8 and never looks at column 4.
-  static const char* kOrientName[kDPnOrientations] = { "FR", "RF", "FF", "XS" };
+  static const char* kOrientName[kDPnOrientations] = { "FR", "RF", "FF", "XS", "EV" };
 
   // Run an independent detector for each (focal strand x orientation) bin, so a breakpoint's
   // forward/reverse shoulders and its distinct orientations each become separate regions.
@@ -2633,7 +2646,7 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
       region.seq_id = target_name(seq_id);
       region.start = _dp_region_start[bin];
       region.end = position - 1;
-      region.strand = (bin / kDPnOrientations == 0) ? 'F' : 'R';
+      region.strand = (bin / kDPnOrientations == 0) ? '>' : '<';   // which way its reads face
       region.orientation = kOrientName[bin % kDPnOrientations];
       region.max_count = _dp_region_max_count[bin];
       // Redundant side: a majority of the region's discordant reads mapped redundantly (i.e. the
@@ -2942,7 +2955,7 @@ void identify_mutations_pileup::write_dp_candidate_regions(const string& filenam
   // and parsed as the final field by dp_evidence). 1 = a majority of this region's reads were
   // redundant (tie-broken multicopy side); 0 otherwise. Each 'discordant_pairs' entry is
   // <read1>__<read2>__<insert_size>__<read_start>__<read_end> (see dp_descriptor).
-  out << "seq_id,start,end,strand,orientation,length,max_discordant_count,redundant,discordant_pairs" << endl;
+  out << "seq_id,start,end,facing,orientation,length,max_discordant_count,redundant,discordant_pairs" << endl;
   for (vector<dp_candidate_region>::const_iterator r = _dp_candidate_regions.begin(); r != _dp_candidate_regions.end(); r++) {
     out << r->seq_id << "," << r->start << "," << r->end << "," << r->strand << "," << r->orientation << ","
         << (r->end - r->start + 1) << "," << r->max_count << "," << (r->redundant ? 1 : 0) << "," << r->discordant_pairs << endl;
