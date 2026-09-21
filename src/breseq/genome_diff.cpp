@@ -2839,6 +2839,22 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
         
+        // A deletion can cross the origin of a circular sequence, in which case it runs past the last
+        // base and takes this many bases from the start of the sequence too. Mutations are applied in
+        // order of position, so everything before this one has been applied and its position and the
+        // sequence length have shifted together: the overhang is the same in the current coordinates.
+        const int32_t del_seq_length = static_cast<int32_t>(new_ref_seq_info[mut[SEQ_ID]].get_sequence_length());
+        int32_t del_overhang = position + size - 1 - del_seq_length;
+        if (del_overhang > 0) {
+          if (!new_ref_seq_info.is_circular(mut[SEQ_ID]) || (del_overhang >= position)) {
+            WARN("DEL extends past the end of the reference sequence. Only the bases up to its end are deleted.\n" + mut.as_string());
+            size -= del_overhang;
+            del_overhang = 0;
+          }
+        } else {
+          del_overhang = 0;
+        }
+        
         // We normally show the base before (if there is one)
         int32_t remaining_base_start_shown = 1;
         int32_t remaining_base_end_shown = 0;
@@ -2860,7 +2876,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_start = position - remaining_base_start_shown;
         replace_end = position - 1 + size + remaining_base_end_shown;
         
-        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        if (del_overhang > 0) {
+          replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, del_seq_length)
+                      + new_ref_seq_info.get_sequence_1(replace_seq_id, 1, del_overhang);
+        } else {
+          replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        }
         if (remaining_base_start_shown) {
           replace_seq.insert(0,"(");
           replace_seq.insert(2,")");
@@ -2889,7 +2910,13 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         result_seq.insert(2,")");
 
         ASSERT(size >= 1, "Attempt to apply DEL mutation with size ≤ 0:\n" + mut.as_string());
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id));
+        if (del_overhang > 0) {
+          // The end of the sequence first, which does not move the bases at its start
+          new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, del_seq_length, "", (to_string(mut._type) + " " + mut._id));
+          new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], 1, del_overhang, "", (to_string(mut._type) + " " + mut._id));
+        } else {
+          new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id));
+        }
 
         mutation_bases_deleted = size;
 
