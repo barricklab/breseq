@@ -598,6 +598,39 @@ namespace breseq {
     return false;
   }
 
+  // Shared with MP; see the declaration in dp_evidence.h.
+  bool paired_library_geometry(const Summary& summary, pair_geometry& geometry, double& D, double& pair_median)
+  {
+    string majority_orientation;
+    D = 0.0;
+    pair_median = 0.0;
+    map<string, int> votes;
+    for (PairedMappingDistanceDistributionSummaries::const_iterator it = summary.preliminary_paired_mapping_distance_distribution.begin();
+         it != summary.preliminary_paired_mapping_distance_distribution.end(); it++) {
+      if (!it->second.majority_orientation.empty())
+        votes[it->second.majority_orientation]++;
+      if (it->second.distance_cutoff > D) D = it->second.distance_cutoff;
+      if (it->second.median > pair_median) pair_median = it->second.median;
+    }
+    int best = 0;
+    for (map<string, int>::iterator it = votes.begin(); it != votes.end(); it++) {
+      if (it->second > best) { best = it->second; majority_orientation = it->first; }
+    }
+    return geometry.set_from_orientation(majority_orientation);
+  }
+
+  void paired_region_facing_to_side(bool faces_right, uint32_t region_start, uint32_t region_end,
+                                    int32_t& position, int32_t& strand)
+  {
+    if (faces_right) {
+      position = static_cast<int32_t>(region_end);
+      strand = -1;
+    } else {
+      position = static_cast<int32_t>(region_start);
+      strand = +1;
+    }
+  }
+
   // Return the library orientation for the majority of paired read groups, or the (unsupported)
   // orientation name for the warning below.
   static string paired_library_orientation_name(const Summary& summary)

@@ -88,6 +88,48 @@ inline string read_pair_orientation_as_recorded(const string& orientation, const
   return orientation;
 }
 
+//! Which way a read of a paired library FACES: toward the side its mate lies on, which is also the
+//! side of any breakpoint the pair reaches across.
+//!
+//!   FR  a forward read faces right                    (ordinary paired-end)
+//!   RF  a reverse read faces right                    (mate-pair)
+//!   FF  mate 1 faces right when forward, mate 2 when reverse   (same strand, mate 1 upstream)
+//!   EV  the mirror of FF                              (same strand, mate 2 upstream)
+//!
+//! For FR and RF the strand alone decides it, which is why the pair-evidence code could get by on a
+//! single library-wide bit ("inner3p") and a read's strand. For a same-strand library it cannot: a
+//! forward mate 1 has its mate to the right and a forward mate 2 has it to the left, so the mate
+//! number is needed too. It is always available -- BAM_FREAD1 / BAM_FREAD2 are stamped on every
+//! record of a paired read group, and a mate's number is the complement of the read's own.
+//!
+//! The library is named by its majority orientation token (read_pair_orientation, above).
+struct pair_geometry {
+  enum library_t { FR, RF, FF, EV };
+  library_t library;
+
+  pair_geometry() : library(FR) {}
+
+  //! False if the orientation names no supported geometry (empty, "NA", ...); library is then unchanged.
+  bool set_from_orientation(const string& majority_orientation) {
+    if      (majority_orientation == "FR") library = FR;
+    else if (majority_orientation == "RF") library = RF;
+    else if (majority_orientation == "FF") library = FF;
+    else if (majority_orientation == "EV") library = EV;
+    else return false;
+    return true;
+  }
+
+  bool faces_right(bool reversed, bool is_read2) const {
+    switch (library) {
+      case FR: return !reversed;
+      case RF: return reversed;
+      case FF: return reversed == is_read2;
+      case EV: return reversed != is_read2;
+    }
+    return !reversed;
+  }
+};
+
 //! The MOLECULE a paired read came from, as a string shared by every read pair sequenced from it.
 //!
 //! Read names are "<file>:<read>" and the two mates of a pair share <read>, so ordinarily a pair IS a

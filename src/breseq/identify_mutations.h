@@ -297,6 +297,10 @@ namespace breseq {
       //! pre-existing bug, left alone here so DP/MP descriptors do not silently change.)
       uint32_t        r1_read_name_prefix;
       uint32_t        r2_read_name_prefix;
+      //! Which way this group's reads face, from its majority orientation (pair_geometry, alignment.h).
+      //! has_geometry is false when that orientation names no supported library.
+      pair_geometry   geometry;
+      bool            has_geometry;
       deque<dp_read>  reads[kDPnBins];
       deque<mp_read>  mp_reads[kMPnBins];
       //! Start positions of ALL primary mapped reads of each focal strand currently in-window --

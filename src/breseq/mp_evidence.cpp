@@ -19,7 +19,7 @@
 *****************************************************************************/
 
 #include "mp_evidence.h"
-#include "dp_evidence.h"   // paired_library_params / paired_region_to_side (shared pair geometry)
+#include "dp_evidence.h"   // paired_library_geometry / paired_region_facing_to_side (shared pair geometry)
 #include "genome_diff.h"
 #include "genome_diff_entry.h"
 #include "pileup.h"   // pileup_base + alignment_wrapper + BAM flag macros
@@ -145,7 +145,7 @@ namespace breseq {
   class mp_side_scanner : public pileup_base {
   public:
     mp_side_scanner(const string& bam, const string& fasta, bool by_molecule)
-      : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_fwd(true),
+      : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_faces_right(true),
         m_window(0.0), m_collect(false), m_ext(NULL), m_supporting(0), m_spanning(0), m_window_total(0),
         m_by_molecule(by_molecule), m_have_inner(false), m_inner_edge(0)
       { set_print_progress(false); }
@@ -172,10 +172,10 @@ namespace breseq {
     //                   junction-facing end). An aligned base cannot lie past the breakpoint, so the
     //                   caller clamps the placed coordinate out to this.
     //  Returns false (no placement possible) when no supporting read is found.
-    bool supporting_outer_median(const string& seq_id, int32_t p, int32_t s, bool cross_fwd, double D,
+    bool supporting_outer_median(const string& seq_id, int32_t p, int32_t s, bool cross_faces_right, double D,
                                  int32_t& median_outer, int32_t& inner_edge)
     {
-      set_ctx(p, s, cross_fwd, 0.0);
+      set_ctx(p, s, cross_faces_right, 0.0);
       m_outside.clear();
       m_have_inner = false; m_inner_edge = 0;
       m_collect = true;
@@ -196,9 +196,9 @@ namespace breseq {
     //  the SAME pass as m_supporting, so the two numbers always describe the same set of reads.
     //  W is the counting window: both the fetch half-width AND the bound on how far a read's outer
     //  end may lie from p. It must be the width the null was tabulated at -- see classify().
-    void scan(const string& seq_id, int32_t p, int32_t s, bool cross_fwd, double W)
+    void scan(const string& seq_id, int32_t p, int32_t s, bool cross_faces_right, double W)
     {
-      set_ctx(p, s, cross_fwd, W);
+      set_ctx(p, s, cross_faces_right, W);
       m_supporting = 0; m_spanning = 0; m_window_total = 0;
       m_distinct.clear();
       m_distinct_molecules.clear();
@@ -247,8 +247,8 @@ namespace breseq {
     }
 
   private:
-    void set_ctx(int32_t p, int32_t s, bool cross_fwd, double window)
-    { m_p = p; m_s = s; m_cross_fwd = cross_fwd; m_window = window; }
+    void set_ctx(int32_t p, int32_t s, bool cross_faces_right, double window)
+    { m_p = p; m_s = s; m_cross_faces_right = cross_faces_right; m_window = window; }
 
     // One-sided fetch window [lo, hi]: the kept flank, out to D.
     void fetch_side_window(const string& seq_id, int32_t p, int32_t s, double D)
@@ -272,7 +272,7 @@ namespace breseq {
       if (a.unmapped()) return 0;
 
       // Only reads on this side's crossing strand -- the ones pointing INTO the insertion.
-      if ((!a.reversed()) != m_cross_fwd) return 0;
+      if (m_geometry.faces_right(a.reversed(), (a.flag() & BAM_FREAD2) != 0) != m_cross_faces_right) return 0;
 
       int32_t rs = static_cast<int32_t>(a.reference_start_1());
       int32_t re = static_cast<int32_t>(a.reference_end_1());
@@ -326,7 +326,13 @@ namespace breseq {
 
     int32_t m_p;
     int32_t m_s;
-    bool    m_cross_fwd;
+    //! The reads that cross a side are the ones FACING it: right for a side that keeps its left
+    //! flank (s == -1), left otherwise. Which reads those are is the library's pair_geometry.
+    bool    m_cross_faces_right;
+    pair_geometry m_geometry;
+  public:
+    void set_geometry(const pair_geometry& geometry) { m_geometry = geometry; }
+  private:
     //! Half-width of the opportunity set, in outer-end coordinates. 0 disables the bound, which is
     //! what the placement pass wants: it scans out to D looking for ANY supporting read to place on.
     double  m_window;
@@ -362,7 +368,7 @@ namespace breseq {
   class mp_plot_gatherer : public pileup_base {
   public:
     mp_plot_gatherer(const string& bam, const string& fasta)
-      : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_fwd(true), m_window(0.0), m_ext(NULL)
+      : pileup_base(bam, fasta), m_p(0), m_s(0), m_cross_faces_right(true), m_window(0.0), m_ext(NULL)
       { set_print_progress(false); }
 
     //! Exact mate extents for the position about to be gathered. Not owned; must outlive the gather.
@@ -374,9 +380,9 @@ namespace breseq {
       return -1;
     }
 
-    void gather(const string& seq_id, int32_t p, int32_t s, bool cross_fwd, double W)
+    void gather(const string& seq_id, int32_t p, int32_t s, bool cross_faces_right, double W)
     {
-      m_p = p; m_s = s; m_cross_fwd = cross_fwd; m_window = W;
+      m_p = p; m_s = s; m_cross_faces_right = cross_faces_right; m_window = W;
       m_reads.clear();
       int32_t tid = tid_for_seq_id(seq_id);
       if (tid < 0) return;
@@ -394,7 +400,7 @@ namespace breseq {
     {
       if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) return;
       if (a.unmapped()) return;
-      if ((!a.reversed()) != m_cross_fwd) return;
+      if (m_geometry.faces_right(a.reversed(), (a.flag() & BAM_FREAD2) != 0) != m_cross_faces_right) return;
 
       int32_t rs = static_cast<int32_t>(a.reference_start_1());
       int32_t re = static_cast<int32_t>(a.reference_end_1());
@@ -444,7 +450,13 @@ namespace breseq {
   private:
     int32_t m_p;
     int32_t m_s;
-    bool    m_cross_fwd;
+    //! The reads that cross a side are the ones FACING it: right for a side that keeps its left
+    //! flank (s == -1), left otherwise. Which reads those are is the library's pair_geometry.
+    bool    m_cross_faces_right;
+    pair_geometry m_geometry;
+  public:
+    void set_geometry(const pair_geometry& geometry) { m_geometry = geometry; }
+  private:
     double  m_window;
     const mp_extent_index* m_ext;
     vector<mp_draw_read> m_reads;
@@ -657,9 +669,9 @@ namespace breseq {
   {
     (void)ref_seq_info;
 
-    bool inner3p = true;
+    pair_geometry geometry;
     double D = 0.0, pair_median = 0.0;
-    if (!paired_library_params(summary, inner3p, D, pair_median)) return;  // predict already warned
+    if (!paired_library_geometry(summary, geometry, D, pair_median)) return;  // predict already warned
     if (!file_exists(settings.reference_bam_file_name.c_str()) ||
         !file_exists(settings.reference_fasta_file_name.c_str())) return;
 
@@ -668,6 +680,7 @@ namespace breseq {
 
     create_path(settings.evidence_path);
     mp_plot_gatherer g(settings.reference_bam_file_name, settings.reference_fasta_file_name);
+    g.set_geometry(geometry);
     mp_extent_indexer indexer(settings.reference_bam_file_name, settings.reference_fasta_file_name);
 
     // Map a read-name file prefix (m_id + 1) to its mate's, so a mate-mapped lane shows both names.
@@ -691,7 +704,7 @@ namespace breseq {
       string  seq_id = mp[SEQ_ID];
       int32_t pos    = from_string<int32_t>(mp[POSITION]);
       int32_t strand = from_string<int32_t>(mp[STRAND]);
-      bool cross_fwd = (inner3p == (strand == -1));
+      bool cross_fwd = (strand == -1);   // the crossing reads FACE RIGHT at a side keeping its left flank
 
       // Draw over the same window the counts were taken in, with the same exact mate extents, so the
       // plot and the table agree on which reads are involved and how each counts. The width comes
@@ -758,22 +771,24 @@ namespace breseq {
     cGenomeDiff mp_gd;
 
     //
-    // Step 0: library geometry. Which read end faces the insertion (inner3p), how far out to rescan
-    // (D), and the median pair distance whose half sets the placement shift.
+    // Step 0: library geometry. Which way each read faces (pair_geometry, alignment.h), how far out
+    // to rescan (D), and the median pair distance whose half sets the placement shift.
     //
-    bool inner3p = true;
+    // MP needs nothing from the library but which way a mate-missing read points, so it works for
+    // any geometry pair_geometry knows -- same-strand (FF) libraries included.
+    pair_geometry geometry;
     double D = 0.0;
     double pair_median = 0.0;
-    if (!paired_library_params(summary, inner3p, D, pair_median)) {
-      WARN("Missing pair (MP) evidence prediction currently supports only FR- and RF-concordant "
-           "libraries. No MP evidence will be predicted.");
+    if (!paired_library_geometry(summary, geometry, D, pair_median)) {
+      WARN("Missing pair (MP) evidence prediction needs paired read groups with a majority orientation "
+           "of FR, RF or FF. No MP evidence will be predicted.");
       mp_gd.write(settings.mp_genome_diff_file_name);
       return;
     }
 
     //
     // Step 1: re-read the candidate regions CSV.
-    //  columns: seq_id,start,end,strand,length,max_unpaired_count,redundant,unpaired_reads
+    //  columns: seq_id,start,end,facing,length,max_unpaired_count,redundant,unpaired_reads
     //  unpaired_reads is the final field: ';'-joined <read_start>__<read_end>, never contains a comma.
     //
     if (!file_exists(settings.mp_candidate_regions_file_name.c_str())) {
@@ -820,7 +835,7 @@ namespace breseq {
         r.seq_id = f[0];
         r.start = from_string<uint32_t>(f[1]);
         r.end = from_string<uint32_t>(f[2]);
-        r.strand = f[3].empty() ? 'F' : f[3][0];
+        r.strand = f[3].empty() ? '>' : f[3][0];   // facing: '>' right, '<' left (mp_format 2)
         r.max_count = from_string<uint32_t>(f[5]);
         r.max_total = from_string<uint32_t>(f[6]);
         r.redundant = (f[7] == "1");
@@ -881,6 +896,7 @@ namespace breseq {
     mp_side_scanner* scanner =
       new mp_side_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name,
                           settings.read_file_long_read_pair_distance != 0);
+    scanner->set_geometry(geometry);
     mp_extent_indexer indexer(settings.reference_bam_file_name, settings.reference_fasta_file_name);
 
     //
@@ -913,7 +929,7 @@ namespace breseq {
       const mp_region_row& r = regions[ri];
 
       int32_t p = 0, s = 0;
-      paired_region_to_side(r.strand, r.start, r.end, inner3p, p, s);
+      paired_region_facing_to_side(r.strand == '>', r.start, r.end, p, s);
 
       // Prefer the reads' own extents to the region span: a region closes when a read ages out of the
       // sliding window, so its far bound is a read's start plus the window width -- a coordinate no
@@ -927,7 +943,7 @@ namespace breseq {
       int32_t seqlen = scanner->seq_length(tid);
 
       // The crossing strand for this side, matching DP's convention.
-      bool cross_fwd = (inner3p == (s == -1));
+      bool cross_fwd = (s == -1);   // the crossing reads FACE RIGHT at a side keeping its left flank
 
       // Half-MAD placement: the median of the supporting reads' outside ends, shifted toward the
       // insertion by half the median pair distance, then clamped OUT to the innermost aligned read

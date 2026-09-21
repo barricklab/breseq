@@ -917,6 +917,7 @@ identify_mutations_pileup::identify_mutations_pileup(
     g.mp_window_width = it->second.median;   // see dp_group::mp_window_width
     g.r1_read_name_prefix = rfs.m_files[0].m_id + 1;  // see dp_group for why this is m_id-derived
     g.r2_read_name_prefix = rfs.m_files[1].m_id + 1;
+    g.has_geometry = g.geometry.set_from_orientation(it->second.majority_orientation);
     int group_index = static_cast<int>(_dp_groups.size());
     _dp_groups.push_back(g);
     _read_group_to_dp_group[set_index] = group_index;
@@ -1652,10 +1653,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       if (_mp_enabled && (insert_count == 0) && (i->reference_start_1() == position)) {
         if (!i->unmapped() && !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY))) {
           int gi = dp_group_for(p, *i);
-          if (gi >= 0) {
-            int bin = i->reversed() ? 1 : 0;
+          if ((gi >= 0) && _dp_groups[gi].has_geometry) {
+            // Binned by which way the read FACES (bin 0 = right), not by its strand. A mate-missing
+            // read says there is unseen sequence on the side it faces; for an FR library that is the
+            // same thing as "forward", but for a same-strand library a forward mate 2 faces LEFT, so
+            // binning by strand would pool reads pointing at opposite flanks into one window.
+            int bin = _dp_groups[gi].geometry.faces_right(i->reversed(), (i->flag() & BAM_FREAD2) != 0) ? 0 : 1;
 
-            // Every primary mapped read of this strand enters the denominator window, whether or not
+            // Every primary mapped read facing this way enters the denominator window, whether or not
             // its mate is missing. The seed test below is an ENRICHMENT test, and it needs both terms.
             _dp_groups[gi].mp_all_reads[bin].push_back(position);
             ++_mp_total_metric[bin];
@@ -2767,7 +2772,7 @@ void identify_mutations_pileup::check_missing_pair_completion(uint32_t seq_id, u
       region.seq_id = target_name(seq_id);
       region.start = _mp_region_start[bin];
       region.end = position - 1;
-      region.strand = (bin == 0) ? 'F' : 'R';
+      region.strand = (bin == 0) ? '>' : '<';   // which way its reads face -- see the MP "enter" step
       region.max_count = _mp_region_max_count[bin];
       region.max_total = _mp_region_max_total[bin];
       region.redundant = (2 * _mp_region_redundant_count[bin] > _mp_region_descriptors[bin].size());
@@ -2881,7 +2886,8 @@ void identify_mutations_pileup::write_mp_candidate_regions(const string& filenam
   // The leading format token exists so a CSV written by an older binary fails loudly rather than
   // being silently reinterpreted. Bump it whenever the meaning of a column or of the null changes.
   out << std::fixed << std::setprecision(8);
-  out << "#mp_format=1" << endl;
+  // format 2: the fourth column is which way the region's reads FACE ('>' right, '<' left), not their strand
+  out << "#mp_format=2" << endl;
   out << "#window_width=" << calibration.window_width << endl;
   out << "#n_effective_tests=" << calibration.n_effective_tests << endl;
   out << "#null_rate=" << calibration.null_rate << endl;
@@ -2898,7 +2904,7 @@ void identify_mutations_pileup::write_mp_candidate_regions(const string& filenam
   // 'unpaired_reads' must stay last: it is ';'-joined and parsed as the final field by mp_evidence.
   // Each entry is <read_start>__<read_end> (see mp_descriptor). 'redundant' is 1 when a majority of
   // this region's reads mapped redundantly.
-  out << "seq_id,start,end,strand,length,max_unpaired_count,max_window_total_count,redundant,unpaired_reads" << endl;
+  out << "seq_id,start,end,facing,length,max_unpaired_count,max_window_total_count,redundant,unpaired_reads" << endl;
   for (vector<mp_candidate_region>::const_iterator r = _mp_candidate_regions.begin(); r != _mp_candidate_regions.end(); r++) {
     out << r->seq_id << "," << r->start << "," << r->end << "," << r->strand << ","
         << (r->end - r->start + 1) << "," << r->max_count << "," << r->max_total << ","

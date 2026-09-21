@@ -37,6 +37,18 @@ namespace breseq {
   //  unsupported; the caller emits its own warning.
   bool paired_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median);
 
+  //! The same vote, returning the library's pair_geometry (alignment.h) instead of inner3p. Unlike
+  //  paired_library_params it succeeds for a same-strand (FF) library too, so only code that reads
+  //  direction through pair_geometry::faces_right may use it.
+  bool paired_library_geometry(const Summary& summary, pair_geometry& geometry, double& D, double& pair_median);
+
+  //! A candidate region of reads that all FACE one way, as a junction side. Reads facing right sit on
+  //  the left flank of whatever they reach toward, so the side is the region's END with the retained
+  //  flank at <= position (strand -1); reads facing left give the region's START and strand +1. This
+  //  is what paired_region_to_side computes from (strand, inner3p), without needing either.
+  void paired_region_facing_to_side(bool faces_right, uint32_t region_start, uint32_t region_end,
+                                    int32_t& position, int32_t& strand);
+
   //! Convert one sliding-window candidate region into a JC-style breakpoint side (position, strand).
   //
   //  strand=+1 means the retained flank lies at coords >= position, -1 at <= position.
