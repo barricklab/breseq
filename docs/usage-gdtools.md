@@ -97,6 +97,22 @@ codon and amino acid attributes to SNPs.
 In GVF output, a `Reference_seq` or `Variant_seq` longer than this is written as
 `~<length>`. Zero means always write the full sequence. DEFAULT: 50
 
+#### How mutations are written as VCF
+
+Each record replaces `REF` with `ALT`, using the same sequences as in the GVF
+table below, so it also describes exactly the change that `gdtools APPLY` makes.
+Alleles are always written out in full; symbolic alleles (`<DEL>`, `<INS:ME>`)
+are not used.
+
+- VCF does not allow an empty allele, so an insertion or a deletion includes the
+  base before it (the base after it, at the start of a sequence).
+- `INS` entries at one site that differ in `insert_position` are written as one
+  record when they are at the same frequency. Separate records with the same
+  `POS` would be read as alternatives to one another.
+- A `DEL` that crosses the origin of a circular sequence is written as two
+  records, one on each side of it. Other mutations that do are omitted with a
+  warning, as is a mutation `within` another one.
+
 #### How mutations are written as GVF
 
 Output follows [Genome Variation Format 1.10](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gvf.md).

@@ -3085,7 +3085,13 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq_id = mut[SEQ_ID];
         replace_start = position - 1;
         replace_end = position - 1 + abs(iDupLen);
-        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        // A MOB at the first base has no base before it to show. Asking for position zero gets a
+        // string that is one base short, and the bracket positions below then ran off of its end.
+        if (position > 1) {
+          replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        } else {
+          replace_seq = "-" + ((iDupLen != 0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, 1, abs(iDupLen)) : "");
+        }
         replace_seq.insert(0,"(");
         replace_seq.insert(2,")");
         if (iDupLen > 0) {
@@ -3100,7 +3106,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         result_seq_id = mut[SEQ_ID];
         result_start = position - 1;
         result_end = position - 1;
-        result_seq = new_ref_seq_info.get_sequence_1(result_seq_id, result_start, result_end);
+        result_seq = (position > 1) ? new_ref_seq_info.get_sequence_1(result_seq_id, result_start, result_end) : "-";
         result_seq.insert(0,"(");
         result_seq.insert(2,")");
 
@@ -4518,6 +4524,206 @@ void cGenomeDiff::write_table_file(
 //
 // IMPORTANT: Although it doesn't seem to specify -- ALL columns must be separated by TABS, not spaces
   
+// ---- Mutations as sequence replacements --------------------------------------------------------
+//
+// VCF and GVF both describe a mutation as reference bases being replaced by other bases. This is the
+// one place that works that out for each type of GD mutation, so that the two writers cannot
+// disagree, and what it produces has to be exactly the change that gdtools APPLY makes for the entry.
+
+struct cSequenceReplacement {
+  string seq_id;
+  int32_t start;          // reference bases [start, end] are replaced...
+  int32_t end;
+  bool is_insertion;      // ...or none are, and variant_seq goes in 3' of start
+  string reference_seq;   // empty for an insertion
+  string variant_seq;     // empty for a deletion
+  string gvf_type;        // SO sequence_alteration term
+  vector<string> gvf_attributes;
+
+  cSequenceReplacement() : start(0), end(0), is_insertion(false) {}
+};
+
+// Reserved characters in column 9 of a GVF file are URL-escaped.
+static string gvf_escape(const string& s)
+{
+  string escaped;
+  for (size_t i = 0; i < s.size(); i++) {
+    unsigned char c = static_cast<unsigned char>(s[i]);
+    if ((c == ';') || (c == '=') || (c == '%') || (c == '&') || (c == ',') || (c < 0x20) || (c == 0x7F)) {
+      char buffer[4];
+      snprintf(buffer, sizeof(buffer), "%%%02X", c);
+      escaped += buffer;
+    } else {
+      escaped += s[i];
+    }
+  }
+  return escaped;
+}
+
+// Reference bases [start_1, end_1]. A mutation that crosses the origin of a circular sequence has
+// an end that is past the length of the sequence, so wrap around for it (get_sequence_1 would stop
+// at the last base).
+static string wrapped_reference_bases(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start_1, int32_t end_1)
+{
+  int32_t length = static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length());
+  if ((end_1 > length) && ref_seq_info.is_circular(seq_id) && (start_1 <= length) && (end_1 - length < start_1)) {
+    return ref_seq_info.get_sequence_1(seq_id, start_1, length) + ref_seq_info.get_sequence_1(seq_id, 1, end_1 - length);
+  }
+  return ref_seq_info.get_sequence_1(seq_id, start_1, end_1);
+}
+
+static string file_date(const char* format)
+{
+  time_t now = time(NULL);
+  char buffer[32];
+  strftime(buffer, sizeof(buffer), format, localtime(&now));
+  return buffer;
+}
+
+// Returns false, and says why, for a mutation that cannot be described this way.
+static bool mutation_as_sequence_replacement(cGenomeDiff& gd, cReferenceSequences& ref_seq_info, cDiffEntry& de, cSequenceReplacement& r, string& why_not)
+{
+  r = cSequenceReplacement();
+
+  // The position of a mutation inside of a newly inserted sequence (e.g., within a new MOB copy)
+  // counts bases of that insertion. It is not a reference coordinate.
+  if (de.entry_exists(WITHIN)) {
+    why_not = "It is 'within' another mutation, so its position is not a reference coordinate.";
+    return false;
+  }
+
+  r.seq_id = de[SEQ_ID];
+  const string& seq_id = r.seq_id;
+  const int32_t pos = from_string<int32_t>(de[POSITION]);
+  const int32_t size = de.entry_exists(SIZE) ? from_string<int32_t>(de[SIZE]) : 0;
+  r.start = r.end = pos;
+
+  switch (de._type)
+  {
+    case SNP:
+    {
+      r.gvf_type = "SNV";
+      r.variant_seq = de[NEW_SEQ];
+    } break;
+
+    case SUB:
+    {
+      r.variant_seq = de[NEW_SEQ];
+      r.gvf_type = (static_cast<int32_t>(r.variant_seq.size()) == size) ? "MNV" : "indel";
+      r.end = pos + size - 1;
+    } break;
+
+    case DEL:
+    {
+      r.gvf_type = "deletion";
+      r.end = pos + size - 1;
+    } break;
+
+    case INS:
+    {
+      r.gvf_type = "insertion";
+      r.is_insertion = true;
+      r.variant_seq = de[NEW_SEQ];
+    } break;
+
+    case AMP:
+    {
+      uint32_t new_copy_number = from_string<uint32_t>(de[NEW_COPY_NUMBER]);
+      if (new_copy_number < 2) {
+        why_not = "It is an AMP with a new copy number of less than two.";
+        return false;
+      }
+      r.gvf_type = (new_copy_number == 2) ? "tandem_duplication" : "copy_number_gain";
+      r.end = pos + size - 1;
+      string one_copy = wrapped_reference_bases(ref_seq_info, seq_id, r.start, r.end);
+      for (uint32_t i = 0; i < new_copy_number; i++) r.variant_seq += one_copy;
+      r.gvf_attributes.push_back("copy_number=" + to_string(new_copy_number));
+    } break;
+
+    case MOB:
+    {
+      int32_t duplication_size = from_string<int32_t>(de["duplication_size"]);
+
+      // Includes everything but the target site duplication (ins_start, del_start, ...)
+      r.variant_seq = gd.mob_replace_sequence(ref_seq_info, de);
+
+      if (duplication_size > 0) {
+        // The position is the first duplicated base. The new copy of the target site and then
+        // the element go in before it, leaving the original copy of the target site after them.
+        r.gvf_type = "mobile_element_insertion";
+        r.is_insertion = true;
+        r.start = r.end = pos - 1;
+        r.variant_seq = wrapped_reference_bases(ref_seq_info, seq_id, pos, pos + duplication_size - 1) + r.variant_seq;
+      } else if (duplication_size == 0) {
+        r.gvf_type = "mobile_element_insertion";
+        r.is_insertion = true;
+      } else {
+        // Target site bases are deleted rather than duplicated: the element replaces them, which
+        // is not an insertion as SO defines one. [gd_type] still says what this is.
+        r.gvf_type = "indel";
+        r.end = pos - duplication_size - 1;
+      }
+
+      r.gvf_attributes.push_back("repeat_name=" + gvf_escape(de["repeat_name"]));
+      r.gvf_attributes.push_back("repeat_strand=" + string((from_string<int32_t>(de["strand"]) > 0) ? "+" : "-"));
+      r.gvf_attributes.push_back("duplication_size=" + to_string(duplication_size));
+    } break;
+
+    case INV:
+    {
+      r.gvf_type = "inversion";
+      r.end = pos + size - 1;
+      r.variant_seq = reverse_complement(wrapped_reference_bases(ref_seq_info, seq_id, r.start, r.end));
+    } break;
+
+    case CON:
+    case INT:
+    {
+      uint32_t donor_target_id, donor_start, donor_end;
+      ref_seq_info.parse_region(de["region"], donor_target_id, donor_start, donor_end);
+      if (donor_start == donor_end) {
+        why_not = "Its donor region has end == start.";
+        return false;
+      }
+
+      // A region given high..low means the donor sequence goes in reverse complemented
+      bool donor_is_reversed = (donor_start > donor_end);
+      if (donor_is_reversed) swap(donor_start, donor_end);
+      r.variant_seq = ref_seq_info[donor_target_id].get_sequence_1(donor_start, donor_end);
+      if (donor_is_reversed) r.variant_seq = reverse_complement(r.variant_seq);
+
+      if (size == 0) {
+        r.gvf_type = "insertion";
+        r.is_insertion = true;
+      } else {
+        r.gvf_type = (static_cast<int32_t>(r.variant_seq.size()) == size) ? "substitution" : "indel";
+        r.end = pos + size - 1;
+      }
+
+      r.gvf_attributes.push_back("Breakpoint_detail=" + gvf_escape(ref_seq_info[donor_target_id].m_seq_id)
+                                 + ":" + to_string(donor_start) + "-" + to_string(donor_end) + ":" + (donor_is_reversed ? "-" : "+"));
+    } break;
+
+    default:
+      why_not = "Mutations of this type are not handled.";
+      return false;
+  }
+
+  if (r.is_insertion && (r.start == 0)) {
+    // There is no base for an insertion before the first base to be 3' of. It becomes the first
+    // base being replaced by the inserted bases followed by itself.
+    r.is_insertion = false;
+    r.gvf_type = "indel";
+    r.start = r.end = 1;
+    r.reference_seq = ref_seq_info.get_sequence_1(seq_id, 1, 1);
+    r.variant_seq += r.reference_seq;
+  } else if (!r.is_insertion) {
+    r.reference_seq = wrapped_reference_bases(ref_seq_info, seq_id, r.start, r.end);
+  }
+
+  return true;
+}
+
 // Average score of the evidence items supporting a mutation, for the VCF QUAL and GVF score
 // columns. Returns false when none of them has a score.
 static bool average_evidence_score(const diff_entry_list_t& ev, double& average_score)
@@ -4544,212 +4750,118 @@ static bool average_evidence_score(const diff_entry_list_t& ev, double& average_
   return true;
 }
 
+// One VCF record. Neither REF nor ALT may be empty, so an insertion or a deletion takes in the base
+// before it (or the base after it, at the start of a sequence) as an anchor.
+static string vcf_record(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start, int32_t end, bool is_insertion,
+                         string ref, string alt, const string& qual, const string& info)
+{
+  int32_t pos = start;
+  if (is_insertion) {
+    // goes in 3' of [start], which is the anchor
+    ref = ref_seq_info.get_sequence_1(seq_id, start, start);
+    alt = ref + alt;
+  } else if (alt.empty()) {
+    if (start > 1) {
+      pos = start - 1;
+      string anchor = ref_seq_info.get_sequence_1(seq_id, pos, pos);
+      ref = anchor + ref;
+      alt = anchor;
+    } else {
+      string anchor = ref_seq_info.get_sequence_1(seq_id, end + 1, end + 1);
+      ref = ref + anchor;
+      alt = anchor;
+    }
+  }
+  return seq_id + "\t" + to_string(pos) + "\t.\t" + ref + "\t" + alt + "\t" + qual + "\tPASS\t" + info;
+}
 
 void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_info)
-{  
+{
   ofstream output( vcffile.c_str() );
   output << "##fileformat=VCFv4.1" << endl;
-  output << "##fileDate" << endl;
-  output << "##source=breseq_GD2VCF_converterter" << endl;
-  //output << "##reference=" << endl;
-  
-  
+  output << "##fileDate=" << file_date("%Y%m%d") << endl;
+  output << "##source=" << PACKAGE_STRING << " gdtools CONVERT" << endl;
+
   // Write contig information.
-  
   for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     output << "##contig=<ID=" << it->m_seq_id << ",length=" << it->get_sequence_length() << ">" << endl;
   }
-  
+
   output << "##INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">" << endl;
   output << "##INFO=<ID=AD,Number=1,Type=Float,Description=\"Allele Depth (avg read count)\">" << endl;
   output << "##INFO=<ID=DP,Number=1,Type=Float,Description=\"Total Depth (avg read count)\">" << endl;
-  output << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" << endl;
 
-  
-  // Write header line
-  //output << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tsample" << endl;
+  // Write header line. There are no sample columns, since a GD file does not describe genotypes.
   output << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" << endl;
 
-  diff_entry_list_t muts = mutation_list();  
+  diff_entry_list_t muts = mutation_list();
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++) {
 
     cDiffEntry& mut = **it;
-    int32_t pos = from_string<int32_t>(mut[POSITION]);
-    
-    string chrom = mut[SEQ_ID];
-    string id = ".";
-    string ref;
-    string alt;
-    string qual = ".";
-    string filter = "PASS";
-    string format = "GT";
-    string sample = "1/1";
-    
-    // This is currently unused, only mutations are output
-    //if (mut.entry_exists(REJECT)) filter=mut[REJECT];
-    
-    vector<string> info_entries;
 
-    // Allele frequency field
-    double freq = 1.0;
-    if (mut.entry_exists(FREQUENCY)) {
-        freq = from_string<double>(mut[FREQUENCY]);
+    cSequenceReplacement r;
+    string why_not;
+    if (!mutation_as_sequence_replacement(*this, ref_seq_info, mut, r, why_not)) {
+      WARN("Mutation cannot be written as VCF (will be omitted). " + why_not + "\n" + mut.as_string());
+      continue;
     }
-    
+
     // Allele frequency
-    string AF = formatted_double(freq, 4).to_string();
-    info_entries.push_back("AF=" + AF);
-    
+    double freq = mut.entry_exists(FREQUENCY) ? from_string<double>(mut[FREQUENCY]) : 1.0;
+
+    // Insertions at one site (INS entries that differ in insert_position) would be records with the
+    // same POS and REF, which tools that apply a VCF file treat as alternatives to one another, not
+    // as all being present. They are written as one record when they are at the same frequency.
+    if (r.is_insertion) {
+      diff_entry_list_t::iterator it_next = it;
+      for (++it_next; it_next != muts.end(); ++it_next) {
+        cDiffEntry& next_mut = **it_next;
+        cSequenceReplacement next_r;
+        string next_why_not;
+        double next_freq = next_mut.entry_exists(FREQUENCY) ? from_string<double>(next_mut[FREQUENCY]) : 1.0;
+        if ( (next_mut._type != INS) || (mut._type != INS) || (next_freq != freq)
+            || !mutation_as_sequence_replacement(*this, ref_seq_info, next_mut, next_r, next_why_not)
+            || !next_r.is_insertion || (next_r.seq_id != r.seq_id) || (next_r.start != r.start) )
+          break;
+        r.variant_seq += next_r.variant_seq;
+        it = it_next;
+      }
+    }
+
+    vector<string> info_entries;
+    info_entries.push_back("AF=" + formatted_double(freq, 4).to_string());
+
     double new_read_count(0.0), total_read_count(0.0);
     if (read_counts_for_entry(mut, new_read_count, total_read_count)) {
       info_entries.push_back("AD=" + to_string<double>(new_read_count));
       info_entries.push_back("DP=" + to_string<double>(total_read_count));
     }
-    
+    string info = join(info_entries, ";");
+
     // Quality
     // Gets carried forward from the supporting evidence (and averaged if multiple apply)
+    string qual = ".";
     double average_score(0.0);
     if (average_evidence_score(in_evidence_list(mut), average_score)) {
       qual = formatted_double(average_score, 1).to_string();
     }
-    
-    switch (mut._type) 
-    {
-      case SNP:
-      { 
-        alt = mut[NEW_SEQ];
-        ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos);
-      } break;
-        
-      case SUB:
-      {
-        // We know Ref seq is not just a "." in this case.
-        alt = mut[NEW_SEQ];
-        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
-        ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + size - 1);
-      } break;
-        
-      case INS:
-      {          
-        // Ref has to be something - so take base insertion was after
-        // Complication: It could be inserted at the beginning of the sequence.
-        // In this case, we take the base after.
-        
-        bool before_base = (pos != 0);
-        if (!before_base) pos++;
-        ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos);
 
-        // Correct position of first base shown, if necessary
-        
-        alt = before_base ? ref + mut[NEW_SEQ] : mut[NEW_SEQ] + ref;
-      } break;
-        
-      case DEL:
-      {
-        // Complication: Alt has to be something (not .)
-        // So, take first base before deletion or after if it is the first base
-        
-        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
-        ref = ref_seq_info.get_sequence_1_start_size(mut[SEQ_ID], pos, size);
-        
-        bool before_base = (pos != 1);
-        alt = before_base ? ref_seq_info.get_sequence_1(mut[SEQ_ID], pos-1, pos-1) : ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos);
-        ref = before_base ? alt + ref : ref + alt;
-
-        // Correct position of first base shown, if necessary
-        if (before_base) pos--;
-      } break;
-        
-      case AMP:
-      {        
-        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
-        
-        //Build duplicate sequence
-        for (uint32_t i = 0; i < from_string<uint32_t>(mut[NEW_COPY_NUMBER]); i++)
-          alt.append(ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos+size-1));
-        ASSERT(!alt.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
-        
-        ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos+size-1);
-      } break;
-        
-      case INV:
-      {        
-        WARN("INV mutation type not handled by VCF converter (will be omitted):\n" + mut.as_string());
-      } break;
-        
-      case MOB:
-      {
-        // Ref has to be something - so take first base before deletion
-        // Or after if there is none before
-        
-        bool before_base = (pos != 1);
-        ref = before_base ? ref_seq_info.get_sequence_1(mut[SEQ_ID], pos-1, pos) : ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + 1);
-        //ref = before_base ? alt + ref : ref + alt;
-        
-        // This includes the IS and all adjacent duplicated or deleted nucleotides  
-        string new_seq_string = mob_replace_sequence(ref_seq_info, mut);
-        
-        // The position of a MOB is the first position that is duplicated
-        // Inserting at the position means we have to copy the duplication
-        // in FRONT OF the repeat sequence
-        
-        string duplicate_sequence;
-        int32_t iDupLen = from_string<int32_t>(mut["duplication_size"]);
-        if (iDupLen < 0) {
-          cerr << "Warning: MOB with negative target site insertion not handled. Ignoring:" << endl << mut << endl;
-          break;
-        }
-        if (iDupLen > 0) {
-          duplicate_sequence = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + iDupLen - 1);
-        }
-        
-        // Add on the duplicated sequence.  This happens AFTER
-        // we have inserted any insertions.
-        new_seq_string = duplicate_sequence + new_seq_string;        
-        
-        if (before_base) 
-          alt = ref + duplicate_sequence + new_seq_string;
-        else
-          alt = duplicate_sequence + new_seq_string + ref;
-        
-        // Correct position of first base shown, if necessary
-        if (before_base) pos--;
-        
-      } break;
-        
-      case CON:
-      case INT:
-      {        
-        uint32_t size = from_string<uint32_t>(mut[SIZE]);
-        
-        uint32_t replace_target_id, replace_start, replace_end;
-        ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process CON/INT mutation with end == start. ID:" + mut._id);
-        
-        int8_t strand = (replace_start < replace_end) ?  +1 : -1;
-        
-        if (strand == -1)
-          swap(replace_start, replace_end);
-        
-        // @JEB: correct here to look for where the replacing_sequence is in the original ref_seq_info.
-        // This saves us from possible looking at a shifted location...
-        alt = ref_seq_info[replace_target_id].get_sequence_1(replace_start, replace_end);
-        
-        if (strand == -1)
-          alt = reverse_complement(alt);
-        
-        ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + size - 1);
-        
-      } break;
-        
-      default:
-        WARN("Can't handle mutation type: " + to_string(mut._type) + "\nIt will be skipped.");
+    int32_t length = static_cast<int32_t>(ref_seq_info[r.seq_id].get_sequence_length());
+    if (r.end > length) {
+      // VCF has no way to write a record that crosses the origin of a circular sequence. A deletion
+      // that does is the same thing as two deletions, one on each side of it.
+      if ((mut._type == DEL) && ref_seq_info.is_circular(r.seq_id) && (r.start <= length) && (r.end - length < r.start - 1)) {
+        output << vcf_record(ref_seq_info, r.seq_id, 1, r.end - length, false, r.reference_seq.substr(length - r.start + 1), "", qual, info) << endl;
+        output << vcf_record(ref_seq_info, r.seq_id, r.start, length, false, r.reference_seq.substr(0, length - r.start + 1), "", qual, info) << endl;
+      } else {
+        WARN("Mutation cannot be written as VCF (will be omitted). It extends past the end of the reference sequence.\n" + mut.as_string());
+      }
+      continue;
     }
-    
-    //output << chrom << "\t" << pos << "\t" << id << "\t" << ref << "\t" << alt << "\t" << qual << "\t" << filter << "\t" << info << "\t" << format << "\t" << sample << endl;
-    output << chrom << "\t" << pos << "\t" << id << "\t" << ref << "\t" << alt << "\t" << qual << "\t" << filter << "\t" << join(info_entries, ";") << endl;
+
+    output << vcf_record(ref_seq_info, r.seq_id, r.start, r.end, r.is_insertion, r.reference_seq, r.variant_seq, qual, info) << endl;
   }
-  
+
   output.close();
 }
   
@@ -4773,24 +4885,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
 //  * The type (column 3) is an SO sequence_alteration term. SO substitution/MNV mean the two
 //    sequences have the same length; "indel" is the term for a replacement that changes length.
 //
-// Each case below has to describe exactly the change that gdtools APPLY makes for that entry.
-
-// Reserved characters in column 9 are URL-escaped.
-static string gvf_escape(const string& s)
-{
-  string escaped;
-  for (size_t i = 0; i < s.size(); i++) {
-    unsigned char c = static_cast<unsigned char>(s[i]);
-    if ((c == ';') || (c == '=') || (c == '%') || (c == '&') || (c == ',') || (c < 0x20) || (c == 0x7F)) {
-      char buffer[4];
-      snprintf(buffer, sizeof(buffer), "%%%02X", c);
-      escaped += buffer;
-    } else {
-      escaped += s[i];
-    }
-  }
-  return escaped;
-}
+// What replaces what is worked out by mutation_as_sequence_replacement(), above.
 
 // How one allele is written: "-" for no sequence, "~<length>" when it is longer than the cutoff
 // (a cutoff of zero means never abbreviate).
@@ -4799,26 +4894,6 @@ static string gvf_allele(const string& seq, uint32_t max_sequence_length)
   if (seq.empty()) return "-";
   if ((max_sequence_length != 0) && (seq.size() > max_sequence_length)) return "~" + to_string(seq.size());
   return seq;
-}
-
-// Reference bases [start_1, end_1]. A feature that crosses the origin of a circular sequence is
-// written the GFF3 way, with an end that is past the length of the sequence, so wrap around for it
-// (get_sequence_1 would stop at the last base).
-static string gvf_reference_bases(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start_1, int32_t end_1)
-{
-  int32_t length = static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length());
-  if ((end_1 > length) && ref_seq_info.is_circular(seq_id) && (start_1 <= length) && (end_1 - length < start_1)) {
-    return ref_seq_info.get_sequence_1(seq_id, start_1, length) + ref_seq_info.get_sequence_1(seq_id, 1, end_1 - length);
-  }
-  return ref_seq_info.get_sequence_1(seq_id, start_1, end_1);
-}
-
-static string gvf_file_date()
-{
-  time_t now = time(NULL);
-  char buffer[32];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%d", localtime(&now));
-  return buffer;
 }
 
 // Convert GD file to GVF file
@@ -4835,141 +4910,20 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
 
     if (snv_only && (de._type != SNP)) continue;
 
-    // The position of a mutation inside of a newly inserted sequence (e.g., within a new MOB copy)
-    // counts bases of that insertion. It cannot be written as a reference coordinate.
-    if (de.entry_exists(WITHIN)) {
-      WARN("Mutation 'within' another mutation cannot be written as GVF (will be omitted):\n" + de.as_string());
+    cSequenceReplacement r;
+    string why_not;
+    if (!mutation_as_sequence_replacement(*this, ref_seq_info, de, r, why_not)) {
+      WARN("Mutation cannot be written as GVF (will be omitted). " + why_not + "\n" + de.as_string());
       continue;
     }
 
-    const string seq_id = de[SEQ_ID];
-    const int32_t pos = from_string<int32_t>(de[POSITION]);
-    const int32_t size = de.entry_exists(SIZE) ? from_string<int32_t>(de[SIZE]) : 0;
-
-    // What has to be decided for each type: the SO term, the reference bases [start, end] that are
-    // replaced (none of them when is_insertion, which goes 3' of start), and what replaces them.
-    string type;
-    int32_t start(pos), end(pos);
-    bool is_insertion(false);
-    string variant_seq;
-    vector<string> extra_attributes;
-
-    switch (de._type)
-    {
-      case SNP:
-      {
-        type = "SNV";
-        variant_seq = de[NEW_SEQ];
-      } break;
-
-      case SUB:
-      {
-        variant_seq = de[NEW_SEQ];
-        type = (static_cast<int32_t>(variant_seq.size()) == size) ? "MNV" : "indel";
-        end = pos + size - 1;
-      } break;
-
-      case DEL:
-      {
-        type = "deletion";
-        end = pos + size - 1;
-      } break;
-
-      case INS:
-      {
-        type = "insertion";
-        is_insertion = true;
-        variant_seq = de[NEW_SEQ];
-      } break;
-
-      case AMP:
-      {
-        uint32_t new_copy_number = from_string<uint32_t>(de[NEW_COPY_NUMBER]);
-        type = (new_copy_number == 2) ? "tandem_duplication" : "copy_number_gain";
-        end = pos + size - 1;
-        string one_copy = gvf_reference_bases(ref_seq_info, seq_id, start, end);
-        for (uint32_t i = 0; i < new_copy_number; i++) variant_seq += one_copy;
-        extra_attributes.push_back("copy_number=" + to_string(new_copy_number));
-      } break;
-
-      case MOB:
-      {
-        int32_t duplication_size = from_string<int32_t>(de["duplication_size"]);
-
-        // Includes everything but the target site duplication (ins_start, del_start, ...)
-        variant_seq = mob_replace_sequence(ref_seq_info, de);
-
-        if (duplication_size > 0) {
-          // The position is the first duplicated base. The new copy of the target site and then
-          // the element go in before it, leaving the original copy of the target site after them.
-          type = "mobile_element_insertion";
-          is_insertion = true;
-          start = end = pos - 1;
-          variant_seq = gvf_reference_bases(ref_seq_info, seq_id, pos, pos + duplication_size - 1) + variant_seq;
-        } else if (duplication_size == 0) {
-          type = "mobile_element_insertion";
-          is_insertion = true;
-        } else {
-          // Target site bases are deleted rather than duplicated: the element replaces them, which
-          // is not an insertion as SO defines one. [gd_type] still says what this is.
-          type = "indel";
-          end = pos - duplication_size - 1;
-        }
-
-        extra_attributes.push_back("repeat_name=" + gvf_escape(de["repeat_name"]));
-        extra_attributes.push_back("repeat_strand=" + string((from_string<int32_t>(de["strand"]) > 0) ? "+" : "-"));
-        extra_attributes.push_back("duplication_size=" + to_string(duplication_size));
-      } break;
-
-      case INV:
-      {
-        type = "inversion";
-        end = pos + size - 1;
-        variant_seq = reverse_complement(gvf_reference_bases(ref_seq_info, seq_id, start, end));
-      } break;
-
-      case CON:
-      case INT:
-      {
-        uint32_t donor_target_id, donor_start, donor_end;
-        ref_seq_info.parse_region(de["region"], donor_target_id, donor_start, donor_end);
-        ASSERT(donor_start != donor_end, "Cannot process CON/INT mutation with end == start. ID:" + de._id);
-
-        // A region given high..low means the donor sequence goes in reverse complemented
-        bool donor_is_reversed = (donor_start > donor_end);
-        if (donor_is_reversed) swap(donor_start, donor_end);
-        variant_seq = ref_seq_info[donor_target_id].get_sequence_1(donor_start, donor_end);
-        if (donor_is_reversed) variant_seq = reverse_complement(variant_seq);
-
-        if (size == 0) {
-          type = "insertion";
-          is_insertion = true;
-        } else {
-          type = (static_cast<int32_t>(variant_seq.size()) == size) ? "substitution" : "indel";
-          end = pos + size - 1;
-        }
-
-        extra_attributes.push_back("Breakpoint_detail=" + gvf_escape(ref_seq_info[donor_target_id].m_seq_id)
-                                   + ":" + to_string(donor_start) + "-" + to_string(donor_end) + ":" + (donor_is_reversed ? "-" : "+"));
-      } break;
-
-      default:
-        WARN("Mutation type cannot be written as GVF (will be omitted):\n" + de.as_string());
-        continue;
-    }
-
-    string reference_seq;
-    if (is_insertion && (start == 0)) {
-      // There is no base for an insertion before the first base to be 3' of. Write it as the
-      // first base being replaced by the inserted bases followed by itself.
-      type = "indel";
-      start = end = 1;
-      reference_seq = ref_seq_info.get_sequence_1(seq_id, 1, 1);
-      variant_seq += reference_seq;
-    } else if (!is_insertion) {
-      reference_seq = gvf_reference_bases(ref_seq_info, seq_id, start, end);
-    }
-
+    const string& seq_id = r.seq_id;
+    const string& type = r.gvf_type;
+    const int32_t start(r.start), end(r.end);
+    const string& reference_seq = r.reference_seq;
+    const string& variant_seq = r.variant_seq;
+    const vector<string>& extra_attributes = r.gvf_attributes;
+    
     // A mutation that is not at 100% frequency is a mixed sample: the reference allele is there too.
     double frequency = de.entry_exists(FREQUENCY) ? from_string<double>(de[FREQUENCY]) : 1.0;
     bool is_mixed = (frequency < 1.0);
@@ -5062,7 +5016,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
   ofstream output( gvffile.c_str() );
   output << "##gff-version 3" << endl;
   output << "##gvf-version 1.10" << endl;
-  output << "##file-date " << gvf_file_date() << endl;
+  output << "##file-date " << file_date("%Y-%m-%d") << endl;
   output << "##source-method Source=breseq;Dbxref=https://github.com/barricklab/breseq;Comment=Mutations predicted by " << PACKAGE_STRING << " and converted from Genome Diff format;" << endl;
   output << "##score-method Source=breseq;Comment=Average of the breseq scores of the evidence items supporting a mutation. Not Phred scaled;" << endl;
   for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
