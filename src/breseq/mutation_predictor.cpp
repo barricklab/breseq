@@ -4312,9 +4312,9 @@ namespace breseq {
     diff_entry_list_t dp_list = gd.get_list(make_vector<gd_entry_type>(DP));
     if (dp_list.empty()) return;
 
-    bool inner3p = true;
+    pair_geometry geometry;   // only the median is wanted here
     double D = 0.0, pair_median = 0.0;
-    if (!paired_library_params(summary, inner3p, D, pair_median)) return;
+    if (!paired_library_geometry(summary, geometry, D, pair_median)) return;
     int32_t window = max(1, static_cast<int32_t>(pair_median));
 
     // Each doomed DP remembers which PD displaced it, so a mutation that was resting on the DP can

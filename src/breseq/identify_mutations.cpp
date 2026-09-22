@@ -804,6 +804,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _pd_u(0)
 , _pd_last_b(0)
 , _pd_by_molecule(settings.read_file_long_read_pair_distance != 0)
+, _pd_admit_opposite_strand(false)
+, _pd_admit_same_strand(false)
 , _pd_u_long(0)
 , _pd_u_short(0)
 , _pd_tail_lower(0)
@@ -981,6 +983,8 @@ identify_mutations_pileup::identify_mutations_pileup(
       // The orientation the null was built from. Pairs of any other orientation are not scored
       // against it; see dp_group::pd_orientation.
       _dp_groups[group_index].pd_orientation = it->second.majority_orientation;
+      if (read_pair_orientation_is_same_strand(it->second.majority_orientation)) _pd_admit_same_strand = true;
+      else                                                                       _pd_admit_opposite_strand = true;
       _dp_groups[group_index].pd_minimum_shift = _pd_by_molecule ? pd_minimum_shift(settings, it->second.median) : 0;
       _pd_mean_covering_gap = max(_pd_mean_covering_gap, group_gap);
       usable_groups++;
@@ -1732,7 +1736,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             && !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP))
             && (i->mate_reference_target_id() == i->reference_target_id())
             && (i->insert_size() > 0)
-            && (i->reversed() != ((i->flag() & BAM_FMREVERSE) != 0))
+            && ((i->reversed() != ((i->flag() & BAM_FMREVERSE) != 0)) ? _pd_admit_opposite_strand : _pd_admit_same_strand)
             // A tie-broken multi-mapping placement has an arbitrary distance, so it would add noise
             // to the distribution rather than signal. This is the opposite of DP, which USES
             // redundancy as evidence that a side sits on a multicopy element.

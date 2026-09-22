@@ -724,6 +724,11 @@ namespace breseq {
 		int64_t _pd_u_long;                                  //!< running total of molecules' mean u_long
 		int64_t _pd_u_short;                                 //!< running total of molecules' mean u_short
 		bool _pd_by_molecule;                                //!< true with --long-read-pair-distance
+		//! Which strand arrangements some read group's null was built from. The PD "enter" step tests
+		//! these before it knows a read's group, so that the pairs it COUNTS as considered stay the
+		//! ones that could match: opposite-strand for FR and RF libraries, same-strand for FF.
+		bool _pd_admit_opposite_strand;
+		bool _pd_admit_same_strand;
 		vector<vector<pd_molecule_event> > _pd_ring_events;  //!< per column: pairs whose gap starts / ended here
 		map<uint64_t, pd_molecule_state> _pd_molecules;      //!< molecules with a pair covering the current column
 		int64_t _pd_tail_lower;                              //!< lower-tail quantile bound, kPDuScale fixed point

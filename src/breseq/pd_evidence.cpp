@@ -697,12 +697,15 @@ namespace breseq {
     //
     // Step 0: library geometry and the null distribution.
     //
-    bool inner3p = true;
+    // PD never reads which way a read faces -- every pair is reduced to its leftmost mate's end, its
+    // mate's start and their distance -- so all it needs from the library is that it HAS a majority
+    // orientation to match pairs against (pd_orientation_matches) and the median pair distance.
+    pair_geometry geometry;
     double D = 0.0;
     double pair_median = 0.0;
-    if (!paired_library_params(summary, inner3p, D, pair_median)) {
-      WARN("Pair distance (PD) evidence prediction currently supports only FR- and RF-concordant "
-           "libraries. No PD evidence will be predicted.");
+    if (!paired_library_geometry(summary, geometry, D, pair_median)) {
+      WARN("Pair distance (PD) evidence prediction needs paired read groups with a majority orientation "
+           "of FR, RF or FF. No PD evidence will be predicted.");
       pd_gd.write(settings.pd_genome_diff_file_name);
       return;
     }
@@ -1238,6 +1241,7 @@ namespace breseq {
     int32_t mate_start, mate_end;
     int32_t d;
     bool    read_reversed;
+    bool    mate_reversed;   // the mate's OWN strand: it is not the opposite of the read's in a same-strand library
   };
 
   //! Gathers the pairs to draw at a PD position, classified by the SAME likelihood ratio the counts
@@ -1298,6 +1302,7 @@ namespace breseq {
       p.mate_end = 0;
       p.d = a.insert_size();
       p.read_reversed = a.reversed();
+      p.mate_reversed = (a.flag() & BAM_FMREVERSE) != 0;
       if (p.mate_start - 1 < p.read_end) return;
       if (p.d > m_max_span) return;
       m_lefts.push_back(p);
@@ -1389,13 +1394,13 @@ namespace breseq {
       else if (p.category == 2) has_n = true;
       else                      has_a = true;
 
-      // The left mate points right and the right mate points left (or the mirror under an RF
-      // library); drawing each arrow from its own 5' end is what makes that orientation visible.
+      // Each arrow is drawn from its own mate's 5' end, which is what makes the orientation visible:
+      // facing for FR, back to back for RF, and both the same way for a same-strand library.
       int32_t l_tail = p.read_reversed ? p.read_end : p.read_start;
       int32_t l_head = p.read_reversed ? p.read_start : p.read_end;
       reads << l_tail << "\t" << y << "\t" << (l_head - l_tail) << "\t0\n";
-      int32_t r_tail = p.read_reversed ? p.mate_start : p.mate_end;
-      int32_t r_head = p.read_reversed ? p.mate_end : p.mate_start;
+      int32_t r_tail = p.mate_reversed ? p.mate_end : p.mate_start;
+      int32_t r_head = p.mate_reversed ? p.mate_start : p.mate_end;
       reads << r_tail << "\t" << y << "\t" << (r_head - r_tail) << "\t0\n";
       conns << p.read_end << "\t" << y << "\n" << p.mate_start << "\t" << y << "\n\n";
     }
@@ -1510,9 +1515,9 @@ namespace breseq {
   {
     (void)ref_seq_info;
 
-    bool inner3p = true;
+    pair_geometry geometry;
     double D = 0.0, pair_median = 0.0;
-    if (!paired_library_params(summary, inner3p, D, pair_median)) return;  // predict already warned
+    if (!paired_library_geometry(summary, geometry, D, pair_median)) return;  // predict already warned
     if (!file_exists(settings.reference_bam_file_name.c_str()) ||
         !file_exists(settings.reference_fasta_file_name.c_str())) return;
 

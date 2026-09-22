@@ -94,10 +94,20 @@ namespace breseq {
   //
   //  Shared by the seeding pass in identify_mutations.cpp and the rescan and plot passes here, so all
   //  three see the same population.
-  inline bool pd_orientation_matches(const string& required, bool reversed, bool mate_reversed)
+  //
+  //  A same-strand library ("FF", or its mirror "EV") is matched the same way. Its orientation cannot
+  //  be read off two strand flags -- both arrangements have them equal -- so the leftmost mate's
+  //  NUMBER is needed too: mate 1 is upstream along the shared strand exactly when the leftmost mate
+  //  is forward and mate 1, or reverse and mate 2 (see read_pair_orientation, alignment.h). With no
+  //  majority call, same-strand pairs stay excluded: in an ordinary library they are precisely the
+  //  clustered, systematically long minority the paragraph above is about.
+  inline bool pd_orientation_matches(const string& required, bool reversed, bool mate_reversed, bool is_read2)
   {
-    if (reversed == mate_reversed) return false;      // FF or RR: not a pair PD can read at all
-    if (required.empty()) return true;
+    const bool same_strand = (reversed == mate_reversed);
+    if (required.empty()) return !same_strand;
+    if (same_strand) return required == ((reversed == is_read2) ? "FF" : "EV");
+    // An opposite-strand pair in a same-strand library is recorded as "FR" whichever mate is lower
+    // (read_pair_orientation_as_recorded), but it can never equal a same-strand `required` anyway.
     return required == (reversed ? "RF" : "FR");
   }
 
@@ -105,7 +115,7 @@ namespace breseq {
   template <class TAlignment>
   inline bool pd_orientation_matches(const string& required, const TAlignment& a)
   {
-    return pd_orientation_matches(required, a.reversed(), (a.flag() & BAM_FMREVERSE) != 0);
+    return pd_orientation_matches(required, a.reversed(), (a.flag() & BAM_FMREVERSE) != 0, (a.flag() & BAM_FREAD2) != 0);
   }
 
   //! Predict Pair Distance (PD) evidence.
