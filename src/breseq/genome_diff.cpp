@@ -2727,7 +2727,7 @@ static void replace_sequence_across_origin_1(cReferenceSequences& ref_seq_info, 
 
   int32_t overhang = end_1 - length;
   if (!ref_seq_info.is_circular(seq_id) || (start_1 > length) || (overhang >= start_1)) {
-    WARN("Mutation extends past the end of the reference sequence. Only the bases up to its end are replaced.\n" + mut.as_string());
+    WARN("Mutation extends past the end of a linear reference sequence. Only the bases up to its end are replaced. If the sequence is actually circular, mark it CIRCULAR in the reference file (on the LOCUS line of a GenBank file, or with Is_circular=true on the region feature of a GFF3 file) and the mutation will be applied across the origin instead.\n" + mut.as_string());
     ref_seq_info.replace_sequence_1(seq_id, start_1, length, replacement_seq, mut_type);
     return;
   }
@@ -2900,7 +2900,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         int32_t del_overhang = position + size - 1 - del_seq_length;
         if (del_overhang > 0) {
           if (!new_ref_seq_info.is_circular(mut[SEQ_ID]) || (del_overhang >= position)) {
-            WARN("DEL extends past the end of the reference sequence. Only the bases up to its end are deleted.\n" + mut.as_string());
+            WARN("DEL extends past the end of a linear reference sequence. Only the bases up to its end are deleted. If the sequence is actually circular, mark it CIRCULAR in the reference file (on the LOCUS line of a GenBank file, or with Is_circular=true on the region feature of a GFF3 file) and the mutation will be applied across the origin instead.\n" + mut.as_string());
             size -= del_overhang;
             del_overhang = 0;
           }
@@ -4938,7 +4938,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         output << vcf_record(ref_seq_info, r.seq_id, 1, r.end - length, false, r.reference_seq.substr(bases_before_origin), after_origin, qual, info) << endl;
         output << vcf_record(ref_seq_info, r.seq_id, r.start, length, false, r.reference_seq.substr(0, bases_before_origin), before_origin, qual, info) << endl;
       } else {
-        WARN("Mutation cannot be written as VCF (will be omitted). It extends past the end of the reference sequence.\n" + mut.as_string());
+        WARN("Mutation cannot be written as VCF (will be omitted). It extends past the end of a linear reference sequence. If the sequence is actually circular, mark it CIRCULAR in the reference file (on the LOCUS line of a GenBank file, or with Is_circular=true on the region feature of a GFF3 file) and the mutation will be written as two records, one on each side of the origin.\n" + mut.as_string());
       }
       continue;
     }

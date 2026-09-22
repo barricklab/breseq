@@ -62,7 +62,9 @@ origin as there were, so a change that does not alter the length (`SUB`, `INV`)
 leaves every other coordinate where it was. Features inside an `INV` that
 crosses the origin are not carried over to the new sequence (a warning says so).
 On a linear sequence, a mutation that runs past the end is cut off there, with a
-warning.
+warning. If the sequence is actually circular, mark it `CIRCULAR` in the
+reference file (see [Reference Sequence File Formats](reference-sequence-file-formats.md))
+and the warning goes away.
 
 `-r <file_path>, --reference=<file_path>`
 
