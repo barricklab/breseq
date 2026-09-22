@@ -1293,7 +1293,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << to_string(settings.read_file_long_read_split_length) << " bases" << (settings.read_file_long_read_distribute_remainder ? "" : " (extra bases discarded)");
     // (appended before the line ends, so that the sentence break is not preceded by whitespace; without
     // synthetic pairs the bytes written are exactly what they were)
-    if (settings.read_file_long_read_pair_distance != 0) {
+    if (settings.have_long_read_pairs()) {
       HTML << ". Each piece was paired with the piece " << settings.read_file_long_read_pair_distance
            << " bases downstream on the same long read (--long-read-pair-distance). Both pieces keep the long"
            << " read's strand, so the pairs are FF. These synthetic pairs are the .LP1 / .LP2 files; pieces without a"
@@ -2856,7 +2856,7 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
 
   // What a count IS, when the pairs are synthetic. Without this row every number in the DP tables
   // reads as a count of pairs, and for long reads none of them is except discordant_count.
-  if (settings.read_file_long_read_pair_distance != 0) {
+  if (settings.have_long_read_pairs()) {
     ss << tr(td("counting unit")
              + td("source long reads")
              + td("the synthetic pairs cut from one long read are one molecule, not independent observations"
@@ -2952,7 +2952,7 @@ string html_pair_distance_gates_string(const Settings& settings, Summary& summar
                    ? " &mdash; fragments are shorter than two reads, so only the minority of pairs with a gap can carry PD evidence"
                    : ""))) << endl;
 
-  if (settings.read_file_long_read_pair_distance != 0) {
+  if (settings.have_long_read_pairs()) {
     int32_t floor_shift = pd_minimum_shift(settings, d.pair_distance_median);
     ss << tr(td("counting unit")
              + td("source long reads")
@@ -3176,7 +3176,7 @@ string html_missing_pair_gates_string(const Settings& settings, Summary& summary
 
   // MP is the one pair-based type that does NOT count source reads throughout, so say exactly where
   // it does -- an MP item otherwise looks like it mixes units by accident.
-  if (settings.read_file_long_read_pair_distance != 0) {
+  if (settings.have_long_read_pairs()) {
     ss << tr(td("counting unit")
              + td("pieces; source reads for <i>distinct</i>")
              + td("unpaired, spanning, total and window counts, the score and the background below are in the pieces"

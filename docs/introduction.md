@@ -20,11 +20,15 @@ it can:
 _breseq_ version 0.38+ can also be used with long-read sequencing
 data (e.g., Nanopore, PacBio). It analyzes long reads by automatically
 splitting them into shorter subsequences so that it can use its standard
-mapping and analysis methods. Be aware that this discards unique
-information in long reads that can be used to identify large-scale
-structural variation in a genome! We recommend that you perform _de novo_
-assembly and whole-genome comparisons with other software programs to
-analyze long-read data for structural variation.
+mapping and analysis methods. By default, pieces cut from the same long read
+that are 2000 bases apart are also paired with one another, so that the
+discordant pair (DP), missing pair (MP) and pair distance (PD) evidence
+normally derived from paired-end libraries can be predicted from long reads
+(see `--long-read-pair-distance`; set it to 0 to turn this off). Be aware
+that this still discards unique information in long reads that can be used
+to identify large-scale structural variation in a genome! We recommend that
+you perform _de novo_ assembly and whole-genome comparisons with other
+software programs to analyze long-read data for structural variation.
 
 If your Nanopore reads were processed using fast basecalling, we recommend adding
 the `--nanopore-fast` option. It rules out false-positive mutation predictions

@@ -875,7 +875,7 @@ namespace breseq {
 
     pd_pair_scanner* scanner =
       new pd_pair_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name,
-                          max_span, required_orientation, settings.read_file_long_read_pair_distance != 0);
+                          max_span, required_orientation, settings.have_long_read_pairs());
 
     //
     // Step 2: rescan, estimate, localize.

@@ -126,6 +126,7 @@ namespace breseq
   public:
     vector<cReadFile> m_files;  // 1 file (unpaired) or 2 files (paired, R1 at [0], R2 at [1])
     string m_base_name;         // collective name (X-substituted for paired, or individual base name)
+    bool m_long_read_pairs = false; // the synthetic .LP1/.LP2 mates cut from one long-read file
 
     bool is_paired() const { return m_files.size() == 2; }
   };
@@ -169,6 +170,16 @@ namespace breseq
     {
       for (const auto& rfs : *this)
         if (rfs.is_paired()) return true;
+      return false;
+    }
+
+    // True if any set holds synthetic pairs cut from long reads (--long-read-pair-distance). Ask
+    // this, never the option value, before treating pairs as pieces of one molecule: the option is
+    // on by default, and a run with no long reads must behave exactly as if it were off.
+    bool any_long_read_pairs() const
+    {
+      for (const auto& rfs : *this)
+        if (rfs.m_long_read_pairs) return true;
       return false;
     }
 	};
@@ -323,7 +334,7 @@ namespace breseq
     uint32_t read_file_long_read_trigger_length;// Default = 1000 COMMAND-LINE OPTION
     uint32_t read_file_long_read_split_length;  // Default = 200 COMMAND-LINE OPTION
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
-    uint32_t read_file_long_read_pair_distance; // Default = 0 (OFF) COMMAND-LINE OPTION, EXPERIMENTAL
+    uint32_t read_file_long_read_pair_distance; // Default = 2000 COMMAND-LINE OPTION (0 = OFF)
     bool paired_mapping;                                     // Default = true COMMAND-LINE OPTION (disable with --no-paired-mapping)
     bool predict_discordant_pairs;                           // Default = true COMMAND-LINE OPTION (disable with --no-discordant-pair-prediction; requires paired-mapping)
     bool predict_missing_pairs;                              // Default = true COMMAND-LINE OPTION (disable with --no-missing-pair-prediction; requires paired-mapping)
@@ -1100,6 +1111,10 @@ namespace breseq
     // --no-paired-mapping was not given; it is true for a run of nothing but single-end reads.
     // Steps that need pairs gate on this so such a run skips them without a banner or a warning.
     bool have_paired_reads() const { return paired_mapping && read_file_sets.any_paired(); }
+    //! Whether this run made synthetic pairs from long reads. Derived from the read file sets that
+    //! are rebuilt from the sequence-conversion summary on every (re)start, so it is the same in
+    //! every stage; see cReadFileSets::any_long_read_pairs for why it is not the option value.
+    bool have_long_read_pairs() const { return read_file_sets.any_long_read_pairs(); }
 
     bool do_step(const string& done_key, const string& message);
     void set_current_step_done_key(const string& done_key) { current_step_done_key = done_key; }

@@ -804,7 +804,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _pd_short(0)
 , _pd_u(0)
 , _pd_last_b(0)
-, _pd_by_molecule(settings.read_file_long_read_pair_distance != 0)
+, _pd_by_molecule(settings.have_long_read_pairs())
 , _pd_admit_opposite_strand(false)
 , _pd_admit_same_strand(false)
 , _pd_u_long(0)

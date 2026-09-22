@@ -1621,7 +1621,6 @@ int breseq_default_action(int argc, char* argv[])
           cerr << "  ::SKIPPED DUE TO REACHING COVERAGE LIMIT::" << endl;
           set_index++;
           flat_file_counter += rfs.m_files.size();
-          if (!rfs.is_paired() && settings.read_file_long_read_pair_distance) flat_file_counter += 2;
           continue;
         }
 
@@ -1682,9 +1681,11 @@ int breseq_default_action(int argc, char* argv[])
           string fastq_file_name = settings.base_name_to_read_file_name(base_name);
           string convert_file_name = settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
-          // EXPERIMENTAL synthetic pairs from long reads: an unpaired file may also produce two
-          // mate files. It always reserves their two file indices, whether or not it turns out to
-          // hold long reads, so that read-name prefixes do not depend on the content of the files.
+          // Synthetic pairs from long reads: an unpaired file may also produce two mate files, which
+          // take the two file indices after its own. Those indices are reserved only when the file
+          // actually produced pairs (below), so that a run with no long reads names its reads exactly
+          // as it would with --long-read-pair-distance 0 -- bowtie2 seeds its tie-breaking from the
+          // read name, so merely renumbering the reads of a short-read file changes its alignments.
           const bool make_long_read_pairs = (settings.read_file_long_read_pair_distance != 0);
           const string lp_base_names[2] = { base_name + ".LP1", base_name + ".LP2" };
           const string lp_convert_file_names[2] = {
@@ -1733,7 +1734,7 @@ int breseq_default_action(int argc, char* argv[])
               s.num_bases += s_lp[m].num_bases;
               s.reads[lp_base_names[m]] = s_lp[m];
             }
-            flat_file_counter += 2;
+            if ((s_lp[0].num_reads != 0) && (s_lp[1].num_reads != 0)) flat_file_counter += 2;
           }
 
           if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
@@ -1861,7 +1862,10 @@ int breseq_default_action(int argc, char* argv[])
           lp_rfs.m_files.push_back(lp_rf);
           surviving_sets.read_file_to_fastq_file_name_map[lp_base_name] = lp_rf.m_original_file_name;
         }
-        if (lp_rfs.m_files.size() == 2) surviving_sets.push_back(lp_rfs);
+        if (lp_rfs.m_files.size() == 2) {
+          lp_rfs.m_long_read_pairs = true;
+          surviving_sets.push_back(lp_rfs);
+        }
       }
     }
     settings.read_file_sets = surviving_sets;

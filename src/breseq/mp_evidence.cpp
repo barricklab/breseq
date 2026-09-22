@@ -895,7 +895,7 @@ namespace breseq {
     }
     mp_side_scanner* scanner =
       new mp_side_scanner(settings.reference_bam_file_name, settings.reference_fasta_file_name,
-                          settings.read_file_long_read_pair_distance != 0);
+                          settings.have_long_read_pairs());
     scanner->set_geometry(geometry);
     mp_extent_indexer indexer(settings.reference_bam_file_name, settings.reference_fasta_file_name);
 
@@ -1124,7 +1124,7 @@ namespace breseq {
       mp[MP_READ_COUNT] = to_string(c.supporting);
       // In source long reads, and named for it, when the reads are synthetic pairs (see
       // mp_side_scanner::distinct and MP_DISTINCT_SOURCE_READ_COUNT); distinct outer ends otherwise.
-      const bool by_molecule = (settings.read_file_long_read_pair_distance != 0);
+      const bool by_molecule = settings.have_long_read_pairs();
       mp[by_molecule ? MP_DISTINCT_SOURCE_READ_COUNT : MP_DISTINCT_COUNT] = to_string(c.distinct);
       mp[MP_CONCORDANT_COUNT] = to_string(c.spanning);
       mp[MP_TOTAL_COUNT] = to_string(static_cast<uint32_t>(n));

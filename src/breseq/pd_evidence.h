@@ -36,7 +36,7 @@ namespace breseq {
   inline int32_t pd_minimum_shift(const Settings& settings, double pair_distance_median)
   {
     if (settings.pair_distance_minimum_shift > 0) return settings.pair_distance_minimum_shift;
-    if (settings.read_file_long_read_pair_distance == 0) return 0;
+    if (!settings.have_long_read_pairs()) return 0;
     return static_cast<int32_t>(ceil(settings.pair_distance_long_read_minimum_shift_fraction * pair_distance_median));
   }
 
