@@ -57,18 +57,16 @@ class cAnnotatedSequence;
                                         // long_read_pair_distance is nonzero, a split piece is
                                         // paired with the piece that many bases downstream on the
                                         // same long read. Mate 1 goes to lp1_convert_file_name with
-                                        // read-name prefix file_index+1; mate 2 is REVERSE
-                                        // COMPLEMENTED, so the pair is an ordinary FR pair, and goes
-                                        // to lp2_convert_file_name with prefix file_index+2. Pieces
+                                        // read-name prefix file_index+1 and mate 2 to
+                                        // lp2_convert_file_name with prefix file_index+2. Both keep
+                                        // the long read's strand, so the pairs are FF with mate 1
+                                        // upstream -- the arrangement the pieces really have. Pieces
                                         // without a partner stay in convert_file_name as before.
                                         const uint32_t long_read_pair_distance = 0,
                                         const string &lp1_convert_file_name = "",
                                         const string &lp2_convert_file_name = "",
                                         AnalyzeFastqSummary* lp1_summary = NULL,
-                                        AnalyzeFastqSummary* lp2_summary = NULL,
-                                        // true = leave mate 2 on the long read's strand (FF pairs)
-                                        // instead of reverse complementing it (FR pairs)
-                                        const bool long_read_pairs_ff = false
+                                        AnalyzeFastqSummary* lp2_summary = NULL
                                         );
 
   pair<AnalyzeFastqSummary, AnalyzeFastqSummary> normalize_fastq_paired(

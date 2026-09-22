@@ -46,9 +46,10 @@ namespace breseq {
   // Rescan of a DP junction side by direct BAM fetch.
   //
   // A DP junction side is (position p, strand s). s=+1 => the retained reference flank lies at coords
-  // >= p; s=-1 => flank at coords <= p. The reads that "cross" the side sit on the kept flank with a
-  // fixed strand (the same strand as the discordant reads whose region produced this side):
-  //   crossing_is_forward = (inner3p == (s == -1))
+  // >= p; s=-1 => flank at coords <= p. The reads that "cross" the side sit on the kept flank and
+  // FACE the breakpoint (like the discordant reads whose region produced this side): they face right
+  // exactly when s == -1. Which reads those are is the library's pair_geometry (alignment.h) -- one
+  // strand for FR and RF, a forward mate 1 or a reverse mate 2 for FF.
   // We fetch the kept-flank window out to D = the paired-read distance_cutoff and, for reads on the
   // crossing strand whose body is on the kept side (their junction-facing "anchor" end may extend past
   // p), count three categories:
@@ -538,24 +539,9 @@ namespace breseq {
     map<string, dp_key_extent> keys;
   };
 
-  // Shared with MP; see the declaration in dp_evidence.h for the coordinate convention.
-  void paired_region_to_side(char region_strand, uint32_t region_start, uint32_t region_end,
-                             bool inner3p, int32_t& position, int32_t& strand)
-  {
-    bool is_forward = (region_strand == 'F');
-    if (inner3p == is_forward) {
-      position = static_cast<int32_t>(region_end);
-      strand = -1;
-    } else {
-      position = static_cast<int32_t>(region_start);
-      strand = +1;
-    }
-  }
-
   // Convert one DP region into a JC-style junction side (position, strand).
-  static void dp_region_to_side(const dp_region_row& r, bool inner3p, int32_t& position, int32_t& strand)
+  static void dp_region_to_side(const dp_region_row& r, int32_t& position, int32_t& strand)
   {
-    (void)inner3p;
     paired_region_facing_to_side(r.strand == '>', r.start, r.end, position, strand);
   }
 
@@ -585,30 +571,6 @@ namespace breseq {
     }
     if (found) position = best;
     return found;
-  }
-
-  // Shared with MP; see the declaration in dp_evidence.h.
-  bool paired_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median)
-  {
-    string majority_orientation;
-    D = 0.0;
-    pair_median = 0.0;
-    map<string, int> votes;
-    for (PairedMappingDistanceDistributionSummaries::const_iterator it = summary.preliminary_paired_mapping_distance_distribution.begin();
-         it != summary.preliminary_paired_mapping_distance_distribution.end(); it++) {
-      if (!it->second.majority_orientation.empty())
-        votes[it->second.majority_orientation]++;
-      if (it->second.distance_cutoff > D) D = it->second.distance_cutoff;
-      if (it->second.median > pair_median) pair_median = it->second.median;
-    }
-    int best = 0;
-    for (map<string, int>::iterator it = votes.begin(); it != votes.end(); it++) {
-      if (it->second > best) { best = it->second; majority_orientation = it->first; }
-    }
-
-    if (majority_orientation == "FR") { inner3p = true;  return true; }
-    if (majority_orientation == "RF") { inner3p = false; return true; }
-    return false;
   }
 
   // Shared with MP; see the declaration in dp_evidence.h.
@@ -1456,9 +1418,8 @@ namespace breseq {
     double crossing_mean_ref = have_crossing ? dp_crossing_mean(crossing_hist_ref) : 0.0;
 
     //
-    // Step 0: library orientation (inner3p) + rescan window (distance_cutoff). FF/RR unsupported.
+    // Step 0: library geometry + rescan window (distance_cutoff).
     //
-    bool inner3p = true;
     double distance_cutoff = 0.0;
     double pair_median = 0.0;
     pair_geometry geometry;
@@ -1709,8 +1670,8 @@ namespace breseq {
       // extents of the pairs that seed THIS edge, falling back to the region span when the CSV
       // carries no extents.
       int32_t pos_a, strand_a, pos_b, strand_b;
-      dp_region_to_side(regions[a], inner3p, pos_a, strand_a);
-      dp_region_to_side(regions[b], inner3p, pos_b, strand_b);
+      dp_region_to_side(regions[a], pos_a, strand_a);
+      dp_region_to_side(regions[b], pos_b, strand_b);
       {
         const vector<string>& seed_keys = edge_keys[edges[e].second];
         dp_seed_side_position(regions[a], seed_keys, strand_a, pos_a);
@@ -2721,7 +2682,6 @@ namespace breseq {
   {
     (void)ref_seq_info;
 
-    bool inner3p = true;
     double D = 0.0;
     double pair_median = 0.0;
     pair_geometry geometry;

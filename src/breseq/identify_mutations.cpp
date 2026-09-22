@@ -931,7 +931,7 @@ identify_mutations_pileup::identify_mutations_pileup(
   _mp_enabled = _settings.predict_missing_pairs && !_dp_groups.empty();
 
   // The width the MP null is tabulated at, and therefore the width mp_evidence must count over.
-  // Taking the max across groups matches paired_library_params' convention for pair_median.
+  // Taking the max across groups matches paired_library_geometry's convention for pair_median.
   for (vector<dp_group>::const_iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++)
     if (g->mp_window_width > _mp_window_width) _mp_window_width = g->mp_window_width;
 

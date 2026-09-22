@@ -50,7 +50,7 @@ class bam_alignment;
 //! The two same-strand tokens DO depend on it, and that is why the mates must be given in order.
 //! Two strand letters cannot tell them apart: a pair with both mates forward reads "FF" whichever
 //! mate is on the left. For a library whose concordant pairs are same-strand -- the synthetic pairs
-//! --long-read-pair-distance cuts from long reads, with --long-read-pair-orientation FF -- that
+//! --long-read-pair-distance cuts from long reads -- that
 //! difference is the whole signature of a tandem duplication, which puts mate 2 upstream of mate 1.
 //! Under one token such a pair passed the concordance test and was never seen by DP. (There used to
 //! be three copies of this recipe, each folding "RR" into "FF"; the strand itself still carries no
@@ -104,8 +104,8 @@ inline string read_pair_orientation_as_recorded(const string& orientation, const
 //!   FF  mate 1 faces right when forward, mate 2 when reverse   (same strand, mate 1 upstream)
 //!   EV  the mirror of FF                              (same strand, mate 2 upstream)
 //!
-//! For FR and RF the strand alone decides it, which is why the pair-evidence code could get by on a
-//! single library-wide bit ("inner3p") and a read's strand. For a same-strand library it cannot: a
+//! For FR and RF the strand alone decides it, which is why the pair-evidence code used to get by on
+//! a single library-wide bit and a read's strand. For a same-strand library it cannot: a
 //! forward mate 1 has its mate to the right and a forward mate 2 has it to the left, so the mate
 //! number is needed too. It is always available -- BAM_FREAD1 / BAM_FREAD2 are stamped on every
 //! record of a paired read group, and a mate's number is the complement of the read's own.

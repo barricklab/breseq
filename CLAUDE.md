@@ -305,13 +305,31 @@ uses the whole pair population where DP uses only its tail.
 `DP` is the only one of the three that is two-sided across sequences: its two sides carry independent
 `side_1_seq_id` / `side_2_seq_id`, so a plasmid integration or a translocation between two contigs is
 a single DP item. A cross-sequence pair has no within-sequence orientation — `mark_pair_info` writes
-`XP:Z:NA` and `TLEN 0` for it — so the DP sliding-window detector gives it a fourth orientation slot
-of its own (`kDPnOrientations`, `identify_mutations.h`) rather than one of FR/RF/FF. Do **not** try to
+`XP:Z:NA` and `TLEN 0` for it — so the DP sliding-window detector gives it an orientation slot of
+its own (`kDPnOrientations`, `identify_mutations.h`) rather than one of FR/RF/FF/EV. Do **not** try to
 synthesize a letter pair for it by ordering the two mates by reference target id: that would make the
 bin depend on the order the `-r` files were given on the command line. `PD` and `MP` are
 single-sequence by construction (PD's statistic *is* the insert distribution, which is undefined
 across sequences; MP's mate has no alignment at all), and `pd_evidence`/`identify_mutations` gate them
 on `mate_reference_target_id() == reference_target_id()` accordingly.
+
+**Pair orientation is computed in mate order, and read geometry comes from strand + mate number.**
+`read_pair_orientation()` (`alignment.h`) is the one definition: `FR`/`RF` for opposite-strand pairs
+as always, and for same-strand pairs `FF` (mate 1 upstream along the shared strand) or `EV`
+(everted, mate 2 upstream — the tandem-duplication signature in a same-strand library). Two strand
+letters cannot tell those apart, which is why the mates must be passed in order. A minority
+arrangement whose mate order is meaningless in the library is folded when recorded
+(`read_pair_orientation_as_recorded`: `EV`→`FF` in an FR/RF library, `RF`→`FR` in a same-strand one)
+so that one inversion breakpoint's pairs do not split across two DP slots. DP, MP and PD then ask
+`pair_geometry::faces_right(reversed, is_read2)` — which side a read's mate, and any breakpoint the
+pair reaches across, lies on — instead of reading direction off strand alone; `BAM_FREAD2` is stamped
+on every record of a paired read group, and a mate's number is the complement of the read's. The DP
+and MP candidate files record a region's *facing* (`>`/`<`), not its strand. All three types
+therefore work on FR, RF and FF libraries. The synthetic pairs `--long-read-pair-distance` cuts from
+long reads are **FF** (both pieces keep the long read's strand, mate 1 upstream — the arrangement
+they really have); making them FR by reverse-complementing mate 2 was tried first and is lossless for
+the pairs themselves, but it inflated RA evidence two- to threefold and perturbed junction calls,
+whereas native FF reproduces the unpaired baseline's RA count and accepted junctions exactly.
 
 Note also that `DP` is deliberately absent from `MutationPredictor::ignore_evidence_near_contig_ends`,
 which marks RA/MC/JC/SC (and, via their own equivalents, PD/MP) at a contig end. Those types are

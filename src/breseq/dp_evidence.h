@@ -28,38 +28,21 @@
 
 namespace breseq {
 
-  //! Paired-library geometry shared by every pair-based evidence type (DP, MP).
+  //! Paired-library geometry shared by every pair-based evidence type (DP, MP, PD).
   //
-  //  Determines the library's concordant orientation -- which fixes which read end faces a breakpoint
-  //  (inner3p) -- plus the rescan window half-width D (max distance_cutoff over paired read groups)
-  //  and the median paired-mapping distance. FR is fully supported; RF is the mirror; FF/RR is not
-  //  supported. Returns false (leaving the outputs as set so far) if the orientation is unknown or
-  //  unsupported; the caller emits its own warning.
-  bool paired_library_params(const Summary& summary, bool& inner3p, double& D, double& pair_median);
-
-  //! The same vote, returning the library's pair_geometry (alignment.h) instead of inner3p. Unlike
-  //  paired_library_params it succeeds for a same-strand (FF) library too, so only code that reads
-  //  direction through pair_geometry::faces_right may use it.
+  //  Votes the majority orientation across the paired read groups into a pair_geometry (alignment.h),
+  //  and also returns the rescan window half-width D (max distance_cutoff over the groups) and the
+  //  median paired-mapping distance. Returns false, leaving the outputs as set so far, if the
+  //  orientation names no supported geometry; the caller emits its own warning.
   bool paired_library_geometry(const Summary& summary, pair_geometry& geometry, double& D, double& pair_median);
 
   //! A candidate region of reads that all FACE one way, as a junction side. Reads facing right sit on
   //  the left flank of whatever they reach toward, so the side is the region's END with the retained
-  //  flank at <= position (strand -1); reads facing left give the region's START and strand +1. This
-  //  is what paired_region_to_side computes from (strand, inner3p), without needing either.
+  //  flank at <= position (strand -1); reads facing left give the region's START and strand +1. For an
+  //  FR library "faces right" is "forward", so this is the rule that was always used there; the
+  //  facing is what pair_geometry computes for every supported library.
   void paired_region_facing_to_side(bool faces_right, uint32_t region_start, uint32_t region_end,
                                     int32_t& position, int32_t& strand);
-
-  //! Convert one sliding-window candidate region into a JC-style breakpoint side (position, strand).
-  //
-  //  strand=+1 means the retained flank lies at coords >= position, -1 at <= position.
-  //    inner3p:  F -> (end, -1) ; R -> (start, +1)
-  //   !inner3p:  F -> (start, +1) ; R -> (end, -1)   [the RF/"outie" mirror]
-  //
-  //  This same rule is correct for MP as well as DP: under FR the flank-facing mate of a fragment
-  //  reaching into unseen sequence is forward, and under RF it is reverse, so `is_forward == inner3p`
-  //  identifies the left-hand flank in both cases.
-  void paired_region_to_side(char region_strand, uint32_t region_start, uint32_t region_end,
-                             bool inner3p, int32_t& position, int32_t& strand);
 
   //! Small gnuplot axis-formatting helpers, shared by the pair-based evidence plots (DP, MP).
   //! plot_commafy: whole number with thousands separators. plot_nice_tick: a round tick step giving

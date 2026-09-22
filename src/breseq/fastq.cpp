@@ -51,8 +51,7 @@ namespace breseq {
                                         const string &lp1_convert_file_name,
                                         const string &lp2_convert_file_name,
                                         AnalyzeFastqSummary* lp1_summary,
-                                        AnalyzeFastqSummary* lp2_summary,
-                                        const bool long_read_pairs_ff
+                                        AnalyzeFastqSummary* lp2_summary
                                         )
 {
     cerr << "    Converting/filtering FASTQ file..." << endl;
@@ -200,8 +199,8 @@ namespace breseq {
           }
         }
 
-        // Counts and writes one read to a given output. Mate 2 of a synthetic pair is reverse
-        // complemented here, so that the two mates face each other like an ordinary FR pair.
+        // Counts and writes one read to a given output. Both mates of a synthetic pair keep the long
+        // read's strand: the pairs are FF, which the pair-evidence code reads through pair_geometry.
         auto emit_single = [&](const cFastqSequence& seq) {
           r.num_reads++;
           r.num_bases += seq.m_sequence.length();
@@ -211,10 +210,6 @@ namespace breseq {
         };
         auto emit_mate = [&](const cFastqSequence& piece, uint32_t mate_index, const string& mate_name) {
           cFastqSequence seq = piece;
-          if ((mate_index == 1) && !long_read_pairs_ff) {
-            seq.m_sequence = reverse_complement(seq.m_sequence);
-            seq.m_qualities = reverse_string(seq.m_qualities);
-          }
           seq.m_name = mate_name;
           r.lp_num_reads[mate_index]++;
           r.lp_num_bases[mate_index] += seq.m_sequence.length();

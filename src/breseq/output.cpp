@@ -1295,8 +1295,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     // synthetic pairs the bytes written are exactly what they were)
     if (settings.read_file_long_read_pair_distance != 0) {
       HTML << ". Each piece was paired with the piece " << settings.read_file_long_read_pair_distance
-           << " bases downstream on the same long read (--long-read-pair-distance; the second mate is reverse"
-           << " complemented, so pairs are FR). These synthetic pairs are the .LP1 / .LP2 files; pieces without a"
+           << " bases downstream on the same long read (--long-read-pair-distance). Both pieces keep the long"
+           << " read's strand, so the pairs are FF. These synthetic pairs are the .LP1 / .LP2 files; pieces without a"
            << " partner stay in the file the long reads came from.";
     }
     HTML << endl;

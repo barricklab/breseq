@@ -315,7 +315,6 @@ namespace breseq
     uint32_t read_file_long_read_split_length;  // Default = 200 COMMAND-LINE OPTION
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
     uint32_t read_file_long_read_pair_distance; // Default = 0 (OFF) COMMAND-LINE OPTION, EXPERIMENTAL
-    bool read_file_long_read_pairs_ff;          // Default = false (FR) COMMAND-LINE OPTION --long-read-pair-orientation
     bool paired_mapping;                                     // Default = true COMMAND-LINE OPTION (disable with --no-paired-mapping)
     bool predict_discordant_pairs;                           // Default = true COMMAND-LINE OPTION (disable with --no-discordant-pair-prediction; requires paired-mapping)
     bool predict_missing_pairs;                              // Default = true COMMAND-LINE OPTION (disable with --no-missing-pair-prediction; requires paired-mapping)
