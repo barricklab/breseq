@@ -656,12 +656,16 @@ int do_convert(int argc, char* argv[], string forced_format = "")
 		options("reference,r",  "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED for VCF input or with annotate option)").isInputFile();
 	options("annotate,a","annotate mutations and evidence in input file", TAKES_NO_ARGUMENT);
 	options("snv-only","only include SNP/SNV entries in GVF output", TAKES_NO_ARGUMENT);
+	options("gvf-max-sequence-length","in GVF output, write a Reference_seq or Variant_seq longer than this many bases as ~<length> instead of in full. Zero means to always write the full sequence", 50);
 
 	options.processCommandArgs( argc,argv);
 
 	options.addUsage("");
 	options.addUsage("Convert a single file from/to GenomeDiff format.");
 	options.addUsage("Allowed input formats: GD, VCF");
+	options.addUsage("");
+	options.addUsage("GVF output follows Genome Variation Format 1.10. With --annotate, SNP entries");
+	options.addUsage("also get Variant_effect and the codon and amino acid attributes.");
 	options.addUsage("");
 
 	if (options.count("help")) {
@@ -760,7 +764,7 @@ int do_convert(int argc, char* argv[], string forced_format = "")
 	} else if (output_format == "VCF") {
 		gd.write_vcf(output_file_name, ref_seq_info);
 	} else if (output_format == "GVF") {
-		gd.write_gvf(output_file_name, ref_seq_info, options.count("snv-only"));
+		gd.write_gvf(output_file_name, ref_seq_info, options.count("snv-only"), from_string<uint32_t>(options["gvf-max-sequence-length"]));
 	} else if (output_format == "JSON") {
 		gd.write_json(output_file_name);
 	}

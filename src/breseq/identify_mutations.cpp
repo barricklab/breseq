@@ -80,10 +80,11 @@ void identify_mutations(
   // Write discordant-pair candidate regions accumulated during the pileup (single operation).
   imp.write_dp_candidate_regions(settings.dp_candidate_regions_file_name);
   // Likewise for missing-pair regions -- but only when they were actually collected, so a run
-  // without --predict-missing-pairs leaves no empty CSV behind.
-  if (settings.predict_missing_pairs) imp.write_mp_candidate_regions(settings.mp_candidate_regions_file_name);
+  // without --predict-missing-pairs leaves no empty CSV behind. Nor does a run with no paired reads,
+  // whose MP step is skipped: writing here would also report a seeding that had nothing to seed from.
+  if (settings.have_paired_reads() && settings.predict_missing_pairs) imp.write_mp_candidate_regions(settings.mp_candidate_regions_file_name);
   // Likewise for pair-distance regions.
-  if (settings.predict_pair_distance) imp.write_pd_candidate_regions(settings.pd_candidate_regions_file_name);
+  if (settings.have_paired_reads() && settings.predict_pair_distance) imp.write_pd_candidate_regions(settings.pd_candidate_regions_file_name);
   imp.write_gd(gd_file);
 }
 

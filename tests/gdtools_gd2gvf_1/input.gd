@@ -1,0 +1,24 @@
+#=GENOME_DIFF	1.0
+SNP	1	40	REL606-5	2000	A
+SNP	2	41	REL606-5	2002	C	frequency=2.5000e-01
+SNP	3	.	REL606-5	2004	T
+SUB	4	.	REL606-5	5000	2	TT
+SUB	5	.	REL606-5	5100	4	GG
+DEL	6	.	REL606-5	3000	10
+DEL	7	.	REL606-5	3500	120
+DEL	8	42	REL606-5	4000	25	frequency=4.0000e-01
+INS	10	.	REL606-5	7000	ACGT
+INS	11	.	REL606-5	7000	TT	insert_position=2
+MOB	12	.	REL606-5	15000	IS1	-1	9
+MOB	13	.	REL606-5	16000	IS1	1	0
+MOB	14	.	REL606-5	17000	IS1	1	-4
+MOB	15	.	REL606-5	18000	IS1	1	9	ins_start=AC	del_end=3
+SNP	16	.	REL606-5	25	G	within=MOB:15000:1
+AMP	17	.	REL606-5	20000	12	2
+AMP	18	.	REL606-5	20500	8	3
+INV	19	.	REL606-5	22000	30
+CON	20	.	REL606-5	24000	6	REL606-5:26000-26008
+CON	21	.	REL606-5	24500	9	REL606-5:26108-26100
+RA	40	.	REL606-5	2000	0	G	A	consensus_score=120.5	frequency=1	new_cov=20/22	prediction=consensus	total_cov=21/23
+RA	41	.	REL606-5	2002	0	A	C	frequency=2.5000e-01	new_cov=5/6	polymorphism_score=35.2	prediction=polymorphism	total_cov=21/23
+JC	42	.	REL606-5	3999	-1	REL606-5	4025	1	0	frequency=4.0000e-01	junction_effective_depth=50	new_junction_read_count=20	score=88.1	side_1_read_count=30	side_2_read_count=30

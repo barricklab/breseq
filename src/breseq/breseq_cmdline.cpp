@@ -1983,7 +1983,9 @@ int breseq_default_action(int argc, char* argv[])
     settings.done_step(settings.preprocess_junction_done_file_name);
   }
 
-  if ( !settings.aligned_sam_mode &&
+  // Tested before do_step() so that a run with no paired reads prints no banner for a step that
+  // would have had nothing to fit.
+  if ( !settings.aligned_sam_mode && settings.have_paired_reads() &&
       settings.do_step(settings.paired_mapping_distance_done_file_name, "Fitting paired-end mapping distance distributions"))
   {
     ////////////////////////////////////////////////
@@ -1999,7 +2001,9 @@ int breseq_default_action(int argc, char* argv[])
     summary.preliminary_paired_mapping_distance_distribution.store(settings.paired_mapping_distance_summary_file_name);
     settings.done_step(settings.paired_mapping_distance_done_file_name);
   }
-  if (!settings.aligned_sam_mode)
+  // Guarded because JSONStorable::retrieve asserts on a missing file, and the step above does not
+  // run -- so never writes this one -- when there are no paired reads.
+  if (!settings.aligned_sam_mode && file_exists(settings.paired_mapping_distance_summary_file_name.c_str()))
     summary.preliminary_paired_mapping_distance_distribution.retrieve(settings.paired_mapping_distance_summary_file_name);
 
   //
@@ -2561,7 +2565,7 @@ int breseq_default_action(int argc, char* argv[])
     // Discordant Pair (DP) evidence
     // Pair up discordant-pair candidate regions (from the identify_mutations CSV) into DP evidence.
     //
-  if (settings.paired_mapping && settings.predict_discordant_pairs) {
+  if (settings.have_paired_reads() && settings.predict_discordant_pairs) {
     if (settings.do_step(settings.discordant_pair_done_file_name, "Examining discordant pairing evidence")) {
 
       predict_discordant_pairs(settings, summary, ref_seq_info);
@@ -2583,7 +2587,7 @@ int breseq_default_action(int argc, char* argv[])
     // Turn clusters of reads whose mates did not map anywhere (from the identify_mutations CSV) into
     // one-sided MP evidence: the signature of a novel sequence inserted at that point.
     //
-  if (settings.paired_mapping && settings.predict_missing_pairs) {
+  if (settings.have_paired_reads() && settings.predict_missing_pairs) {
     if (settings.do_step(settings.missing_pair_done_file_name, "Examining missing pair evidence")) {
 
       predict_missing_pairs(settings, summary, ref_seq_info);
@@ -2610,7 +2614,7 @@ int breseq_default_action(int argc, char* argv[])
     // deletions and insertions of a few hundred bases that no single pair is anomalous enough to
     // reveal, and that DP therefore cannot see in either direction.
     //
-  if (settings.paired_mapping && settings.predict_pair_distance) {
+  if (settings.have_paired_reads() && settings.predict_pair_distance) {
     if (settings.do_step(settings.pair_distance_done_file_name, "Examining pair distance evidence")) {
 
       predict_pair_distances(settings, summary, ref_seq_info);
@@ -2858,17 +2862,20 @@ int breseq_default_action(int argc, char* argv[])
 
     cerr << "Drawing coverage plots..." << endl;
     output::draw_coverage(settings, ref_seq_info, gd);
-    output::draw_discordant_pairs_plot(settings, ref_seq_info);
+    // summary.html links this plot only from its paired-end section, so without paired reads it
+    // would be drawn and never shown.
+    if (settings.have_paired_reads())
+      output::draw_discordant_pairs_plot(settings, ref_seq_info);
 
     // Run-wide + per-sequence concordant-pair crossing distribution plots (the DP null distribution).
-    if (settings.paired_mapping)
+    if (settings.have_paired_reads())
       breseq::draw_concordant_pair_crossing_plots(settings, summary, ref_seq_info);
 
     // Per-side read-pair plots for DP evidence (stamps plot filenames onto the DP entries so
     // cOutputEvidenceFiles can surface them as per-side '?' pages). Must run before that step.
     // The braces matter: the MP call below was indented as though it were inside this condition but
     // was a separate statement, so MP plots were drawn even under --no-evidence-html.
-    if (!settings.no_evidence_html && settings.paired_mapping) {
+    if (!settings.no_evidence_html && settings.have_paired_reads()) {
       breseq::draw_discordant_pair_evidence_plots(settings, summary, ref_seq_info, gd);
       // Must also run before cOutputEvidenceFiles: it stamps _mp_plot_file_name onto each MP entry.
       if (settings.predict_missing_pairs)

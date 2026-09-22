@@ -312,7 +312,7 @@ public:
   void write_vcf(const string& filename, cReferenceSequences& ref_seq_info);
 
   //! GVF files
-  void write_gvf(const string& filename, cReferenceSequences& ref_seq_info, bool snv_only = false);
+  void write_gvf(const string& filename, cReferenceSequences& ref_seq_info, bool snv_only = false, uint32_t max_sequence_length = 50);
   
   //! JSON files
   void write_json(const string &jsonfile);

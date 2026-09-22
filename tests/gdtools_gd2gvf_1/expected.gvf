@@ -1,0 +1,25 @@
+##gff-version 3
+##gvf-version 1.10
+##file-date 2026-09-20
+##source-method Source=breseq;Dbxref=https://github.com/barricklab/breseq;Comment=Mutations predicted by breseq 0.50.0 and converted from Genome Diff format;
+##score-method Source=breseq;Comment=Average of the breseq scores of the evidence items supporting a mutation. Not Phred scaled;
+##sequence-region REL606-5 1 46298
+REL606-5	breseq	SNV	2000	2000	120.5	+	.	ID=REL606-5:breseq:SNV:2000:1;Reference_seq=G;Variant_seq=A;Variant_freq=1;Total_reads=44;Variant_reads=42;gd_type=SNP;gd_id=1
+REL606-5	breseq	SNV	2002	2002	35.2	+	.	ID=REL606-5:breseq:SNV:2002:2;Reference_seq=A;Variant_seq=C,A;Variant_freq=0.2500,0.7500;Total_reads=44;Variant_reads=11:33;gd_type=SNP;gd_id=2
+REL606-5	breseq	SNV	2004	2004	.	+	.	ID=REL606-5:breseq:SNV:2004:3;Reference_seq=C;Variant_seq=T;Variant_freq=1;gd_type=SNP;gd_id=3
+REL606-5	breseq	deletion	3000	3009	.	+	.	ID=REL606-5:breseq:deletion:3000:6;Reference_seq=CTGTTGATGG;Variant_seq=-;Variant_freq=1;gd_type=DEL;gd_id=6
+REL606-5	breseq	deletion	3500	3619	.	+	.	ID=REL606-5:breseq:deletion:3500:7;Reference_seq=~120;Variant_seq=-;Variant_freq=1;gd_type=DEL;gd_id=7
+REL606-5	breseq	deletion	4000	4024	88.1	+	.	ID=REL606-5:breseq:deletion:4000:8;Reference_seq=GGGAATCGGTGCCTTTTTATTATCT;Variant_seq=-,GGGAATCGGTGCCTTTTTATTATCT;Variant_freq=0.4000,0.6000;Total_reads=50;Variant_reads=20:30;gd_type=DEL;gd_id=8
+REL606-5	breseq	MNV	5000	5001	.	+	.	ID=REL606-5:breseq:MNV:5000:4;Reference_seq=AG;Variant_seq=TT;Variant_freq=1;gd_type=SUB;gd_id=4
+REL606-5	breseq	indel	5100	5103	.	+	.	ID=REL606-5:breseq:indel:5100:5;Reference_seq=CGTA;Variant_seq=GG;Variant_freq=1;gd_type=SUB;gd_id=5
+REL606-5	breseq	insertion	7000	7000	.	+	.	ID=REL606-5:breseq:insertion:7000:10;Reference_seq=-;Variant_seq=ACGT;Variant_freq=1;gd_type=INS;gd_id=10
+REL606-5	breseq	insertion	7000	7000	.	+	.	ID=REL606-5:breseq:insertion:7000:11;Reference_seq=-;Variant_seq=TT;Variant_freq=1;gd_type=INS;gd_id=11
+REL606-5	breseq	mobile_element_insertion	14999	14999	.	+	.	ID=REL606-5:breseq:mobile_element_insertion:14999:12;Reference_seq=-;Variant_seq=~777;Variant_freq=1;repeat_name=IS1;repeat_strand=-;duplication_size=9;gd_type=MOB;gd_id=12
+REL606-5	breseq	mobile_element_insertion	16000	16000	.	+	.	ID=REL606-5:breseq:mobile_element_insertion:16000:13;Reference_seq=-;Variant_seq=~768;Variant_freq=1;repeat_name=IS1;repeat_strand=+;duplication_size=0;gd_type=MOB;gd_id=13
+REL606-5	breseq	indel	17000	17003	.	+	.	ID=REL606-5:breseq:indel:17000:14;Reference_seq=ACGT;Variant_seq=~768;Variant_freq=1;repeat_name=IS1;repeat_strand=+;duplication_size=-4;gd_type=MOB;gd_id=14
+REL606-5	breseq	mobile_element_insertion	17999	17999	.	+	.	ID=REL606-5:breseq:mobile_element_insertion:17999:15;Reference_seq=-;Variant_seq=~776;Variant_freq=1;repeat_name=IS1;repeat_strand=+;duplication_size=9;gd_type=MOB;gd_id=15
+REL606-5	breseq	tandem_duplication	20000	20011	.	+	.	ID=REL606-5:breseq:tandem_duplication:20000:17;Reference_seq=AGCAGAAGGGCG;Variant_seq=AGCAGAAGGGCGAGCAGAAGGGCG;Variant_freq=1;copy_number=2;gd_type=AMP;gd_id=17
+REL606-5	breseq	copy_number_gain	20500	20507	.	+	.	ID=REL606-5:breseq:copy_number_gain:20500:18;Reference_seq=TTTGGGCG;Variant_seq=TTTGGGCGTTTGGGCGTTTGGGCG;Variant_freq=1;copy_number=3;gd_type=AMP;gd_id=18
+REL606-5	breseq	inversion	22000	22029	.	+	.	ID=REL606-5:breseq:inversion:22000:19;Reference_seq=TAATATCATCATAGTTAAACAAATCAGGAA;Variant_seq=TTCCTGATTTGTTTAACTATGATGATATTA;Variant_freq=1;gd_type=INV;gd_id=19
+REL606-5	breseq	indel	24000	24005	.	+	.	ID=REL606-5:breseq:indel:24000:20;Reference_seq=CTGCTT;Variant_seq=CGTTGAACG;Variant_freq=1;Breakpoint_detail=REL606-5:26000-26008:+;gd_type=CON;gd_id=20
+REL606-5	breseq	substitution	24500	24508	.	+	.	ID=REL606-5:breseq:substitution:24500:21;Reference_seq=CACTGGCAA;Variant_seq=CACCGTAAG;Variant_freq=1;Breakpoint_detail=REL606-5:26100-26108:-;gd_type=CON;gd_id=21

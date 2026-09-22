@@ -1,0 +1,12 @@
+##fileformat=VCFv4.1
+##fileDate=20260921
+##source=breseq 0.50.0 gdtools CONVERT
+##contig=<ID=TMV-plasmid,length=10411>
+##contig=<ID=REL606-5,length=46298>
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##INFO=<ID=AD,Number=1,Type=Float,Description="Allele Depth (avg read count)">
+##INFO=<ID=DP,Number=1,Type=Float,Description="Total Depth (avg read count)">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+TMV-plasmid	8000	.	T	TACGTACGT	.	PASS	AF=1.0000
+TMV-plasmid	1	.	TGCGGGCCTC	TGCGGGCCTCGGGCGATCGGTGCGGGCCTCGGGCGATCGGTGCGGGCCTC	.	PASS	AF=1.0000
+TMV-plasmid	10402	.	GGGCGATCGG	GGGCGATCGG	.	PASS	AF=1.0000

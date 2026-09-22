@@ -1,0 +1,9 @@
+##gff-version 3
+##gvf-version 1.10
+##file-date 2026-09-21
+##source-method Source=breseq;Dbxref=https://github.com/barricklab/breseq;Comment=Mutations predicted by breseq 0.50.0 and converted from Genome Diff format;
+##score-method Source=breseq;Comment=Average of the breseq scores of the evidence items supporting a mutation. Not Phred scaled;
+##sequence-region TMV-plasmid 1 10411
+##sequence-region REL606-5 1 46298
+TMV-plasmid	breseq	insertion	8000	8000	.	+	.	ID=TMV-plasmid:breseq:insertion:8000:9;Reference_seq=-;Variant_seq=ACGTACGT;Variant_freq=1;gd_type=INS;gd_id=9
+TMV-plasmid	breseq	inversion	10402	10421	.	+	.	ID=TMV-plasmid:breseq:inversion:10402:1;Reference_seq=GGGCGATCGGTGCGGGCCTC;Variant_seq=GAGGCCCGCACCGATCGCCC;Variant_freq=1;gd_type=INV;gd_id=1

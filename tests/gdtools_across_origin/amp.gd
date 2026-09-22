@@ -1,0 +1,3 @@
+#=GENOME_DIFF	1.0
+INS	9	.	TMV-plasmid	8000	ACGTACGT
+AMP	1	.	TMV-plasmid	10402	20	3
