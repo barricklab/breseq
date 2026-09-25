@@ -2969,7 +2969,522 @@ namespace breseq {
     }
   }
 
-  
+  //////////////////////////////////////////////////////////////////////////////
+  // Gene conversion detection -- see predict_gene_conversions in the header.
+  //////////////////////////////////////////////////////////////////////////////
+
+  namespace {
+
+    bool gc_all_ACGT(const string& s)
+    {
+      if (s.empty()) return false;
+      for (size_t i = 0; i < s.size(); i++) {
+        char c = s[i];
+        if ((c != 'A') && (c != 'C') && (c != 'G') && (c != 'T')) return false;
+      }
+      return true;
+    }
+
+    // Only consensus SNP/INS/DEL/SUB with nothing that pins them to another mutation or a repeat.
+    bool gc_eligible(cDiffEntry& mut)
+    {
+      if ((mut._type != SNP) && (mut._type != INS) && (mut._type != DEL) && (mut._type != SUB))
+        return false;
+      if (mut.is_polymorphism()) return false;
+      if (mut.entry_exists("within") || mut.entry_exists("before") || mut.entry_exists("no_normalize")
+          || mut.entry_exists("mediated") || mut.entry_exists("between"))
+        return false;
+
+      if ((mut._type == DEL) || (mut._type == SUB)) {
+        if (!mut.entry_exists(SIZE)) return false;
+        if (from_string<int32_t>(mut[SIZE]) < 1) return false;
+      }
+      if ((mut._type == SNP) || (mut._type == INS) || (mut._type == SUB)) {
+        if (!mut.entry_exists(NEW_SEQ)) return false;
+        if (!gc_all_ACGT(to_upper(mut[NEW_SEQ]))) return false;
+      }
+      return true;
+    }
+
+    int32_t gc_start(cDiffEntry& mut) { return mut.get_reference_coordinate_start().get_position(); }
+    int32_t gc_end(cDiffEntry& mut)   { return mut.get_reference_coordinate_end().get_position(); }
+
+    // An eligible mutation and where it lands in its sequence's mutated form. The footprint is
+    // always a pair of indices of REFERENCE bases (ref_pos != 0): a SNP's own base, or for
+    // INS/DEL/SUB the reference base just left and just right of the changed run.
+    // footprint_start == -1 means the member could not be placed (an anchor fell off the end of
+    // the sequence) and can never be explained.
+    struct cGCMember {
+      diff_entry_ptr_t mut;
+      uint32_t         tid;
+      int32_t          footprint_start;
+      int32_t          footprint_end;
+      bool             removed;
+      cGCMember(diff_entry_ptr_t m, uint32_t t) : mut(m), tid(t), footprint_start(-1), footprint_end(-1), removed(false) {}
+    };
+
+    // One reference sequence with every eligible mutation applied, and the bookkeeping that ties
+    // its bases back to reference coordinates and keeps tracts off other mutations.
+    struct cGCMutatedSequence {
+      string          seq;            // the mutated bases
+      vector<int32_t> ref_pos;        // per mutated base: reference coordinate, 0 if inserted
+      vector<int32_t> index_of_ref;   // per reference coordinate (1-based): mutated index, -1 if deleted
+      vector<uint8_t> blocked;        // per mutated base: 1 = a tract may not include it
+      vector<uint8_t> no_cross;       // per mutated base i: 1 = a tract may not span both i and i+1
+      bool            usable;
+    };
+
+    // Applies the members on one sequence (sorted by position) to it. Returns false when two
+    // members claim the same reference bases, which a validated Genome Diff never does but an
+    // unchecked one (NORMALIZE -x) might; that sequence is then left alone.
+    bool gc_build_mutated_sequence(const cAnnotatedSequence& seq, vector<cGCMember>& members,
+                                   const vector<size_t>& ids, cGCMutatedSequence& ms)
+    {
+      const int32_t len = seq.get_sequence_length();
+      map<int32_t, size_t> snp_at;                            // ref pos -> member
+      map<int32_t, vector<pair<int32_t, size_t> > > ins_at;  // ref pos -> (insert_position, member)
+      map<int32_t, size_t> replace_at;                        // ref pos -> member (DEL or SUB)
+      const size_t kCovered = members.size();                 // a base inside a run, not its start
+
+      for (size_t i = 0; i < ids.size(); i++) {
+        size_t m = ids[i];
+        cDiffEntry& mut = *members[m].mut;
+        int32_t pos = from_string<int32_t>(mut[POSITION]);
+        if ((pos < 1) || (pos > len)) return false;
+        if (mut._type == SNP) {
+          if (snp_at.count(pos) || replace_at.count(pos)) return false;
+          snp_at[pos] = m;
+        } else if (mut._type == INS) {
+          int32_t insert_position = mut.entry_exists(INSERT_POSITION) ? from_string<int32_t>(mut[INSERT_POSITION]) : 1;
+          ins_at[pos].push_back(make_pair(insert_position, m));
+        } else {
+          int32_t size = from_string<int32_t>(mut[SIZE]);
+          if (pos + size - 1 > len) return false;
+          for (int32_t p = pos; p < pos + size; p++) {
+            if (snp_at.count(p) || replace_at.count(p)) return false;
+          }
+          replace_at[pos] = m;
+          for (int32_t p = pos + 1; p < pos + size; p++) replace_at[p] = kCovered;
+        }
+      }
+      for (map<int32_t, vector<pair<int32_t, size_t> > >::iterator it = ins_at.begin(); it != ins_at.end(); it++)
+        sort(it->second.begin(), it->second.end());
+
+      ms.seq.clear();
+      ms.ref_pos.clear();
+      ms.seq.reserve(len);
+      ms.ref_pos.reserve(len);
+      ms.index_of_ref.assign(len + 1, -1);
+
+      int32_t last_ref_index = -1;         // mutated index of the last emitted reference base
+      vector<size_t> pending_right_anchor; // members waiting for the next reference base
+
+      int32_t p = 1;
+      while (p <= len) {
+        map<int32_t, size_t>::iterator rit = replace_at.find(p);
+        if (rit != replace_at.end()) {
+          size_t m = rit->second;
+          if (m == kCovered) return false;
+          cDiffEntry& mut = *members[m].mut;
+          int32_t size = from_string<int32_t>(mut[SIZE]);
+          members[m].footprint_start = last_ref_index;
+          if (mut._type == SUB) {
+            string new_seq = to_upper(mut[NEW_SEQ]);
+            for (size_t i = 0; i < new_seq.size(); i++) { ms.seq += new_seq[i]; ms.ref_pos.push_back(0); }
+          }
+          pending_right_anchor.push_back(m);
+          p += size;
+          continue;
+        }
+
+        map<int32_t, size_t>::iterator sit = snp_at.find(p);
+        ms.seq += (sit != snp_at.end()) ? to_upper(members[sit->second].mut->get(NEW_SEQ))[0] : seq.get_sequence_1(p);
+        ms.ref_pos.push_back(p);
+        int32_t index = ms.seq.size() - 1;
+        ms.index_of_ref[p] = index;
+        if (sit != snp_at.end()) {
+          members[sit->second].footprint_start = index;
+          members[sit->second].footprint_end = index;
+        }
+        for (size_t i = 0; i < pending_right_anchor.size(); i++)
+          members[pending_right_anchor[i]].footprint_end = index;
+        pending_right_anchor.clear();
+        last_ref_index = index;
+
+        map<int32_t, vector<pair<int32_t, size_t> > >::iterator iit = ins_at.find(p);
+        if (iit != ins_at.end()) {
+          for (size_t i = 0; i < iit->second.size(); i++) {
+            size_t m = iit->second[i].second;
+            members[m].footprint_start = last_ref_index;
+            string new_seq = to_upper(members[m].mut->get(NEW_SEQ));
+            for (size_t j = 0; j < new_seq.size(); j++) { ms.seq += new_seq[j]; ms.ref_pos.push_back(0); }
+            pending_right_anchor.push_back(m);
+          }
+        }
+        p++;
+      }
+
+      for (size_t i = 0; i < ids.size(); i++) {
+        cGCMember& m = members[ids[i]];
+        if ((m.footprint_start < 0) || (m.footprint_end < 0)) { m.footprint_start = -1; m.footprint_end = -1; }
+      }
+      ms.blocked.assign(ms.seq.size(), 0);
+      ms.no_cross.assign(ms.seq.size(), 0);
+      return true;
+    }
+
+    // One candidate donor: mutated index i aligns to index i + offset of the donor string (the
+    // reference sequence target_id, forward or reverse-complemented). [start, end] is the
+    // identical stretch around the seed, in mutated indices.
+    struct cGCDonorHit {
+      uint32_t       target_id;
+      bool           reverse;
+      int32_t        offset;
+      int32_t        start;
+      int32_t        end;
+      vector<size_t> explained;            // members whose footprints lie inside the stretch
+      int32_t        donor_forward_start;  // lowest forward coordinate of the identical stretch
+
+      int32_t identical_length() const { return end - start + 1; }
+    };
+
+    // Order candidate donors: most explained, longest identical stretch, forward strand first,
+    // reference order, lowest coordinate.
+    bool gc_hit_better(const cGCDonorHit& a, const cGCDonorHit& b)
+    {
+      if (a.explained.size() != b.explained.size()) return a.explained.size() > b.explained.size();
+      if (a.identical_length() != b.identical_length()) return a.identical_length() > b.identical_length();
+      if (a.reverse != b.reverse) return !a.reverse;
+      if (a.target_id != b.target_id) return a.target_id < b.target_id;
+      return a.donor_forward_start < b.donor_forward_start;
+    }
+
+    // Every position of every reference sequence, keyed by the 2-bit packed k-mer that starts
+    // there (forward strand only; a reverse-strand seed is looked up as its reverse complement).
+    // Entries pack the k-mer into the high 32 bits and a global position into the low 32, so the
+    // key length is capped at 16 bases; a longer seed is verified against the sequence after the
+    // lookup. Sorting once costs well under a second for a bacterial genome, after which every
+    // seed is a binary search instead of a scan of the whole genome.
+    struct cGCKmerIndex {
+      int32_t          key_length;
+      vector<uint64_t> entries;
+      vector<uint32_t> seq_offset;   // global position where each sequence starts; last = total
+
+      static bool pack(const string& s, size_t start, int32_t len, uint64_t& key)
+      {
+        key = 0;
+        for (int32_t i = 0; i < len; i++) {
+          uint64_t code;
+          switch (s[start + i]) {
+            case 'A': code = 0; break;
+            case 'C': code = 1; break;
+            case 'G': code = 2; break;
+            case 'T': code = 3; break;
+            default: return false;
+          }
+          key = (key << 2) | code;
+        }
+        return true;
+      }
+
+      void build(const vector<string>& fwd, int32_t seed_length)
+      {
+        key_length = min(seed_length, 16);
+        entries.clear();
+        seq_offset.assign(1, 0);
+        size_t total = 0;
+        for (size_t tid = 0; tid < fwd.size(); tid++) {
+          total += fwd[tid].size();
+          seq_offset.push_back(total);
+        }
+        ASSERT(total < 0xFFFFFFFFull, "Reference sequences are too long to index for gene conversion detection.");
+        entries.reserve(total);
+
+        const uint64_t mask = (1ull << (2 * key_length)) - 1;
+        for (size_t tid = 0; tid < fwd.size(); tid++) {
+          const string& s = fwd[tid];
+          uint64_t key = 0;
+          int32_t valid = 0;   // how many consecutive ACGT bases end at the current position
+          for (size_t i = 0; i < s.size(); i++) {
+            uint64_t code;
+            switch (s[i]) {
+              case 'A': code = 0; break;
+              case 'C': code = 1; break;
+              case 'G': code = 2; break;
+              case 'T': code = 3; break;
+              default: code = 4; break;
+            }
+            if (code == 4) { valid = 0; key = 0; continue; }
+            key = ((key << 2) | code) & mask;
+            valid++;
+            if (valid >= key_length) {
+              uint64_t pos = seq_offset[tid] + i + 1 - key_length;
+              entries.push_back((key << 32) | pos);
+            }
+          }
+        }
+        sort(entries.begin(), entries.end());
+      }
+
+      // Global positions of every exact occurrence of the first key_length bases of seed.
+      void find(const string& seed, vector<uint32_t>& positions) const
+      {
+        positions.clear();
+        uint64_t key;
+        if (!pack(seed, 0, key_length, key)) return;
+        vector<uint64_t>::const_iterator lo = lower_bound(entries.begin(), entries.end(), key << 32);
+        vector<uint64_t>::const_iterator hi = lower_bound(entries.begin(), entries.end(), (key + 1) << 32);
+        for (; lo != hi; lo++) positions.push_back(static_cast<uint32_t>(*lo & 0xFFFFFFFFull));
+      }
+
+      void locate(uint32_t global, uint32_t& tid, uint32_t& pos) const
+      {
+        vector<uint32_t>::const_iterator it = upper_bound(seq_offset.begin(), seq_offset.end(), global);
+        tid = (it - seq_offset.begin()) - 1;
+        pos = global - seq_offset[tid];
+      }
+    };
+
+  } // anonymous namespace
+
+  int32_t MutationPredictor::predict_gene_conversions(cGenomeDiff& gd, const cGeneConversionOptions& options)
+  {
+    const int32_t k = options.seed_length;
+    const size_t num_seqs = ref_seq_info.size();
+
+    // The two strands of every reference sequence, and a k-mer index of the forward strand.
+    vector<string> fwd(num_seqs);
+    vector<string> rc(num_seqs);
+    for (size_t tid = 0; tid < num_seqs; tid++) {
+      fwd[tid] = ref_seq_info[tid].m_fasta_sequence.get_sequence();
+      rc[tid] = reverse_complement(fwd[tid]);
+    }
+    cGCKmerIndex index;
+    index.build(fwd, k);
+
+    // Sort the mutations into the eligible ones, which become the mutated sequences, and the
+    // rest, which become bases no tract may cover.
+    gd.sort();
+    diff_entry_list_t muts = gd.mutation_list();
+    vector<cGCMember> members;
+    vector<vector<size_t> > members_on(num_seqs);
+    vector<pair<uint32_t, diff_entry_ptr_t> > others;
+    for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+      cDiffEntry& mut = **it;
+      uint32_t tid = 0;
+      while ((tid < num_seqs) && (ref_seq_info[tid].m_seq_id != mut[SEQ_ID])) tid++;
+      if (tid == num_seqs) continue;
+      if (gc_eligible(mut)) {
+        members_on[tid].push_back(members.size());
+        members.push_back(cGCMember(*it, tid));
+      } else {
+        others.push_back(make_pair(tid, *it));
+      }
+    }
+
+    vector<cGCMutatedSequence> mutated(num_seqs);
+    for (size_t tid = 0; tid < num_seqs; tid++) {
+      mutated[tid].usable = gc_build_mutated_sequence(ref_seq_info[tid], members, members_on[tid], mutated[tid]);
+      if (!mutated[tid].usable) {
+        WARN("Mutations on reference sequence " + ref_seq_info[tid].m_seq_id + " overlap, so no gene conversions were looked for there.");
+      }
+    }
+    for (size_t i = 0; i < others.size(); i++) {
+      cGCMutatedSequence& ms = mutated[others[i].first];
+      if (!ms.usable) continue;
+      cDiffEntry& other = *others[i].second;
+      const int32_t len = ms.index_of_ref.size() - 1;
+      int32_t s = max(1, min(len, gc_start(other)));
+      int32_t e = max(1, min(len, gc_end(other)));
+      if (other._type == INS) {
+        // An insertion after base s sits between s and s+1: a tract may end at s or begin at
+        // s+1, but not contain both.
+        if (ms.index_of_ref[s] >= 0) ms.no_cross[ms.index_of_ref[s]] = 1;
+      } else {
+        for (int32_t p = s; p <= e; p++) {
+          if (ms.index_of_ref[p] >= 0) ms.blocked[ms.index_of_ref[p]] = 1;
+        }
+      }
+    }
+
+    // Members of each sequence ordered by where they start, for finding the ones a stretch covers.
+    vector<vector<pair<int32_t, size_t> > > starts(num_seqs);
+    for (size_t m = 0; m < members.size(); m++) {
+      if (members[m].footprint_start >= 0)
+        starts[members[m].tid].push_back(make_pair(members[m].footprint_start, m));
+    }
+    for (size_t tid = 0; tid < num_seqs; tid++) sort(starts[tid].begin(), starts[tid].end());
+
+    if (options.verbose)
+      cerr << "  " << members.size() << " mutation(s) eligible for gene conversion." << endl;
+
+    int32_t num_created = 0;
+    vector<uint32_t> found;
+
+    for (size_t m = 0; m < members.size(); m++) {
+      cGCMember& member = members[m];
+      if (member.removed || (member.footprint_start < 0)) continue;
+      const uint32_t self_tid = member.tid;
+      cGCMutatedSequence& ms = mutated[self_tid];
+      if (!ms.usable) continue;
+      const string& M = ms.seq;
+      const int32_t M_size = M.size();
+      if (M_size < k) continue;
+
+      // The seed: k bases of the mutated sequence centered on this mutation.
+      int32_t s = (member.footprint_start + member.footprint_end) / 2 - k / 2;
+      s = max(0, min(s, M_size - k));
+      string seed = M.substr(s, k);
+      if (!gc_all_ACGT(seed)) continue;
+      bool seed_touches_other = false;
+      for (int32_t i = s; i < s + k; i++) {
+        if (ms.blocked[i] || ((i + 1 < s + k) && ms.no_cross[i])) { seed_touches_other = true; break; }
+      }
+      if (seed_touches_other) continue;
+
+      // A seed on the reverse strand of a sequence is the reverse complement of the seed on
+      // its forward strand, which is the only strand indexed.
+      const string seed_rc = reverse_complement(seed);
+
+      set<pair<pair<uint32_t, bool>, int32_t> > seen;
+      bool accepted = false;
+      cGCDonorHit best;
+
+      for (int strand = 0; strand < 2; strand++) {
+        const bool reverse = (strand == 1);
+        index.find(reverse ? seed_rc : seed, found);
+
+        for (size_t f = 0; f < found.size(); f++) {
+          uint32_t tid, fpos;
+          index.locate(found[f], tid, fpos);
+          const string& D = reverse ? rc[tid] : fwd[tid];
+          const int32_t L = D.size();
+          if (static_cast<int32_t>(fpos) + k > L) continue;
+          // The index only matched the first key_length bases; check the whole seed.
+          if (fwd[tid].compare(fpos, k, reverse ? seed_rc : seed) != 0) continue;
+          // Where that forward occurrence sits in the strand string we extend along.
+          const int32_t pos = reverse ? (L - static_cast<int32_t>(fpos) - k) : static_cast<int32_t>(fpos);
+          const int32_t offset = pos - s;
+          if (!seen.insert(make_pair(make_pair(tid, reverse), offset)).second) continue;
+
+          // Extend the exact match in both directions along the mutated sequence, never onto
+          // another mutation's bases. N never matches.
+          int32_t l = s, dl = s + offset;
+          while ((l > 0) && (dl > 0) && (M[l-1] == D[dl-1]) && (M[l-1] != 'N')
+                 && !ms.blocked[l-1] && !ms.no_cross[l-1]) { l--; dl--; }
+          int32_t r = s + k - 1, dr = r + offset;
+          while ((r + 1 < M_size) && (dr + 1 < L) && (M[r+1] == D[dr+1]) && (M[r+1] != 'N')
+                 && !ms.blocked[r+1] && !ms.no_cross[r]) { r++; dr++; }
+
+          cGCDonorHit hit;
+          hit.target_id = tid;
+          hit.reverse = reverse;
+          hit.offset = offset;
+          hit.start = l;
+          hit.end = r;
+          hit.donor_forward_start = reverse ? (L - dr) : (dl + 1);
+          const int32_t donor_forward_end = reverse ? (L - dl) : (dr + 1);
+
+          // The recipient bases this stretch covers, in forward reference coordinates.
+          int32_t recip_start = 0, recip_end = 0;
+          for (int32_t i = l; i <= r; i++) {
+            if (ms.ref_pos[i] == 0) continue;
+            if (recip_start == 0) recip_start = ms.ref_pos[i];
+            recip_end = ms.ref_pos[i];
+          }
+          // A donor that overlaps the stretch it explains is the same locus seen through a
+          // tandem repeat's register shift, not a second copy.
+          if ((tid == self_tid) && (recip_start != 0)
+              && (hit.donor_forward_start <= recip_end) && (donor_forward_end >= recip_start))
+            continue;
+
+          const vector<pair<int32_t, size_t> >& on = starts[self_tid];
+          for (vector<pair<int32_t, size_t> >::const_iterator it = lower_bound(on.begin(), on.end(), make_pair(l, size_t(0)));
+               (it != on.end()) && (it->first <= r); it++) {
+            const cGCMember& candidate = members[it->second];
+            if (!candidate.removed && (candidate.footprint_end <= r)) hit.explained.push_back(it->second);
+          }
+          if (static_cast<int32_t>(hit.explained.size()) < options.minimum_mutations) continue;
+          if (hit.identical_length() < options.minimum_identical_length) continue;
+
+          if (!accepted || gc_hit_better(hit, best)) { best = hit; accepted = true; }
+        }
+      }
+      if (!accepted) continue;
+
+      // The tract is the whole identical stretch: every base the donor and the converted
+      // recipient share, not just the span of the replaced mutations. That is the maximal extent
+      // rule -- the conversion could have happened anywhere within it -- and it is what gives a
+      // one-base conversion a tract long enough to say which strand the donor is on.
+      //
+      // The stretch may begin or end on a base the cluster inserted (an INS or SUB whose other
+      // anchor lies outside it, and which therefore stays a separate mutation). The tract has to
+      // start and end on reference bases, so it is trimmed inward to the first and last reference
+      // bases of the stretch; the leftover mutation then sits just outside it.
+      int32_t ma = best.start;
+      while ((ma <= best.end) && (ms.ref_pos[ma] == 0)) ma++;
+      int32_t mb = best.end;
+      while ((mb >= ma) && (ms.ref_pos[mb] == 0)) mb--;
+      if (ma > mb) continue;
+
+      const int32_t position = ms.ref_pos[ma];
+      const int32_t size = ms.ref_pos[mb] - position + 1;
+      const int32_t da = ma + best.offset;
+      const int32_t db = mb + best.offset;
+      if (db - da + 1 < 2) continue;   // APPLY rejects a one-base donor region
+      const int32_t donor_len = static_cast<int32_t>(fwd[best.target_id].size());
+      const string& donor_seq_id = ref_seq_info[best.target_id].m_seq_id;
+      int32_t region_start, region_end;
+      if (!best.reverse) { region_start = da + 1; region_end = db + 1; }
+      else               { region_start = donor_len - da; region_end = donor_len - db; }
+
+      // Read the donor back exactly the way APPLY will, and insist it is the mutated tract.
+      string donor = ref_seq_info[best.target_id].get_sequence_1(min(region_start, region_end), max(region_start, region_end));
+      if (best.reverse) donor = reverse_complement(donor);
+      ASSERT(donor == M.substr(ma, mb - ma + 1), "Gene conversion donor does not reproduce the mutated sequence at " + ref_seq_info[self_tid].m_seq_id + ":" + to_string(position));
+
+      cDiffEntry con(CON);
+      con[SEQ_ID] = ref_seq_info[self_tid].m_seq_id;
+      con[POSITION] = to_string(position);
+      con[SIZE] = to_string(size);
+      con[REGION] = donor_seq_id + ":" + to_string(region_start) + "-" + to_string(region_end);
+
+      // The CON inherits every piece of evidence the mutations it replaces had.
+      for (size_t j = 0; j < best.explained.size(); j++) {
+        cGCMember& replaced = members[best.explained[j]];
+        replaced.removed = true;
+        for (size_t e = 0; e < replaced.mut->_evidence.size(); e++) {
+          const string& id = replaced.mut->_evidence[e];
+          if (find(con._evidence.begin(), con._evidence.end(), id) == con._evidence.end())
+            con._evidence.push_back(id);
+        }
+      }
+      diff_entry_list_t* entries = gd.get_mutable_list_ptr();
+      for (diff_entry_list_t::iterator it = entries->begin(); it != entries->end(); ) {
+        bool replaced = false;
+        for (size_t j = 0; j < best.explained.size(); j++) {
+          if (&(**it) == &(*members[best.explained[j]].mut)) { replaced = true; break; }
+        }
+        if (replaced) it = gd.remove(it);
+        else it++;
+      }
+      diff_entry_ptr_t added = gd.add(con, true);
+      num_created++;
+
+      // No later tract may overlap this one.
+      for (int32_t i = ma; i <= mb; i++) ms.blocked[i] = 1;
+
+      if (options.verbose) {
+        cerr << "  " << best.explained.size() << " mutation(s) explained by " << best.identical_length()
+             << " bp identical to " << con[REGION] << ": " << added->as_string() << endl;
+      }
+    }
+
+    gd.sort();
+    return num_created;
+  }
+
+
 	/*
 	 Title   : predict
 	 Usage   : $mp->predict();

@@ -344,7 +344,20 @@ pairs that store optional information.
 
 7.  **region** *\<sequence:start-end>*
 
-    Region in the reference genome to use as a replacement.
+    Region in the reference genome to use as a replacement. When *start*
+    is greater than *end*, the reverse complement of that region is used.
+    The donor bases are always taken from the original reference
+    sequence, not from the genome with other mutations applied.
+
+`gdtools NORMALIZE` creates CON mutations. When applying a cluster of
+SNP, INS, DEL, and SUB mutations makes a region an exact copy of another
+region of the reference (on either strand or on another sequence) over a
+long enough stretch, it replaces those mutations with one CON that has
+its maximal extent: the tract is the whole stretch over which the
+converted region and the donor are identical, including the flanking
+bases that already matched, and the region is the donor bases that align
+to it. The CON inherits the evidence of the mutations it replaced, and
+applying it gives the same genome as applying them.
 
 ### INT: Integration mutation
 

@@ -1600,18 +1600,30 @@ int do_normalize_gd(int argc, char* argv[])
 	options("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT);
 	options("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT);
 	options("dont-check-apply,x" , "skip both the check that the input is valid against the reference sequences and the step that checks consistency of normalize using APPLY.", TAKES_NO_ARGUMENT);
+	options("no-gene-conversion" , "do not replace clusters of SNP, INS, DEL, and SUB mutations that make a region identical to another copy of it in the reference with a CON mutation.", TAKES_NO_ARGUMENT);
+	cGeneConversionOptions con_defaults;
+	options("con-minimum-mutations", "minimum number of mutations a CON must replace.", con_defaults.minimum_mutations);
+	options("con-minimum-length", "minimum length (bp) of the exact match between the converted region and its donor. The match must contain every replaced mutation.", con_defaults.minimum_identical_length);
 
 	const int32_t kDistanceToRepeat = 20;
-	
+
   options.addUsage("");
   options.addUsage("Creates a GD file of mutations that have been normalized to the input reference files. ");
 	options.addUsage("");
-  options.addUsage("This process involves (1) converting AMP mutations of ≤50 bp to indels, ");
-  options.addUsageSameLine("(2) shifting INS and DEL mutations to the highest coordinates possible, (3)");
+  options.addUsage("This process involves (1) replacing SNP, INS, DEL, and SUB mutations with a single CON");
+  options.addUsageSameLine("(gene conversion) mutation when applying them makes a region an exact copy of a donor region");
+  options.addUsageSameLine("elsewhere in the reference (on either strand or another sequence) over at least " + to_string(con_defaults.minimum_identical_length) + " bp,");
+  options.addUsageSameLine("(2) converting AMP mutations of ≤50 bp to indels, ");
+  options.addUsageSameLine("(3) shifting INS and DEL mutations to the highest coordinates possible, (4)");
   options.addUsageSameLine("adding repeat_seq, repeat_length, repeat_ref_copies, and repeat_new_copies fields");
   options.addUsageSameLine("for INS and DEL mutations that are in tandem sequence repeats of ≥5 bases in the reference sequence,");
-  options.addUsageSameLine("and (4) flagging SNP, INS, or DEL mutations with sizes ≤50 bp that are within 20 bp of the ends of");
+  options.addUsageSameLine("and (5) flagging SNP, INS, or DEL mutations with sizes ≤50 bp that are within 20 bp of the ends of");
   options.addUsageSameLine("annotated mobile_element copies in the reference genome with the field mobile_element_adjacent=1");
+  options.addUsage("");
+  options.addUsage("A CON is written with its maximal extent: the tract is every base over which the converted region and the");
+  options.addUsageSameLine("donor are identical, not just the mutations it replaces, and it inherits their evidence. Mutations that are polymorphic or that");
+  options.addUsageSameLine("carry within, before, mediated, or between fields are never combined. The APPLY check at the end");
+  options.addUsageSameLine("verifies that every CON reproduces the same genome as the mutations it replaced.");
   options.addUsage("");
 	options.addUsage("Optionally, assigns 'adjacent', 'mediated', or 'between' tags to mutations within");
 	options.addUsageSameLine(to_string(kDistanceToRepeat) + " bp of annotated repeat regions");
@@ -1718,6 +1730,19 @@ int do_normalize_gd(int argc, char* argv[])
 		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 	}
 	
+	// Gene conversions first: the comparison is between applied sequences, so it does not care
+	// whether the indels have been shifted yet, and whatever it leaves behind is shifted below.
+	if (!options.count("no-gene-conversion")) {
+		uout("Replacing clusters of mutations explained by gene conversion with CON mutations.");
+		cGeneConversionOptions con_options;
+		con_options.minimum_mutations = from_string<int32_t>(options["con-minimum-mutations"]);
+		con_options.minimum_identical_length = from_string<int32_t>(options["con-minimum-length"]);
+		con_options.verbose = verbose;
+		MutationPredictor mp(ref_seq_info);
+		int32_t num_con = mp.predict_gene_conversions(gd, con_options);
+		uout("Created " + to_string(num_con) + " CON mutation(s).");
+	}
+
 	uout("Normalizing mutations.");
 	gd.normalize_mutations(ref_seq_info, settings);
 	

@@ -57,6 +57,27 @@ namespace breseq {
   //! tiling while MC boundaries are per-base, and the deletion callers want the precise ones.
   void merge_MC_fragments_spanned_by_CN(cGenomeDiff& gd, uint32_t fallback_max_island = kMaxMCMergeIslandBases);
 
+  //! Options for MutationPredictor::predict_gene_conversions. Its own struct rather than fields
+  //! of Settings so that gdtools NORMALIZE, which has no Settings of its own, and the pipeline
+  //! can both drive it.
+  struct cGeneConversionOptions {
+    //! A CON is only made when its identical stretch explains at least this many mutations.
+    int32_t minimum_mutations;
+    //! The converted recipient must match the donor exactly, without gaps, over a stretch at
+    //! least this long that contains every replaced mutation.
+    int32_t minimum_identical_length;
+    //! Length of the exact k-mer, taken across each mutation, used to locate candidate donors.
+    int32_t seed_length;
+    bool    verbose;
+
+    cGeneConversionOptions()
+      : minimum_mutations(1)
+      , minimum_identical_length(50)
+      , seed_length(20)
+      , verbose(false)
+    {}
+  };
+
 	class MutationPredictor
 	{
 	public:
@@ -154,7 +175,51 @@ namespace breseq {
     
     // Cleans up predictions of large INS to make them AMP
     void normalize_INS_to_AMP(Settings& settings, Summary& summary, cGenomeDiff& gd);
-    
+
+    //! Replace groups of small mutations with the gene conversion (CON) that explains them.
+    //!
+    //! Recombination between two near-identical copies of a sequence -- paralogous genes, rRNA
+    //! operons, copies of a mobile element -- overwrites a tract of the recipient copy with the
+    //! donor copy's sequence. Read mapping sees that as a run of SNP/INS/DEL/SUB calls in the
+    //! recipient, one at every position where the copies differed across the tract. Those calls
+    //! reproduce the right genome, but they describe one event as many, and gdtools COUNT and any
+    //! phylogeny built on them treat each as an independent mutation.
+    //!
+    //! Every consensus SNP/INS/DEL/SUB mutation is applied to its reference sequence once, giving
+    //! the mutated genome with a map from each base back to its reference coordinate. A k-mer of
+    //! that mutated sequence across each mutation is looked for everywhere in the reference, on
+    //! both strands, and every hit is extended without gaps in both directions until the mutated
+    //! sequence and the candidate donor disagree. A mutation is explained by a hit when its whole
+    //! footprint lies inside that identical stretch: because the comparison is against the
+    //! MUTATED sequence, a mutation can only sit inside it if the donor really carries the new
+    //! base(s) and the reference did not. There is no notion of a cluster: a stretch absorbs
+    //! every explained mutation it reaches, however far apart they are, which is what an rRNA
+    //! operon needs. The best hit (most mutations explained, then the longest identical stretch)
+    //! is accepted when it explains at least minimum_mutations and the identical stretch is at
+    //! least minimum_identical_length long.
+    //!
+    //! The CON written has the MAXIMAL extent: its tract is the whole identical stretch, every
+    //! base the converted recipient shares with the donor. Every tract inside that stretch that
+    //! still covers the mutations applies to the same genome, so the widest one is the canonical
+    //! form, and it is the only form that says which strand the donor is on when the conversion
+    //! changed a single base. A stretch never covers a base that belongs to any other mutation
+    //! (one that is polymorphic, pinned by within/before/mediated/between, of another type, or a
+    //! CON already made), so tracts never overlap and a de novo SNP inside a converted region
+    //! yields two CON entries around a SNP rather than a CON with a SNP inside it (VALIDATE would
+    //! reject that: 'within' is not allowed on a CON).
+    //!
+    //! A hit whose donor overlaps the recipient stretch it explains is discarded. That is what an
+    //! insertion or deletion of one unit of a tandem repeat looks like when the mutated sequence
+    //! is matched against the same locus shifted by a unit, and those are already normalized as
+    //! INS/DEL with repeat_* annotations. A donor that is the neighbouring, non-overlapping copy
+    //! of a tandem array is kept. Copies of an equally good donor (a mobile element family) are
+    //! broken deterministically: forward strand first, then reference order, then the lowest
+    //! coordinate. Circular sequences are not searched across the origin.
+    //!
+    //! Returns the number of CON entries created. gd is left sorted. The donor is read from the
+    //! reference as APPLY reads it, so the caller's APPLY-based self-check is a genuine test.
+    int32_t predict_gene_conversions(cGenomeDiff& gd, const cGeneConversionOptions& options);
+
     // Master function
 		void predict(Settings& settings, Summary& summary, cGenomeDiff& gd);
 
