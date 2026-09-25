@@ -119,7 +119,7 @@ pairs that store optional information.
 
 *mutation* types are 3 letters: SNP, SUB, DEL, INS, MOB, AMP, CON, INV.
 
-*evidence* types are 2 letters: RA, MC, JC, UN, CN, SC, DP, MP, PD.
+*evidence* types are 2 letters: RA, MC, JC, UN, CN, SC, DP, MP, PD, LN.
 
 *validation* types are 4 letters: TSEQ, PFLP, RFLP, PFGE, PHYL, CURA.
 
@@ -766,6 +766,76 @@ Notable name=value pairs:
     duplicates of one molecule cannot carry a prediction.
 *   **snapped_to_junction** — present when the coordinates were taken from a validated split-read
     junction inside the interval, and are therefore exact to the base.
+
+### LN: Read linkage evidence
+
+Which `RA` pileup columns carry their variant alleles in the *same reads*. `RA` evidence is called
+one column at a time, so on its own it cannot say whether a base substitution and the inserted base
+next to it are one event at 30% or two events that happen to have similar frequencies. An LN records
+what the reads spanning the columns say, and it is the only thing that lets breseq join polymorphic
+`RA` columns into one `INS`, `DEL` or `SUB` with one frequency in polymorphism mode. Two kinds exist:
+
+*   A **contiguous** LN (`contiguous=1`) covers a run of adjacent columns. Each read spanning the run
+    contributes its allele string, the run is fit as a mixture of haplotypes, and `linked=1` says the
+    haplotype carrying every column's variant explains the columns well enough that the predictor
+    should merge them (its frequency becomes the mutation's).
+*   A **nearby** LN (`contiguous=0`) compares two runs within a read length of each other and counts
+    the reads spanning both by which alleles they pair up, giving a cis/trans reading. It never merges
+    anything.
+
+Produced in polymorphism mode only. Pass `--no-linkage` to turn it off. Columns are named by
+coordinate, not by `RA` id, because ids are renumbered when evidence files are merged.
+
+Line specification:
+
+4.  **seq_id** *\<string>*
+
+    id of reference sequence fragment.
+
+5.  **position** *\<uint32>*
+
+    reference position of the first column of the run.
+
+6.  **insert_position** *\<uint32>*
+
+    insert position of the first column, in `RA` column numbering (0 = the reference base itself,
+    1 = the first base inserted after it).
+
+7.  **end** *\<uint32>*
+
+    reference position of the last column of the run.
+
+8.  **insert_end** *\<uint32>*
+
+    insert position of the last column.
+
+Notable name=value pairs:
+
+*   **contiguous** *\<0/1>* — 1 for a run of adjacent columns, 0 for the comparison of two nearby
+    runs, whose second run is given by **position_2**, **insert_position_2**, **end_2**,
+    **insert_end_2**.
+*   **linked** *\<0/1>* — 1 when the run's columns should be merged into one mutation. Requires the
+    all-variant haplotype to be present (its **score** clears the polymorphism score cutoff) above the
+    polymorphism frequency cutoff, to account for at least `--linkage-merge-fraction` of every
+    column's own variant frequency, and no partial haplotype (some but not all of the variant alleles)
+    to be present above the frequency cutoff.
+*   **ref_haplotype**, **new_haplotype** — the allele strings over the run's columns for the reference
+    and for the all-variant haplotype, one character per column (`.` is a deletion, or no base at an
+    inserted column). For a nearby LN, the two runs' strings joined by `/`.
+*   **haplotypes** — read counts of the allele strings observed among reads spanning the whole run,
+    e.g. `CA:12,.T:80,other:1`. For a nearby LN, counts of reads by (allele in run 1, allele in run
+    2) with `R` for reference and `V` for variant, e.g. `RR:80,RV:2,VR:1,VV:12`.
+*   **spanning_reads** — how many reads span the whole run (or both runs).
+*   **frequency**, **frequency_lower**, **frequency_upper**, **score** — for a contiguous LN, the
+    all-variant haplotype's fitted frequency, its profile-likelihood bounds, and the log10 evidence
+    that it is present at all.
+*   **phase** *\<cis/trans/unresolved>* — for a nearby LN: `cis` when nearly all variant-carrying
+    shared reads carry both variants, `trans` when nearly none do and each variant is seen on its own.
+    A summary of the counts, not a test.
+*   **realigned** *\<0/1>* — 1 when the frequency was refined by re-scoring the spanning reads against
+    the candidate haplotype sequences (see `--no-local-realignment`); **pileup_frequency** then keeps
+    the column-based value it replaced.
+*   **reject** — `RA_REJECTED` when a column of the run was itself rejected, which voids the link.
 
 ### UN: Unknown base evidence
 

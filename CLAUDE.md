@@ -92,7 +92,11 @@ regressions to be merged. Rules:
 - Do not commit/merge/push based on a `make test` result you did not first force to re-run this way.
 
 **To run a single test, use `tests/test.sh <action> <name>`** — this is the canonical single-test
-entry point (streams output live, no Snakemake). Prefer it over the thin `run.sh`/`rebuild.sh`/
+entry point (streams output live, no Snakemake). **Under `conda run` it must be
+`conda run --no-capture-output -p ../../../env ./tests/test.sh ...` with output redirected to a
+file**: plain `conda run` buffers the child's output until exit, so breseq's live progress fills the
+pipe and the run deadlocks at 0% CPU part-way through (`make test` is unaffected because Snakemake
+logs each test to a file). Prefer it over the thin `run.sh`/`rebuild.sh`/
 `build.sh` wrappers, which all just dispatch to the same `tests/<name>/testcmd.sh <action>`:
 
 ```bash
@@ -283,7 +287,18 @@ Mutation types (enum `gd_entry_type`): `SNP`, `SUB`, `DEL`, `INS`, `MOB`, `AMP`,
 
 Evidence types: `RA` (read alignment), `MC` (missing coverage), `JC` (new junction), `CN` (copy
 number), `UN` (unknown), `SC` (soft clipping), `DP` (discordant pair), `MP` (missing pair),
-`PD` (pair distance)
+`PD` (pair distance), `LN` (read linkage between RA columns)
+
+`LN` is produced in polymorphism mode only (`--no-linkage` turns it off). RA is called one pileup
+column at a time, so the predictor refuses to join two *polymorphic* RA columns into one
+INS/DEL/SUB (`mutation_predictor.cpp`, `predictRAtoSNPorDELorINSorSUB`) unless a `contiguous=1
+linked=1` LN says the reads carry both variants together; the merged mutation then takes the LN's
+haplotype frequency. `identify_mutations_pileup` tags every per-read observation with a read
+ordinal (assigned at the read's leftmost column, keyed by the htslib record pointer) and keeps each
+candidate column's observations until the pileup is a read length past it. **An LN names its
+columns by coordinate, never by RA id**: `merge_preserving_duplicates` reassigns every id when the
+per-stage evidence files are merged, and `reassign_unique_ids` clears the evidence list of every
+non-mutation entry, so an evidence-to-evidence id reference cannot survive the Output stage.
 
 `CN`, `DP`, `MP` and `PD` are predicted by **default**; turn each off with
 `--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`,

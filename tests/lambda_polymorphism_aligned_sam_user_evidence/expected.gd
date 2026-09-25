@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	07:36:02 09 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=CREATED	15:22:17 25 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision f30111c975ee
 #=COMMAND	./src/breseq/breseq -j 4 -p --aligned-sam --user-evidence-gd tests/lambda_polymorphism_aligned_sam_user_evidence/user_evidence.gd -o tests/lambda_polymorphism_aligned_sam_user_evidence -r tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
 #=REFSEQ	tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
@@ -46,7 +46,7 @@ SNP	33	78	NC_001416	47575	A	aa_new_seq=M	aa_position=1	aa_ref_seq=M	codon_new_se
 SNP	34	79	NC_001416	47669	C	frequency=1	gene_name=lambdap78/lambdap79	gene_position=intergenic (-94/-69)	gene_product=putative envelope protein/hypothetical protein	gene_strand=</>	genes_promoter=lambdap78,lambdap79	locus_tag=lambdap78/lambdap79	locus_tags_promoter=lambdap78,lambdap79	mutation_category=snp_intergenic	position_end=47669	position_start=47669	ref_seq=T	snp_type=intergenic
 SNP	35	80	NC_001416	47878	G	aa_new_seq=R	aa_position=47	aa_ref_seq=R	codon_new_seq=AGG	codon_number=47	codon_position=3	codon_ref_seq=AGA	frequency=1	gene_name=lambdap79	gene_position=141	gene_product=hypothetical protein	gene_strand=>	genes_overlapping=lambdap79	locus_tag=lambdap79	locus_tags_overlapping=lambdap79	mutation_category=snp_synonymous	position_end=47878	position_start=47878	ref_seq=A	snp_type=synonymous	transl_table=11
 SNP	36	81	NC_001416	47973	C	frequency=1	gene_name=lambdap79/–	gene_position=intergenic (+29/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=snp_intergenic	position_end=47973	position_start=47973	ref_seq=T	snp_type=intergenic
-SUB	37	82,83	NC_001416	47977	2	AC	frequency=1	gene_name=lambdap79/–	gene_position=intergenic (+33/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=small_indel	position_end=47978	position_start=47977	ref_seq=GT
+SUB	37	82,83,100	NC_001416	47977	2	AC	frequency=1	gene_name=lambdap79/–	gene_position=intergenic (+33/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=small_indel	position_end=47978	position_start=47977	ref_seq=GT
 SNP	38	84	NC_001416	48160	C	frequency=8.20578650e-01	gene_name=lambdap79/–	gene_position=intergenic (+216/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=snp_intergenic	position_end=48160	position_start=48160	ref_seq=T	snp_type=intergenic
 SNP	39	86	NC_001416	48295	A	frequency=1.34440431e-01	gene_name=lambdap79/–	gene_position=intergenic (+351/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=snp_intergenic	position_end=48295	position_start=48295	ref_seq=C	snp_type=intergenic
 RA	40	.	NC_001416	54	0	G	A	allele_frequencies=G:9.99999999e-01	consensus_reject=SCORE_CUTOFF,FREQUENCY_CUTOFF	frequency=0.00000000e+00	frequency_lower=0.00000000e+00	frequency_upper=6.58283234e-02	gene_name=–/nu1	gene_position=intergenic (–/-137)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	major_base=G	major_cov=4/16	major_frequency=9.99999999e-01	minor_base=A	minor_cov=0/0	new_cov=0/0	prediction=polymorphism	ref_cov=4/16	reject=SCORE_CUTOFF,FREQUENCY_CUTOFF,VARIANT_STRAND_COVERAGE	score=-4.7	snp_type=intergenic	total_cov=4/16	user_defined=1
@@ -109,3 +109,4 @@ UN	96	.	NC_001416	48471	48471
 UN	97	.	NC_001416	48473	48474
 UN	98	.	NC_001416	48476	48478
 UN	99	.	NC_001416	48502	48502
+LN	100	.	NC_001416	47977	0	47978	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.18176651e-01	frequency_upper=1.00000000e+00	gene_name=lambdap79/–	gene_position=intergenic (+33/–)	gene_product=hypothetical protein/–	gene_strand=>/–	haplotypes=GT:0,AC:15,other:1	linked=1	locus_tag=lambdap79/–	new_haplotype=AC	realigned=0	ref_haplotype=GT	score=89.5	spanning_reads=16

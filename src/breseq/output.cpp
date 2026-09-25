@@ -246,6 +246,7 @@ string header_style_string()
   ss << ".discordant_pair_header_row {background-color: rgb(200,0,120);}" << endl;
   ss << ".missing_pair_header_row {background-color: rgb(0,120,160);}"    << endl;
   ss << ".pair_distance_header_row {background-color: rgb(120,60,170);}"  << endl;
+  ss << ".read_linkage_header_row {background-color: rgb(170,90,0);}"     << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(235,235,235);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
@@ -675,6 +676,10 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     pd.remove_if(cDiffEntry::ignored_but_not_circular());
   }
 
+  // LN: the linkage items not used by a merged mutation -- unlinked runs and cis/trans pairs.
+  diff_entry_list_t ln = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(LN)));
+  ln.remove_if(cDiffEntry::rejected_and_not_user_defined());
+
   // Open list container before sticky header so the .search input is inside it
   if (!settings.no_javascript) {
     if (!settings.no_list_js) {
@@ -693,7 +698,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << mutation_filter_input_string() << endl;
   }
 
-  if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() + mp.size() + pd.size() > 0) {
+  if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() + mp.size() + pd.size() + ln.size() > 0) {
     HTML << "<p>Jump to: <a href=\"#mutation_list\">predicted mutations</a>";
     HTML << " | Unassigned evidence: ";
     vector<string> jump_link_list;
@@ -711,6 +716,8 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
       jump_link_list.push_back("<a href=\"#missing_pair_list\">missing pair</a>");
     if (pd.size() > 0)
       jump_link_list.push_back("<a href=\"#pair_distance_list\">pair distance</a>");
+    if (ln.size() > 0)
+      jump_link_list.push_back("<a href=\"#read_linkage_list\">read linkage</a>");
     HTML << join(jump_link_list, ", ");
     HTML << endl;
   }
@@ -785,9 +792,17 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << html_pair_distance_table_string(pd, false, "Unassigned pair distance evidence", relative_path);
   }
 
+  /////////////////////////
+  // Unassigned LN evidence
+  /////////////////////////
+
+  if (ln.size() > 0) {
+    HTML << "<p>" << html_read_linkage_table_string(ln, false, "Unassigned read linkage evidence", relative_path);
+  }
+
 
   // This code prints out a message if there was nothing in the previous tables
-  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() + dp.size() + mp.size() + pd.size() == 0) {
+  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() + dp.size() + mp.size() + pd.size() + ln.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
 
@@ -897,6 +912,17 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   pd_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
   pd_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(PD_SUPPORTING_COUNT)));
   mark_gd_entries_in_list_no_show(pd_list, settings.max_rejected_pair_distance_evidence_to_show);
+
+  /////
+  // LN evidence
+  //////
+
+  // Rejected LN items are ones whose RA columns were themselves rejected; keep the best-supported.
+  vector<gd_entry_type> ln_types = make_vector<gd_entry_type>(LN);
+  diff_entry_list_t ln_list = gd.filter_used_as_evidence(gd.get_list(ln_types));
+  ln_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  ln_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(LN_SPANNING_READS)));
+  mark_gd_entries_in_list_no_show(ln_list, settings.max_rejected_read_linkage_evidence_to_show);
 
 }
 
@@ -1039,6 +1065,16 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     marginal_mp_title += " (sorted from high to low score)";
   }
 
+  diff_entry_list_t ln_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(LN)));
+  ln_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  ln_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
+
+  string marginal_ln_title = "Marginal read linkage evidence";
+  if (ln_list.size() > 0) {
+    ln_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(LN_SPANNING_READS)));
+    marginal_ln_title += " (sorted from high to low spanning read count)";
+  }
+
   /////////////////////////
   // Sticky header: breseq nav + jump links
   /////////////////////////
@@ -1068,6 +1104,9 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     }
     if (pd_list.size() > 0) {
       jump_link_list.push_back("<a href=\"#pair_distance_list\">pair distance</a>");
+    }
+    if (ln_list.size() > 0) {
+      jump_link_list.push_back("<a href=\"#read_linkage_list\">read linkage</a>");
     }
     HTML << join(jump_link_list, ", ");
 
@@ -1117,8 +1156,13 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     HTML << html_pair_distance_table_string(pd_list, false, marginal_pd_title, relative_path);
   }
 
+  if (ln_list.size() > 0) {
+    HTML << "<p>" << endl;
+    HTML << html_read_linkage_table_string(ln_list, false, marginal_ln_title, relative_path);
+  }
+
   // This code prints out a message if there was nothing in the previous tables
-  if (ra_list.size() + jc_list.size() + dp_list.size() + sc_list.size() + mp_list.size() + pd_list.size() == 0) {
+  if (ra_list.size() + jc_list.size() + dp_list.size() + sc_list.size() + mp_list.size() + pd_list.size() + ln_list.size() == 0) {
     HTML << "<p>No marginal predictions." << endl;
   }
 
@@ -1978,6 +2022,10 @@ string html_genome_diff_item_table_string(const Settings& settings, const cGenom
     else if(first_item._type == PD)
     {
       return html_pair_distance_table_string(list_ref, true, "Pair distance evidence", relative_link);
+    }
+    else if(first_item._type == LN)
+    {
+      return html_read_linkage_table_string(list_ref, true, "Read linkage evidence", relative_link);
     }
   }
   return "";
@@ -3928,6 +3976,114 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
     ss << td(ALIGN_RIGHT,
              Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(MP_SCORE) ? c[MP_SCORE] : "&nbsp;")) << endl;
+
+    if (c.entry_exists(GENE_NAME))
+      ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c[GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));
+    else
+      ss << td("&nbsp;");
+    if (c.entry_exists(GENE_PRODUCT))
+      ss << td(ALIGN_LEFT, htmlize(substitute(c[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
+    else
+      ss << td("&nbsp;");
+
+    ss << end_tr();
+
+    if (show_details && c.entry_exists(REJECT)) {
+      vector<string> reject_reasons = c.get_reject_reasons();
+      for (vector<string>::iterator it = reject_reasons.begin(); it != reject_reasons.end(); it++) {
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected: " + decode_reject_reason(*it)));
+      }
+    }
+  }
+
+  ss << "</tbody>" << endl;
+  ss << end_table() << endl;
+  ss << "</div>" << endl;
+
+  return ss.str();
+}
+
+
+string html_read_linkage_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
+{
+  if (list_ref.size() == 0) return "";
+
+  stringstream ss;
+  cDiffEntry& test_item = *list_ref.front();
+
+  bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
+
+  ss << "<div id=\"read_linkage_list\">" << endl;
+  ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  size_t total_cols = link ? 14 : 13;
+
+  ss << "<thead>" << endl;
+  if (title != "") {
+    ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"read_linkage_header_row\"", title)) << endl;
+  }
+
+  ss << "<tr>" << endl;
+  if (link) ss << th("&nbsp;") << endl;
+  ss << th(nonbreaking("seq id")) << endl;
+  ss << th("columns") << endl;
+  ss << th("kind") << endl;
+  ss << th("ref&rarr;new") << endl;
+  ss << th("haplotypes") << endl;
+  ss << th("spanning") << endl;
+  ss << th("freq") << endl;
+  ss << th("range") << endl;
+  ss << th("score") << endl;
+  ss << th("result") << endl;
+  ss << th("gene") << endl;
+  ss << th("width=\"100%\"", "product") << endl;
+  ss << "</tr>" << endl;
+  ss << "</thead>" << endl;
+  ss << endl;
+  ss << "<tbody class=\"list\">" << endl;
+
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr++) {
+    cDiffEntry& c = **itr;
+
+    ss << start_tr("class=\"normal_table_row\"") << endl;
+
+    if (link)
+      ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
+
+    bool contiguous = c.entry_exists(LN_CONTIGUOUS) && (c[LN_CONTIGUOUS] == "1");
+
+    // Columns are written in RA notation: position.insert_position, with .0 (the reference base
+    // itself) left implicit.
+    string first = c[POSITION] + ((c[INSERT_POSITION] != "0") ? "." + c[INSERT_POSITION] : "");
+    string last  = c[END] + ((c[LN_INSERT_END] != "0") ? "." + c[LN_INSERT_END] : "");
+    string columns = (first == last) ? first : first + "&ndash;" + last;
+    if (!contiguous) {
+      string first_2 = c[LN_POSITION_2] + ((c[LN_INSERT_POSITION_2] != "0") ? "." + c[LN_INSERT_POSITION_2] : "");
+      string last_2  = c[LN_END_2] + ((c[LN_INSERT_END_2] != "0") ? "." + c[LN_INSERT_END_2] : "");
+      columns += " / " + ((first_2 == last_2) ? first_2 : first_2 + "&ndash;" + last_2);
+    }
+
+    ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(columns)) << endl;
+    ss << td(ALIGN_CENTER, contiguous ? "adjacent" : "nearby") << endl;
+    ss << td(ALIGN_CENTER, nonbreaking(c[LN_REF_HAPLOTYPE] + "&rarr;" + c[LN_NEW_HAPLOTYPE])) << endl;
+    ss << td(ALIGN_LEFT, nonbreaking(substitute(c[LN_HAPLOTYPES], ",", " "))) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[LN_SPANNING_READS])) << endl;
+    if (c.entry_exists(FREQUENCY)) {
+      ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
+      ss << td(ALIGN_RIGHT, Html_Mutation_Table_String::freq_range_to_string(c[FREQUENCY_LOWER], c[FREQUENCY_UPPER])) << endl;
+    } else {
+      ss << td("&nbsp;") << td("&nbsp;") << endl;
+    }
+    ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(SCORE) ? c[SCORE] : "&nbsp;")) << endl;
+
+    // What the item concluded: whether an adjacent run merges, or the phase of a nearby pair.
+    string result;
+    if (contiguous) result = (c.entry_exists(LN_LINKED) && (c[LN_LINKED] == "1")) ? "linked" : "not linked";
+    else            result = c.entry_exists(LN_PHASE) ? c[LN_PHASE] : "";
+    if (c.entry_exists(LN_REALIGNED) && (c[LN_REALIGNED] == "1")) result += " (realigned)";
+    ss << td(ALIGN_CENTER, nonbreaking(result)) << endl;
 
     if (c.entry_exists(GENE_NAME))
       ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c[GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));

@@ -28,6 +28,7 @@
 #include "pileup_base.h"
 
 #include <deque>
+#include <unordered_map>
 
 using namespace std;
 
@@ -130,8 +131,8 @@ namespace breseq {
 	 */
 	struct polymorphism_data {
 		//! Constructor.
-		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t mq, const covariate_values_t& cv)
-		: _base_char(b), _quality(q), _strand(s), _mapping_quality(mq), _cv(cv)
+		polymorphism_data(uint8_t b, uint8_t q, int s, int32_t mq, const covariate_values_t& cv, uint32_t read_id = 0)
+		: _base_char(b), _quality(q), _strand(s), _mapping_quality(mq), _cv(cv), _read_id(read_id)
     , _log10_pr_max(0.0) {
       for (uint8_t j=0; j<base_list_size; j++) { _log10_pr[j] = 0.0; _r[j] = 0.0; }
 		}
@@ -141,6 +142,9 @@ namespace breseq {
 		int _strand;
     int32_t _mapping_quality;
     covariate_values_t _cv;
+    //! Ordinal of the read this base came from, assigned at the read's leftmost pileup column. It
+    //! is what lets observations at different columns be matched up by read (LN evidence).
+    uint32_t _read_id;
 
     // Cache of this read base's likelihood under each of the five candidate true bases, filled
     // once by fill_read_base_likelihoods(). Every model in this file -- the pure-genotype scores
@@ -211,6 +215,34 @@ namespace breseq {
 
     string genotype;
     double score;
+  };
+
+
+  /*! One read's likelihood under each candidate haplotype of a run of linked RA columns.
+
+   The haplotype mixture (fit_haplotype_frequencies) is the allele mixture of one column, with the
+   five bases replaced by however many haplotypes the run's reads support. A read's likelihood
+   under haplotype h is the product, over the columns of the run it covers, of its cached
+   per-column likelihood for the base h carries there -- columns it does not cover contribute
+   nothing, which is the marginal likelihood, so a read that sees only part of the run still
+   informs the fit through the part it saw. Stored max-normalized like polymorphism_data::_r.
+   */
+  struct haplotype_observation {
+    haplotype_observation() : read_id(0), log10_pr_max(0.0) {}
+    uint32_t read_id;
+    vector<double> log10_pr;   //!< log10 P(read | haplotype h)
+    vector<double> r;          //!< 10^(log10_pr[h] - log10_pr_max), max == 1
+    double log10_pr_max;
+  };
+
+  /*! Fitted haplotype frequencies over a run of linked columns. Same shape as allele_model. */
+  struct haplotype_model {
+    haplotype_model() : log10_likelihood(0.0), n(0), iterations(0) {}
+    vector<double> f;          //!< fitted frequencies, sum to 1 over the allowed haplotypes
+    vector<double> sum_w;      //!< Sum_i w_i(h), exactly n * f[h]
+    double log10_likelihood;
+    uint32_t n;
+    uint32_t iterations;
   };
 
 
@@ -748,6 +780,77 @@ namespace breseq {
 		//! single-threshold region tracking above, one flag per rung, so each excursion is counted once.
 		bool _pd_ladder_open[kPDnBins][kPDLadderSteps];
 		uint64_t _pd_ladder_count[kPDnBins][kPDLadderSteps];
+
+    // Read linkage (LN evidence) between RA columns ----
+    //
+    // The column caller above fits every pileup column on its own and never learns which reads a
+    // neighboring column's variant sat in. In polymorphism mode that is what stops two adjacent
+    // polymorphic RA columns from becoming one INS/DEL/SUB with one frequency. So every candidate
+    // column (one that passed as a consensus or polymorphism candidate) is kept, with its per-read
+    // observations tagged by read, until the pileup is far enough past it that no read can span
+    // both it and a later column. Adjacent candidates form a RUN, which is fit as a haplotype
+    // mixture; runs within a read length of each other are compared read by read for cis/trans.
+  public:
+    //! One candidate RA column retained for linkage, with its per-read observations.
+    struct linked_column {
+      uint32_t position;
+      int32_t insert_count;
+      base_char ref_base;        //!< '.' at an inserted column
+      base_char variant_base;    //!< the RA's new_base ('.' for a deletion / no inserted base)
+      double variant_frequency;  //!< the column's own fitted variant frequency
+      vector<polymorphism_data> pdata;
+    };
+    //! A maximal run of ADJACENT candidate columns (the predictor's adjacency: same position with
+    //! the next insert count, or the next position at insert count 0).
+    struct linked_run {
+      linked_run() : tid(0) {}
+      uint32_t tid;
+      vector<linked_column> columns;
+      vector<string> haplotypes;   //!< allele strings fit over the run: [0] = reference, [1] = all-variant
+      uint32_t first_position() const { return columns.front().position; }
+      uint32_t last_position() const { return columns.back().position; }
+      //! Every read's allele string over this run, keyed by read id, for the cis/trans comparison
+      //! between nearby runs. 'R' = reference at every covered column, 'V' = variant at every one,
+      //! 'O' = anything else (including a read covering only part of the run with mixed alleles).
+      map<uint32_t, char> read_classes;
+    };
+  protected:
+    bool _linkage_enabled;                                  //!< polymorphism mode and not --no-linkage
+    uint32_t _linkage_window;                               //!< --linkage-window, resolved (0 -> longest read)
+    unordered_map<const bam1_t*, uint32_t> _read_ordinal_by_record;  //!< live pileup reads -> read id
+    uint32_t _next_read_ordinal;
+    linked_run _open_run;                                   //!< the run the most recent candidate column extended
+    deque<linked_run> _recent_runs;                         //!< closed runs still within the window of the pileup
+
+    //! Retain one candidate column for linkage; extends the open run or closes it and starts another.
+    void linkage_add_column(uint32_t tid, uint32_t position, int32_t insert_count,
+                            base_char ref_base, base_char variant_base, double variant_frequency,
+                            const vector<polymorphism_data>& pdata);
+    //! Close the open run: fit and write its LN, compare it with the recent runs, retire old ones.
+    void linkage_close_run();
+
+    //! Enumerate the haplotypes a run's reads support (into run.haplotypes), classify every read
+    //! that spans the whole run (into run.read_classes), and build each read's per-haplotype
+    //! likelihoods. observed_counts[h] is the number of spanning reads whose allele string IS
+    //! haplotype h; spanning_reads is their total, including those matching no listed haplotype.
+    void build_run_observations(linked_run& run, vector<haplotype_observation>& obs,
+                                vector<uint32_t>& observed_counts, uint32_t& spanning_reads) const;
+    //! Fit the haplotype mixture over a run by EM (the allele EM with haplotypes for bases).
+    haplotype_model fit_haplotype_frequencies(const vector<haplotype_observation>& obs, const vector<bool>& allowed) const;
+    //! log10 evidence that the haplotypes in `which` are present at all, against the best fit without them.
+    double haplotype_presence_score(const vector<haplotype_observation>& obs, const haplotype_model& full, const vector<bool>& which) const;
+    //! Maximum log10 likelihood with the TOTAL frequency of the haplotypes in `which` held at f_fixed.
+    double haplotype_profile_log10_likelihood(const vector<haplotype_observation>& obs, const haplotype_model& full, const vector<bool>& which, double f_fixed) const;
+    //! Write the total frequency of the haplotypes in `which`, and its profile-likelihood bounds, onto an entry.
+    void write_haplotype_frequency(cDiffEntry& de, const vector<haplotype_observation>& obs, const haplotype_model& m, const vector<bool>& which) const;
+    //! A mask selecting one haplotype.
+    static vector<bool> one_haplotype(size_t n, size_t h) { vector<bool> v(n, false); v[h] = true; return v; }
+    //! Write the LN entry for a run of two or more columns (linked=1 when the columns should merge).
+    //! Returns the entry added to the genome diff, or NULL if none was.
+    diff_entry_ptr_t write_contiguous_LN(const linked_run& run, const vector<haplotype_observation>& obs,
+                                         const vector<uint32_t>& observed_counts, uint32_t spanning_reads);
+    //! Write the LN entry recording cis/trans read counts between two nearby runs, if enough reads span both.
+    void write_nearby_LN(const linked_run& a, const linked_run& b);
 	};
 
   

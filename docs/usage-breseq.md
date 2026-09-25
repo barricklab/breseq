@@ -41,6 +41,14 @@ Number of processors to use in multithreaded steps (DEFAULT=1).
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
 
+`--no-linkage`, `--linkage-window <bp>`
+
+In polymorphism mode, adjacent read alignment (RA) columns whose variant alleles occur in the same
+reads are merged into one INS, DEL or SUB with one frequency, and nearby polymorphic RA items are
+reported as cis or trans, on the basis of read linkage (LN) evidence. `--no-linkage` turns this
+off, and `--linkage-window` sets how far apart two items may be and still be compared (default:
+the longest read length). Neither has any effect in consensus mode.
+
 `--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`, `--no-pair-distance-prediction`
 
 Copy number (CN), discordant pair (DP), missing pair (MP) and pair distance (PD) evidence are

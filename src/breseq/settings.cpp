@@ -512,6 +512,11 @@ namespace breseq
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = OFF) ", "", NORMAL_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = OFF)", "", NORMAL_OPTION)
+    ("no-linkage", "Do not link RA evidence across pileup columns by the reads they share (LN evidence). By default in polymorphism mode, adjacent RA columns whose variant alleles occur in the same reads are merged into one INS/DEL/SUB with one frequency, and nearby polymorphic RA items are reported as cis/trans. Has no effect in consensus mode.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("linkage-window", "Farthest apart (in reference bases) two polymorphic RA items may be and still be reported as linked in cis or trans by the reads they share. (DEFAULT = 0, meaning the longest read length)", "", NORMAL_OPTION)
+    ("linkage-merge-fraction", "Merge adjacent RA columns into one mutation only when the frequency of the haplotype carrying all of their variant alleles is at least this fraction of each column's own variant frequency. (DEFAULT = 0.8)", "", EXPERT_OPTION)
+    ("linkage-minimum-shared-reads", "Report a cis/trans linkage between two nearby RA items only when at least this many reads span both and carry a reference or variant allele at each. (DEFAULT = 3)", "", EXPERT_OPTION)
+    ("linkage-maximum-haplotypes", "Most haplotypes fit at once over a run of linked RA columns; the reference and all-variant haplotypes are always included and the rest are the most frequently observed. (DEFAULT = 8)", "", EXPERT_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -1303,6 +1308,20 @@ namespace breseq
       this->polymorphism_reject_surrounding_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-surrounding-homopolymer-length"]);
     if (options.count("polymorphism-score-cutoff"))
       this->polymorphism_log10_e_value_cutoff = from_string<double>(options["polymorphism-score-cutoff"]);
+
+    // Read linkage (LN evidence)
+    if (options.count("no-linkage"))
+      this->no_linkage = true;
+    if (options.count("linkage-window"))
+      this->linkage_window = from_string<uint32_t>(options["linkage-window"]);
+    if (options.count("linkage-merge-fraction"))
+      this->linkage_merge_fraction = from_string<double>(options["linkage-merge-fraction"]);
+    if (options.count("linkage-minimum-shared-reads"))
+      this->linkage_minimum_shared_reads = from_string<uint32_t>(options["linkage-minimum-shared-reads"]);
+    if (options.count("linkage-maximum-haplotypes"))
+      this->linkage_maximum_haplotypes = from_string<uint32_t>(options["linkage-maximum-haplotypes"]);
+    ASSERT(this->linkage_merge_fraction >= 0.0 && this->linkage_merge_fraction <= 1.0, "--linkage-merge-fraction must be between 0 and 1.");
+    ASSERT(this->linkage_maximum_haplotypes >= 2, "--linkage-maximum-haplotypes must be at least 2.");
     if (this->polymorphism_log10_e_value_cutoff < 0) {
       options.addUsage("");
       options.addUsage("--polymorphism-score-cutoff must be ≥0");
@@ -1680,7 +1699,14 @@ namespace breseq
     this->polymorphism_reject_indel_homopolymer_length = 0;
     this->polymorphism_reject_surrounding_homopolymer_length = 0;
 		this->polymorphism_no_indels = false;
-    
+
+    //! Settings: Read linkage (LN evidence)
+    this->no_linkage = false;
+    this->linkage_window = 0;
+    this->linkage_merge_fraction = 0.8;
+    this->linkage_minimum_shared_reads = 3;
+    this->linkage_maximum_haplotypes = 8;
+
     //! Settings: Mutation Prediction
     this->size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
     this->ignore_within_this_multiple_of_average_read_length_of_contig_end = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end;
@@ -1695,6 +1721,7 @@ namespace breseq
     this->max_rejected_soft_clipping_evidence_to_show = 20;
     this->max_rejected_discordant_pair_evidence_to_show = 20;
     this->max_rejected_missing_pair_evidence_to_show = 20;
+    this->max_rejected_read_linkage_evidence_to_show = 20;
     this->max_rejected_pair_distance_evidence_to_show = 20;
 		this->hide_circular_genome_junctions = true;
     

@@ -581,6 +581,13 @@ namespace breseq
     double polymorphism_precision_decimal;                        // Default = 0.000001
     uint32_t polymorphism_precision_places;                       // Default = 3 for mixed base | 8 for polymorphism
 
+    //! Settings: Read linkage (LN evidence) between RA columns. Polymorphism mode only.
+    bool     no_linkage;                                          // Default = false
+    uint32_t linkage_window;                                      // Default = 0 (= longest read)
+    double   linkage_merge_fraction;                              // Default = 0.8
+    uint32_t linkage_minimum_shared_reads;                        // Default = 3
+    uint32_t linkage_maximum_haplotypes;                          // Default = 8
+
 		
 		//! Settings: Copy Number Variation
     uint32_t periodicity_method;
@@ -617,6 +624,7 @@ namespace breseq
     uint32_t max_rejected_soft_clipping_evidence_to_show;  // Default = 20
     uint32_t max_rejected_discordant_pair_evidence_to_show; // Default = 20
     uint32_t max_rejected_missing_pair_evidence_to_show;    // Default = 20
+    uint32_t max_rejected_read_linkage_evidence_to_show;    // Default = 20
     uint32_t max_rejected_pair_distance_evidence_to_show;   // Default = 20
 		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!

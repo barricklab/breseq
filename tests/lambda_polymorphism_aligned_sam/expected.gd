@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	07:35:56 09 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision 1a30aed3f53b
+#=CREATED	15:22:00 25 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision f30111c975ee
 #=COMMAND	./src/breseq/breseq -j 4 -p --aligned-sam -o tests/lambda_polymorphism_aligned_sam -r tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda.gbk tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda_mixed_population.sam
 #=REFSEQ	tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda_mixed_population.sam
@@ -36,7 +36,7 @@ SNP	23	59	NC_001416	47575	A	aa_new_seq=M	aa_position=1	aa_ref_seq=M	codon_new_se
 SNP	24	60	NC_001416	47669	C	frequency=1	gene_name=lambdap78/lambdap79	gene_position=intergenic (-94/-69)	gene_product=putative envelope protein/hypothetical protein	gene_strand=</>	genes_promoter=lambdap78,lambdap79	locus_tag=lambdap78/lambdap79	locus_tags_promoter=lambdap78,lambdap79	mutation_category=snp_intergenic	position_end=47669	position_start=47669	ref_seq=T	snp_type=intergenic
 SNP	25	61	NC_001416	47878	G	aa_new_seq=R	aa_position=47	aa_ref_seq=R	codon_new_seq=AGG	codon_number=47	codon_position=3	codon_ref_seq=AGA	frequency=1	gene_name=lambdap79	gene_position=141	gene_product=hypothetical protein	gene_strand=>	genes_overlapping=lambdap79	locus_tag=lambdap79	locus_tags_overlapping=lambdap79	mutation_category=snp_synonymous	position_end=47878	position_start=47878	ref_seq=A	snp_type=synonymous	transl_table=11
 SNP	26	62	NC_001416	47973	C	frequency=1	gene_name=lambdap79/–	gene_position=intergenic (+29/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=snp_intergenic	position_end=47973	position_start=47973	ref_seq=T	snp_type=intergenic
-SUB	27	63,64	NC_001416	47977	2	AC	frequency=1	gene_name=lambdap79/–	gene_position=intergenic (+33/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=small_indel	position_end=47978	position_start=47977	ref_seq=GT
+SUB	27	63,64,81	NC_001416	47977	2	AC	frequency=1	gene_name=lambdap79/–	gene_position=intergenic (+33/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=small_indel	position_end=47978	position_start=47977	ref_seq=GT
 SNP	28	65	NC_001416	48160	C	frequency=8.20578650e-01	gene_name=lambdap79/–	gene_position=intergenic (+216/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=snp_intergenic	position_end=48160	position_start=48160	ref_seq=T	snp_type=intergenic
 SNP	29	67	NC_001416	48295	A	frequency=1.34440431e-01	gene_name=lambdap79/–	gene_position=intergenic (+351/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	mutation_category=snp_intergenic	position_end=48295	position_start=48295	ref_seq=C	snp_type=intergenic
 RA	30	.	NC_001416	102	0	T	C	allele_frequencies=C:1.17110953e-01,T:8.82889047e-01	consensus_reject=SCORE_CUTOFF,FREQUENCY_CUTOFF	fisher_strand_p_value=1.00000e+00	frequency=1.17110953e-01	frequency_lower=5.64575719e-02	frequency_upper=2.04328343e-01	gene_name=–/nu1	gene_position=intergenic (–/-89)	gene_product=–/DNA packaging protein	gene_strand=–/>	ks_quality_p_value=1.00000e+00	locus_tag=–/lambdap01	major_base=T	major_cov=9/36	major_frequency=8.82889047e-01	minor_base=C	minor_cov=1/5	new_cov=1/5	prediction=polymorphism	ref_cov=9/36	reject=VARIANT_STRAND_COVERAGE	score=6.5	snp_type=intergenic	total_cov=10/41
@@ -90,3 +90,4 @@ UN	77	.	NC_001416	48471	48471
 UN	78	.	NC_001416	48473	48474
 UN	79	.	NC_001416	48476	48478
 UN	80	.	NC_001416	48502	48502
+LN	81	.	NC_001416	47977	0	47978	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.18176651e-01	frequency_upper=1.00000000e+00	gene_name=lambdap79/–	gene_position=intergenic (+33/–)	gene_product=hypothetical protein/–	gene_strand=>/–	haplotypes=GT:0,AC:15,other:1	linked=1	locus_tag=lambdap79/–	new_haplotype=AC	realigned=0	ref_haplotype=GT	score=89.5	spanning_reads=16

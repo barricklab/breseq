@@ -187,7 +187,26 @@ namespace breseq {
 
   //For CN
   const char* COPY_NUMBER = "copy_number";
-  
+
+  //For LN (read linkage between RA columns)
+  // The linked columns are named by COORDINATE, never by RA id: RA ids are reassigned when the
+  // per-stage evidence files are merged (cGenomeDiff::merge_preserving_duplicates) and again by
+  // reassign_unique_ids(), which also clears the evidence list of every non-mutation entry.
+  const char* LN_INSERT_END = "insert_end";
+  const char* LN_POSITION_2 = "position_2";
+  const char* LN_INSERT_POSITION_2 = "insert_position_2";
+  const char* LN_END_2 = "end_2";
+  const char* LN_INSERT_END_2 = "insert_end_2";
+  const char* LN_CONTIGUOUS = "contiguous";
+  const char* LN_LINKED = "linked";
+  const char* LN_REF_HAPLOTYPE = "ref_haplotype";
+  const char* LN_NEW_HAPLOTYPE = "new_haplotype";
+  const char* LN_HAPLOTYPES = "haplotypes";
+  const char* LN_SPANNING_READS = "spanning_reads";
+  const char* LN_PHASE = "phase";
+  const char* LN_REALIGNED = "realigned";
+  const char* LN_PILEUP_FREQUENCY = "pileup_frequency";
+
   // For gdtools APPLY
   const char* HAS_BEEN_APPLIED = "_has_been_applied";
 
@@ -226,6 +245,11 @@ namespace breseq {
   // predictJCtoINSorSUBorDEL reads, which is why one shape covers both of PD's directions (a
   // deletion lengthens the apparent pair distance, an insertion shortens it).
   (PD,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND))
+  // LN spans a run of RA pileup columns from (position, insert_position) to (end, insert_end),
+  // using RA's column numbering (insert 0 = the reference base, 1.. = bases inserted after it).
+  // A non-contiguous LN (contiguous=0) links this run to a second one given by the optional
+  // position_2/insert_position_2/end_2/insert_end_2 keys.
+  (LN,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(END)(LN_INSERT_END))
 
   //## validation
   (CURA,make_vector<string> ("expert"))
@@ -249,6 +273,9 @@ namespace breseq {
   (AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER)(MEDIATED)(MEDIATED_STRAND)(MOB_REGION))
   (RA,make_vector<string>  (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
   (JC,make_vector<string>  (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP)(UNIQUE_READ_SEQUENCE))
+  // A run's own LN and a nearby-pair LN that starts at the same run share every required field,
+  // so the second run's coordinates are what tell them apart.
+  (LN,make_vector<string>  (SEQ_ID)(POSITION)(INSERT_POSITION)(END)(LN_INSERT_END)(LN_POSITION_2)(LN_INSERT_POSITION_2)(LN_END_2)(LN_INSERT_END_2))
   ;
   
   enum diff_entry_field_variable_t {
@@ -291,6 +318,12 @@ namespace breseq {
   (SIDE_2_STRAND, kDiffEntryFieldVariableType_Strand)
   (OVERLAP, kDiffEntryFieldVariableType_Integer)
   (UNIQUE_READ_SEQUENCE, kDiffEntryFieldVariableType_BaseSequence)
+  //LN item
+  (LN_INSERT_END, kDiffEntryFieldVariableType_NonNegativeInteger)
+  (LN_POSITION_2, kDiffEntryFieldVariableType_PositiveInteger)
+  (LN_INSERT_POSITION_2, kDiffEntryFieldVariableType_NonNegativeInteger)
+  (LN_END_2, kDiffEntryFieldVariableType_PositiveInteger)
+  (LN_INSERT_END_2, kDiffEntryFieldVariableType_NonNegativeInteger)
   ;
 
   // Stricter types applied only while loading a file, for fields whose valid range depends on
@@ -307,7 +340,7 @@ namespace breseq {
   ;
 
   const vector<string>gd_entry_type_lookup_table =
-  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("SC")("DP")("MP")("PD")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
+  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("SC")("DP")("MP")("PD")("LN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
   
   // Used when determining what fields need to be updated if ids are renumbered
   // accounts for key=mutation_id:copy_index notation.
@@ -337,6 +370,7 @@ namespace breseq {
   (DP,   cDiffEntry::sort_fields_item(8, SIDE_1_SEQ_ID, SIDE_1_POSITION))
   (MP,   cDiffEntry::sort_fields_item(8, SEQ_ID, POSITION))
   (PD,   cDiffEntry::sort_fields_item(8, SIDE_1_SEQ_ID, SIDE_1_POSITION))
+  (LN,   cDiffEntry::sort_fields_item(8, SEQ_ID, POSITION))
   (CURA, cDiffEntry::sort_fields_item(9, "expert", "expert"))
   (FPOS, cDiffEntry::sort_fields_item(9, "expert", "expert"))
   (PHYL, cDiffEntry::sort_fields_item(9, "gd", "gd"))
@@ -366,18 +400,20 @@ namespace breseq {
   (DP,  16)
   (MP,  17)
   (PD,  18)
-  // The validation types below were shifted up by one to make room for PD. CURA previously tied
-  // with MP at 17; giving PD its own value keeps the evidence types strictly ordered. A uniform
-  // shift changes no type's order RELATIVE to any other, so no existing .gd output reorders.
-  (CURA, 19)
-  (FPOS, 20)
-  (PHYL, 21)
-  (TSEQ, 22)
-  (PFLP, 23)
-  (RFLP, 24)
-  (PFGE, 25)
-  (NOTE, 25)
-  (MASK, 25)
+  (LN,  19)
+  // The validation types below were shifted up by one to make room for PD, and again for LN. CURA
+  // previously tied with MP at 17; giving each evidence type its own value keeps them strictly
+  // ordered. A uniform shift changes no type's order RELATIVE to any other, so no existing .gd
+  // output reorders.
+  (CURA, 20)
+  (FPOS, 21)
+  (PHYL, 22)
+  (TSEQ, 23)
+  (PFLP, 24)
+  (RFLP, 25)
+  (PFGE, 26)
+  (NOTE, 26)
+  (MASK, 26)
   ;
   ////
   // End sorting variables

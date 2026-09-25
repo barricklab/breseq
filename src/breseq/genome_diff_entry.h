@@ -197,6 +197,22 @@ namespace breseq {
   //For CN
   extern const char* COPY_NUMBER;
 
+  //For LN
+  extern const char* LN_INSERT_END;
+  extern const char* LN_POSITION_2;
+  extern const char* LN_INSERT_POSITION_2;
+  extern const char* LN_END_2;
+  extern const char* LN_INSERT_END_2;
+  extern const char* LN_CONTIGUOUS;
+  extern const char* LN_LINKED;
+  extern const char* LN_REF_HAPLOTYPE;
+  extern const char* LN_NEW_HAPLOTYPE;
+  extern const char* LN_HAPLOTYPES;
+  extern const char* LN_SPANNING_READS;
+  extern const char* LN_PHASE;
+  extern const char* LN_REALIGNED;
+  extern const char* LN_PILEUP_FREQUENCY;
+
   // For gdtools APPLY
   extern const char* HAS_BEEN_APPLIED;
   
@@ -204,7 +220,7 @@ namespace breseq {
 
   // Types of diff entries:
   enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, INT,
-    RA, MC, JC, CN, UN, SC, DP, MP, PD, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
+    RA, MC, JC, CN, UN, SC, DP, MP, PD, LN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
   
   extern const vector<string> gd_keys_with_ids;
   

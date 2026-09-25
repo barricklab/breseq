@@ -199,6 +199,11 @@ class alignment_wrapper {
     //!Retrieve name of read.
     inline string read_name() const { return bam_get_qname(_a);}
 
+    //! The underlying BAM record. In a pileup this pointer is stable for as long as the read overlaps
+    //! any column, and htslib recycles it only once the read has left, so it can key per-read state
+    //! that is (re)assigned at the read's leftmost column (see identify_mutations_pileup).
+    inline const bam1_t* bam_record() const { return _a; }
+
     //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
     inline bool reversed() const { return bam_is_rev(_a); }

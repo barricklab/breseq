@@ -4113,6 +4113,12 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         annotate_1_mutation(mut, from_string<int32_t>(mut[POSITION]), from_string<int32_t>(mut[POSITION]), true);
       } break;
 
+      case LN:{
+        // Annotate at the first linked column, like the single-position evidence types above
+        // (the repeat-aware path requires a single position).
+        annotate_1_mutation(mut, from_string<int32_t>(mut[POSITION]), from_string<int32_t>(mut[POSITION]), true);
+      } break;
+
       default:{
       } break;
     }

@@ -2143,6 +2143,85 @@ namespace breseq {
     }
     
 		ra.sort(MutationPredictor::sort_by_pos);
+
+    ///
+    // Read linkage (LN): which adjacent RA columns the pileup found to sit in the same reads.
+    //
+    // In polymorphism mode this is the only license to join polymorphic columns into one
+    // INS/DEL/SUB. An LN names its columns by coordinate, not by RA id (ids are reassigned when the
+    // evidence files are merged), so each usable LN is indexed here by every column it spans. It
+    // is usable only if EVERY column of its span survived as an RA in this list -- one column
+    // rejected for strand bias, coverage or a homopolymer voids the link -- and all of those
+    // columns received the same consensus/polymorphism verdict, so a fixed column is never
+    // welded to a mixed one.
+    ///
+    map<string, diff_entry_ptr_t> ln_by_column;   // "seq_id:position.insert_position" -> LN
+    diff_entry_ptr_t mut_ln;                      // the LN licensing the mutation being built, if any
+    if (settings.polymorphism_prediction) {
+      map<string, diff_entry_ptr_t> ra_by_column;
+      for (diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) {
+        cDiffEntry& item = **ra_it;
+        if (item.entry_exists(USER_DEFINED)) continue;
+        if (item.entry_exists("reject") || item.entry_exists("deleted")) continue;
+        ra_by_column[item[SEQ_ID] + ":" + item[POSITION] + "." + item[INSERT_POSITION]] = *ra_it;
+      }
+
+      diff_entry_list_t ln_list = gd.get_list(make_vector<gd_entry_type>(LN));
+      for (diff_entry_list_t::iterator ln_it = ln_list.begin(); ln_it != ln_list.end(); ln_it++) {
+        cDiffEntry& ln = **ln_it;
+
+        // A nearby-pair LN is informational only. It was written before either run's columns were
+        // classified, so mark it rejected when the first column of either run did not survive as
+        // an RA: a cis/trans reading between two rejected columns is noise, not evidence.
+        if (ln.entry_exists(LN_CONTIGUOUS) && (ln[LN_CONTIGUOUS] == "0")) {
+          if (!ra_by_column.count(ln[SEQ_ID] + ":" + ln[POSITION] + "." + ln[INSERT_POSITION])
+              || !ra_by_column.count(ln[SEQ_ID] + ":" + ln[LN_POSITION_2] + "." + ln[LN_INSERT_POSITION_2])) {
+            ln["reject"] = "RA_REJECTED";
+          }
+          continue;
+        }
+
+        if (!ln.entry_exists(LN_CONTIGUOUS) || (ln[LN_CONTIGUOUS] != "1")) continue;
+        if (!ln.entry_exists(LN_LINKED) || (ln[LN_LINKED] != "1")) {
+          // An unlinked run is still voided by a rejected column, for the same reason.
+          if (!ra_by_column.count(ln[SEQ_ID] + ":" + ln[POSITION] + "." + ln[INSERT_POSITION])
+              || !ra_by_column.count(ln[SEQ_ID] + ":" + ln[END] + "." + ln[LN_INSERT_END])) {
+            ln["reject"] = "RA_REJECTED";
+          }
+          continue;
+        }
+
+        // Walk the span column by column with the adjacency rule used below, requiring an RA at
+        // each step: after insert column k comes insert column k+1 if an RA exists there, otherwise
+        // the next position's base column.
+        const string seq_id = ln[SEQ_ID];
+        int32_t position = from_string<int32_t>(ln[POSITION]);
+        int32_t insert = from_string<int32_t>(ln[INSERT_POSITION]);
+        const int32_t end_position = from_string<int32_t>(ln[END]);
+        const int32_t end_insert = from_string<int32_t>(ln[LN_INSERT_END]);
+        vector<diff_entry_ptr_t> span;
+        string prediction;
+        bool usable = true;
+        while (usable) {
+          map<string, diff_entry_ptr_t>::iterator found = ra_by_column.find(seq_id + ":" + to_string(position) + "." + to_string(insert));
+          if (found == ra_by_column.end()) { usable = false; break; }
+          if (span.empty()) prediction = (*found->second)[PREDICTION];
+          else if ((*found->second)[PREDICTION] != prediction) { usable = false; break; }
+          span.push_back(found->second);
+          if ((position == end_position) && (insert == end_insert)) break;
+          if ((position > end_position) || ((position == end_position) && (insert > end_insert))) { usable = false; break; }
+          if (ra_by_column.count(seq_id + ":" + to_string(position) + "." + to_string(insert + 1))) insert++;
+          else { position++; insert = 0; }
+        }
+        if (!usable || (span.size() < 2)) {
+          ln["reject"] = "RA_REJECTED";
+          continue;
+        }
+        for (size_t k = 0; k < span.size(); k++) {
+          ln_by_column[seq_id + ":" + (*span[k])[POSITION] + "." + (*span[k])[INSERT_POSITION]] = *ln_it;
+        }
+      }
+    }
     
 		///
 		// Gather together read alignment mutations that occur next to each other
@@ -2187,7 +2266,14 @@ namespace breseq {
       if (!settings.polymorphism_prediction && !ra_is_consensus) {
         continue;
       }
-      
+
+      // The LN licensing this column to join its neighbors, if any.
+      diff_entry_ptr_t item_ln;
+      if (!item.entry_exists(USER_DEFINED)) {
+        map<string, diff_entry_ptr_t>::iterator found = ln_by_column.find(ra_seq_id + ":" + item[POSITION] + "." + item[INSERT_POSITION]);
+        if (found != ln_by_column.end()) item_ln = found->second;
+      }
+
 			bool same = false;
 			if (!first_time)
 			{
@@ -2199,9 +2285,14 @@ namespace breseq {
         
         // This code is only safe if every mutation has a frequency
         if (settings.polymorphism_prediction) {
-          if ( !ra_is_consensus || (mut[FREQUENCY] != "1") //don't join polymorphisms
-              || (mut[SEQ_ID] != item[SEQ_ID]) )
-            same = false;
+          // Two columns licensed by the same LN join whatever their frequencies; otherwise only
+          // consensus columns do.
+          bool linked = (mut_ln.get() != NULL) && (item_ln.get() == mut_ln.get());
+          if (!linked) {
+            if ( !ra_is_consensus || (mut[FREQUENCY] != "1") //don't join polymorphisms
+                || (mut[SEQ_ID] != item[SEQ_ID]) )
+              same = false;
+          }
         }
 			}
       
@@ -2224,7 +2315,17 @@ namespace breseq {
         
         if (settings.polymorphism_prediction) {
           new_mut[FREQUENCY] = item.entry_exists(FREQUENCY) ? item.mutation_frequency() : "1";
+          // A linked run's frequency is the haplotype's, fit over the reads spanning every column,
+          // in place of the first column's own. A consensus run still snaps to 1.
+          if ((item_ln.get() != NULL) && !ra_is_consensus) {
+            new_mut[FREQUENCY] = (*item_ln)[FREQUENCY];
+          }
+          if (item_ln.get() != NULL) {
+            new_mut._evidence.push_back(item_ln->_id);
+            new_mut["_linked"] = "1";
+          }
         }
+        mut_ln = item_ln;
 				mut = new_mut;
 			}
 			else
@@ -2262,7 +2363,7 @@ namespace breseq {
           // This is a special case to keep ordering of multiple inserted bases after 
           // the same base (without it the order is unknown in poly mode
           
-          ASSERT( (mut[FREQUENCY]=="1") || (mut["insert_start"] == mut["insert_end"]), "Polymorphism has incorrectly merged INS mutations.");
+          ASSERT( (mut[FREQUENCY]=="1") || (mut["insert_start"] == mut["insert_end"]) || mut.entry_exists("_linked"), "Polymorphism has incorrectly merged INS mutations.");
           string debug_ins_pos = mut["insert_start"];           
           mut["insert_position"] = mut["insert_start"];
         } else { // CONSENSUS mode
@@ -2337,7 +2438,8 @@ namespace breseq {
 			mut.erase("end");
 			mut.erase("insert_start");
 			mut.erase("insert_end");
-      
+      mut.erase("_linked");
+
 			gd.add(mut);
 		}
 

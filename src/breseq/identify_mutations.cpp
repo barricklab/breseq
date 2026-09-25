@@ -811,6 +811,9 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _pd_u_short(0)
 , _pd_tail_lower(0)
 , _pd_mean_covering_gap(0.0)
+, _linkage_enabled(false)
+, _linkage_window(0)
+, _next_read_ordinal(0)
 {
 
   // remove once used
@@ -887,7 +890,15 @@ identify_mutations_pileup::identify_mutations_pileup(
   // group with the mate flag and land on the same read file the rates were fit for.
   _error_table.set_read_file_partition(&read_groups(),
                                        make_read_file_partition(read_groups(), settings.read_file_sets));
-  
+
+  // Read linkage (LN evidence) is a polymorphism-mode question: in consensus mode adjacent RA
+  // columns are already joined by the predictor, and a fixed mutation's columns have nothing to
+  // link. The window is how far apart two columns may be and still be spanned by one read.
+  _linkage_enabled = _settings.polymorphism_prediction && !_settings.no_linkage;
+  _linkage_window = _settings.linkage_window;
+  if (_linkage_window == 0) _linkage_window = summary.sequence_conversion.read_length_max;
+  if (_linkage_window == 0) _linkage_window = 1;
+
   if (_print_per_position_file) {
     _per_position_file.open(_settings.mutation_identification_per_position_file_name.c_str());
   }
@@ -1565,6 +1576,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//## for each alignment within this pileup:
 		for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
 
+      //## Read linkage (LN): give each read an ordinal at its leftmost column, keyed by its BAM
+      //## record. htslib keeps one record per live read and recycles it only once the read has
+      //## left the pileup, so re-assigning at the start column is exactly what keeps a recycled
+      //## pointer from inheriting the previous read's id. Done before any `continue` below.
+      if (_linkage_enabled && (insert_count == 0) && (i->reference_start_1() == position)) {
+        _read_ordinal_by_record[i->bam_record()] = _next_read_ordinal++;
+      }
+
       //## Discordant-pair (DP) region detection: incremental "enter" step.
       //## Add each discordant read to its paired read group's sliding window exactly ONCE, at its
       //## leftmost reference column (so it is counted a single time as it enters the window). Done
@@ -1885,7 +1904,16 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         ++pos_info[baseindex2char(cv.obs_base())][1+strand];
         
         //##### this is for polymorphism prediction and making strings
-        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(), i->mapping_quality(), cv));
+        uint32_t read_id = 0;
+        if (_linkage_enabled) {
+          // Assign lazily rather than assert on a miss: a read whose start column this pileup
+          // never visited (a region-limited pileup) still needs a distinct id.
+          unordered_map<const bam1_t*, uint32_t>::iterator rid = _read_ordinal_by_record.find(i->bam_record());
+          if (rid == _read_ordinal_by_record.end())
+            rid = _read_ordinal_by_record.insert(make_pair(i->bam_record(), _next_read_ordinal++)).first;
+          read_id = rid->second;
+        }
+        pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(), i->mapping_quality(), cv, read_id));
 
         //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
@@ -2146,6 +2174,13 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // what's going on here? we may need to change a value latter,
       // and add added a copy not the current one
       added_mut_p = _gd.get_list().back();
+
+      //## Read linkage (LN): keep this candidate column's per-read observations so it can be
+      //## fit jointly with its neighbors once the pileup has moved past them.
+      if (_linkage_enabled && (variant_base_index != base_list_N_index)) {
+        linkage_add_column(p.target(), position, insert_count, ref_base_char, variant_base_char,
+                           amodel.reported_frequency(variant_base_index), pdata);
+      }
     } // END ra_output
     
     // Now we print additional RA items as user= if they have not already been printed.
@@ -2290,6 +2325,11 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     _coverage_data << endl;
 	}
   
+  // Reset the read linkage (LN) state: reads and runs never span reference boundaries.
+  _read_ordinal_by_record.clear();
+  _open_run.columns.clear();
+  _recent_runs.clear();
+
   // Reset the Missing Coverage evidence variables
   _last_deletion_start_position = UNDEFINED_UINT32;
 	_last_deletion_end_position = UNDEFINED_UINT32;
@@ -2385,6 +2425,13 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   // Flush any open pair-distance (PD) region at the end of this reference sequence.
   if (_pd_enabled) {
     check_pair_distance_completion(tid, target_length(tid)+1);
+  }
+
+  // Close the last run of linked RA columns on this reference sequence.
+  if (_linkage_enabled) {
+    linkage_close_run();
+    _recent_runs.clear();
+    _read_ordinal_by_record.clear();
   }
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
@@ -3847,6 +3894,502 @@ void identify_mutations_pileup::fill_read_base_likelihoods(polymorphism_data& pd
   for (uint8_t b=0; b<base_list_size; b++) {
     pd._r[b] = pow(10, pd._log10_pr[b] - pd._log10_pr_max);
   }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Read linkage (LN evidence) between RA columns
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*! Retain one candidate RA column for linkage.
+
+  Adjacency is the predictor's rule (predictRAtoSNPorDELorINSorSUB): the same reference position
+  at the next insert count, or the next reference position at insert count 0. A candidate that is
+  not adjacent to the open run closes it and starts a new one.
+*/
+void identify_mutations_pileup::linkage_add_column(uint32_t tid, uint32_t position, int32_t insert_count,
+                                                   base_char ref_base, base_char variant_base, double variant_frequency,
+                                                   const vector<polymorphism_data>& pdata)
+{
+  bool adjacent = false;
+  if (!_open_run.columns.empty() && (_open_run.tid == tid)) {
+    const linked_column& last = _open_run.columns.back();
+    adjacent = ((last.position == position) && (last.insert_count + 1 == insert_count))
+            || ((last.position + 1 == position) && (insert_count == 0));
+  }
+  if (!adjacent) linkage_close_run();
+
+  linked_column c;
+  c.position = position;
+  c.insert_count = insert_count;
+  c.ref_base = ref_base;
+  c.variant_base = variant_base;
+  c.variant_frequency = variant_frequency;
+  c.pdata = pdata;
+  _open_run.tid = tid;
+  _open_run.columns.push_back(c);
+}
+
+/*! Close the open run of candidate columns.
+
+  A run of two or more columns is fit as a haplotype mixture and recorded as a contiguous LN. Every
+  run, including a single column, is then compared read by read with each earlier run still within
+  the linkage window, and recorded as a nearby LN when enough reads span both. Runs the window has
+  passed are retired first; only the read classes of a retired-eligible run are kept, never its
+  observations, so what is held between candidates is bounded by the window.
+*/
+void identify_mutations_pileup::linkage_close_run()
+{
+  if (_open_run.columns.empty()) return;
+
+  linked_run run;
+  run.tid = _open_run.tid;
+  run.columns.swap(_open_run.columns);
+  _open_run.columns.clear();
+
+  while (!_recent_runs.empty()
+         && (run.first_position() > _recent_runs.front().last_position() + _linkage_window)) {
+    _recent_runs.pop_front();
+  }
+
+  vector<haplotype_observation> obs;
+  vector<uint32_t> observed_counts;
+  uint32_t spanning_reads = 0;
+  build_run_observations(run, obs, observed_counts, spanning_reads);
+
+  if (run.columns.size() >= 2) write_contiguous_LN(run, obs, observed_counts, spanning_reads);
+
+  for (deque<linked_run>::const_iterator it = _recent_runs.begin(); it != _recent_runs.end(); it++) {
+    write_nearby_LN(*it, run);
+  }
+
+  // Only the read classes are needed from here on.
+  for (size_t c = 0; c < run.columns.size(); c++) {
+    vector<polymorphism_data>().swap(run.columns[c].pdata);
+  }
+  _recent_runs.push_back(run);
+}
+
+/*! Enumerate a run's haplotypes and build each read's per-haplotype likelihoods.
+
+  The haplotypes are allele strings over the run's columns, one character per column in the same
+  alphabet the columns use (A/C/G/T, and '.' for a deletion or for no base at an inserted column).
+  [0] is the reference string and [1] the string carrying every column's variant allele; after
+  them come the other strings the spanning reads actually show, most common first, up to
+  --linkage-maximum-haplotypes in all. A read's likelihood under a haplotype is the product of its
+  cached per-column likelihoods for that haplotype's bases at the columns the read covers.
+
+  A read is classified ('R', 'V' or 'O' in run.read_classes) only if it covers the whole run: a
+  read seeing one column of a two-column run cannot say whether it carries the haplotype.
+*/
+void identify_mutations_pileup::build_run_observations(linked_run& run, vector<haplotype_observation>& obs,
+                                                       vector<uint32_t>& observed_counts, uint32_t& spanning_reads) const
+{
+  const size_t n_columns = run.columns.size();
+
+  // Per read: the (column, observation) pairs it contributes. Ordered by read id so that every sum
+  // below is taken in the same order on every platform.
+  map<uint32_t, vector<pair<size_t, const polymorphism_data*> > > by_read;
+  for (size_t c = 0; c < n_columns; c++) {
+    const vector<polymorphism_data>& pdata = run.columns[c].pdata;
+    for (vector<polymorphism_data>::const_iterator it = pdata.begin(); it != pdata.end(); it++) {
+      by_read[it->_read_id].push_back(make_pair(c, &(*it)));
+    }
+  }
+
+  string ref_string, variant_string;
+  for (size_t c = 0; c < n_columns; c++) {
+    ref_string += run.columns[c].ref_base;
+    variant_string += run.columns[c].variant_base;
+  }
+
+  // Observed allele strings over reads spanning the whole run.
+  map<string, uint32_t> string_counts;
+  map<uint32_t, string> read_strings;
+  for (map<uint32_t, vector<pair<size_t, const polymorphism_data*> > >::const_iterator r = by_read.begin(); r != by_read.end(); r++) {
+    if (r->second.size() != n_columns) continue;
+    string s(n_columns, 'N');
+    bool complete = true;
+    for (size_t k = 0; k < r->second.size(); k++) {
+      size_t c = r->second[k].first;
+      if (s[c] != 'N') { complete = false; break; }   // two observations at one column: not a spanning read
+      s[c] = r->second[k].second->_base_char;
+    }
+    if (!complete) continue;
+    string_counts[s]++;
+    read_strings[r->first] = s;
+  }
+  spanning_reads = 0;
+  for (map<string, uint32_t>::const_iterator it = string_counts.begin(); it != string_counts.end(); it++) spanning_reads += it->second;
+
+  // Haplotype list: reference, all-variant, then observed strings by count (ties by string).
+  run.haplotypes.clear();
+  run.haplotypes.push_back(ref_string);
+  if (variant_string != ref_string) run.haplotypes.push_back(variant_string);
+  vector<pair<uint32_t, string> > ranked;
+  for (map<string, uint32_t>::const_iterator it = string_counts.begin(); it != string_counts.end(); it++) {
+    if ((it->first == ref_string) || (it->first == variant_string)) continue;
+    if (it->second < 2) continue;
+    ranked.push_back(make_pair(it->second, it->first));
+  }
+  // Highest count first; equal counts in string order.
+  for (size_t i = 0; i < ranked.size(); i++) {
+    for (size_t j = i + 1; j < ranked.size(); j++) {
+      if ((ranked[j].first > ranked[i].first) || ((ranked[j].first == ranked[i].first) && (ranked[j].second < ranked[i].second)))
+        swap(ranked[i], ranked[j]);
+    }
+  }
+  for (size_t i = 0; (i < ranked.size()) && (run.haplotypes.size() < _settings.linkage_maximum_haplotypes); i++) {
+    run.haplotypes.push_back(ranked[i].second);
+  }
+  const size_t n_haplotypes = run.haplotypes.size();
+
+  observed_counts.assign(n_haplotypes, 0);
+  for (size_t h = 0; h < n_haplotypes; h++) {
+    map<string, uint32_t>::const_iterator it = string_counts.find(run.haplotypes[h]);
+    if (it != string_counts.end()) observed_counts[h] = it->second;
+  }
+
+  // Read classes for the cis/trans comparison between runs.
+  run.read_classes.clear();
+  for (map<uint32_t, string>::const_iterator it = read_strings.begin(); it != read_strings.end(); it++) {
+    char cls = 'O';
+    if (it->second == ref_string) cls = 'R';
+    else if (it->second == variant_string) cls = 'V';
+    run.read_classes[it->first] = cls;
+  }
+
+  // Per-read likelihoods under each haplotype.
+  obs.clear();
+  obs.reserve(by_read.size());
+  for (map<uint32_t, vector<pair<size_t, const polymorphism_data*> > >::const_iterator r = by_read.begin(); r != by_read.end(); r++) {
+    haplotype_observation o;
+    o.read_id = r->first;
+    o.log10_pr.assign(n_haplotypes, 0.0);
+    for (size_t k = 0; k < r->second.size(); k++) {
+      size_t c = r->second[k].first;
+      const polymorphism_data& pd = *(r->second[k].second);
+      for (size_t h = 0; h < n_haplotypes; h++) {
+        base_index b = basechar2index(run.haplotypes[h][c]);
+        o.log10_pr[h] += pd._log10_pr[b];
+      }
+    }
+    o.log10_pr_max = -numeric_limits<double>::max();
+    for (size_t h = 0; h < n_haplotypes; h++) o.log10_pr_max = max(o.log10_pr_max, o.log10_pr[h]);
+    o.r.assign(n_haplotypes, 0.0);
+    for (size_t h = 0; h < n_haplotypes; h++) o.r[h] = pow(10, o.log10_pr[h] - o.log10_pr_max);
+    obs.push_back(o);
+  }
+}
+
+/*! Fit the haplotype mixture over a run by EM.
+
+  fit_allele_frequencies() with haplotypes in place of the five bases: the same Laplace-smoothed
+  start, the same E and M steps, the same tolerance and iteration cap, and the same concavity
+  argument that makes the fixed point the global maximum.
+*/
+haplotype_model identify_mutations_pileup::fit_haplotype_frequencies(const vector<haplotype_observation>& obs, const vector<bool>& allowed) const
+{
+  haplotype_model m;
+  const size_t n_haplotypes = allowed.size();
+  m.f.assign(n_haplotypes, 0.0);
+  m.sum_w.assign(n_haplotypes, 0.0);
+  m.n = static_cast<uint32_t>(obs.size());
+  if ((m.n == 0) || (n_haplotypes == 0)) return m;
+
+  // Start from the counts of each read's best haplotype, half-smoothed so no allowed component
+  // starts at exactly zero (a zero is a fixed point the E-step could never revive).
+  uint32_t n_allowed = 0;
+  for (size_t h = 0; h < n_haplotypes; h++) { if (allowed[h]) { m.f[h] = 0.5; n_allowed++; } }
+  if (n_allowed == 0) return m;
+  for (vector<haplotype_observation>::const_iterator it = obs.begin(); it != obs.end(); ++it) {
+    size_t best = n_haplotypes;
+    for (size_t h = 0; h < n_haplotypes; h++) {
+      if (!allowed[h]) continue;
+      if ((best == n_haplotypes) || (it->r[h] > it->r[best])) best = h;
+    }
+    if (best < n_haplotypes) m.f[best] += 1.0;
+  }
+  double init_total = 0.0;
+  for (size_t h = 0; h < n_haplotypes; h++) init_total += m.f[h];
+  for (size_t h = 0; h < n_haplotypes; h++) m.f[h] /= init_total;
+
+  const uint32_t k_max_iterations = 50;
+  const double k_tolerance = _polymorphism_precision_decimal;
+  vector<double> sum_w(n_haplotypes, 0.0);
+
+  for (m.iterations = 1; m.iterations <= k_max_iterations; m.iterations++) {
+    for (size_t h = 0; h < n_haplotypes; h++) sum_w[h] = 0.0;
+    double log10_likelihood = 0.0;
+
+    for (vector<haplotype_observation>::const_iterator it = obs.begin(); it != obs.end(); ++it) {
+      double s = 0.0;
+      for (size_t h = 0; h < n_haplotypes; h++) { if (allowed[h]) s += m.f[h] * it->r[h]; }
+      if (s > 0.0) {
+        log10_likelihood += log10(s) + it->log10_pr_max;
+        for (size_t h = 0; h < n_haplotypes; h++) { if (allowed[h]) sum_w[h] += m.f[h] * it->r[h] / s; }
+      } else {
+        for (size_t h = 0; h < n_haplotypes; h++) { if (allowed[h]) sum_w[h] += m.f[h]; }
+      }
+    }
+
+    double max_delta = 0.0;
+    for (size_t h = 0; h < n_haplotypes; h++) {
+      if (!allowed[h]) continue;
+      double f_new = sum_w[h] / static_cast<double>(m.n);
+      max_delta = max(max_delta, fabs(f_new - m.f[h]));
+      m.f[h] = f_new;
+    }
+    m.sum_w = sum_w;
+    m.log10_likelihood = log10_likelihood;
+    if (max_delta < k_tolerance) break;
+  }
+  if (m.iterations > k_max_iterations) m.iterations = k_max_iterations;
+  return m;
+}
+
+/*! log10 evidence that the selected haplotypes are present at all: the full fit against the best
+    fit without them, Bonferroni-corrected by the reference length as every score in this file is.
+    A set rather than one haplotype, because after realignment a run's variant may be spread over
+    several joint haplotypes (its variant combined with each of its neighbors' alleles). */
+double identify_mutations_pileup::haplotype_presence_score(const vector<haplotype_observation>& obs, const haplotype_model& full, const vector<bool>& which) const
+{
+  const size_t n_haplotypes = full.f.size();
+  if ((full.n == 0) || (which.size() != n_haplotypes) || (n_haplotypes < 2)) return numeric_limits<double>::quiet_NaN();
+  vector<bool> without(n_haplotypes, true);
+  size_t n_selected = 0;
+  for (size_t h = 0; h < n_haplotypes; h++) { without[h] = !which[h]; if (which[h]) n_selected++; }
+  if ((n_selected == 0) || (n_selected == n_haplotypes)) return numeric_limits<double>::quiet_NaN();
+  haplotype_model null_fit = fit_haplotype_frequencies(obs, without);
+  return (full.log10_likelihood - null_fit.log10_likelihood) - _log10_ref_length;
+}
+
+/*! Maximum log10 likelihood with the selected haplotypes' TOTAL frequency held at f_fixed.
+
+  The same EM as the free fit, except that the selected set's total is pinned at f_fixed and the
+  complement's at 1 - f_fixed; within each side the components keep sharing the M-step's weights
+  proportionally. With one haplotype selected this is profile_log10_likelihood() exactly.
+*/
+double identify_mutations_pileup::haplotype_profile_log10_likelihood(const vector<haplotype_observation>& obs, const haplotype_model& full, const vector<bool>& which, double f_fixed) const
+{
+  const size_t n_haplotypes = full.f.size();
+  if ((full.n == 0) || (which.size() != n_haplotypes)) return 0.0;
+
+  size_t n_selected = 0;
+  double selected_total = 0.0, other_total = 0.0;
+  for (size_t k = 0; k < n_haplotypes; k++) {
+    if (which[k]) { n_selected++; selected_total += full.f[k]; }
+    else other_total += full.f[k];
+  }
+  const size_t n_other = n_haplotypes - n_selected;
+  if ((n_selected == 0) || (n_other == 0)) return 0.0;
+
+  vector<double> f(n_haplotypes, 0.0);
+  for (size_t k = 0; k < n_haplotypes; k++) {
+    if (which[k]) f[k] = (selected_total > 0.0) ? f_fixed * full.f[k] / selected_total : f_fixed / static_cast<double>(n_selected);
+    else          f[k] = (other_total > 0.0) ? (1.0 - f_fixed) * full.f[k] / other_total : (1.0 - f_fixed) / static_cast<double>(n_other);
+  }
+
+  const uint32_t k_max_iterations = 50;
+  double log10_likelihood = 0.0;
+  vector<double> sum_w(n_haplotypes, 0.0);
+
+  for (uint32_t iter = 0; iter < k_max_iterations; iter++) {
+    for (size_t k = 0; k < n_haplotypes; k++) sum_w[k] = 0.0;
+    log10_likelihood = 0.0;
+    for (vector<haplotype_observation>::const_iterator it = obs.begin(); it != obs.end(); ++it) {
+      double s = 0.0;
+      for (size_t k = 0; k < n_haplotypes; k++) s += f[k] * it->r[k];
+      if (s > 0.0) {
+        log10_likelihood += log10(s) + it->log10_pr_max;
+        for (size_t k = 0; k < n_haplotypes; k++) sum_w[k] += f[k] * it->r[k] / s;
+      } else {
+        for (size_t k = 0; k < n_haplotypes; k++) sum_w[k] += f[k];
+      }
+    }
+    double selected_sum = 0.0, other_sum = 0.0;
+    for (size_t k = 0; k < n_haplotypes; k++) { if (which[k]) selected_sum += sum_w[k]; else other_sum += sum_w[k]; }
+    double max_delta = 0.0;
+    for (size_t k = 0; k < n_haplotypes; k++) {
+      double f_new;
+      if (which[k]) f_new = (selected_sum > 0.0) ? f_fixed * sum_w[k] / selected_sum : f_fixed / static_cast<double>(n_selected);
+      else          f_new = (other_sum > 0.0) ? (1.0 - f_fixed) * sum_w[k] / other_sum : (1.0 - f_fixed) / static_cast<double>(n_other);
+      max_delta = max(max_delta, fabs(f_new - f[k]));
+      f[k] = f_new;
+    }
+    if (max_delta < _polymorphism_precision_decimal) break;
+  }
+  return log10_likelihood;
+}
+
+/*! Write the selected haplotypes' total fitted frequency and its profile-likelihood bounds (see write_RA_frequency_bounds). */
+void identify_mutations_pileup::write_haplotype_frequency(cDiffEntry& de, const vector<haplotype_observation>& obs, const haplotype_model& m, const vector<bool>& which) const
+{
+  double f_hat = 0.0, lower = 0.0, upper = 1.0;
+
+  if ((m.n > 0) && (which.size() == m.f.size())) {
+    double f_total = 0.0;
+    for (size_t h = 0; h < m.f.size(); h++) { if (which[h]) f_total += m.f[h]; }
+    f_hat = f_total;
+    // Below the half-read level the fit is reporting an absent component asymptotically, not a call.
+    if (f_hat < 0.5 / static_cast<double>(m.n)) f_hat = 0.0;
+
+    const double pl_max = haplotype_profile_log10_likelihood(obs, m, which, f_total);
+    const double target = pl_max - kProfileLikelihoodLog10Drop;
+
+    if (haplotype_profile_log10_likelihood(obs, m, which, 0.0) >= target) {
+      lower = 0.0;
+    } else {
+      double lo = 0.0, hi = f_total;
+      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+        double mid = 0.5 * (lo + hi);
+        if (haplotype_profile_log10_likelihood(obs, m, which, mid) >= target) hi = mid;
+        else                                                                    lo = mid;
+      }
+      lower = hi;
+    }
+
+    if (haplotype_profile_log10_likelihood(obs, m, which, 1.0) >= target) {
+      upper = 1.0;
+    } else {
+      double lo = f_total, hi = 1.0;
+      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+        double mid = 0.5 * (lo + hi);
+        if (haplotype_profile_log10_likelihood(obs, m, which, mid) >= target) lo = mid;
+        else                                                                    hi = mid;
+      }
+      upper = lo;
+    }
+  }
+
+  de[FREQUENCY] = formatted_double(f_hat, _polymorphism_precision_places, true).to_string();
+  de[FREQUENCY_LOWER] = formatted_double(lower, _polymorphism_precision_places, true).to_string();
+  de[FREQUENCY_UPPER] = formatted_double(upper, _polymorphism_precision_places, true).to_string();
+}
+
+/*! Write the LN entry for a run of two or more adjacent candidate columns.
+
+  linked=1 means the predictor should join the run's RA columns into ONE mutation carrying the
+  all-variant haplotype's frequency. That requires, all at once: the all-variant haplotype is
+  present (its presence score clears the polymorphism cutoff) at a frequency above the polymorphism
+  frequency cutoff; it accounts for at least --linkage-merge-fraction of every column's own variant
+  frequency, so no column's variant is mostly on some other haplotype; and no PARTIAL haplotype --
+  one carrying some but not all of the variant alleles -- is itself present above the frequency
+  cutoff, since that would be a second, separate event. Otherwise the LN is still written (linked=0)
+  so the haplotype counts can be inspected, and the columns stay separate mutations.
+*/
+diff_entry_ptr_t identify_mutations_pileup::write_contiguous_LN(const linked_run& run, const vector<haplotype_observation>& obs,
+                                                                const vector<uint32_t>& observed_counts, uint32_t spanning_reads)
+{
+  const size_t n_haplotypes = run.haplotypes.size();
+  if (n_haplotypes < 2) return diff_entry_ptr_t(NULL);   // every column's variant equals its reference: nothing to link
+
+  cDiffEntry ln(LN);
+  ln[SEQ_ID] = target_name(run.tid);
+  ln[POSITION] = to_string<uint32_t>(run.columns.front().position);
+  ln[INSERT_POSITION] = to_string<int32_t>(run.columns.front().insert_count);
+  ln[END] = to_string<uint32_t>(run.columns.back().position);
+  ln[LN_INSERT_END] = to_string<int32_t>(run.columns.back().insert_count);
+  ln[LN_CONTIGUOUS] = "1";
+  ln[LN_REF_HAPLOTYPE] = run.haplotypes[0];
+  ln[LN_NEW_HAPLOTYPE] = run.haplotypes[1];
+
+  string haplotype_counts;
+  uint32_t listed = 0;
+  for (size_t h = 0; h < n_haplotypes; h++) {
+    if (!haplotype_counts.empty()) haplotype_counts += ",";
+    haplotype_counts += run.haplotypes[h] + ":" + to_string<uint32_t>(observed_counts[h]);
+    listed += observed_counts[h];
+  }
+  if (spanning_reads > listed) haplotype_counts += ",other:" + to_string<uint32_t>(spanning_reads - listed);
+  ln[LN_HAPLOTYPES] = haplotype_counts;
+  ln[LN_SPANNING_READS] = to_string<uint32_t>(spanning_reads);
+
+  vector<bool> all(n_haplotypes, true);
+  haplotype_model m = fit_haplotype_frequencies(obs, all);
+  const size_t variant_h = 1;
+  double score = haplotype_presence_score(obs, m, one_haplotype(n_haplotypes, variant_h));
+  ln[SCORE] = formatted_double(score, kMutationScorePrecision).to_string();
+  write_haplotype_frequency(ln, obs, m, one_haplotype(n_haplotypes, variant_h));
+
+  const double f_variant = m.f[variant_h];
+  const double present_threshold = (m.n > 0) ? 0.5 / static_cast<double>(m.n) : 1.0;
+  bool linked = !std::isnan(score) && (score >= _polymorphism_score_cutoff)
+              && (f_variant >= _settings.polymorphism_frequency_cutoff);
+  for (size_t c = 0; linked && (c < run.columns.size()); c++) {
+    if (f_variant < _settings.linkage_merge_fraction * run.columns[c].variant_frequency) linked = false;
+  }
+  for (size_t h = 2; linked && (h < n_haplotypes); h++) {
+    // A partial haplotype carries a variant allele at some column and not at another.
+    bool has_variant = false, lacks_variant = false;
+    for (size_t c = 0; c < run.columns.size(); c++) {
+      if (run.haplotypes[h][c] == run.columns[c].variant_base) has_variant = true;
+      else lacks_variant = true;
+    }
+    if (has_variant && lacks_variant && (m.f[h] >= present_threshold)
+        && (m.f[h] >= _settings.polymorphism_frequency_cutoff)) linked = false;
+  }
+  ln[LN_LINKED] = linked ? "1" : "0";
+  ln[LN_REALIGNED] = "0";
+
+  return _gd.add(ln);
+}
+
+/*! Write the LN entry recording how the reads spanning two nearby runs pair up their alleles.
+
+  Counts reads by (class in a, class in b) over R and V only -- a read is R if it carries the
+  reference allele at every column of the run and V if it carries the variant at every one. The
+  phase is a summary, not a test: cis when nearly all variant-carrying shared reads carry both
+  variants, trans when nearly none do and each variant is seen on its own, unresolved otherwise.
+*/
+void identify_mutations_pileup::write_nearby_LN(const linked_run& a, const linked_run& b)
+{
+  if ((a.haplotypes.size() < 2) || (b.haplotypes.size() < 2)) return;
+
+  uint32_t RR = 0, RV = 0, VR = 0, VV = 0, other = 0;
+  map<uint32_t, char>::const_iterator ia = a.read_classes.begin();
+  map<uint32_t, char>::const_iterator ib = b.read_classes.begin();
+  while ((ia != a.read_classes.end()) && (ib != b.read_classes.end())) {
+    if (ia->first < ib->first) { ia++; continue; }
+    if (ib->first < ia->first) { ib++; continue; }
+    char ca = ia->second, cb = ib->second;
+    if      ((ca == 'R') && (cb == 'R')) RR++;
+    else if ((ca == 'R') && (cb == 'V')) RV++;
+    else if ((ca == 'V') && (cb == 'R')) VR++;
+    else if ((ca == 'V') && (cb == 'V')) VV++;
+    else other++;
+    ia++; ib++;
+  }
+
+  const uint32_t variant_carrying = RV + VR + VV;
+  if (variant_carrying < _settings.linkage_minimum_shared_reads) return;
+
+  string phase = "unresolved";
+  const double cis_fraction = static_cast<double>(VV) / static_cast<double>(variant_carrying);
+  if (cis_fraction >= 0.9) phase = "cis";
+  else if ((cis_fraction <= 0.1) && (RV >= 1) && (VR >= 1)) phase = "trans";
+
+  cDiffEntry ln(LN);
+  ln[SEQ_ID] = target_name(a.tid);
+  ln[POSITION] = to_string<uint32_t>(a.columns.front().position);
+  ln[INSERT_POSITION] = to_string<int32_t>(a.columns.front().insert_count);
+  ln[END] = to_string<uint32_t>(a.columns.back().position);
+  ln[LN_INSERT_END] = to_string<int32_t>(a.columns.back().insert_count);
+  ln[LN_POSITION_2] = to_string<uint32_t>(b.columns.front().position);
+  ln[LN_INSERT_POSITION_2] = to_string<int32_t>(b.columns.front().insert_count);
+  ln[LN_END_2] = to_string<uint32_t>(b.columns.back().position);
+  ln[LN_INSERT_END_2] = to_string<int32_t>(b.columns.back().insert_count);
+  ln[LN_CONTIGUOUS] = "0";
+  ln[LN_LINKED] = "0";
+  ln[LN_REF_HAPLOTYPE] = a.haplotypes[0] + "/" + b.haplotypes[0];
+  ln[LN_NEW_HAPLOTYPE] = a.haplotypes[1] + "/" + b.haplotypes[1];
+  ln[LN_HAPLOTYPES] = "RR:" + to_string<uint32_t>(RR) + ",RV:" + to_string<uint32_t>(RV)
+                    + ",VR:" + to_string<uint32_t>(VR) + ",VV:" + to_string<uint32_t>(VV)
+                    + ((other > 0) ? ",other:" + to_string<uint32_t>(other) : string());
+  ln[LN_SPANNING_READS] = to_string<uint32_t>(RR + RV + VR + VV + other);
+  ln[LN_PHASE] = phase;
+  ln[LN_REALIGNED] = "0";
+
+  _gd.add(ln);
 }
 
 /*! Call the single most probable pure genotype, and score it against the alternatives.
