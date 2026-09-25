@@ -4816,9 +4816,17 @@ uint32_t CIGAR_edit_distance(const string& ref_seq, const string& read_seq, cons
 }
 
 
-// This currently normalizes (by pushing left) bases in homopolymers
-// It *does not* deal with repeats of more than one base
-// Slides homopolymer-length D/I ops as far right as the surrounding repeat allows, in place.
+// Slides D/I ops as far RIGHT as the surrounding repeat allows, in place, so that every read
+// carrying the same indel in a tandem repeat places it at the same reference coordinate.
+//
+// This works for a repeat unit of ANY length, not just homopolymers, and needs no explicit unit
+// or rotation: a deletion of ref[r, r+L) can move one base to the right exactly when
+// ref[r] == ref[r+L] (the base leaving the deleted span on the left is the same as the one
+// entering it on the right, so the read sequence is unchanged). Repeating that test base by base
+// walks the indel to the right end of the repeat, however long the unit is and whatever phase of
+// the unit the aligner happened to open the gap in. For a homopolymer it reduces to the old
+// "while the next base is the same base" loop. Insertions are the same test on the read.
+//
 // ref_seq/read_seq must start exactly at cigar_pair_array's own first reference/query position
 // (e.g. the full alignment's matched span, or an arbitrary sub-span of it -- the shift logic
 // only ever looks at ref_seq_index/read_seq_index relative to that start).
@@ -4840,7 +4848,7 @@ void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array,
 
     // We must be between two 'M' for shifting to work
     // This catches cases of I and D next to each other in minimap2 output with nanopore reads.
-    // A *missing* neighbor (leading/trailing indel) is NOT shiftable: shifting a homopolymer indel
+    // A *missing* neighbor (leading/trailing indel) is NOT shiftable: shifting an indel
     // needs a real 'M' on both sides. This matters when callers pass a split CIGAR half whose first/
     // last op can be a bare indel (write_moved_alignment) -- without this guard the boundary branches
     // below would prepend/append an 'M' with no compensating decrement and inflate the query length.
@@ -4852,15 +4860,13 @@ void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array,
 
     if (op == 'D')
     {
-      char base = ref_seq[ref_seq_index];
-      bool all_same_base = true;
-      for (uint32_t j = 1; j < len; j++)
-        all_same_base = all_same_base && (ref_seq[ref_seq_index + j] == base);
-
-      if (valid_for_shift && all_same_base)
+      if (valid_for_shift)
       {
+        // Explicit bounds: the old homopolymer loop stopped on the string's null terminator, which
+        // could never equal a real base. Comparing base against base, it could.
         uint16_t shift_amount = 0;
-        while (ref_seq[ref_seq_index + len + shift_amount] == base)
+        while ((ref_seq_index + len + shift_amount < ref_seq.size())
+               && (ref_seq[ref_seq_index + len + shift_amount] == ref_seq[ref_seq_index + shift_amount]))
           shift_amount++;
 
         // Cap amount at length of next CIGAR feature so we don't get a negative length after adjusting (zero length is OK)
@@ -4889,15 +4895,11 @@ void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array,
     }
     else if (op == 'I')
     {
-      char base = read_seq[read_seq_index];
-      bool all_same_base = true;
-      for (uint32_t j = 1; j < len; j++)
-        all_same_base = all_same_base && (read_seq[read_seq_index + j] == base);
-
-      if (valid_for_shift && all_same_base)
+      if (valid_for_shift)
       {
         uint16_t shift_amount = 0;
-        while (read_seq[read_seq_index + len + shift_amount] == base)
+        while ((read_seq_index + len + shift_amount < read_seq.size())
+               && (read_seq[read_seq_index + len + shift_amount] == read_seq[read_seq_index + shift_amount]))
           shift_amount++;
 
         // Cap amount at length of next CIGAR feature so we don't get a negative length after adjusting (zero length is OK)
