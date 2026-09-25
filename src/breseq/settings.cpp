@@ -338,7 +338,7 @@ namespace breseq
     ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)").isInputFile()
     ("name,n", "Human-readable name of the analysis run for output (DEFAULT=<none>)", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
-    //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, NORMAL_OPTION) @JEB - not consistently implemented
+    ("verbose", "Print diagnostic output from the pipeline steps that support it (gene conversion prediction).", TAKES_NO_ARGUMENT, EXPERT_OPTION)
 		("output,o", "Path to breseq output", ".").isOutputDirectory()
     ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT);
 
@@ -572,6 +572,7 @@ namespace breseq
     ("no-read-alignment-prediction", "Do not predict read alignment (RA) evidence. Missing coverage (MC) evidence comes from the same pileup pass, so it is not predicted either, and neither are the CN/DP/MP/PD evidence types that read what that pass writes. (DEFAULT=OFF, i.e. RA prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("no-missing-coverage-prediction", "Do not predict missing coverage (MC) evidence. Read alignment (RA) evidence is still predicted. (DEFAULT=OFF, i.e. MC prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("no-homologous-deletion-prediction", "Do not predict large deletions between two near-identical copies of an unannotated repeat (paralogous genes, an rRNA operon) from missing coverage evidence. These deletions leave no new junction, so they are located by reading which copy the surviving reads came from. (DEFAULT=OFF, i.e. they are predicted)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-gene-conversion-prediction", "Do not predict gene conversions (CON): clusters of SNP, INS, DEL, and SUB mutations that make a region an exact copy of another region of the reference are otherwise replaced by one CON mutation, and such tracts are extended using the reads that align equally well to both copies. (DEFAULT=OFF, i.e. they are predicted)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("skip-RA-MC-prediction", "DEPRECATED: use --no-read-alignment-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("skip-JC-prediction", "DEPRECATED: use --no-junction-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("skip-MC-prediction", "DEPRECATED: use --no-missing-coverage-prediction instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
@@ -1030,6 +1031,7 @@ namespace breseq
                                   && !options.count("skip-MC-prediction");
     this->predict_homologous_deletions = !options.count("no-homologous-deletion-prediction")
                                       && !options.count("skip-homologous-DEL-prediction");
+    this->predict_gene_conversions = !options.count("no-gene-conversion-prediction");
 
     this->max_percent_divergence = from_string<double>(options["max-percent-divergence"]);
     ASSERT(this->max_percent_divergence >= 0, "Argument --max-percent-divergence must be >= 0")
@@ -1513,6 +1515,7 @@ namespace breseq
 		this->predict_read_alignments = true;
 		this->predict_missing_coverage = true;
     this->predict_homologous_deletions = true;
+    this->predict_gene_conversions = true;
     this->no_evidence_html = false;
 		this->predict_copy_number = true;
     this->copy_number_explicitly_requested = false;

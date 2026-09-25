@@ -283,6 +283,9 @@ namespace breseq
     bool predict_read_alignments;           // Default = true COMMAND-LINE OPTION
     bool predict_missing_coverage;          // Default = true, set to false if targeted_sequencing
     bool predict_homologous_deletions;      // Default = true COMMAND-LINE OPTION
+    //! Replace SNP/INS/DEL/SUB that make a region an exact copy of another region of the
+    //! reference with a CON (gene conversion), and extend such tracts from the read alignments.
+    bool predict_gene_conversions;          // Default = true COMMAND-LINE OPTION
     bool predict_copy_number;                    // Default = true COMMAND-LINE OPTION
     //! Whether the user asked for CN via the deprecated --predict-copy-number, rather than
     //! getting it by default. A missing CNery program is fatal only then; by default

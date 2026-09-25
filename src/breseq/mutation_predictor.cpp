@@ -3484,6 +3484,968 @@ namespace breseq {
     return num_created;
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Gene conversions in the pipeline: evidence claiming and read-based extents.
+  //////////////////////////////////////////////////////////////////////////////
+
+  namespace {
+
+    // How a recipient sequence lines up with its donor: recipient coordinate x (1-based) is aligned
+    // to index x-1+offset of the donor's strand string (its forward sequence, or the reverse
+    // complement of the whole sequence). The same frame cGCDonorHit uses.
+    struct cGCMapping {
+      uint32_t donor_tid;
+      bool     reverse;
+      int64_t  offset;
+      bool operator==(const cGCMapping& o) const { return (donor_tid == o.donor_tid) && (reverse == o.reverse) && (offset == o.offset); }
+    };
+
+    char gc_complement(char c)
+    {
+      switch (c) {
+        case 'A': return 'T';
+        case 'C': return 'G';
+        case 'G': return 'C';
+        case 'T': return 'A';
+        default:  return 'N';
+      }
+    }
+
+    // The donor base aligned to recipient x, written in the recipient's frame; N when off the donor.
+    char gc_donor_base(const cGCMapping& m, const vector<string>& fwd, const vector<string>& rc, int32_t x)
+    {
+      const string& D = m.reverse ? rc[m.donor_tid] : fwd[m.donor_tid];
+      int64_t i = x - 1 + m.offset;
+      if ((i < 0) || (i >= static_cast<int64_t>(D.size()))) return 'N';
+      return D[i];
+    }
+
+    // The forward donor coordinate aligned to recipient x.
+    int32_t gc_donor_pos(const cGCMapping& m, int32_t donor_len, int32_t x)
+    {
+      int64_t i = x - 1 + m.offset;
+      return m.reverse ? static_cast<int32_t>(donor_len - i) : static_cast<int32_t>(i + 1);
+    }
+
+    // The mapping a CON entry describes, if one ungapped frame carries both of its ends (the tract
+    // nets no indel). Returns false otherwise.
+    bool gc_con_mapping(const cDiffEntry& con, cReferenceSequences& ref, const vector<string>& fwd, cGCMapping& m)
+    {
+      const int32_t P = n(con.get(POSITION));
+      const int32_t Q = P + n(con.get(SIZE)) - 1;
+      uint32_t donor_tid, region_start, region_end;
+      ref.parse_region(con.get(REGION), donor_tid, region_start, region_end);
+      const int32_t donor_len = fwd[donor_tid].size();
+      m.donor_tid = donor_tid;
+      m.reverse = region_start > region_end;
+      m.offset = m.reverse ? (static_cast<int64_t>(donor_len) - region_start) - (P - 1) : static_cast<int64_t>(region_start - 1) - (P - 1);
+      return gc_donor_pos(m, donor_len, Q) == static_cast<int32_t>(region_end);
+    }
+
+    // Intervals of one sequence that a tract may not include.
+    typedef vector<pair<int32_t, int32_t> > gc_interval_list_t;
+
+    bool gc_intervals_hit(const gc_interval_list_t& v, int32_t lo, int32_t hi)
+    {
+      for (size_t i = 0; i < v.size(); i++) {
+        if ((v[i].first <= hi) && (v[i].second >= lo)) return true;
+      }
+      return false;
+    }
+
+    // How many places in the reference, on either strand, carry the k-mer centered on position pos
+    // of sequence tid. A count of one means no other copy's reads can tie there.
+    int32_t gc_kmer_multiplicity(const cGCKmerIndex& index, const vector<string>& fwd, uint32_t tid, int32_t pos, int32_t k)
+    {
+      const int32_t L = fwd[tid].size();
+      if (L < k) return 1;
+      int32_t s = max(0, min(pos - 1 - k / 2, L - k));
+      string seed = fwd[tid].substr(s, k);
+      if (!gc_all_ACGT(seed)) return 1;
+      int32_t count = 0;
+      vector<uint32_t> found;
+      for (int strand = 0; strand < 2; strand++) {
+        string probe = strand ? reverse_complement(seed) : seed;
+        index.find(probe, found);
+        for (size_t f = 0; f < found.size(); f++) {
+          uint32_t t, p;
+          index.locate(found[f], t, p);
+          if ((static_cast<int32_t>(p) + k <= static_cast<int32_t>(fwd[t].size())) && (fwd[t].compare(p, k, probe) == 0)) count++;
+        }
+      }
+      return max(1, count);
+    }
+
+    // Grow [start, end] outward from the middle of the seed in steps, starting with the window around
+    // the middle itself, while each window matches the mapped donor at min_identity or better and
+    // both sequences last that far. Returns false when not even the first window is homologous.
+    bool gc_block_extent(const string& R, const cGCMapping& m, const vector<string>& fwd, const vector<string>& rc,
+                         int32_t seed_lo, int32_t seed_hi, int32_t step, double min_identity, int32_t max_extent,
+                         int32_t& start, int32_t& end)
+    {
+      const int32_t len = R.size();
+      const int32_t mid = (seed_lo + seed_hi) / 2;
+      start = max(1, mid - step / 2);
+      end = min(len, mid + step / 2);
+      for (int side = -1; side < 2; side++) {
+        while (true) {
+          int32_t lo, hi;
+          if (side < 0)       { lo = start; hi = end; }               // the first window, once
+          else if (side == 0) { lo = start - step; hi = start - 1; }
+          else                { lo = end + 1; hi = end + step; }
+          if ((lo < 1) || (hi > len)) break;
+          if ((side > 0) && (hi - start > max_extent)) break;
+          if ((side == 0) && (end - lo > max_extent)) break;
+          int32_t measurable = 0, matches = 0;
+          for (int32_t x = lo; x <= hi; x++) {
+            char d = gc_donor_base(m, fwd, rc, x);
+            char r = R[x-1];
+            if ((d == 'N') || (r == 'N')) continue;
+            measurable++;
+            if (d == r) matches++;
+          }
+          bool ok = (measurable >= step / 2) && (matches >= min_identity * measurable);
+          if (side < 0) { if (!ok) return false; break; }
+          if (!ok) break;
+          if (side > 0) end = hi; else start = lo;
+        }
+      }
+      return true;
+    }
+
+    // One column where the recipient and its donor differ, and what the reads say there.
+    struct cGCColumn {
+      int32_t  x;          // recipient coordinate
+      int32_t  y;          // forward donor coordinate
+      char     native;     // recipient's base
+      char     donor;      // donor's base, in the recipient's frame
+      uint32_t native_x, donor_x, total_x;   // pile at x
+      uint32_t native_y, donor_y, total_y;   // pile at y
+      bool     covered_x;
+      bool     x_unique;   // no other copy in the reference carries the k-mer around x
+      bool     y_unique;   // ... or around y
+      int32_t  call;       // +1 reads carry the donor base, -1 the native base, 0 neither cleanly
+    };
+
+    // Calls every discriminating column of the block from the two piles.
+    //
+    // At a column where the copies differ, a read from the converted recipient carries the donor's
+    // base, so it fits the donor exactly and the recipient with a mismatch. Whether it is placed at
+    // the recipient depends on the reads: a pair whose mate anchors it in the recipient's unique flank
+    // is kept there and shows the donor base AT x; a read with no such anchor is placed at the donor,
+    // leaving x empty and doubling the depth at y. A column is therefore read from x when x has
+    // coverage, and from y otherwise.
+    //
+    // A third copy of the family that shares the recipient's base can put its own tied reads on x,
+    // making a converted column look native, so only columns whose k-mer is unique in the reference
+    // are trusted to bound a tract (x_unique); likewise only columns whose donor k-mer is unique are
+    // trusted to measure the donor's depth (y_unique), because sister copies inflate the rest.
+    void gc_build_columns(const string& R, uint32_t recip_tid, const cGCMapping& m, const vector<string>& fwd, const vector<string>& rc,
+                          const cGCKmerIndex& index, int32_t k,
+                          int32_t block_start, int32_t block_end,
+                          const base_tally_map_t& tallies_x, const base_tally_map_t& tallies_y,
+                          uint32_t min_cov_x, uint32_t min_cov_y, double min_fraction,
+                          vector<cGCColumn>& columns)
+    {
+      columns.clear();
+      const int32_t donor_len = fwd[m.donor_tid].size();
+      for (int32_t x = block_start; x <= block_end; x++) {
+        cGCColumn c;
+        c.native = R[x-1];
+        c.donor = gc_donor_base(m, fwd, rc, x);
+        if ((c.native == 'N') || (c.donor == 'N') || (c.native == c.donor)) continue;
+        uint8_t native_idx = basechar2index(c.native), donor_idx = basechar2index(c.donor);
+        if ((native_idx > 3) || (donor_idx > 3)) continue;
+        c.x = x;
+        c.y = gc_donor_pos(m, donor_len, x);
+        c.native_x = c.donor_x = c.total_x = 0;
+        c.native_y = c.donor_y = c.total_y = 0;
+
+        base_tally_map_t::const_iterator tx = tallies_x.find(c.x);
+        if (tx != tallies_x.end()) {
+          c.native_x = tx->second.n[native_idx];
+          c.donor_x = tx->second.n[donor_idx];
+          c.total_x = tx->second.total;
+        }
+        // On the donor's forward strand the two alleles are complemented when the donor is reverse.
+        uint8_t native_y_idx = basechar2index(m.reverse ? gc_complement(c.native) : c.native);
+        uint8_t donor_y_idx = basechar2index(m.reverse ? gc_complement(c.donor) : c.donor);
+        base_tally_map_t::const_iterator ty = tallies_y.find(c.y);
+        if (ty != tallies_y.end()) {
+          c.native_y = ty->second.n[native_y_idx];
+          c.donor_y = ty->second.n[donor_y_idx];
+          c.total_y = ty->second.total;
+        }
+
+        c.x_unique = (gc_kmer_multiplicity(index, fwd, recip_tid, c.x, k) == 1);
+        c.y_unique = (gc_kmer_multiplicity(index, fwd, m.donor_tid, c.y, k) == 1);
+
+        c.covered_x = (c.total_x >= min_cov_x);
+        c.call = 0;
+        if (c.covered_x) {
+          if (c.donor_x >= min_fraction * c.total_x) c.call = +1;
+          else if (c.native_x >= min_fraction * c.total_x) c.call = -1;
+        } else if ((c.total_y >= min_cov_y) && (c.donor_y >= min_fraction * c.total_y)) {
+          c.call = +1;
+        }
+        columns.push_back(c);
+      }
+    }
+
+    // What the reads said about one candidate.
+    struct cGCReadTract {
+      bool    is_conversion;
+      int32_t tract_start, tract_end;   // recipient coordinates, maximal identical extent
+      int32_t n_columns;                // informative columns in the run
+      vector<int32_t> run_positions;    // every discriminating position from the run's first column to its last
+      double  depth_ratio;              // donor-allele depth inside the run over its baseline
+      string  reason;                   // why not, when !is_conversion
+    };
+
+    // Every base in [lo, hi] where the recipient (with its donor-reading SNPs applied) differs from
+    // the donor must be a column the reads said was converted, or lie inside a CON of the same event;
+    // anything else means the tract would rewrite bases nothing supports.
+    bool gc_tract_is_supported(const string& R, const cGCMapping& m, const vector<string>& fwd, const vector<string>& rc,
+                               const map<int32_t, char>& snp_base, const set<int32_t>& supported, int32_t lo, int32_t hi)
+    {
+      for (int32_t x = lo; x <= hi; x++) {
+        map<int32_t, char>::const_iterator s = snp_base.find(x);
+        char r = (s != snp_base.end()) ? s->second : R[x-1];
+        if (r == gc_donor_base(m, fwd, rc, x)) continue;
+        if (!supported.count(x)) return false;
+      }
+      return true;
+    }
+
+    // Read one candidate tract out of the alignments. The seed is a recipient interval that the
+    // caller believes converted (a CON's tract, or an MC). Returns the maximal identical stretch
+    // around the run of donor-reading columns that overlaps the seed, bounded by the first trusted
+    // column reading otherwise, by any other mutation (a SNP is passed over only where it reads the
+    // donor base), and by the end of homology.
+    cGCReadTract gc_read_tract(const string& R, uint32_t recip_tid, const cGCMapping& m, const vector<string>& fwd, const vector<string>& rc,
+                               const cGCKmerIndex& index, int32_t seed_lo, int32_t seed_hi,
+                               const gc_interval_list_t& bounds, const map<int32_t, char>& snp_base,
+                               homology_base_counter& counter, const string& recip_seq_id, const string& donor_seq_id,
+                               double avg_cov_x, double avg_cov_y, int32_t k,
+                               bool verbose, const string& label)
+    {
+      const int32_t kBlockStep = 50;
+      const double  kBlockIdentity = 0.80;
+      const int32_t kBlockMaxExtent = 20000;
+      const double  kMaxColumnDensity = 0.25;
+      const double  kMinAlleleFraction = 0.80;
+      const int32_t kMinColumns = 3;
+      const int32_t kMinOutsideColumns = 3;
+      // A deleted recipient leaves the donor allele at exactly its single-copy depth (ratio 1); a
+      // converted one doubles it in principle, and 1.6-2.0 in practice, depending on how many of
+      // its reads the aligner discarded as discordant pairs. Halfway, with margin on both sides.
+      const double  kMinDepthRatio = 1.4;
+
+      cGCReadTract result;
+      result.is_conversion = false;
+      result.tract_start = result.tract_end = 0;
+      result.n_columns = 0;
+      result.depth_ratio = 0.0;
+
+      int32_t block_start, block_end;
+      if (!gc_block_extent(R, m, fwd, rc, seed_lo, seed_hi, kBlockStep, kBlockIdentity, kBlockMaxExtent, block_start, block_end)) {
+        result.reason = "not homologous to the donor at the seed";
+        return result;
+      }
+      // The homology must cover the seed, give or take the overshoot an MC edge can have.
+      {
+        int32_t overlap = min(block_end, seed_hi) - max(block_start, seed_lo) + 1;
+        if (2 * overlap < seed_hi - seed_lo + 1) { result.reason = "homology covers less than half the seed"; return result; }
+      }
+
+      const int32_t donor_len = fwd[m.donor_tid].size();
+      int32_t y1 = gc_donor_pos(m, donor_len, block_start), y2 = gc_donor_pos(m, donor_len, block_end);
+      int32_t donor_lo = max(1, min(y1, y2)), donor_hi = min(donor_len, max(y1, y2));
+      // A donor that overlaps the recipient is the same locus seen through a tandem repeat's register
+      // shift; the vote excluded such hits at the seed, but homology grows the block into them.
+      if ((m.donor_tid == recip_tid) && (donor_lo <= block_end) && (donor_hi >= block_start)) {
+        result.reason = "the donor overlaps the recipient (a tandem repeat)";
+        return result;
+      }
+
+      counter.clear();
+      counter.count_region(recip_seq_id, block_start, block_end);
+      base_tally_map_t tallies_x = counter.tallies();
+      counter.clear();
+      counter.count_region(donor_seq_id, donor_lo, donor_hi);
+      const base_tally_map_t& tallies_y = counter.tallies();
+
+      uint32_t min_cov_x = max(3u, static_cast<uint32_t>(0.20 * avg_cov_x));
+      uint32_t min_cov_y = max(3u, static_cast<uint32_t>(0.20 * avg_cov_y));
+      vector<cGCColumn> columns;
+      gc_build_columns(R, recip_tid, m, fwd, rc, index, k, block_start, block_end, tallies_x, tallies_y, min_cov_x, min_cov_y, kMinAlleleFraction, columns);
+      if (columns.empty()) { result.reason = "no discriminating columns"; return result; }
+      if (columns.size() > kMaxColumnDensity * (block_end - block_start + 1)) { result.reason = "too divergent from the donor to be its copy"; return result; }
+
+      // A SNP that reads the donor base is part of the conversion; one that does not, or any other
+      // mutation, is a wall. A column whose k-mer another copy shares cannot be read and is skipped.
+      vector<bool> wall(columns.size(), false), informative(columns.size(), false);
+      for (size_t i = 0; i < columns.size(); i++) {
+        map<int32_t, char>::const_iterator s = snp_base.find(columns[i].x);
+        if ((s != snp_base.end()) && (s->second != columns[i].donor)) wall[i] = true;
+        if (gc_intervals_hit(bounds, columns[i].x, columns[i].x)) wall[i] = true;
+        informative[i] = columns[i].x_unique;
+      }
+
+      // Maximal runs of donor-reading informative columns that neither a wall nor a trusted column
+      // reading otherwise interrupts; pick the one that holds the most seed columns, then the longest.
+      int32_t best_first = -1, best_last = -1, best_in_seed = -1, best_count = 0;
+      for (size_t i = 0; i < columns.size(); i++) {
+        if (!informative[i] || (columns[i].call != +1) || wall[i]) continue;
+        size_t j = i;
+        int32_t count = 1;
+        while (j + 1 < columns.size()) {
+          size_t nx = j + 1;
+          if (wall[nx]) break;
+          if (gc_intervals_hit(bounds, columns[j].x + 1, columns[nx].x - 1)) break;
+          if (informative[nx]) {
+            if (columns[nx].call != +1) break;
+            count++;
+          }
+          j = nx;
+        }
+        // Trim trailing uninformative columns so the run ends on a read one.
+        while ((j > i) && !informative[j]) j--;
+        int32_t in_seed = 0;
+        for (size_t t = i; t <= j; t++) if (informative[t] && (columns[t].x >= seed_lo) && (columns[t].x <= seed_hi)) in_seed++;
+        if ((in_seed > best_in_seed) || ((in_seed == best_in_seed) && (count > best_count))) {
+          best_in_seed = in_seed; best_first = i; best_last = j; best_count = count;
+        }
+        i = j;
+      }
+      if ((best_first < 0) || (best_in_seed == 0)) { result.reason = "no donor-reading column in the seed"; return result; }
+      result.n_columns = best_count;
+      for (int32_t i = best_first; i <= best_last; i++) result.run_positions.push_back(columns[i].x);
+      if (result.n_columns < kMinColumns) { result.reason = "fewer than " + to_string(kMinColumns) + " donor-reading columns"; return result; }
+
+      // Depth: inside the run, reads carrying the donor's base come from both copies, so there are
+      // twice as many of them as the donor alone provides; a deleted recipient provides none. They
+      // are counted wherever they were placed -- at the donor, or at the recipient when a mate held
+      // them there -- so the measure does not depend on the read layout. Only columns whose donor
+      // k-mer is unique in the reference are used, so sister copies cannot inflate either side; the
+      // baseline is such columns outside the run when there are enough, else the sequence's average.
+      double inside = 0.0;
+      int32_t n_inside = 0;
+      for (int32_t i = best_first; i <= best_last; i++) {
+        if (!columns[i].y_unique) continue;
+        inside += columns[i].donor_y + columns[i].donor_x;
+        n_inside++;
+      }
+      double baseline = avg_cov_y;
+      bool depth_from_unique = (n_inside > 0);
+      if (depth_from_unique) {
+        inside /= n_inside;
+        vector<double> outside;
+        for (size_t i = 0; i < columns.size(); i++) {
+          if ((static_cast<int32_t>(i) >= best_first) && (static_cast<int32_t>(i) <= best_last)) continue;
+          if (columns[i].y_unique && (columns[i].total_y >= min_cov_y)) outside.push_back(columns[i].total_y);
+        }
+        if (static_cast<int32_t>(outside.size()) >= kMinOutsideColumns) {
+          sort(outside.begin(), outside.end());
+          baseline = outside[outside.size() / 2];
+        }
+      } else {
+        // Every donor column is shared with sister copies, whose tied reads inflate it. The best
+        // that can be done is to expect one copy's worth per place the k-mer occurs, and one more
+        // for the converted recipient; the test weakens as the family grows, which is the honest
+        // outcome, and it can only fail to call, never miscall a deletion (which adds nothing).
+        double expected = 0.0;
+        for (int32_t i = best_first; i <= best_last; i++) {
+          inside += columns[i].donor_y + columns[i].donor_x;
+          expected += gc_kmer_multiplicity(index, fwd, m.donor_tid, columns[i].y, k) * avg_cov_y;
+          n_inside++;
+        }
+        inside /= n_inside;
+        baseline = expected / n_inside;
+      }
+      result.depth_ratio = (baseline > 0) ? inside / baseline : 0.0;
+
+      if (verbose) {
+        cerr << "  " << label << ": block " << recip_seq_id << ":" << block_start << "-" << block_end
+             << " -> " << donor_seq_id << ":" << donor_lo << "-" << donor_hi << (m.reverse ? " (reverse)" : "")
+             << ", " << columns.size() << " columns, run of " << result.n_columns
+             << " at " << columns[best_first].x << "-" << columns[best_last].x
+             << ", donor-allele depth " << inside << " vs " << baseline << " (ratio " << result.depth_ratio
+             << (depth_from_unique ? "" : ", from shared columns") << ")" << endl;
+        for (size_t i = 0; i < columns.size(); i++) {
+          const cGCColumn& c = columns[i];
+          cerr << "    " << c.x << " " << c.native << ">" << c.donor << " x:" << c.native_x << "/" << c.donor_x << "/" << c.total_x
+               << " y:" << c.native_y << "/" << c.donor_y << "/" << c.total_y << " call " << c.call
+               << (informative[i] ? "" : " shared") << (c.y_unique ? "" : " donor-shared")
+               << (wall[i] ? " wall" : "") << ((static_cast<int32_t>(i) >= best_first && static_cast<int32_t>(i) <= best_last) ? " *" : "") << endl;
+        }
+      }
+
+      if (result.depth_ratio < kMinDepthRatio) { result.reason = "donor-allele depth not doubled (ratio " + to_string(result.depth_ratio, 2) + ")"; return result; }
+
+      // The maximal extent: from the run's outermost columns, every base that still matches the donor
+      // (a SNP reading the donor base counts as matching), up to the next difference, the next other
+      // mutation, or the end of homology.
+      int32_t lo = columns[best_first].x, hi = columns[best_last].x;
+      const int32_t len = R.size();
+      while (lo - 1 >= 1) {
+        int32_t x = lo - 1;
+        if (gc_intervals_hit(bounds, x, x)) break;
+        char d = gc_donor_base(m, fwd, rc, x);
+        if (d == 'N') break;
+        map<int32_t, char>::const_iterator s = snp_base.find(x);
+        char r = (s != snp_base.end()) ? s->second : R[x-1];
+        if (r != d) break;
+        lo = x;
+      }
+      while (hi + 1 <= len) {
+        int32_t x = hi + 1;
+        if (gc_intervals_hit(bounds, x, x)) break;
+        char d = gc_donor_base(m, fwd, rc, x);
+        if (d == 'N') break;
+        map<int32_t, char>::const_iterator s = snp_base.find(x);
+        char r = (s != snp_base.end()) ? s->second : R[x-1];
+        if (r != d) break;
+        hi = x;
+      }
+      result.tract_start = lo;
+      result.tract_end = hi;
+      result.is_conversion = true;
+      return result;
+    }
+
+    // Vote for the donor of a recipient interval: sample k-mers of the reference across it, look
+    // each up on both strands, and rank the mappings by how many samples agree on them. Self hits
+    // and hits that overlap the interval itself (tandem copies) do not count. Ties go to the forward
+    // strand, then reference order, then the lowest coordinate.
+    struct cGCVote { cGCMapping mapping; int32_t votes; };
+
+    void gc_vote_donor(const string& R, uint32_t recip_tid, const vector<string>& fwd, const cGCKmerIndex& index,
+                       int32_t lo, int32_t hi, int32_t k, int32_t step, int32_t exclusion,
+                       vector<cGCVote>& ranked, int32_t& samples)
+    {
+      map<pair<pair<uint32_t, bool>, int64_t>, int32_t> tally;
+      samples = 0;
+      vector<uint32_t> found;
+      for (int32_t x = lo; x + k - 1 <= hi; x += step) {
+        string seed = R.substr(x - 1, k);
+        if (!gc_all_ACGT(seed)) continue;
+        samples++;
+        string seed_rc = reverse_complement(seed);
+        for (int strand = 0; strand < 2; strand++) {
+          const bool reverse = (strand == 1);
+          index.find(reverse ? seed_rc : seed, found);
+          set<pair<pair<uint32_t, bool>, int64_t> > seen;
+          for (size_t f = 0; f < found.size(); f++) {
+            uint32_t tid, fpos;
+            index.locate(found[f], tid, fpos);
+            const int32_t L = fwd[tid].size();
+            if (static_cast<int32_t>(fpos) + k > L) continue;
+            if (fwd[tid].compare(fpos, k, reverse ? seed_rc : seed) != 0) continue;
+            if ((tid == recip_tid) && (static_cast<int32_t>(fpos) + k > lo - exclusion) && (static_cast<int32_t>(fpos) + 1 < hi + exclusion)) continue;
+            int64_t pos = reverse ? (L - static_cast<int32_t>(fpos) - k) : fpos;
+            int64_t offset = pos - (x - 1);
+            pair<pair<uint32_t, bool>, int64_t> key(make_pair(tid, reverse), offset);
+            if (seen.insert(key).second) tally[key]++;
+          }
+        }
+      }
+      ranked.clear();
+      for (map<pair<pair<uint32_t, bool>, int64_t>, int32_t>::iterator it = tally.begin(); it != tally.end(); it++) {
+        cGCVote v;
+        v.mapping.donor_tid = it->first.first.first;
+        v.mapping.reverse = it->first.first.second;
+        v.mapping.offset = it->first.second;
+        v.votes = it->second;
+        ranked.push_back(v);
+      }
+      struct ByVotes {
+        static bool better(const cGCVote& a, const cGCVote& b)
+        {
+          if (a.votes != b.votes) return a.votes > b.votes;
+          if (a.mapping.reverse != b.mapping.reverse) return !a.mapping.reverse;
+          if (a.mapping.donor_tid != b.mapping.donor_tid) return a.mapping.donor_tid < b.mapping.donor_tid;
+          return a.mapping.offset < b.mapping.offset;
+        }
+      };
+      sort(ranked.begin(), ranked.end(), ByVotes::better);
+    }
+
+    // Everything on one sequence a tract must respect, rebuilt from the diff whenever it changes:
+    // the bases of every other mutation (walls), the consensus SNPs the reads decide about column
+    // by column, and the CONs that describe the same event (same donor and frame), which a wider
+    // tract may absorb rather than stop at.
+    struct cGCWalls {
+      vector<gc_interval_list_t>            walls;
+      vector<map<int32_t, char> >           snp_base;
+      map<string, diff_entry_ptr_t>         snp_by_key;
+      vector<vector<diff_entry_ptr_t> >     same_event;   // per sequence
+
+      void rebuild(cGenomeDiff& gd, cReferenceSequences& ref, const vector<string>& fwd,
+                   const string& except_id, const cGCMapping* same_mapping)
+      {
+        size_t n = ref.size();
+        walls.assign(n, gc_interval_list_t());
+        snp_base.assign(n, map<int32_t, char>());
+        same_event.assign(n, vector<diff_entry_ptr_t>());
+        snp_by_key.clear();
+        diff_entry_list_t muts = gd.mutation_list();
+        for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+          cDiffEntry& mut = **it;
+          if (mut._id == except_id) continue;
+          uint32_t tid = 0;
+          while ((tid < n) && (ref[tid].m_seq_id != mut[SEQ_ID])) tid++;
+          if (tid == n) continue;
+          int32_t s = gc_start(mut), e = gc_end(mut);
+          if ((mut._type == SNP) && gc_eligible(mut)) {
+            snp_base[tid][s] = to_upper(mut[NEW_SEQ])[0];
+            snp_by_key[mut[SEQ_ID] + ":" + to_string(s)] = *it;
+          } else if (mut._type == INS) {
+            walls[tid].push_back(make_pair(s, s + 1));
+          } else if ((mut._type == CON) && (same_mapping != NULL)) {
+            cGCMapping cm;
+            if (gc_con_mapping(mut, ref, fwd, cm) && (cm == *same_mapping)) same_event[tid].push_back(*it);
+            else walls[tid].push_back(make_pair(s, e));
+          } else {
+            walls[tid].push_back(make_pair(s, e));
+          }
+        }
+      }
+    };
+
+    // Remove a mutation from the diff by identity.
+    void gc_remove_entry(cGenomeDiff& gd, const diff_entry_ptr_t& entry)
+    {
+      diff_entry_list_t* entries = gd.get_mutable_list_ptr();
+      for (diff_entry_list_t::iterator e = entries->begin(); e != entries->end(); e++) {
+        if (&(**e) == &(*entry)) { gd.remove(e); return; }
+      }
+    }
+
+    void gc_merge_evidence(cDiffEntry& into, const cDiffEntry& from)
+    {
+      for (size_t e = 0; e < from._evidence.size(); e++) {
+        if (find(into._evidence.begin(), into._evidence.end(), from._evidence[e]) == into._evidence.end())
+          into._evidence.push_back(from._evidence[e]);
+      }
+    }
+
+  } // anonymous namespace
+
+  void MutationPredictor::attach_gene_conversion_evidence(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                                          cDiffEntry& con, diff_entry_list_t& mc,
+                                                          diff_entry_list_t& dp, diff_entry_list_t& cn)
+  {
+    const string seq_id = con[SEQ_ID];
+    const int32_t P = n(con[POSITION]);
+    const int32_t Q = P + n(con[SIZE]) - 1;
+
+    uint32_t donor_tid, region_start, region_end;
+    ref_seq_info.parse_region(con[REGION], donor_tid, region_start, region_end);
+    const string donor_seq_id = ref_seq_info[donor_tid].m_seq_id;
+    const bool reverse = region_start > region_end;
+    const int32_t a = region_start, b = region_end;           // a pairs with P, b with Q
+    const int32_t donor_lo = min(a, b), donor_hi = max(a, b);
+
+    // Scales: a read length for how far an MC edge or an RA may sit from the tract, a pair
+    // distance for how far a discordant pair's sides sit from the ends they bracket.
+    const double read_length_avg = summary.sequence_conversion.read_length_avg;
+    const int32_t read_length = (read_length_avg > 0) ? static_cast<int32_t>(read_length_avg + 0.5) : 150;
+    const int32_t slop = read_length;
+    double pair_cutoff = 0.0;
+    for (PairedMappingDistanceDistributionSummaries::const_iterator it = summary.preliminary_paired_mapping_distance_distribution.begin();
+         it != summary.preliminary_paired_mapping_distance_distribution.end(); it++)
+      pair_cutoff = max(pair_cutoff, it->second.distance_cutoff);
+    const int32_t T_dp = max(2 * read_length, static_cast<int32_t>(pair_cutoff));
+
+    // MC: unique coverage lost over the tract, because its reads now tie with the donor's, or over
+    // the donor, because the recipient's reads moved there. Either way most of the MC must lie
+    // inside the region and its ends within a read length of it.
+    for (diff_entry_list_t::iterator it = mc.begin(); it != mc.end(); ) {
+      cDiffEntry& m = **it;
+      int32_t s = n(m[START]), e = n(m[END]);
+      int32_t lo = 0, hi = 0;
+      if (m[SEQ_ID] == seq_id)             { lo = P; hi = Q; }
+      else if (m[SEQ_ID] == donor_seq_id)  { lo = donor_lo; hi = donor_hi; }
+      else { it++; continue; }
+      int32_t overlap = min(hi, e) - max(lo, s) + 1;
+      if ((s >= lo - slop) && (e <= hi + slop) && (2 * overlap >= e - s + 1)) {
+        if (find(con._evidence.begin(), con._evidence.end(), m._id) == con._evidence.end())
+          con._evidence.push_back(m._id);
+        it = mc.erase(it);
+      } else {
+        it++;
+      }
+    }
+
+    // DP: a pair with one read in the recipient's flank just outside the tract and its mate placed
+    // at the donor, just past the corresponding end of the donor region. The recipient side is a
+    // unique flank; the mate reached across the tract into the donor's copy of the sequence. For a
+    // forward donor the two sides face opposite ways, for a reverse donor the same way, whichever
+    // read of the pair the redundant placement happened to fall on. When donor and recipient are
+    // close enough that a pair could bracket either, the geometry is ambiguous and nothing is claimed.
+    const bool ambiguous = (donor_seq_id == seq_id)
+      && (min(abs(P - a), abs(Q - b)) <= 2 * T_dp);
+    for (diff_entry_list_t::iterator it = dp.begin(); !ambiguous && (it != dp.end()); it++) {
+      cDiffEntry& d = **it;
+      if (d.entry_exists(REJECT)) continue;
+      bool matched = false;
+      for (int order = 0; (order < 2) && !matched; order++) {
+        const char* r_seq = order ? SIDE_2_SEQ_ID : SIDE_1_SEQ_ID;
+        const char* r_pos = order ? SIDE_2_POSITION : SIDE_1_POSITION;
+        const char* r_str = order ? SIDE_2_STRAND : SIDE_1_STRAND;
+        const char* d_seq = order ? SIDE_1_SEQ_ID : SIDE_2_SEQ_ID;
+        const char* d_pos = order ? SIDE_1_POSITION : SIDE_2_POSITION;
+        const char* d_str = order ? SIDE_1_STRAND : SIDE_2_STRAND;
+        if ((d[r_seq] != seq_id) || (d[d_seq] != donor_seq_id)) continue;
+        int32_t rp = n(d[r_pos]), dpos = n(d[d_pos]);
+        int32_t rs = n(d[r_str]), ds = n(d[d_str]);
+        bool near_left = (abs(rp - P) <= T_dp) && (abs(dpos - a) <= T_dp);
+        bool near_right = (abs(rp - Q) <= T_dp) && (abs(dpos - b) <= T_dp);
+        if (!near_left && !near_right) continue;
+        if (reverse ? (rs != ds) : (rs != -ds)) continue;
+        matched = true;
+      }
+      if (matched && (find(con._evidence.begin(), con._evidence.end(), d._id) == con._evidence.end()))
+        con._evidence.push_back(d._id);
+    }
+
+    // CN: copy number zero over the tract (its reads went to the donor), or a gain over the donor
+    // (the recipient's reads came to it). Same containment rule add_matching_CN_evidence uses.
+    for (diff_entry_list_t::iterator it = cn.begin(); it != cn.end(); it++) {
+      cDiffEntry& c = **it;
+      if (c.entry_exists(REJECT) || c.entry_exists(IGNORE)) continue;
+      double copy_number = from_string<double>(c[COPY_NUMBER]);
+      int32_t lo = 0, hi = 0;
+      if ((c[SEQ_ID] == seq_id) && (copy_number == 0.0))              { lo = P; hi = Q; }
+      else if ((c[SEQ_ID] == donor_seq_id) && (copy_number >= 2.0))   { lo = donor_lo; hi = donor_hi; }
+      else continue;
+      int32_t cs = n(c[START]), ce = n(c[END]);
+      int32_t tile = c.entry_exists("tile_size") ? n(c["tile_size"]) : 0;
+      if ((cs < lo - tile) || (ce > hi + tile)) continue;
+      int32_t overlap = min(hi, ce) - max(lo, cs) + 1;
+      if (2 * overlap < ce - cs + 1) continue;
+      if (find(con._evidence.begin(), con._evidence.end(), c._id) == con._evidence.end())
+        con._evidence.push_back(c._id);
+    }
+
+    // RA inside the tract that read the donor base: the consensus calls at the edges that the
+    // SNP-driven step already inherited, plus the ones predictRAtoSNPorDELorINSorSUB marked deleted
+    // because they sat inside an MC. Only a tract without indels maps a position to its donor base
+    // by offset; a tract with them is left to the evidence it already has.
+    string donor = ref_seq_info[donor_tid].get_sequence_1(donor_lo, donor_hi);
+    if (reverse) donor = reverse_complement(donor);
+    if (static_cast<int32_t>(donor.size()) == Q - P + 1) {
+      diff_entry_list_t ra = gd.get_list(make_vector<gd_entry_type>(RA));
+      for (diff_entry_list_t::iterator it = ra.begin(); it != ra.end(); it++) {
+        cDiffEntry& r = **it;
+        if (r[SEQ_ID] != seq_id) continue;
+        if (r.entry_exists(REJECT)) continue;
+        if (!r.entry_exists(NEW_BASE) || (r[NEW_BASE].size() != 1)) continue;
+        if (r.entry_exists(INSERT_POSITION) && (n(r[INSERT_POSITION]) != 0)) continue;
+        if (r.entry_exists(FREQUENCY) && (from_string<double>(r[FREQUENCY]) < settings.consensus_frequency_cutoff)) continue;
+        int32_t pos = n(r[POSITION]);
+        if ((pos < P) || (pos > Q)) continue;
+        if (toupper(r[NEW_BASE][0]) != donor[pos - P]) continue;
+        if (find(con._evidence.begin(), con._evidence.end(), r._id) == con._evidence.end())
+          con._evidence.push_back(r._id);
+      }
+    }
+  }
+
+  void MutationPredictor::predictGeneConversions(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                                 diff_entry_list_t& mc, diff_entry_list_t& dp, diff_entry_list_t& cn)
+  {
+    const bool verbose = (settings.verbose > 0);
+    const int32_t k = 20;
+
+    // CONs the input already carried (user-defined) keep their evidence as given.
+    set<string> preexisting;
+    {
+      diff_entry_list_t cons = gd.get_list(make_vector<gd_entry_type>(CON));
+      for (diff_entry_list_t::iterator it = cons.begin(); it != cons.end(); it++) preexisting.insert((*it)->_id);
+    }
+
+    // The SNP-driven step: whatever the RA evidence called that together is an exact copy of a donor.
+    cGeneConversionOptions options;
+    options.verbose = verbose;
+    options.seed_length = k;
+    predict_gene_conversions(gd, options);
+    set<string> new_cons;
+    {
+      diff_entry_list_t cons = gd.get_list(make_vector<gd_entry_type>(CON));
+      for (diff_entry_list_t::iterator it = cons.begin(); it != cons.end(); it++) {
+        if (preexisting.count((*it)->_id)) continue;
+        new_cons.insert((*it)->_id);
+        if (settings.polymorphism_prediction) (**it)[FREQUENCY] = "1";
+      }
+    }
+
+    // The reads. Without them (gdtools MUTATIONS) the SNP-driven CONs are all there is.
+    const double read_length_avg = summary.sequence_conversion.read_length_avg;
+    const bool have_bam = (read_length_avg > 0)
+      && file_exists(settings.reference_bam_file_name.c_str())
+      && file_exists(settings.reference_fasta_file_name.c_str());
+
+    if (have_bam) {
+      const int32_t read_length = static_cast<int32_t>(read_length_avg + 0.5);
+      const size_t num_seqs = ref_seq_info.size();
+      vector<string> fwd(num_seqs), rc(num_seqs);
+      vector<double> avg_cov(num_seqs, 0.0);
+      for (size_t tid = 0; tid < num_seqs; tid++) {
+        fwd[tid] = ref_seq_info[tid].m_fasta_sequence.get_sequence();
+        rc[tid] = reverse_complement(fwd[tid]);
+        CoverageSummaries::const_iterator cov = summary.unique_coverage.find(ref_seq_info[tid].m_seq_id);
+        if (cov != summary.unique_coverage.end()) avg_cov[tid] = cov->second.average;
+      }
+      cGCKmerIndex index;
+      index.build(fwd, k);
+      homology_base_counter counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.base_quality_cutoff);
+      cGCWalls W;
+
+      int32_t num_extended = 0, num_from_mc = 0;
+
+      // (1) Extend every CON the SNPs made. Its interior is verified; the reads say how far past the
+      // outermost SNP the conversion really reached. Another CON with the same donor and frame is
+      // the other edge of the same event, split where a column had no call; it is absorbed.
+      {
+        diff_entry_list_t cons = gd.get_list(make_vector<gd_entry_type>(CON));
+        for (diff_entry_list_t::iterator it = cons.begin(); it != cons.end(); it++) {
+          cDiffEntry& con = **it;
+          if (!new_cons.count(con._id)) continue;
+          // Absorbed by an earlier extension?
+          bool present = false;
+          {
+            diff_entry_list_t now = gd.get_list(make_vector<gd_entry_type>(CON));
+            for (diff_entry_list_t::iterator jt = now.begin(); jt != now.end(); jt++) if (&(**jt) == &con) { present = true; break; }
+          }
+          if (!present) continue;
+
+          const string seq_id = con[SEQ_ID];
+          uint32_t recip_tid = 0;
+          while ((recip_tid < num_seqs) && (ref_seq_info[recip_tid].m_seq_id != seq_id)) recip_tid++;
+          if (recip_tid == num_seqs) continue;
+          const int32_t P = n(con[POSITION]);
+          const int32_t Q = P + n(con[SIZE]) - 1;
+          cGCMapping m;
+          if (!gc_con_mapping(con, ref_seq_info, fwd, m)) continue;   // nets an indel: interior stands as it is
+          const int32_t donor_len = fwd[m.donor_tid].size();
+
+          W.rebuild(gd, ref_seq_info, fwd, con._id, &m);
+          cGCReadTract t = gc_read_tract(fwd[recip_tid], recip_tid, m, fwd, rc, index, P, Q, W.walls[recip_tid], W.snp_base[recip_tid],
+                                         counter, seq_id, ref_seq_info[m.donor_tid].m_seq_id,
+                                         avg_cov[recip_tid], avg_cov[m.donor_tid], k, verbose,
+                                         "CON " + con._id + " " + seq_id + ":" + to_string(P) + "-" + to_string(Q));
+          if (!t.is_conversion) { if (verbose) cerr << "    not extended: " << t.reason << endl; continue; }
+          if ((t.tract_start > P) || (t.tract_end < Q)) { if (verbose) cerr << "    not extended: the reads' tract does not contain it" << endl; continue; }
+
+          // Same-event CONs the tract reaches are absorbed whole: their interiors are verified too.
+          set<int32_t> supported(t.run_positions.begin(), t.run_positions.end());
+          for (int32_t x = P; x <= Q; x++) supported.insert(x);
+          vector<diff_entry_ptr_t> absorbed;
+          bool grew = true;
+          while (grew) {
+            grew = false;
+            for (size_t i = 0; i < W.same_event[recip_tid].size(); i++) {
+              diff_entry_ptr_t other = W.same_event[recip_tid][i];
+              if (find(absorbed.begin(), absorbed.end(), other) != absorbed.end()) continue;
+              int32_t os = n((*other)[POSITION]), oe = os + n((*other)[SIZE]) - 1;
+              if ((oe < t.tract_start) || (os > t.tract_end)) continue;
+              if (os < t.tract_start) { t.tract_start = os; grew = true; }
+              if (oe > t.tract_end) { t.tract_end = oe; grew = true; }
+              for (int32_t x = os; x <= oe; x++) supported.insert(x);
+              absorbed.push_back(other);
+            }
+          }
+          if ((t.tract_start == P) && (t.tract_end == Q)) continue;
+
+          ASSERT((t.tract_start >= P || gc_tract_is_supported(fwd[recip_tid], m, fwd, rc, W.snp_base[recip_tid], supported, t.tract_start, P - 1))
+                 && (t.tract_end <= Q || gc_tract_is_supported(fwd[recip_tid], m, fwd, rc, W.snp_base[recip_tid], supported, Q + 1, t.tract_end)),
+                 "Extended gene conversion rewrites unsupported bases at " + seq_id + ":" + to_string(t.tract_start));
+
+          for (size_t i = 0; i < absorbed.size(); i++) {
+            gc_merge_evidence(con, *absorbed[i]);
+            new_cons.erase(absorbed[i]->_id);
+            gc_remove_entry(gd, absorbed[i]);
+          }
+          // Absorb the SNPs the wider tract now explains.
+          for (map<int32_t, char>::const_iterator s = W.snp_base[recip_tid].lower_bound(t.tract_start);
+               (s != W.snp_base[recip_tid].end()) && (s->first <= t.tract_end); s++) {
+            if ((s->first >= P) && (s->first <= Q)) continue;
+            diff_entry_ptr_t snp = W.snp_by_key[seq_id + ":" + to_string(s->first)];
+            gc_merge_evidence(con, *snp);
+            gc_remove_entry(gd, snp);
+          }
+          int32_t new_a = gc_donor_pos(m, donor_len, t.tract_start), new_b = gc_donor_pos(m, donor_len, t.tract_end);
+          con[POSITION] = to_string(t.tract_start);
+          con[SIZE] = to_string(t.tract_end - t.tract_start + 1);
+          con[REGION] = ref_seq_info[m.donor_tid].m_seq_id + ":" + to_string(new_a) + "-" + to_string(new_b);
+          num_extended++;
+          if (verbose) cerr << "    extended to " << con.as_string() << endl;
+          // Claim its missing coverage now, so the MC step below does not derive the same tract again.
+          attach_gene_conversion_evidence(settings, summary, gd, con, mc, dp, cn);
+        }
+      }
+
+      // (2) Missing coverage nothing else explained: the whole signature of a conversion whose reads
+      // all went to the donor. Find the donor by vote, trying the best few in turn (a sister copy
+      // can outvote the real donor and then fail the reads), and read the tract the same way.
+      {
+        const int32_t min_mc_length = max(read_length, 50);
+        const int32_t kMaxDonorCandidates = 3;
+        diff_entry_list_t candidates = mc;
+        for (diff_entry_list_t::iterator it = candidates.begin(); it != candidates.end(); it++) {
+          cDiffEntry& m_item = **it;
+          // Still unclaimed?
+          bool still = false;
+          for (diff_entry_list_t::iterator jt = mc.begin(); jt != mc.end(); jt++) if (&(**jt) == &m_item) { still = true; break; }
+          if (!still) continue;
+          const string seq_id = m_item[SEQ_ID];
+          uint32_t recip_tid = 0;
+          while ((recip_tid < num_seqs) && (ref_seq_info[recip_tid].m_seq_id != seq_id)) recip_tid++;
+          if (recip_tid == num_seqs) continue;
+          const int32_t ms = n(m_item[START]), me = n(m_item[END]);
+          if (me - ms + 1 < min_mc_length) continue;
+          const string& R = fwd[recip_tid];
+          if ((ms < 1) || (me > static_cast<int32_t>(R.size()))) continue;
+
+          // Vote with the index's own key length: a 16-mer of a paralog 4% diverged matches exactly
+          // about half the time, a 20-mer well under half, and the sampling is dense so the vote
+          // has the numbers to be decisive either way.
+          vector<cGCVote> ranked;
+          int32_t samples = 0;
+          gc_vote_donor(R, recip_tid, fwd, index, ms, me, index.key_length, 10, 2 * read_length, ranked, samples);
+          const int32_t min_votes = max(3, static_cast<int32_t>(0.15 * samples));
+          if (ranked.empty() || (ranked.front().votes < min_votes)) {
+            if (verbose) cerr << "  MC " << m_item._id << " " << seq_id << ":" << ms << "-" << me << ": no donor ("
+                              << (ranked.empty() ? 0 : ranked.front().votes) << "/" << samples << " votes)" << endl;
+            continue;
+          }
+
+          for (size_t c = 0; (c < ranked.size()) && (static_cast<int32_t>(c) < kMaxDonorCandidates) && (ranked[c].votes >= min_votes); c++) {
+            const cGCMapping& m = ranked[c].mapping;
+            W.rebuild(gd, ref_seq_info, fwd, "", &m);
+            const int32_t donor_len = fwd[m.donor_tid].size();
+            cGCReadTract t = gc_read_tract(R, recip_tid, m, fwd, rc, index, ms, me, W.walls[recip_tid], W.snp_base[recip_tid],
+                                           counter, seq_id, ref_seq_info[m.donor_tid].m_seq_id,
+                                           avg_cov[recip_tid], avg_cov[m.donor_tid], k, verbose,
+                                           "MC " + m_item._id + " " + seq_id + ":" + to_string(ms) + "-" + to_string(me)
+                                           + " (donor candidate " + to_string(c + 1) + ", " + to_string(ranked[c].votes) + "/" + to_string(samples) + " votes)");
+            if (!t.is_conversion) { if (verbose) cerr << "    not a conversion: " << t.reason << endl; continue; }
+            // The tract must explain this MC: most of the shorter of the two lies inside the other.
+            {
+              int32_t overlap = min(me, t.tract_end) - max(ms, t.tract_start) + 1;
+              int32_t shorter = min(me - ms + 1, t.tract_end - t.tract_start + 1);
+              if (2 * overlap < shorter) { if (verbose) cerr << "    not a conversion: the tract and the MC barely overlap" << endl; continue; }
+            }
+            if (t.tract_end - t.tract_start + 1 < options.minimum_identical_length) continue;
+
+            // Same-event CONs inside the tract are absorbed; their interiors are verified.
+            set<int32_t> supported(t.run_positions.begin(), t.run_positions.end());
+            vector<diff_entry_ptr_t> absorbed;
+            bool grew = true;
+            while (grew) {
+              grew = false;
+              for (size_t i = 0; i < W.same_event[recip_tid].size(); i++) {
+                diff_entry_ptr_t other = W.same_event[recip_tid][i];
+                if (find(absorbed.begin(), absorbed.end(), other) != absorbed.end()) continue;
+                int32_t os = n((*other)[POSITION]), oe = os + n((*other)[SIZE]) - 1;
+                if ((oe < t.tract_start) || (os > t.tract_end)) continue;
+                if (os < t.tract_start) { t.tract_start = os; grew = true; }
+                if (oe > t.tract_end) { t.tract_end = oe; grew = true; }
+                for (int32_t x = os; x <= oe; x++) supported.insert(x);
+                absorbed.push_back(other);
+              }
+            }
+
+            int32_t a = gc_donor_pos(m, donor_len, t.tract_start), b = gc_donor_pos(m, donor_len, t.tract_end);
+            if (abs(b - a) + 1 < 2) continue;
+            ASSERT(gc_tract_is_supported(R, m, fwd, rc, W.snp_base[recip_tid], supported, t.tract_start, t.tract_end),
+                   "Gene conversion from missing coverage rewrites unsupported bases at " + seq_id + ":" + to_string(t.tract_start));
+
+            cDiffEntry con(CON);
+            con[SEQ_ID] = seq_id;
+            con[POSITION] = to_string(t.tract_start);
+            con[SIZE] = to_string(t.tract_end - t.tract_start + 1);
+            con[REGION] = ref_seq_info[m.donor_tid].m_seq_id + ":" + to_string(a) + "-" + to_string(b);
+            if (settings.polymorphism_prediction) con[FREQUENCY] = "1";
+            for (size_t i = 0; i < absorbed.size(); i++) {
+              gc_merge_evidence(con, *absorbed[i]);
+              new_cons.erase(absorbed[i]->_id);
+              gc_remove_entry(gd, absorbed[i]);
+            }
+            // Absorb the SNPs inside the tract (each reads the donor base, or it would have been a wall).
+            for (map<int32_t, char>::const_iterator s = W.snp_base[recip_tid].lower_bound(t.tract_start);
+                 (s != W.snp_base[recip_tid].end()) && (s->first <= t.tract_end); s++) {
+              diff_entry_ptr_t snp = W.snp_by_key[seq_id + ":" + to_string(s->first)];
+              gc_merge_evidence(con, *snp);
+              gc_remove_entry(gd, snp);
+            }
+            diff_entry_ptr_t added = gd.add(con, true);
+            gd.sort();
+            new_cons.insert(added->_id);
+            num_from_mc++;
+            if (verbose) cerr << "    predicted " << added->as_string() << endl;
+            break;
+          }
+        }
+      }
+
+      if (verbose) cerr << "  " << num_extended << " CON extended by reads, " << num_from_mc << " predicted from missing coverage." << endl;
+    }
+
+    // One event, two frames: an indel between the paralogs shifts the register, and an ungapped
+    // tract cannot cross it, so the reads produce two CONs that abut on the recipient and whose
+    // donor regions abut, or are separated by the few bases the donor carries extra. Join them: the
+    // recipient took the donor's sequence across the indel too, which is what the junction reads
+    // aligned to. Overlapping donor regions are not joined; that would drop bases both tracts used.
+    {
+      const int32_t kMaxDonorGap = 10;
+      gd.sort();
+      bool merged = true;
+      while (merged) {
+        merged = false;
+        diff_entry_list_t cons = gd.get_list(make_vector<gd_entry_type>(CON));
+        for (diff_entry_list_t::iterator it = cons.begin(); (it != cons.end()) && !merged; it++) {
+          cDiffEntry& a = **it;
+          if (!new_cons.count(a._id)) continue;
+          diff_entry_list_t::iterator jt = it; jt++;
+          if (jt == cons.end()) break;
+          cDiffEntry& b = **jt;
+          if (!new_cons.count(b._id)) continue;
+          if (a[SEQ_ID] != b[SEQ_ID]) continue;
+          const int32_t a_end = n(a[POSITION]) + n(a[SIZE]) - 1;
+          if (n(b[POSITION]) != a_end + 1) continue;
+          uint32_t at, a1, a2, bt, b1, b2;
+          ref_seq_info.parse_region(a[REGION], at, a1, a2);
+          ref_seq_info.parse_region(b[REGION], bt, b1, b2);
+          if (at != bt) continue;
+          const bool a_rev = a1 > a2, b_rev = b1 > b2;
+          if (a_rev != b_rev) continue;
+          const int32_t gap = a_rev ? (static_cast<int32_t>(a2) - static_cast<int32_t>(b1) - 1)
+                                    : (static_cast<int32_t>(b1) - static_cast<int32_t>(a2) - 1);
+          if ((gap < 0) || (gap > kMaxDonorGap)) continue;
+          a[SIZE] = to_string(n(a[SIZE]) + n(b[SIZE]));
+          a[REGION] = ref_seq_info[at].m_seq_id + ":" + to_string(a1) + "-" + to_string(b2);
+          gc_merge_evidence(a, b);
+          new_cons.erase(b._id);
+          gc_remove_entry(gd, *jt);
+          if (verbose) cerr << "  joined two frames of one conversion: " << a.as_string() << endl;
+          merged = true;
+        }
+      }
+    }
+
+    // Claim what a conversion leaves behind.
+    diff_entry_list_t cons = gd.get_list(make_vector<gd_entry_type>(CON));
+    for (diff_entry_list_t::iterator it = cons.begin(); it != cons.end(); it++) {
+      if (!new_cons.count((*it)->_id)) continue;
+      attach_gene_conversion_evidence(settings, summary, gd, **it, mc, dp, cn);
+    }
+
+    gd.sort();
+  }
+
 
 	/*
 	 Title   : predict
@@ -3680,7 +4642,19 @@ namespace breseq {
 		// mutation INS => mutation AMP
 		///
     normalize_INS_to_AMP(settings, summary, gd);
-    
+
+    ///
+    // mutations SNP/INS/DEL/SUB (+ evidence MC/DP/CN) => mutation CON
+    ///
+    // After the RA-derived mutations exist, have been reconciled and shifted, and INS have become
+    // AMP (so amplified bases are off limits to a tract); before 'before'/'within' assignment, which
+    // must never see a CON, and before the frequency check below.
+    if (settings.predict_gene_conversions) {
+      cerr << "  Predicting gene conversions..." << endl;
+      diff_entry_list_t dp = gd.get_list(make_vector<gd_entry_type>(DP));
+      predictGeneConversions(settings, summary, gd, mc, dp, cn);
+    }
+
     ///
     // Check for certain kinds of overlap that need 'before' or 'within' fields to resolve
     ///

@@ -78,13 +78,25 @@ everything: on a short or heavily fragmented reference, where there is too littl
 single-copy level down, residual mapping and GC bias can still be called as a level slightly off 1.
 Treat a `CN` entry near single copy on a small contig with suspicion.
 
-`--no-read-alignment-prediction`, `--no-missing-coverage-prediction`, `--no-junction-prediction`, `--no-homologous-deletion-prediction`
+`--no-read-alignment-prediction`, `--no-missing-coverage-prediction`, `--no-junction-prediction`, `--no-homologous-deletion-prediction`, `--no-gene-conversion-prediction`
 
 Turn off one kind of evidence prediction. `--no-read-alignment-prediction` also turns off missing
 coverage, because both come from the same pileup pass (as do CN, DP, MP and PD, which read what
 that pass writes). The older `--skip-RA-MC-prediction`, `--skip-MC-prediction`,
 `--skip-JC-prediction` and `--skip-homologous-DEL-prediction` spellings are deprecated: they still
 work, but every opt-out is now spelled `--no-X-prediction`.
+
+`--no-gene-conversion-prediction` turns off `CON` (gene conversion) mutations. By default, a
+cluster of SNP, INS, DEL and SUB mutations that makes a region an exact copy of another region of
+the reference is replaced by one `CON`, and the read alignments are then used to find how far the
+conversion really reached: inside a converted tract reads either tie between the two copies and
+are discarded as redundant, or match the donor and are placed there, so nothing gets called and
+the tract shows up as missing coverage. At every position where the two copies differ, breseq
+counts the reads carrying the donor's base at both copies; a converted tract carries twice as many
+as the donor alone would, while a deleted copy leaves the donor's count unchanged. The tract is
+the whole stretch over which the recipient and donor read identical, bounded by the first
+position that still reads the recipient's own base, and the `CON` claims the missing coverage,
+discordant pairs, copy number and read alignment evidence the conversion produced.
 
 `--max-percent-divergence <float>`, `--max-evidence-items <int>`
 

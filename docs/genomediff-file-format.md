@@ -349,15 +349,24 @@ pairs that store optional information.
     The donor bases are always taken from the original reference
     sequence, not from the genome with other mutations applied.
 
-`gdtools NORMALIZE` creates CON mutations. When applying a cluster of
-SNP, INS, DEL, and SUB mutations makes a region an exact copy of another
-region of the reference (on either strand or on another sequence) over a
-long enough stretch, it replaces those mutations with one CON that has
-its maximal extent: the tract is the whole stretch over which the
-converted region and the donor are identical, including the flanking
-bases that already matched, and the region is the donor bases that align
-to it. The CON inherits the evidence of the mutations it replaced, and
-applying it gives the same genome as applying them.
+`breseq` and `gdtools NORMALIZE` create CON mutations. When applying a
+cluster of SNP, INS, DEL, and SUB mutations makes a region an exact copy
+of another region of the reference (on either strand or on another
+sequence) over a long enough stretch, they replace those mutations with
+one CON that has its maximal extent: the tract is the whole stretch over
+which the converted region and the donor are identical, including the
+flanking bases that already matched, and the region is the donor bases
+that align to it. The CON inherits the evidence of the mutations it
+replaced, and applying it gives the same genome as applying them.
+
+`breseq` also reads the alignments, because inside a converted tract the
+reads tie between the two copies or match the donor, so no mutation is
+called there. It extends each CON, or predicts one from unexplained
+missing coverage, over every position where the two copies differ and
+the reads carrying the donor's base are twice as many as the donor
+alone provides, and attaches the missing coverage, discordant pair, copy
+number, and read alignment evidence the conversion produced
+(`--no-gene-conversion-prediction` turns this off).
 
 ### INT: Integration mutation
 

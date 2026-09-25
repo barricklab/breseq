@@ -7,9 +7,11 @@ TEST_CORES=4
 CURRENT_OUTPUTS[0]="${SELF}/data/annotated.gd"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 
-# All four new opt-out flags at once. This is what proves the opt-outs actually work: CN, DP,
+# All the opt-out flags at once. This is what proves the opt-outs actually work: CN, DP,
 # MP and PD are on by default now, so without them this run would produce CN evidence (the
-# default-on flip is otherwise only ever exercised in the positive direction).
+# default-on flip is otherwise only ever exercised in the positive direction). Gene conversion
+# (CON) prediction is on by default too; it never fires on this data, so its flag is exercised
+# here only for the fact that it is accepted and the run still completes.
 #
 # The trailing count is the real assertion. The golden alone would not catch a regression that
 # made one of these flags a no-op, because the reviewer would have to notice one line appearing
@@ -24,9 +26,10 @@ TESTCMD="\
     --no-discordant-pair-prediction \
     --no-missing-pair-prediction \
     --no-pair-distance-prediction \
+    --no-gene-conversion-prediction \
     -r ${DATADIR}/lambda/lambda.gbk \
     ${DATADIR}/lambda/lambda_mixed_population.fastq.gz \
-    && test \$(cut -f1 ${SELF}/data/annotated.gd | grep -cE '^(CN|DP|MP|PD)\$') -eq 0 \
+    && test \$(cut -f1 ${SELF}/data/annotated.gd | grep -cE '^(CN|DP|MP|PD|CON)\$') -eq 0 \
     "
 
 do_test $1 ${SELF}

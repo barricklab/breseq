@@ -220,6 +220,26 @@ namespace breseq {
     //! reference as APPLY reads it, so the caller's APPLY-based self-check is a genuine test.
     int32_t predict_gene_conversions(cGenomeDiff& gd, const cGeneConversionOptions& options);
 
+    //! The pipeline's gene conversion step. Runs predict_gene_conversions on the mutations the RA
+    //! evidence produced, then reads the alignments to do what those mutations cannot: inside a
+    //! converted tract breseq calls nothing, because the reads there either tie between the two
+    //! copies and are discarded as redundant, or match the donor and are placed there. The SNPs
+    //! only ever mark the edges. So every tract is extended along the reads that align to both
+    //! copies (see extend_gene_conversion_by_reads), missing-coverage evidence left over from the
+    //! deletion predictors is tested for the same signature, and the MC, DP, CN and RA evidence a
+    //! conversion produces is attached to the CON so it stops being reported as unassigned.
+    void predictGeneConversions(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                diff_entry_list_t& mc, diff_entry_list_t& dp, diff_entry_list_t& cn);
+
+    //! Attach the evidence a gene conversion leaves to its CON: missing coverage inside the tract or
+    //! inside the donor (reads moved from one copy to the other), discordant pairs joining the flank
+    //! just outside the tract to the corresponding end of the donor, copy number zero over the tract
+    //! or a gain over the donor, and read alignment evidence inside the tract that reads the donor
+    //! base. Claimed MC items are removed from the working list.
+    void attach_gene_conversion_evidence(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                         cDiffEntry& con, diff_entry_list_t& mc,
+                                         diff_entry_list_t& dp, diff_entry_list_t& cn);
+
     // Master function
 		void predict(Settings& settings, Summary& summary, cGenomeDiff& gd);
 

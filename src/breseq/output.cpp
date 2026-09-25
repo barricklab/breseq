@@ -629,7 +629,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   // Compute all lists before emitting any HTML so jump links can be built
   /////////////////////////
 
-  diff_entry_list_t muts = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
+  diff_entry_list_t muts = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP)(CON));
   muts.remove_if(cDiffEntry::field_exists(IGNORE));
 
   diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MC)));
@@ -4781,8 +4781,9 @@ void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       }
     } break;
       
-    case CON:{
-      html_mutation = mut["size"] + " bp" + mut["region"];
+    case CON:
+    case INT:{
+      html_mutation = mut["size"] + " bp → " + mut["region"];
     } break;
       
     case MOB:{
@@ -5744,6 +5745,35 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
   
   
   
+  // A gene conversion inherits the RA evidence of the SNPs it replaced, and can claim RA inside its
+  // tract that were never turned into mutations. Those RA are no longer unassigned, so the loop below
+  // would not draw them, and the loop above only knows SNP/INS/DEL/SUB. Draw one alignment per RA at
+  // the RA's own position, with the CON as the parent the page links back to.
+  diff_entry_list_t items_CON = gd.show_list(make_vector<gd_entry_type>(CON));
+  for (diff_entry_list_t::iterator itr = items_CON.begin(); itr != items_CON.end(); itr ++)
+  {
+    diff_entry_ptr_t item = *itr;
+    diff_entry_list_t in_evidence_list = gd.in_evidence_list(*item);
+    for (diff_entry_list_t::iterator eit = in_evidence_list.begin(); eit != in_evidence_list.end(); eit ++)
+    {
+      diff_entry_ptr_t evidence_item = *eit;
+      if (evidence_item->_type != RA) continue;
+      add_evidence(_EVIDENCE_FILE_NAME,
+                   evidence_item,
+                   item,
+                   make_map<string,string>
+                   (BAM_PATH, reference_bam_file_name)
+                   (FASTA_PATH, reference_fasta_file_name)
+                   (SEQ_ID, (*evidence_item)[SEQ_ID])
+                   (START, (*evidence_item)[POSITION])
+                   (END, (*evidence_item)[POSITION])
+                   (INSERT_START, (*evidence_item)[INSERT_POSITION])
+                   (INSERT_END, (*evidence_item)[INSERT_POSITION])
+                   (PREFIX, "RA")
+                   );
+    }
+  }
+
   // Still create files for RA evidence that was not good enough to predict a mutation from
   diff_entry_list_t items_RA = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
   //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
