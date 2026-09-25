@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	15:13:56 25 Sep 2026
+#=CREATED	13:49:50 25 Sep 2026
 #=PROGRAM	breseq 0.50.0 revision f30111c975ee
 #=COMMAND	./src/breseq/breseq -j 1 -o tests/bull_2 -r tests/bull_2/../data/bull/bull_2.gbk tests/bull_2/../data/bull/bull_2.fastq.gz
 #=REFSEQ	tests/bull_2/../data/bull/bull_2.gbk

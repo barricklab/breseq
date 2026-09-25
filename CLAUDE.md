@@ -300,6 +300,17 @@ columns by coordinate, never by RA id**: `merge_preserving_duplicates` reassigns
 per-stage evidence files are merged, and `reassign_unique_ids` clears the evidence list of every
 non-mutation entry, so an evidence-to-evidence id reference cannot survive the Output stage.
 
+After the pileup, `refine_by_local_realignment` re-scores the reads spanning every linked run and
+every polymorphic indel column against the candidate haplotype *sequences* (a banded alignment
+whose emission terms are error-table probabilities) and refits the frequency (`realigned=1`,
+`pileup_frequency=` keeps the column value). It runs in stage 08, not Output, because it needs the
+error table whose directory is deleted at the end of the run. **Candidates within
+`--linkage-realignment-cluster-distance` (20 bp) are refined together against the cross product of
+their haplotypes.** Scored alone, a run's window carries its neighbor's indel as reference and the
+reads that have that indel pay for it least against whichever haplotype changes the length the same
+way: in `tests/lambda_polymorphism` the 12% T→CA next to the 81% homopolymer A insertion came back at
+98% that way. Set `BRESEQ_REALIGN_DEBUG=<first position>` to dump per-read scores for one cluster.
+
 `CN`, `DP`, `MP` and `PD` are predicted by **default**; turn each off with
 `--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`,
 `--no-pair-distance-prediction`. The old `--predict-*` opt-in flags for these four are DEPRECATED:

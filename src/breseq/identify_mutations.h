@@ -798,6 +798,7 @@ namespace breseq {
       base_char ref_base;        //!< '.' at an inserted column
       base_char variant_base;    //!< the RA's new_base ('.' for a deletion / no inserted base)
       double variant_frequency;  //!< the column's own fitted variant frequency
+      diff_entry_ptr_t ra_entry; //!< the RA written for this column
       vector<polymorphism_data> pdata;
     };
     //! A maximal run of ADJACENT candidate columns (the predictor's adjacency: same position with
@@ -825,7 +826,7 @@ namespace breseq {
     //! Retain one candidate column for linkage; extends the open run or closes it and starts another.
     void linkage_add_column(uint32_t tid, uint32_t position, int32_t insert_count,
                             base_char ref_base, base_char variant_base, double variant_frequency,
-                            const vector<polymorphism_data>& pdata);
+                            const diff_entry_ptr_t& ra_entry, const vector<polymorphism_data>& pdata);
     //! Close the open run: fit and write its LN, compare it with the recent runs, retire old ones.
     void linkage_close_run();
 
@@ -851,6 +852,57 @@ namespace breseq {
                                          const vector<uint32_t>& observed_counts, uint32_t spanning_reads);
     //! Write the LN entry recording cis/trans read counts between two nearby runs, if enough reads span both.
     void write_nearby_LN(const linked_run& a, const linked_run& b);
+
+    // Cluster-local realignment ----
+    //
+    // The column caller and the linkage fit above both trust each read's CIGAR: a read whose
+    // aligner placed an indel two bases to the left of where the other reads have it, or spelled
+    // a substitution-plus-insertion as two mismatches, is counted against the variant at the RA
+    // column. After the pileup, every linked run and every polymorphic indel column is therefore
+    // revisited: the reads spanning it are re-scored against the candidate haplotype SEQUENCES
+    // with a small alignment whose emission terms come from the calibrated error table, and the
+    // haplotype mixture is refit from those scores. A read then supports whichever haplotype it
+    // matches with the fewest edits, wherever its CIGAR had put them.
+    //
+    // Candidates within a few bases of each other are refined TOGETHER, against the cross product
+    // of their haplotypes. Scored alone, a candidate's window carries its neighbor's indel as
+    // reference sequence, and every read that has the neighbor's indel then pays for it against
+    // every haplotype -- least against whichever haplotype happens to change the length the same
+    // way, which is how a 12% substitution next to an 80% homopolymer insertion came back at 98%.
+  public:
+    struct realignment_candidate {
+      realignment_candidate() : tid(0), is_run(false) {}
+      uint32_t tid;
+      vector<pair<uint32_t, int32_t> > columns;   //!< (position, insert_count) of each column
+      vector<string> haplotypes;                  //!< allele strings over the columns, [0] ref, [1] all-variant
+      diff_entry_ptr_t entry;                     //!< the LN (run) or RA (single indel column) to refine
+      bool is_run;
+      uint32_t first_position() const { return columns.front().first; }
+      uint32_t last_position() const { return columns.back().first; }
+    };
+  protected:
+    vector<realignment_candidate> _realignment_candidates;
+    //! Refine one cluster of candidates (consecutive entries of _realignment_candidates) together.
+    void refine_candidate_cluster(size_t begin, size_t end, uint32_t flank);
+    //! Reads collected by fetch_callback() for the candidate being refined. Held by pointer:
+    //! bam_alignment's copy constructor leaves the wrapper pointing at the SOURCE record, so a
+    //! vector that reallocates would leave every earlier element dangling.
+    vector<bam_alignment_ptr> _fetched_reads;
+    uint32_t _fetch_cover_start_1;               //!< reference span every fetched read must cover ...
+    uint32_t _fetch_cover_end_1;                 //!< ... untrimmed, to be kept
+  public:
+    //! Collect one read overlapping the candidate being refined (see refine_by_local_realignment).
+    virtual void fetch_callback(const alignment_wrapper& a);
+    //! Re-score the reads over every recorded candidate and refine its frequency.
+    void refine_by_local_realignment();
+  protected:
+    //! Spell out haplotype h of a candidate over the reference window [window_start_1, window_end_1].
+    string candidate_haplotype_sequence(const realignment_candidate& c, size_t h, uint32_t window_start_1, uint32_t window_end_1) const;
+    //! log10 P(read | haplotype): the best alignment of the read's aligned bases to the haplotype
+    //! sequence, scored with the error table. read_offset is where the read's first aligned base
+    //! sits on the reference window; extra_length is how much longer than the reference the
+    //! haplotype is, which widens the band.
+    double realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length);
 	};
 
   

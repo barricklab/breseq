@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	15:15:00 25 Sep 2026
+#=CREATED	13:50:59 25 Sep 2026
 #=PROGRAM	breseq 0.50.0 revision f30111c975ee
 #=COMMAND	./src/breseq/breseq -j 4 -b 0 -o tests/lambda_short_sequence_repeats -r tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk tests/lambda_short_sequence_repeats/../data/lambda/lambda.short_sequence_repeats.fastq.gz
 #=REFSEQ	tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk
