@@ -676,10 +676,6 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     pd.remove_if(cDiffEntry::ignored_but_not_circular());
   }
 
-  // LN: the linkage items not used by a merged mutation -- unlinked runs and cis/trans pairs.
-  diff_entry_list_t ln = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(LN)));
-  ln.remove_if(cDiffEntry::rejected_and_not_user_defined());
-
   // Open list container before sticky header so the .search input is inside it
   if (!settings.no_javascript) {
     if (!settings.no_list_js) {
@@ -698,7 +694,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << mutation_filter_input_string() << endl;
   }
 
-  if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() + mp.size() + pd.size() + ln.size() > 0) {
+  if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() + mp.size() + pd.size() > 0) {
     HTML << "<p>Jump to: <a href=\"#mutation_list\">predicted mutations</a>";
     HTML << " | Unassigned evidence: ";
     vector<string> jump_link_list;
@@ -716,8 +712,6 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
       jump_link_list.push_back("<a href=\"#missing_pair_list\">missing pair</a>");
     if (pd.size() > 0)
       jump_link_list.push_back("<a href=\"#pair_distance_list\">pair distance</a>");
-    if (ln.size() > 0)
-      jump_link_list.push_back("<a href=\"#read_linkage_list\">read linkage</a>");
     HTML << join(jump_link_list, ", ");
     HTML << endl;
   }
@@ -792,17 +786,10 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << html_pair_distance_table_string(pd, false, "Unassigned pair distance evidence", relative_path);
   }
 
-  /////////////////////////
-  // Unassigned LN evidence
-  /////////////////////////
-
-  if (ln.size() > 0) {
-    HTML << "<p>" << html_read_linkage_table_string(ln, false, "Unassigned read linkage evidence", relative_path);
-  }
 
 
   // This code prints out a message if there was nothing in the previous tables
-  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() + dp.size() + mp.size() + pd.size() + ln.size() == 0) {
+  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() + dp.size() + mp.size() + pd.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
 
@@ -912,17 +899,6 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   pd_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
   pd_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(PD_SUPPORTING_COUNT)));
   mark_gd_entries_in_list_no_show(pd_list, settings.max_rejected_pair_distance_evidence_to_show);
-
-  /////
-  // LN evidence
-  //////
-
-  // Rejected LN items are ones whose RA columns were themselves rejected; keep the best-supported.
-  vector<gd_entry_type> ln_types = make_vector<gd_entry_type>(LN);
-  diff_entry_list_t ln_list = gd.filter_used_as_evidence(gd.get_list(ln_types));
-  ln_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
-  ln_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(LN_SPANNING_READS)));
-  mark_gd_entries_in_list_no_show(ln_list, settings.max_rejected_read_linkage_evidence_to_show);
 
 }
 
@@ -1065,16 +1041,6 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     marginal_mp_title += " (sorted from high to low score)";
   }
 
-  diff_entry_list_t ln_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(LN)));
-  ln_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
-  ln_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
-
-  string marginal_ln_title = "Marginal read linkage evidence";
-  if (ln_list.size() > 0) {
-    ln_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(LN_SPANNING_READS)));
-    marginal_ln_title += " (sorted from high to low spanning read count)";
-  }
-
   /////////////////////////
   // Sticky header: breseq nav + jump links
   /////////////////////////
@@ -1104,9 +1070,6 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     }
     if (pd_list.size() > 0) {
       jump_link_list.push_back("<a href=\"#pair_distance_list\">pair distance</a>");
-    }
-    if (ln_list.size() > 0) {
-      jump_link_list.push_back("<a href=\"#read_linkage_list\">read linkage</a>");
     }
     HTML << join(jump_link_list, ", ");
 
@@ -1156,13 +1119,8 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     HTML << html_pair_distance_table_string(pd_list, false, marginal_pd_title, relative_path);
   }
 
-  if (ln_list.size() > 0) {
-    HTML << "<p>" << endl;
-    HTML << html_read_linkage_table_string(ln_list, false, marginal_ln_title, relative_path);
-  }
-
   // This code prints out a message if there was nothing in the previous tables
-  if (ra_list.size() + jc_list.size() + dp_list.size() + sc_list.size() + mp_list.size() + pd_list.size() + ln_list.size() == 0) {
+  if (ra_list.size() + jc_list.size() + dp_list.size() + sc_list.size() + mp_list.size() + pd_list.size() == 0) {
     HTML << "<p>No marginal predictions." << endl;
   }
 
@@ -4017,7 +3975,7 @@ string html_read_linkage_table_string(diff_entry_list_t& list_ref, bool show_det
 
   ss << "<div id=\"read_linkage_list\">" << endl;
   ss << start_table("class=\"report_table\" border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 14 : 13;
+  size_t total_cols = link ? 12 : 11;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -4035,9 +3993,7 @@ string html_read_linkage_table_string(diff_entry_list_t& list_ref, bool show_det
   ss << th("freq") << endl;
   ss << th("range") << endl;
   ss << th("score") << endl;
-  ss << th("result") << endl;
-  ss << th("gene") << endl;
-  ss << th("width=\"100%\"", "product") << endl;
+  ss << th("width=\"100%\"", "result") << endl;
   ss << "</tr>" << endl;
   ss << "</thead>" << endl;
   ss << endl;
@@ -4083,16 +4039,7 @@ string html_read_linkage_table_string(diff_entry_list_t& list_ref, bool show_det
     if (contiguous) result = (c.entry_exists(LN_LINKED) && (c[LN_LINKED] == "1")) ? "linked" : "not linked";
     else            result = c.entry_exists(LN_PHASE) ? c[LN_PHASE] : "";
     if (c.entry_exists(LN_REALIGNED) && (c[LN_REALIGNED] == "1")) result += " (realigned)";
-    ss << td(ALIGN_CENTER, nonbreaking(result)) << endl;
-
-    if (c.entry_exists(GENE_NAME))
-      ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c[GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));
-    else
-      ss << td("&nbsp;");
-    if (c.entry_exists(GENE_PRODUCT))
-      ss << td(ALIGN_LEFT, htmlize(substitute(c[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
-    else
-      ss << td("&nbsp;");
+    ss << td(ALIGN_LEFT, nonbreaking(result)) << endl;
 
     ss << end_tr();
 
@@ -5531,7 +5478,11 @@ void Html_Mutation_Table_String::Item_Lines()
           else
             already_added_RA = true;
         }
-        
+
+        // LN is shown on the evidence page of the mutation it supports, under the RA table there,
+        // and is not itself linked from the mutation table.
+        if (evidence_item._type == LN) continue;
+
         if (!evidence_string.empty()) evidence_string += "&nbsp;";
         
         // This will be empty if we are in the mode where we don't create evidence files.
@@ -6320,7 +6271,9 @@ cOutputEvidenceFiles::html_evidence_file (
 
   // CN belongs here now that a mutation can rest on it: without it, a CN evidence page opened in the
   // context of the AMP it supports would show the mutation and no copy number table at all.
-  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC)(DP)(PD)(MP)(CN);
+  // LN likewise: a mutation merged from linked RA columns shows the linkage that licensed it here,
+  // and only here -- it is never listed on its own in index.html or marginal.html.
+  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(LN)(MC)(JC)(DP)(PD)(MP)(CN);
   
   for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
   {

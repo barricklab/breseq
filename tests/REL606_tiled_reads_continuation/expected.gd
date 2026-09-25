@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	14:42:55 25 Sep 2026
+#=CREATED	15:40:34 25 Sep 2026
 #=PROGRAM	breseq 0.50.0 revision f30111c975ee
 #=COMMAND	./src/breseq/breseq -j 4 -p -o tests/REL606_tiled_reads_continuation -r tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk -s tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk tests/REL606_tiled_reads_continuation/output.tiled_reads.fastq
 #=REFSEQ	tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk
@@ -134,8 +134,8 @@ UN	120	.	REL606-5	31350	31516
 UN	121	.	REL606-5	31608	31698
 UN	122	.	REL606-5	31792	32024
 UN	123	.	REL606-5	46297	46298
-LN	124	.	REL606-5	853	0	855	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.75257874e-01	frequency_upper=1.00000000e+00	gene_name=dkgB	gene_position=coding (253/804 nt)	gene_product=2,5-diketo-D-gluconate reductase B	gene_strand=>	haplotypes=AAA:0,...:54	linked=1	locus_tag=ECB_00200	new_haplotype=...	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=AAA	score=978.0	spanning_reads=54
-LN	125	.	REL606-5	2129	1	2129	3	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.73304749e-01	frequency_upper=1.00000000e+00	gene_name=yafC	gene_position=coding (187/915 nt)	gene_product=predicted DNA-binding transcriptional regulator	gene_strand=<	haplotypes=...:0,CTT:50	linked=1	locus_tag=ECB_00201	new_haplotype=CTT	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=...	score=995.2	spanning_reads=50
-LN	126	.	REL606-5	3249	0	3251	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.75257874e-01	frequency_upper=1.00000000e+00	gene_name=yafD	gene_position=coding (694/801 nt)	gene_product=hypothetical protein	gene_strand=>	haplotypes=GTT:0,...:54	linked=1	locus_tag=ECB_00202	new_haplotype=...	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=GTT	score=978.8	spanning_reads=54
-LN	127	.	REL606-5	8498	0	8500	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.73304749e-01	frequency_upper=1.00000000e+00	gene_name=aspV/yafT	gene_position=intergenic (+57/-273)	gene_product=tRNA-Asp/predicted aminopeptidase	gene_strand=>/>	haplotypes=TTT:0,...:50	linked=1	locus_tag=ECB_t00004/ECB_00209	new_haplotype=...	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=TTT	score=905.2	spanning_reads=50
-LN	128	.	REL606-5	34577	0	34578	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.80858803e-01	frequency_upper=1.00000000e+00	gene_name=proA	gene_position=coding (73/1254 nt)	gene_product=gamma-glutamyl phosphate reductase	gene_strand=>	haplotypes=AA:0,..:70	linked=1	locus_tag=ECB_00240	new_haplotype=..	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=AA	score=844.5	spanning_reads=70
+LN	124	.	REL606-5	853	0	855	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.75257874e-01	frequency_upper=1.00000000e+00	haplotypes=AAA:0,...:54	linked=1	new_haplotype=...	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=AAA	score=978.0	spanning_reads=54
+LN	125	.	REL606-5	2129	1	2129	3	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.73304749e-01	frequency_upper=1.00000000e+00	haplotypes=...:0,CTT:50	linked=1	new_haplotype=CTT	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=...	score=995.2	spanning_reads=50
+LN	126	.	REL606-5	3249	0	3251	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.75257874e-01	frequency_upper=1.00000000e+00	haplotypes=GTT:0,...:54	linked=1	new_haplotype=...	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=GTT	score=978.8	spanning_reads=54
+LN	127	.	REL606-5	8498	0	8500	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.73304749e-01	frequency_upper=1.00000000e+00	haplotypes=TTT:0,...:50	linked=1	new_haplotype=...	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=TTT	score=905.2	spanning_reads=50
+LN	128	.	REL606-5	34577	0	34578	0	contiguous=1	frequency=1.00000000e+00	frequency_lower=9.80858803e-01	frequency_upper=1.00000000e+00	haplotypes=AA:0,..:70	linked=1	new_haplotype=..	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=AA	score=844.5	spanning_reads=70

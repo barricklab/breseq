@@ -784,7 +784,10 @@ what the reads spanning the columns say, and it is the only thing that lets bres
     anything.
 
 Produced in polymorphism mode only. Pass `--no-linkage` to turn it off. Columns are named by
-coordinate, not by `RA` id, because ids are renumbered when evidence files are merged.
+coordinate, not by `RA` id, because ids are renumbered when evidence files are merged. LN items carry
+no gene annotation. In the HTML output an LN is shown only on the evidence page of the mutation it
+licensed, beneath that mutation's `RA` table; unlinked runs and nearby (cis/trans) items are recorded
+in the `.gd` file and not displayed.
 
 Line specification:
 

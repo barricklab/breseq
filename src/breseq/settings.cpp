@@ -1733,7 +1733,6 @@ namespace breseq
     this->max_rejected_soft_clipping_evidence_to_show = 20;
     this->max_rejected_discordant_pair_evidence_to_show = 20;
     this->max_rejected_missing_pair_evidence_to_show = 20;
-    this->max_rejected_read_linkage_evidence_to_show = 20;
     this->max_rejected_pair_distance_evidence_to_show = 20;
 		this->hide_circular_genome_junctions = true;
     

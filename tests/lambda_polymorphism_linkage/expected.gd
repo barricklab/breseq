@@ -1,11 +1,11 @@
 #=GENOME_DIFF	1.0
-#=CREATED	14:45:54 25 Sep 2026
+#=CREATED	15:38:35 25 Sep 2026
 #=PROGRAM	breseq 0.50.0 revision f30111c975ee
-#=COMMAND	./src/breseq/breseq -j 4 --polymorphism-prediction -o ./tests/lambda_polymorphism_linkage -r ./tests/lambda_polymorphism_linkage/../data/lambda/lambda.gbk ./tests/lambda_polymorphism_linkage/output.ref.fastq ./tests/lambda_polymorphism_linkage/output.mutA.fastq ./tests/lambda_polymorphism_linkage/output.mutB.fastq
-#=REFSEQ	./tests/lambda_polymorphism_linkage/../data/lambda/lambda.gbk
-#=READSEQ	./tests/lambda_polymorphism_linkage/output.ref.fastq
-#=READSEQ	./tests/lambda_polymorphism_linkage/output.mutA.fastq
-#=READSEQ	./tests/lambda_polymorphism_linkage/output.mutB.fastq
+#=COMMAND	./src/breseq/breseq -j 4 --polymorphism-prediction -o tests/lambda_polymorphism_linkage -r tests/lambda_polymorphism_linkage/../data/lambda/lambda.gbk tests/lambda_polymorphism_linkage/output.ref.fastq tests/lambda_polymorphism_linkage/output.mutA.fastq tests/lambda_polymorphism_linkage/output.mutB.fastq
+#=REFSEQ	tests/lambda_polymorphism_linkage/../data/lambda/lambda.gbk
+#=READSEQ	tests/lambda_polymorphism_linkage/output.ref.fastq
+#=READSEQ	tests/lambda_polymorphism_linkage/output.mutA.fastq
+#=READSEQ	tests/lambda_polymorphism_linkage/output.mutB.fastq
 #=CONVERTED-BASES	2425000
 #=CONVERTED-READS	24250
 #=INPUT-BASES	2425000
@@ -44,10 +44,10 @@ UN	29	.	NC_001416	1	9
 UN	30	.	NC_001416	20661	20661
 UN	31	.	NC_001416	47317	47317
 UN	32	.	NC_001416	48496	48502
-LN	33	.	NC_001416	10000	1	10000	2	contiguous=1	frequency=3.48837213e-01	frequency_lower=2.37275282e-01	frequency_upper=4.72841665e-01	gene_name=G	gene_position=coding (290/423 nt)	gene_product=tail component	gene_strand=>	haplotypes=..:28,AC:15	linked=1	locus_tag=lambdap14	new_haplotype=AC	pileup_frequency=3.40909094e-01	realigned=1	ref_haplotype=..	score=121.8	spanning_reads=43
-LN	34	.	NC_001416	11702	1	11702	3	contiguous=1	frequency=3.91316135e-01	frequency_lower=2.78815583e-01	frequency_upper=5.12192512e-01	gene_name=H	gene_position=coding (1161/2562 nt)	gene_product=tail component	gene_strand=>	haplotypes=...:28,CAG:18	linked=1	locus_tag=lambdap16	new_haplotype=CAG	pileup_frequency=3.75000000e-01	realigned=1	ref_haplotype=...	score=216.8	spanning_reads=46
-LN	35	.	NC_001416	12000	0	12000	0	contiguous=0	end_2=12005	gene_name=H	gene_position=coding (1459/2562 nt)	gene_product=tail component	gene_strand=>	haplotypes=RR:19,RV:11,VR:9,VV:0	insert_end_2=0	insert_position_2=0	linked=0	locus_tag=lambdap16	new_haplotype=G/C	phase=trans	position_2=12005	realigned=0	ref_haplotype=A/T	spanning_reads=39
-LN	36	.	NC_001416	12000	0	12000	0	contiguous=0	end_2=12011	gene_name=H	gene_position=coding (1459/2562 nt)	gene_product=tail component	gene_strand=>	haplotypes=RR:29,RV:0,VR:0,VV:6	insert_end_2=0	insert_position_2=0	linked=0	locus_tag=lambdap16	new_haplotype=G/C	phase=cis	position_2=12011	realigned=0	ref_haplotype=A/A	spanning_reads=35
-LN	37	.	NC_001416	12005	0	12005	0	contiguous=0	end_2=12011	gene_name=H	gene_position=coding (1464/2562 nt)	gene_product=tail component	gene_strand=>	haplotypes=RR:19,RV:7,VR:12,VV:0	insert_end_2=0	insert_position_2=0	linked=0	locus_tag=lambdap16	new_haplotype=C/C	phase=trans	position_2=12011	realigned=0	ref_haplotype=T/A	spanning_reads=38
-LN	38	.	NC_001416	13019	1	13020	0	contiguous=1	frequency=3.70370357e-01	frequency_lower=2.67835537e-01	frequency_upper=4.81435341e-01	gene_name=H	gene_position=coding (2478/2562 nt)	gene_product=tail component	gene_strand=>	haplotypes=.T:34,CA:20	linked=1	locus_tag=lambdap16	new_haplotype=CA	pileup_frequency=3.70370362e-01	realigned=1	ref_haplotype=.T	score=133.7	spanning_reads=54
-LN	39	.	NC_001416	17246	0	17248	0	contiguous=1	frequency=3.40425531e-01	frequency_lower=2.34282797e-01	frequency_upper=4.58604406e-01	gene_name=J	gene_position=coding (1742/3399 nt)	gene_product=tail:host specificity protein	gene_strand=>	haplotypes=ACG:31,...:16	linked=1	locus_tag=lambdap21	new_haplotype=...	pileup_frequency=3.40425523e-01	realigned=1	ref_haplotype=ACG	score=160.9	spanning_reads=47
+LN	33	.	NC_001416	10000	1	10000	2	contiguous=1	frequency=3.48837213e-01	frequency_lower=2.37275282e-01	frequency_upper=4.72841665e-01	haplotypes=..:28,AC:15	linked=1	new_haplotype=AC	pileup_frequency=3.40909094e-01	realigned=1	ref_haplotype=..	score=121.8	spanning_reads=43
+LN	34	.	NC_001416	11702	1	11702	3	contiguous=1	frequency=3.91316135e-01	frequency_lower=2.78815583e-01	frequency_upper=5.12192512e-01	haplotypes=...:28,CAG:18	linked=1	new_haplotype=CAG	pileup_frequency=3.75000000e-01	realigned=1	ref_haplotype=...	score=216.8	spanning_reads=46
+LN	35	.	NC_001416	12000	0	12000	0	contiguous=0	end_2=12005	haplotypes=RR:19,RV:11,VR:9,VV:0	insert_end_2=0	insert_position_2=0	linked=0	new_haplotype=G/C	phase=trans	position_2=12005	realigned=0	ref_haplotype=A/T	spanning_reads=39
+LN	36	.	NC_001416	12000	0	12000	0	contiguous=0	end_2=12011	haplotypes=RR:29,RV:0,VR:0,VV:6	insert_end_2=0	insert_position_2=0	linked=0	new_haplotype=G/C	phase=cis	position_2=12011	realigned=0	ref_haplotype=A/A	spanning_reads=35
+LN	37	.	NC_001416	12005	0	12005	0	contiguous=0	end_2=12011	haplotypes=RR:19,RV:7,VR:12,VV:0	insert_end_2=0	insert_position_2=0	linked=0	new_haplotype=C/C	phase=trans	position_2=12011	realigned=0	ref_haplotype=T/A	spanning_reads=38
+LN	38	.	NC_001416	13019	1	13020	0	contiguous=1	frequency=3.70370357e-01	frequency_lower=2.67835537e-01	frequency_upper=4.81435341e-01	haplotypes=.T:34,CA:20	linked=1	new_haplotype=CA	pileup_frequency=3.70370362e-01	realigned=1	ref_haplotype=.T	score=133.7	spanning_reads=54
+LN	39	.	NC_001416	17246	0	17248	0	contiguous=1	frequency=3.40425531e-01	frequency_lower=2.34282797e-01	frequency_upper=4.58604406e-01	haplotypes=ACG:31,...:16	linked=1	new_haplotype=...	pileup_frequency=3.40425523e-01	realigned=1	ref_haplotype=ACG	score=160.9	spanning_reads=47

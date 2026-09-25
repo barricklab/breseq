@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	14:43:42 25 Sep 2026
+#=CREATED	15:40:12 25 Sep 2026
 #=PROGRAM	breseq 0.50.0 revision f30111c975ee
 #=COMMAND	./src/breseq/breseq -j 4 -p --aligned-sam -o tests/lambda_polymorphism_aligned_sam -r tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda.gbk tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda_mixed_population.sam
 #=REFSEQ	tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda.gbk
@@ -90,4 +90,4 @@ UN	77	.	NC_001416	48471	48471
 UN	78	.	NC_001416	48473	48474
 UN	79	.	NC_001416	48476	48478
 UN	80	.	NC_001416	48502	48502
-LN	81	.	NC_001416	47977	0	47978	0	contiguous=1	frequency=0.00000000e+00	frequency_lower=0.00000000e+00	frequency_upper=1.00000000e+00	gene_name=lambdap79/–	gene_position=intergenic (+33/–)	gene_product=hypothetical protein/–	gene_strand=>/–	haplotypes=GT:0,AC:0,other:16	linked=0	locus_tag=lambdap79/–	new_haplotype=AC	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=GT	score=-4.7	spanning_reads=16
+LN	81	.	NC_001416	47977	0	47978	0	contiguous=1	frequency=0.00000000e+00	frequency_lower=0.00000000e+00	frequency_upper=1.00000000e+00	haplotypes=GT:0,AC:0,other:16	linked=0	new_haplotype=AC	pileup_frequency=1.00000000e+00	realigned=1	ref_haplotype=GT	score=-4.7	spanning_reads=16
