@@ -274,6 +274,11 @@ public:
                           int32_t size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
                           );
   
+  //! Adds original_<key> (and original_<key>_offset inside inserted sequence) for every coordinate
+  //! field of every entry, from the original coordinate map the reference sequences carry after
+  //! mutations were applied to them with tracking on. See cOriginalCoordinateMap.
+  void annotate_original_coordinates(const cReferenceSequences& ref_seq_info);
+
   //! Remove or mark mutations that overlap MASK items in another GD
   void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose,
                       bool mark_instead_of_delete = false);

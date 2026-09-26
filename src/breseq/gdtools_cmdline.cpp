@@ -183,6 +183,7 @@ int do_apply(int argc, char *argv[])
   options("seq-id,s",    "Sequence ID to keep in output. If this argument is provided, other sequences are deleted after the APPLY. May be provided multiple times.");
 	options("polymorphism-mode,p",  "Apply all mutations in GD file regardless of their frequency. By default (without this option) only mutations with 100% frequency are applied.", TAKES_NO_ARGUMENT);
 	options("applied-gd,a",  "Output file name for GD with mutations updated to coordinates in the output sequences.").isOutputFile();
+	options("coordinate-map,m",  "Output file name for a tab-delimited map from the coordinates of the output sequences back to those of the input reference sequences, one block per line (see breseq --apply-check).").isOutputFile();
   options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -265,7 +266,14 @@ int do_apply(int argc, char *argv[])
 		}
 	}
 	
+	if (options.count("coordinate-map")) new_ref_seq_info.start_original_coordinate_tracking();
+
 	gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
+
+	if (options.count("coordinate-map")) {
+		uout("Writing coordinate map file", options["coordinate-map"]);
+		new_ref_seq_info.write_original_coordinates(options["coordinate-map"]);
+	}
 
 	// If seq-id is present keep only certain sequence ids
 	// Keep the order of the --seq-id|-s to allow user to specify this

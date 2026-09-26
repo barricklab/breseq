@@ -25,6 +25,7 @@
 
 #include "genome_diff.h"
 #include "fasta.h"
+#include "original_coordinates.h"
 #include "fastq.h"
 #include "alignment.h"
 #include "anyoption.h"
@@ -635,6 +636,10 @@ public:
 
 
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
+
+      //! Where each base came from in the sequence that mutations were applied to. Inactive
+      //! unless start_original_coordinate_tracking() was called before the mutations were applied.
+      cOriginalCoordinateMap m_original_coordinates;
     
       vector<string> m_genbank_raw_header_lines;   //!< Raw GenBank header linex (except LOCUS and FEATURES)
  
@@ -715,6 +720,23 @@ public:
         return m_fasta_sequence.get_sequence_length();
       }
 
+      // Begin recording, for every base, where it came from in the current sequence. Must be
+      // called before the mutations are applied.
+      void start_original_coordinate_tracking()
+      {
+        m_original_coordinates.reset_identity(get_sequence_length());
+      }
+
+      bool has_original_coordinates() const
+      {
+        return m_original_coordinates.is_active();
+      }
+
+      cOriginalCoordinate original_coordinate(int32_t pos_1) const
+      {
+        return m_original_coordinates.original(pos_1);
+      }
+
       // Replace Sequence with Input
       void replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type="", bool verbose=false);
       
@@ -771,7 +793,12 @@ public:
         copy.m_description = in.m_description;
         copy.m_seq_id = in.m_seq_id;
         copy.m_fasta_sequence = in.m_fasta_sequence;
+        copy.m_original_coordinates = in.m_original_coordinates;
         copy.m_genbank_raw_header_lines = in.m_genbank_raw_header_lines;
+        // Deliberately NOT copied: m_file_name, m_file_format, m_is_contig and the *_loaded_from_file
+        // names. gdtools APPLY writes the copy, and its output must not record the input paths
+        // (WriteGFF's ##original-file-name lines) or change format depending on what was read.
+        // breseq --apply-check, which does need them, carries them over itself.
 
         //Features.
         for (cSequenceFeatureList::iterator it = in.m_features.begin(); it != in.m_features.end(); ++it) {
@@ -1109,6 +1136,26 @@ public:
     {
       (*this)[seq_id].invert_sequence_1(start_1, end_1, mut_type, verbose);
     }
+
+    //! Original coordinate tracking across all sequences (see cOriginalCoordinateMap)
+    void start_original_coordinate_tracking()
+    {
+      for (iterator it = begin(); it != end(); it++) it->start_original_coordinate_tracking();
+    }
+
+    bool has_original_coordinates() const
+    {
+      for (const_iterator it = begin(); it != end(); it++) if (it->has_original_coordinates()) return true;
+      return false;
+    }
+
+    cOriginalCoordinate original_coordinate(const string& seq_id, int32_t pos_1) const
+    {
+      return (*this)[seq_id].original_coordinate(pos_1);
+    }
+
+    void write_original_coordinates(const string& file_name) const;
+    void read_original_coordinates(const string& file_name);
     
     void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, const cLocation&repeated_region, bool verbose = false)
     {

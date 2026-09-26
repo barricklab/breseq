@@ -29,6 +29,17 @@ https://utexas.zoom.us/j/5110250268https://utexas.zoom.us/j/5110250268
 `output/log.txt`\
 The original command line used to invoke _breseq_.
 
+When _breseq_ was run with `--apply-check`, the reads were analyzed against a reference that had
+the mutations in the given GenomeDiff applied to it, and every position in the report is in the
+coordinates of that mutated reference. The header of every page then has a switch, "Show
+positions in: mutant coordinates / original coordinates", that changes every position on the page
+(in the mutation table, the evidence tables and the evidence pages) to the corresponding position
+in the original reference and back. A position inside sequence that an applied mutation inserted
+is shown as the last original base before the insertion plus an offset into the inserted sequence,
+e.g. `14,000+1200`. The choice is remembered as you move between pages. See the `original_*`
+fields in the [GenomeDiff format](genomediff-file-format.md) for the same information in the
+output files.
+
 ## Mutation Display
 
 Each row displays a predicted mutation in the re-sequenced sample relative to the reference. Examples showing how the format varies depending on the type of mutation are provided in the following sections.

@@ -2681,6 +2681,59 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
   return new_seq_string;
 }
   
+// Adds original_<key> and, inside inserted sequence, original_<key>_offset for every coordinate
+// field of every entry. Entries on a sequence with no map, and validation entries, are left alone.
+// The field names are the same for every entry type, so the HTML output can find the original of
+// any coordinate cell by the key it displays.
+void cGenomeDiff::annotate_original_coordinates(const cReferenceSequences& ref_seq_info)
+{
+  // (coordinate key, seq_id key) pairs per entry type
+  typedef vector<pair<string, string> > coordinate_key_list_t;
+  static map<gd_entry_type, coordinate_key_list_t> coordinate_keys;
+  if (coordinate_keys.empty()) {
+    coordinate_key_list_t position_only = make_vector<pair<string, string> >(make_pair(string(POSITION), string(SEQ_ID)));
+    coordinate_key_list_t start_end = make_vector<pair<string, string> >(make_pair(string(START), string(SEQ_ID)))(make_pair(string(END), string(SEQ_ID)));
+    coordinate_key_list_t two_sided = make_vector<pair<string, string> >(make_pair(string(SIDE_1_POSITION), string(SIDE_1_SEQ_ID)))(make_pair(string(SIDE_2_POSITION), string(SIDE_2_SEQ_ID)));
+    coordinate_key_list_t linkage = make_vector<pair<string, string> >(make_pair(string(POSITION), string(SEQ_ID)))(make_pair(string(END), string(SEQ_ID)))(make_pair(string(LN_POSITION_2), string(SEQ_ID)))(make_pair(string(LN_END_2), string(SEQ_ID)));
+
+    const gd_entry_type position_only_types[] = { SNP, SUB, DEL, INS, MOB, AMP, INV, CON, INT, MASK, RA, SC, MP };
+    for (size_t i = 0; i < sizeof(position_only_types) / sizeof(position_only_types[0]); i++) coordinate_keys[position_only_types[i]] = position_only;
+    coordinate_keys[MC] = start_end;
+    coordinate_keys[CN] = start_end;
+    coordinate_keys[UN] = start_end;
+    coordinate_keys[JC] = two_sided;
+    coordinate_keys[DP] = two_sided;
+    coordinate_keys[PD] = two_sided;
+    coordinate_keys[LN] = linkage;
+  }
+
+  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+    cDiffEntry& de = **it;
+    map<gd_entry_type, coordinate_key_list_t>::const_iterator keys_it = coordinate_keys.find(de._type);
+    if (keys_it == coordinate_keys.end()) continue;
+
+    for (coordinate_key_list_t::const_iterator key_it = keys_it->second.begin(); key_it != keys_it->second.end(); key_it++) {
+      const string& coordinate_key = key_it->first;
+      const string& seq_id_key = key_it->second;
+      if (!de.entry_exists(coordinate_key) || !de.entry_exists(seq_id_key)) continue;
+
+      const string& seq_id = de[seq_id_key];
+      if (!ref_seq_info.seq_id_exists(seq_id) || !ref_seq_info[seq_id].has_original_coordinates()) continue;
+
+      int32_t position = from_string<int32_t>(de[coordinate_key]);
+      if ((position < 1) || (position > static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length()))) continue;
+
+      cOriginalCoordinate original = ref_seq_info[seq_id].original_coordinate(position);
+      de["original_" + coordinate_key] = to_string(original.position);
+      if (original.offset > 0) {
+        de["original_" + coordinate_key + "_offset"] = to_string(original.offset);
+      } else {
+        de.erase("original_" + coordinate_key + "_offset");
+      }
+    }
+  }
+}
+
 // This function will use the current GD and apply it to the new_ref_seq_info.
 // When calling this function make SURE that you load ref_seq_info and
 // new_ref_seq_info separately.

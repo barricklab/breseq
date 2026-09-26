@@ -862,6 +862,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   
   //! Settings: Mutation Identification
   user_evidence_genome_diff_file_name = t.user_evidence_genome_diff_file_name;
+  apply_check_genome_diff_file_name = t.apply_check_genome_diff_file_name;
   base_quality_cutoff = t.base_quality_cutoff;
   quality_score_trim = t.quality_score_trim;
   deletion_coverage_propagation_cutoff = t.deletion_coverage_propagation_cutoff;
@@ -1191,6 +1192,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     //! Settings: Mutation Identification
     {"mutation_identification", json{
       {"user_evidence_genome_diff_file_name", s.user_evidence_genome_diff_file_name},
+      {"apply_check_genome_diff_file_name", s.apply_check_genome_diff_file_name},
       {"base_quality_cutoff", s.base_quality_cutoff},
       {"quality_score_trim", s.quality_score_trim},
       {"deletion_coverage_propagation_cutoff", s.deletion_coverage_propagation_cutoff},

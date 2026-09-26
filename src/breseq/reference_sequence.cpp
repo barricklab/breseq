@@ -242,6 +242,7 @@ namespace breseq {
   {
     // verbose = true;
     ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
+    m_original_coordinates.replace(start_1, end_1, replacement_seq.length());
     m_fasta_sequence.replace_sequence_1(start_1, end_1, replacement_seq);
     
     // Temporary variable for the amount to shift the start and end positions
@@ -392,6 +393,7 @@ namespace breseq {
   {
     (void) verbose;
     (void) mut_type;
+    m_original_coordinates.insert(pos_1, insertion_seq.length());
     m_fasta_sequence.insert_sequence_1(pos_1, insertion_seq);
     
     //Variable for insertion length, only want to call the
@@ -464,6 +466,7 @@ namespace breseq {
     (void) mut_type;
     
     string inv_seq = reverse_complement(get_sequence_1(start_1, end_1));
+    m_original_coordinates.invert(start_1, end_1);
     m_fasta_sequence.replace_sequence_1(start_1, end_1, inv_seq);
     
     //Iterate through all the features
@@ -581,6 +584,46 @@ namespace breseq {
     }
     
     this->update_feature_lists();
+  }
+
+  // Original coordinate map of every sequence, one block per line (see cOriginalCoordinateMap::write)
+  void cReferenceSequences::write_original_coordinates(const string& file_name) const
+  {
+    ofstream out(file_name.c_str());
+    ASSERT(out.good(), "Could not open file for writing: " + file_name);
+    cOriginalCoordinateMap::write_header(out);
+    for (const_iterator it = begin(); it != end(); it++) {
+      ASSERT(it->has_original_coordinates(), "Sequence " + it->m_seq_id + " is not tracking original coordinates.");
+      it->m_original_coordinates.write(out, it->m_seq_id);
+    }
+  }
+
+  void cReferenceSequences::read_original_coordinates(const string& file_name)
+  {
+    ifstream in(file_name.c_str());
+    ASSERT(in.good(), "Could not open file for reading: " + file_name);
+    for (iterator it = begin(); it != end(); it++) it->m_original_coordinates.clear();
+
+    string line;
+    while (getline(in, line)) {
+      if (line.empty() || (line[0] == '#')) continue;
+      vector<string> f = split(line, "\t");
+      ASSERT(f.size() == 6, "Malformed line in original coordinate file " + file_name + ":\n" + line);
+      ASSERT(seq_id_exists(f[0]), "Unknown sequence '" + f[0] + "' in original coordinate file " + file_name);
+      int32_t applied_start = from_string<int32_t>(f[1]);
+      int32_t applied_end = from_string<int32_t>(f[2]);
+      cOriginalCoordinateMap::cBlock block(applied_start, applied_end - applied_start + 1, 0, +1);
+      if (f[3] != ".") {
+        block.original_start = from_string<int32_t>(f[3]);
+        block.strand = (f[5] == "-") ? -1 : +1;
+      }
+      (*this)[f[0]].m_original_coordinates.add_block(block);
+    }
+
+    for (iterator it = begin(); it != end(); it++) {
+      ASSERT(it->m_original_coordinates.applied_length() == static_cast<int32_t>(it->get_sequence_length()),
+             "Original coordinate map for sequence " + it->m_seq_id + " in " + file_name + " does not cover the whole sequence.");
+    }
   }
 
   // Repeat features within the given interval, on the given strand,

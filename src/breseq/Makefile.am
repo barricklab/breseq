@@ -58,6 +58,7 @@ libbreseq_la_SOURCES = \
 	mp_evidence.cpp \
 	pd_evidence.cpp \
 	mutation_predictor.cpp \
+	original_coordinates.cpp \
 	portable_random.cpp \
 	output.cpp \
 	pgzstream.cpp \
@@ -96,6 +97,7 @@ libbreseq_la_SOURCES = \
 	pd_evidence.h \
 	json.hpp \
 	mutation_predictor.h \
+	original_coordinates.h \
 	output.h \
 	pgzstream.h \
 	pileup.h \

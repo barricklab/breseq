@@ -83,6 +83,16 @@ Output file containing the mutated reference genome. DEFAULT: "output.\*"
 
 Output format. Possible values: `GENBANK`, `FASTA`, or `GFF3`.
 
+`-m <file_path>, --coordinate-map=<file_path>`
+
+Also write a tab-delimited map from the coordinates of the output sequences back to those of the
+input reference sequences. Each line is one block of the output that came from one stretch of the
+reference: `seq_id`, `applied_start`, `applied_end`, `original_start`, `original_end` and `strand`
+(`-` inside an applied inversion, where the original coordinates run backwards). A block of
+newly inserted sequence has `.` in the last three columns. Together the blocks cover every base
+of the output. This is the map that `breseq --apply-check` uses to report `original_*`
+coordinates.
+
 ### gdtools CONVERT
 
 Usage:

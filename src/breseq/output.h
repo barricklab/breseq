@@ -166,6 +166,12 @@ extern const char* ALIGN_LEFT;
   //! below settings.output_path (e.g. the evidence pages in output/evidence/)
   //! can reach them with a "../" prefix.
   string breseq_header_string(const Settings& settings, const string& path_prefix = "");
+  //! Radio buttons + script that switch every html_coordinate() cell between mutant and original
+  //! reference coordinates (--apply-check only)
+  string breseq_coordinate_toggle_string();
+  //! A position cell the coordinate toggle can switch; returns applied_html unchanged unless the
+  //! entry has an original_<key> field
+  string html_coordinate(const cDiffEntry& c, const string& key, const string& applied_html);
   string mutation_filter_input_string();
 
   

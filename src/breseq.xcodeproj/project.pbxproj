@@ -39,6 +39,7 @@
 		707F349F155D970000F5C89F /* summary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F349E155D970000F5C89F /* summary.cpp */; };
 		707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F34A1155D97B900F5C89F /* reference_sequence.cpp */; };
 		7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7084E56613CFD471005B57D1 /* mutation_predictor.cpp */; };
+		7A0C0000000000000000A001 /* original_coordinates.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A0C0000000000000000A002 /* original_coordinates.cpp */; };
 		7087728812BC1660000F9B57 /* alignment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728712BC1660000F9B57 /* alignment.cpp */; };
 		7087728E12BC169C000F9B57 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728912BC169C000F9B57 /* error_count.cpp */; };
 		7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728A12BC169C000F9B57 /* genome_diff.cpp */; };
@@ -137,6 +138,7 @@
 		707F34A3155D9C9200F5C89F /* reference_sequence.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = reference_sequence.h; path = breseq/reference_sequence.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		707F34A4155D9C9200F5C89F /* summary.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = summary.h; path = breseq/summary.h; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7084E56613CFD471005B57D1 /* mutation_predictor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = mutation_predictor.cpp; path = breseq/mutation_predictor.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		7A0C0000000000000000A002 /* original_coordinates.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = original_coordinates.cpp; path = breseq/original_coordinates.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7087728712BC1660000F9B57 /* alignment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment.cpp; path = breseq/alignment.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7087728912BC169C000F9B57 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = error_count.cpp; path = breseq/error_count.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7087728A12BC169C000F9B57 /* genome_diff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = genome_diff.cpp; path = breseq/genome_diff.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -172,6 +174,7 @@
 		70CB721D140FEB6400D578EB /* genome_diff.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = genome_diff.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB721E140FEB6400D578EB /* identify_mutations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = identify_mutations.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB721F140FEB6400D578EB /* mutation_predictor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = mutation_predictor.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		7A0C0000000000000000A003 /* original_coordinates.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = original_coordinates.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7220140FEB6400D578EB /* output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = output.h; sourceTree = "<group>"; };
 		70CB7221140FEB6400D578EB /* pileup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = pileup.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7222140FEB6400D578EB /* pileup_base.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = pileup_base.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
@@ -268,6 +271,7 @@
 				70160F14202BF3DD004FDA46 /* genome_diff_entry.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
 				7084E56613CFD471005B57D1 /* mutation_predictor.cpp */,
+				7A0C0000000000000000A002 /* original_coordinates.cpp */,
 				70D789D313C3CEB70036BEAB /* output.cpp */,
 				D8C7B5DA3D71C657685BB753 /* pgzstream.cpp */,
 				7087728D12BC169C000F9B57 /* pileup.cpp */,
@@ -333,6 +337,7 @@
 				70CB721E140FEB6400D578EB /* identify_mutations.h */,
 				702C41621FDD88D900D4B159 /* json.hpp */,
 				70CB721F140FEB6400D578EB /* mutation_predictor.h */,
+				7A0C0000000000000000A003 /* original_coordinates.h */,
 				70CB7220140FEB6400D578EB /* output.h */,
 				70CB7221140FEB6400D578EB /* pileup.h */,
 				70CB7222140FEB6400D578EB /* pileup_base.h */,
@@ -537,6 +542,7 @@
 				70D789D413C3CEB70036BEAB /* output.cpp in Sources */,
 				701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */,
 				7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */,
+				7A0C0000000000000000A001 /* original_coordinates.cpp in Sources */,
 				70576A8F2FF1CD6900D7A49D /* cn_evidence.cpp in Sources */,
 				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
 				7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */,

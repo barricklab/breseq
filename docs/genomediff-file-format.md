@@ -492,6 +492,30 @@ _breseq_.
     and complicated cases. See the [Common Curation Cases](tutorial-curation-common-cases.md)
     tutorial for an example.
 
+### Original Coordinates
+
+These attributes are added to every mutation and evidence entry by `breseq --apply-check`, which
+analyzes reads against a reference that had a set of mutations applied to it first. The positional
+fields of the entry are then in the coordinates of that mutated reference, and these give the same
+coordinates in the original reference. There is one for each positional field of the entry type:
+
+-   **original_position**=*\<int32\>* (mutations, `RA`, `SC`, `MP`)
+-   **original_start**=*\<int32\>*, **original_end**=*\<int32\>* (`MC`, `CN`, `UN`)
+-   **original_side_1_position**=*\<int32\>*, **original_side_2_position**=*\<int32\>* (`JC`, `DP`, `PD`)
+-   **original_position**, **original_end**, **original_position_2**, **original_end_2** (`LN`)
+
+    The coordinate of the same base in the original reference. A base of an applied inversion
+    maps to the base it was read from, so coordinates inside one run backwards.
+
+-   **original_\<field\>_offset**=*\<int32\>*
+
+    Present when the base is inside sequence that an applied mutation inserted (an `INS`, `MOB`,
+    the added copies of an `AMP`, or the donor sequence of a `CON`/`INT`), so it has no base of its
+    own in the original reference. `original_<field>` is then the last original base before the
+    inserted sequence (0 if the insertion is at the very start of the sequence), and this is how
+    many bases into the inserted sequence the position lies: an offset of 1 is the first inserted
+    base.
+
 ## Evidence Types
 
 ### RA: Read alignment evidence

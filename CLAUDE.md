@@ -398,6 +398,21 @@ Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PF
 - `alignment_output.h/cpp` — renders HTML alignment views (used by `BAM2ALN` subcommand)
 - `coverage_distribution.h/cpp` — coverage analysis
 - `mutation_predictor.h/cpp` — final mutation prediction logic
+- `original_coordinates.h/cpp` — `cOriginalCoordinateMap`, the applied→original coordinate block map
+  behind `breseq --apply-check` and `gdtools APPLY --coordinate-map`. It is a member of
+  `cAnnotatedSequence` and is updated inside the **three** sequence-editing primitives
+  (`replace_sequence_1`, `insert_sequence_1`, `invert_sequence_1`), so every mutation type in
+  `apply_to_sequences` is covered without per-type code; do not edit `m_fasta_sequence` any other
+  way. It is inactive (a no-op) until `start_original_coordinate_tracking()` is called on the copy
+  the mutations are applied to. Under `--apply-check`, stage 1 applies the GD, writes the applied
+  reference as `data/reference.{fasta,gff3}` and the map as `data/original_coordinates.tsv`; the
+  Output stage re-reads the map (`read_original_coordinates`) and
+  `cGenomeDiff::annotate_original_coordinates` adds `original_<key>` (+ `_offset` inside inserted
+  sequence) for each positional key of each entry type. The HTML helper `html_coordinate()` wraps a
+  position cell in a toggle-able span **only when the entry has that `original_*` field**, and the
+  toggle control/JS is emitted inline by `breseq_coordinate_toggle_string()` rather than in
+  `header_style_string()`, so runs without `--apply-check` produce byte-identical HTML (the
+  `gdtools_compare_*` tests byte-compare expected.html).
 - `anyoption.h/cpp` — command-line option parsing (custom library)
 
 ### Plotting

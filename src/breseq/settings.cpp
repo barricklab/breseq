@@ -371,6 +371,7 @@ namespace breseq
     ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", "", NORMAL_OPTION).isInputFile()
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("user-evidence-gd","User supplied Genome Diff file of JC and/or RA evidence items. The breseq output will report the support for these sequence changes even if they do not pass the normal filters for calling mutations in this sample.", "", NORMAL_OPTION).isInputFile()
+    ("apply-check","Genome Diff file of mutations to apply to the reference sequences before analyzing the reads, to check that they account for the sample. All positions in the output are then in the coordinates of the mutated reference. Every entry in the output Genome Diff files also reports its position in the original reference in original_* fields (original_position, original_start, original_side_1_position, ...), and the HTML report has a toggle to display either set of coordinates. The block map between the two coordinate systems is written to data/original_coordinates.tsv.", "", NORMAL_OPTION).isInputFile()
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -818,6 +819,7 @@ namespace breseq
     // and a subsequent call to init_reference_sequences()
     
     this->user_evidence_genome_diff_file_name = options["user-evidence-gd"];
+    this->apply_check_genome_diff_file_name = options["apply-check"];
     
     this->custom_run_name = options["name"];
     
@@ -1968,6 +1970,7 @@ namespace breseq
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
+		this->original_coordinates_file_name = this->data_path + "/original_coordinates.tsv";
 		this->discordant_pairs_file_name = this->data_path + "/#.discordant_pairs.csv";
 		this->unmapped_reads_fastq_file_name = this->data_path + "/unmapped_reads.fastq.gz";
     this->data_vcf_file_name = this->data_path + "/output.vcf";

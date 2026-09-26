@@ -41,6 +41,34 @@ Number of processors to use in multithreaded steps (DEFAULT=1).
 
 Predict polymorphic mutations. Add this option when you are analyzing mixed population (metagenomic) samples.
 
+`--apply-check <file_path>`
+
+Apply the mutations in this GenomeDiff file to the reference sequences before aligning the reads,
+and analyze the reads against that mutated reference. This checks a curated set of mutations: if
+they account for the sample, the run predicts nothing (or only what the curation missed), and any
+residual call near an applied mutation points at a mistake in its position or size. It is the same
+result as running `gdtools APPLY` first and then _breseq_ on its output, with one difference:
+_breseq_ keeps track of where every base of the mutated reference came from.
+
+All positions in the output are in the coordinates of the mutated reference, which differ from
+those of the original reference after every applied insertion or deletion. So every entry in the
+output GenomeDiff files (`output/output.gd`, `data/output.gd` and `data/annotated.gd`) also carries
+`original_*` fields giving the same coordinates in the original reference: `original_position` for
+mutations and for RA, SC and MP evidence, `original_start`/`original_end` for MC, CN and UN,
+`original_side_1_position`/`original_side_2_position` for JC, DP and PD, and
+`original_position`/`original_end`/`original_position_2`/`original_end_2` for LN. A position that
+falls inside newly inserted sequence (an applied INS, MOB, AMP copy or CON/INT donor) has no base
+of its own in the original reference; it is reported as the last original base before the
+insertion, together with an `original_<field>_offset` saying that it is that many bases into the
+inserted sequence. The HTML report has a switch in the header of every page that shows positions
+in either set of coordinates (a position inside inserted sequence appears there as, for example,
+`14,000+1200`). The block map between the two coordinate systems is written to
+`data/original_coordinates.tsv`; `gdtools APPLY --coordinate-map` writes the same file.
+
+Entries in the applied GenomeDiff must be valid against the reference (the run stops otherwise),
+and polymorphic mutations (a `frequency` other than 1) are skipped with a warning, exactly as in
+`gdtools APPLY`.
+
 `--no-linkage`, `--no-local-realignment`, `--linkage-window <bp>`
 
 In polymorphism mode, adjacent read alignment (RA) columns whose variant alleles occur in the same

@@ -969,6 +969,7 @@ namespace breseq{
     
     //! Settings: Mutation Identification
     string user_evidence_genome_diff_file_name;
+    string apply_check_genome_diff_file_name;
     uint32_t base_quality_cutoff;
     uint32_t quality_score_trim;
     double deletion_coverage_propagation_cutoff;

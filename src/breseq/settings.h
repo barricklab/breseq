@@ -469,6 +469,11 @@ namespace breseq
     //! Settings: Mutation Identification
     
     string user_evidence_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
+
+    //! Genome Diff whose mutations are applied to the reference sequences before the analysis.
+    //! Every position in the output is then in the coordinates of the mutated reference, and each
+    //! GD entry also carries original_* fields giving the same position in the original reference.
+    string apply_check_genome_diff_file_name;   // Default = none COMMAND-LINE OPTION
     
     //! ignore bases below this cutoff for RA evidence (still counted for deletions?)
     uint32_t base_quality_cutoff;                         // Default 3    COMMAND-LINE OPTION
@@ -849,6 +854,8 @@ namespace breseq
     string reference_fasta_file_name;
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
+    //! Block map from mutated-reference coordinates to original ones, written by --apply-check
+    string original_coordinates_file_name;
     string unmapped_reads_fastq_file_name;
 
     string data_vcf_file_name;

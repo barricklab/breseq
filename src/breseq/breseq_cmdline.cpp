@@ -1574,6 +1574,38 @@ int breseq_default_action(int argc, char* argv[])
                                 settings.all_reference_file_names,
                                 settings.genbank_field_for_seq_id
                                 );
+
+    // --apply-check: the reads are analyzed against the reference with these mutations applied.
+    // The applied copy tracks where each of its bases came from, and that map is what the Output
+    // stage uses to report original coordinates next to every position.
+    if (settings.apply_check_genome_diff_file_name != "") {
+      cerr << "  APPLYING MUTATIONS::" << settings.apply_check_genome_diff_file_name << endl;
+      cGenomeDiff apply_gd(settings.apply_check_genome_diff_file_name);
+      apply_gd.valid_with_reference_sequences(conv_ref_seq_info);
+      cReferenceSequences applied_ref_seq_info = cReferenceSequences::deep_copy(conv_ref_seq_info);
+      // deep_copy leaves the file provenance behind on purpose (see it); the GFF3 written below
+      // must still say which input file each sequence came from, since init_reference_sets() reads
+      // that back to tell contig and junction-only references apart.
+      for (size_t i = 0; i < conv_ref_seq_info.size(); i++) {
+        applied_ref_seq_info[i].m_file_name = conv_ref_seq_info[i].m_file_name;
+        applied_ref_seq_info[i].m_file_format = conv_ref_seq_info[i].m_file_format;
+        applied_ref_seq_info[i].m_is_contig = conv_ref_seq_info[i].m_is_contig;
+      }
+      applied_ref_seq_info.start_original_coordinate_tracking();
+      uint64_t original_length = conv_ref_seq_info.get_total_length();
+      apply_gd.apply_to_sequences(conv_ref_seq_info, applied_ref_seq_info, settings.verbose);
+      applied_ref_seq_info.write_original_coordinates(settings.original_coordinates_file_name);
+      // apply_to_sequences skips (and warns about) polymorphic mutations, so count what it applied
+      diff_entry_list_t applied_mutation_list = apply_gd.mutation_list();
+      size_t num_applied = 0;
+      for (diff_entry_list_t::iterator it = applied_mutation_list.begin(); it != applied_mutation_list.end(); it++) {
+        if (!(*it)->entry_exists(FREQUENCY) || (from_string<double>((**it)[FREQUENCY]) == 1.0)) num_applied++;
+      }
+      cerr << "    Applied " << num_applied << " mutations. Reference length "
+           << original_length << " -> " << applied_ref_seq_info.get_total_length() << " bases." << endl;
+      conv_ref_seq_info = applied_ref_seq_info;
+    }
+
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
     s.total_reference_sequence_length = conv_ref_seq_info.get_total_length();
@@ -2760,6 +2792,12 @@ int breseq_default_action(int argc, char* argv[])
         mask_gd.read(settings.mask_genome_diff_file_name);
         bool mask_only_small = (settings.mask_mode == "SMALL");
         mpgd.mask_mutations(mask_gd, mask_only_small, settings.verbose, true);
+      }
+
+      // --apply-check: every entry also reports where its coordinates fall in the original reference
+      if (settings.apply_check_genome_diff_file_name != "") {
+        ref_seq_info.read_original_coordinates(settings.original_coordinates_file_name);
+        mpgd.annotate_original_coordinates(ref_seq_info);
       }
 
       // Add metadata that will only be in the output.gd file

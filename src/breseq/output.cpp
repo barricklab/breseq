@@ -153,6 +153,23 @@ string nonbreaking(const string& input)
   return retval;
 }
 /*-----------------------------------------------------------------------------
+ *  A coordinate cell that the coordinate toggle can switch between the mutated
+ *  and the original reference (see breseq_coordinate_toggle_string). The text
+ *  is wrapped only when the entry carries the original coordinate of 'key',
+ *  which it does only under breseq --apply-check, so every other page is
+ *  unchanged. applied_html must already be in its final (nonbreaking) form:
+ *  it is copied into an attribute, and nonbreaking() would mangle the tag.
+ *-----------------------------------------------------------------------------*/
+string html_coordinate(const cDiffEntry& c, const string& key, const string& applied_html)
+{
+  string original_key = "original_" + key;
+  if (!c.entry_exists(original_key)) return applied_html;
+  string original = commify(c.get(original_key));
+  if (c.entry_exists(original_key + "_offset")) original += "+" + c.get(original_key + "_offset");
+  return "<span class=\"breseq-coord\" data-applied=\"" + applied_html + "\" data-original=\"" + original + "\">" + applied_html + "</span>";
+}
+
+/*-----------------------------------------------------------------------------
  *  HTML Utility for Encoding HTML
  *-----------------------------------------------------------------------------*/
 string html_escape(const string& input)
@@ -1558,6 +1575,17 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "</tr>" << endl;
   HTML << "</table>" << endl;
 
+  if (!settings.apply_check_genome_diff_file_name.empty()) {
+    HTML << "<p>" << b("Applied mutations: ") << "the mutations in "
+         << html_escape(settings.apply_check_genome_diff_file_name)
+         << " were applied to the reference sequences before the reads were aligned, so the lengths above and "
+         << "every position in this report are those of the mutated reference. Use the coordinate toggle in the page "
+         << "header to show positions in the original reference instead. A position inside newly inserted sequence "
+         << "is then shown as the last original base before the insertion plus an offset (e.g. 14,000+1200). "
+         << "The same information is in the original_* fields of the output Genome Diff files, and the block map "
+         << "between the two coordinate systems is in data/original_coordinates.tsv." << endl;
+  }
+
   HTML << "<p>" << "<b>fit relative_variance</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
   
   if (one_failed_fit) {
@@ -1919,7 +1947,44 @@ string breseq_header_string(const Settings& settings, const string& path_prefix)
   ss << " | " << endl;
   ss << a(path_prefix + Settings::relative_path(settings.log_file_name, settings.output_path), "command line log");
   ss << endl;
+  if (!settings.apply_check_genome_diff_file_name.empty() && !settings.no_javascript) {
+    ss << "<br>" << breseq_coordinate_toggle_string() << endl;
+  }
   ss << "</td></tr></table>" << endl;
+  return ss.str();
+}
+
+/*-----------------------------------------------------------------------------
+ *  Under --apply-check, positions are in the coordinates of the mutated
+ *  reference. This control switches every html_coordinate() cell on the page
+ *  to the original reference's coordinates and back. The choice is remembered
+ *  in localStorage so it carries across the report's pages (and is simply not
+ *  remembered where storage is unavailable, e.g. some file:// sandboxes).
+ *  Emitted inline here rather than in header_style_string()/javascript_string()
+ *  so that pages without --apply-check are byte-identical to before.
+ *-----------------------------------------------------------------------------*/
+string breseq_coordinate_toggle_string()
+{
+  stringstream ss;
+  ss << "<span class=\"breseq-coordinate-toggle\">Show positions in: "
+     << "<label><input type=\"radio\" name=\"breseq_coordinates\" value=\"applied\" checked=\"checked\" onclick=\"breseqSetCoordinates('applied')\" /> mutant coordinates</label> "
+     << "<label><input type=\"radio\" name=\"breseq_coordinates\" value=\"original\" onclick=\"breseqSetCoordinates('original')\" /> original coordinates</label>"
+     << "</span>" << endl;
+  ss << "<script type=\"text/javascript\">\n"
+        "function breseqSetCoordinates(mode) {\n"
+        "  var attr = (mode == 'original') ? 'data-original' : 'data-applied';\n"
+        "  var spans = document.getElementsByClassName('breseq-coord');\n"
+        "  for (var i = 0; i < spans.length; i++) spans[i].textContent = spans[i].getAttribute(attr);\n"
+        "  var radios = document.getElementsByName('breseq_coordinates');\n"
+        "  for (var j = 0; j < radios.length; j++) radios[j].checked = (radios[j].value == mode);\n"
+        "  try { localStorage.setItem('breseq_coordinates', mode); } catch (e) {}\n"
+        "}\n"
+        "document.addEventListener('DOMContentLoaded', function() {\n"
+        "  var mode = 'applied';\n"
+        "  try { mode = localStorage.getItem('breseq_coordinates') || 'applied'; } catch (e) {}\n"
+        "  if (mode == 'original') breseqSetCoordinates('original');\n"
+        "});\n"
+        "</script>" << endl;
   return ss.str();
 }
 
@@ -2305,7 +2370,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
      }
 
     ss << td(ALIGN_CENTER, nonbreaking(c[SEQ_ID]));
-    ss << td(ALIGN_RIGHT, commify(c[POSITION ]));
+    ss << td(ALIGN_RIGHT, html_coordinate(c, POSITION, commify(c[POSITION])));
     ss << td(ALIGN_RIGHT, c[INSERT_POSITION]);
     ss << td(ALIGN_CENTER, c[REF_BASE]);
     ss << td(ALIGN_CENTER, c[NEW_BASE]);
@@ -2539,19 +2604,19 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
         ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "&divide;")) << endl;
     }
 
-    string start = c[START];
+    string start = html_coordinate(c, START, c[START]);
     if (from_string<uint32_t>(c[START_RANGE]) > 0)
     {
-      start += "–" +
+      start += nonbreaking("–" +
         to_string(from_string<uint32_t>(c[START]) +
-                  from_string<uint32_t>(c[START_RANGE]));
+                  from_string<uint32_t>(c[START_RANGE])));
     }
-    string end = c[END];
+    string end = html_coordinate(c, END, c[END]);
     if (from_string<uint32_t>(c[END_RANGE]) > 0)
     {
-       end += "–" +
+       end += nonbreaking("–" +
          to_string(from_string<uint32_t>(c[END]) -
-                   from_string<uint32_t>(c[END_RANGE]));
+                   from_string<uint32_t>(c[END_RANGE])));
     }
 
     string size = to_string(from_string<uint32_t>(c[END]) - from_string<uint32_t>(c[START]) + 1);
@@ -2572,8 +2637,8 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
     }
      
     ss << td(nonbreaking(c[SEQ_ID])) << endl;
-    ss << td(ALIGN_RIGHT, nonbreaking(start)) << endl;
-    ss << td(ALIGN_RIGHT, nonbreaking(end)) << endl;
+    ss << td(ALIGN_RIGHT, start) << endl;
+    ss << td(ALIGN_RIGHT, end) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(size)) << endl;
     ss << td(ALIGN_CENTER, nonbreaking(c[LEFT_OUTSIDE_COV] + " [" + c[LEFT_INSIDE_COV] + "]")) <<endl;
     ss << td(ALIGN_CENTER, nonbreaking( "[" + c[RIGHT_INSIDE_COV] + "] " + c[RIGHT_OUTSIDE_COV])) << endl;
@@ -2699,10 +2764,10 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
        
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
-                c[key + "_position"] + "&nbsp;=");
+                html_coordinate(c, key + "_position", c[key + "_position"]) + "&nbsp;=");
       } else {
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
-                "=&nbsp;" + c[key + "_position"]);
+                "=&nbsp;" + html_coordinate(c, key + "_position", c[key + "_position"]));
       }
       
       ss << td("align=\"center\" class=\"" + annotate_key +"\"",
@@ -2765,10 +2830,10 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
-                c[key + "_position"] + "&nbsp;=") << endl;
+                html_coordinate(c, key + "_position", c[key + "_position"]) + "&nbsp;=") << endl;
       } else {
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
-                "=&nbsp;" + c[key + "_position"]) << endl;
+                "=&nbsp;" + html_coordinate(c, key + "_position", c[key + "_position"])) << endl;
       }
       
       ss << td("align=\"center\" class=\"" + annotate_key +"\"",
@@ -3548,9 +3613,9 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
       ss << td("rowspan=\"1\"" + ak1, nonbreaking(c[key + "_seq_id"])) << endl;
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
-        ss << td("align=\"center\"" + ak1, c[key + "_position"] + "&nbsp;=");
+        ss << td("align=\"center\"" + ak1, html_coordinate(c, key + "_position", c[key + "_position"]) + "&nbsp;=");
       } else {
-        ss << td("align=\"center\"" + ak1, "=&nbsp;" + c[key + "_position"]);
+        ss << td("align=\"center\"" + ak1, "=&nbsp;" + html_coordinate(c, key + "_position", c[key + "_position"]));
       }
 
       // "<pairs> (<relative coverage>)", the same shape as the JC table's per-side "reads (cov)" cell,
@@ -3604,9 +3669,9 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
       ss << td("rowspan=\"1\"" + ak2, nonbreaking(c[key + "_seq_id"])) << endl;
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
-        ss << td("align=\"center\"" + ak2, c[key + "_position"] + "&nbsp;=") << endl;
+        ss << td("align=\"center\"" + ak2, html_coordinate(c, key + "_position", c[key + "_position"]) + "&nbsp;=") << endl;
       } else {
-        ss << td("align=\"center\"" + ak2, "=&nbsp;" + c[key + "_position"]) << endl;
+        ss << td("align=\"center\"" + ak2, "=&nbsp;" + html_coordinate(c, key + "_position", c[key + "_position"])) << endl;
       }
 
       // "<pairs> (<relative coverage>)", the same shape as the JC table's per-side "reads (cov)" cell,
@@ -3709,8 +3774,8 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
       ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*" )) << endl;
     
     ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
-    ss << td(ALIGN_LEFT, nonbreaking(c[START])) << endl;
-    ss << td(ALIGN_LEFT, nonbreaking(c[END])) << endl;
+    ss << td(ALIGN_LEFT, html_coordinate(c, START, nonbreaking(c[START]))) << endl;
+    ss << td(ALIGN_LEFT, html_coordinate(c, END, nonbreaking(c[END]))) << endl;
 
     ss << td(ALIGN_CENTER, nonbreaking(c["tile_size"])) << endl;
     ss << td(ALIGN_CENTER, nonbreaking(c["copy_number"])) << endl;
@@ -3800,7 +3865,7 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
       ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
 
     ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
-    ss << td(ALIGN_RIGHT, nonbreaking(c[POSITION])) << endl;
+    ss << td(ALIGN_RIGHT, html_coordinate(c, POSITION, nonbreaking(c[POSITION]))) << endl;
 
     string dir_str = (c[STRAND] == "-1") ? "&larr;" : "&rarr;";
     ss << td(ALIGN_CENTER, dir_str) << endl;
@@ -3913,7 +3978,7 @@ string html_missing_pair_table_string(diff_entry_list_t& list_ref, bool show_det
       ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
 
     ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
-    ss << td(ALIGN_RIGHT, nonbreaking(c[POSITION])) << endl;
+    ss << td(ALIGN_RIGHT, html_coordinate(c, POSITION, nonbreaking(c[POSITION]))) << endl;
 
     // The direction the supporting reads point: toward the missing sequence. A strand of -1 keeps
     // the flank to the LEFT of the position, so the insert lies to the right.
@@ -4011,17 +4076,17 @@ string html_read_linkage_table_string(diff_entry_list_t& list_ref, bool show_det
 
     // Columns are written in RA notation: position.insert_position, with .0 (the reference base
     // itself) left implicit.
-    string first = c[POSITION] + ((c[INSERT_POSITION] != "0") ? "." + c[INSERT_POSITION] : "");
-    string last  = c[END] + ((c[LN_INSERT_END] != "0") ? "." + c[LN_INSERT_END] : "");
+    string first = html_coordinate(c, POSITION, c[POSITION]) + ((c[INSERT_POSITION] != "0") ? "." + c[INSERT_POSITION] : "");
+    string last  = html_coordinate(c, END, c[END]) + ((c[LN_INSERT_END] != "0") ? "." + c[LN_INSERT_END] : "");
     string columns = (first == last) ? first : first + "&ndash;" + last;
     if (!contiguous) {
-      string first_2 = c[LN_POSITION_2] + ((c[LN_INSERT_POSITION_2] != "0") ? "." + c[LN_INSERT_POSITION_2] : "");
-      string last_2  = c[LN_END_2] + ((c[LN_INSERT_END_2] != "0") ? "." + c[LN_INSERT_END_2] : "");
-      columns += " / " + ((first_2 == last_2) ? first_2 : first_2 + "&ndash;" + last_2);
+      string first_2 = html_coordinate(c, LN_POSITION_2, c[LN_POSITION_2]) + ((c[LN_INSERT_POSITION_2] != "0") ? "." + c[LN_INSERT_POSITION_2] : "");
+      string last_2  = html_coordinate(c, LN_END_2, c[LN_END_2]) + ((c[LN_INSERT_END_2] != "0") ? "." + c[LN_INSERT_END_2] : "");
+      columns += "&nbsp;/&nbsp;" + ((first_2 == last_2) ? first_2 : first_2 + "&ndash;" + last_2);
     }
 
     ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
-    ss << td(ALIGN_RIGHT, nonbreaking(columns)) << endl;
+    ss << td(ALIGN_RIGHT, columns) << endl;
     ss << td(ALIGN_CENTER, contiguous ? "adjacent" : "nearby") << endl;
     ss << td(ALIGN_CENTER, nonbreaking(c[LN_REF_HAPLOTYPE] + "&rarr;" + c[LN_NEW_HAPLOTYPE])) << endl;
 
@@ -4145,10 +4210,10 @@ string html_pair_distance_table_string(diff_entry_list_t& list_ref, bool show_de
 
     // One position, not two: the sides are adjacent unless reference bases were lost, and the size
     // column already says how many that was.
-    string pos_str = c[SIDE_1_POSITION];
+    string pos_str = html_coordinate(c, SIDE_1_POSITION, nonbreaking(c[SIDE_1_POSITION]));
     if (c.entry_exists("snapped_to_junction"))
       pos_str += "&nbsp;&bull;";   // located by a split-read junction, so exact to the base
-    ss << td(ALIGN_RIGHT, nonbreaking(pos_str)) << endl;
+    ss << td(ALIGN_RIGHT, pos_str) << endl;
 
     // The sign IS the call, so it is carried on the size itself: "-200 bp" means 200 bases of
     // reference sequence are missing from the sample (its pairs map that much FARTHER apart than the
@@ -5580,7 +5645,7 @@ void Html_Mutation_Table_String::Item_Lines()
     }
     
     // Embellish with insert position and phylogeny ID information.
-    string position_str = mut[HTML_POSITION];
+    string position_str = html_coordinate(mut, POSITION, mut[HTML_POSITION]);
     if (mut.entry_exists(INSERT_POSITION) && !mut.entry_exists("_dont_print_insert_position") ) {
       if (mut[INSERT_POSITION] != "0") {
         position_str += nonbreaking(":" + mut[INSERT_POSITION]);
@@ -5609,7 +5674,7 @@ void Html_Mutation_Table_String::Item_Lines()
     }
     if (settings.lenski_format) {
       ss << "<!-- Lenski Format -->" << endl;
-      ss << td(string(CLASS_POSITION)+" "+string(ALIGN_CENTER), mut[HTML_POSITION]) << endl;
+      ss << td(string(CLASS_POSITION)+" "+string(ALIGN_CENTER), html_coordinate(mut, POSITION, mut[HTML_POSITION])) << endl;
     } else {
       ss << td(string(CLASS_ANNOTATION)+" "+string(ALIGN_CENTER), mut[HTML_MUTATION_ANNOTATION]) << endl;
       ss << td(string(CLASS_GENE)+" "+string(ALIGN_CENTER), mut[HTML_GENE_NAME]) << endl;
