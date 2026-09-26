@@ -4250,44 +4250,53 @@ double identify_mutations_pileup::haplotype_profile_log10_likelihood(const vecto
   return log10_likelihood;
 }
 
-/*! Write the selected haplotypes' total fitted frequency and its profile-likelihood bounds (see write_RA_frequency_bounds). */
+/*! Profile-likelihood bounds on the selected haplotypes' total frequency (see write_RA_frequency_bounds). */
+void identify_mutations_pileup::haplotype_frequency_bounds(const vector<haplotype_observation>& obs, const haplotype_model& m, const vector<bool>& which, double& lower, double& upper) const
+{
+  lower = 0.0; upper = 1.0;
+  if ((m.n == 0) || (which.size() != m.f.size())) return;
+
+  double f_total = 0.0;
+  for (size_t h = 0; h < m.f.size(); h++) { if (which[h]) f_total += m.f[h]; }
+
+  const double pl_max = haplotype_profile_log10_likelihood(obs, m, which, f_total);
+  const double target = pl_max - kProfileLikelihoodLog10Drop;
+
+  if (haplotype_profile_log10_likelihood(obs, m, which, 0.0) >= target) {
+    lower = 0.0;
+  } else {
+    double lo = 0.0, hi = f_total;
+    for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+      double mid = 0.5 * (lo + hi);
+      if (haplotype_profile_log10_likelihood(obs, m, which, mid) >= target) hi = mid;
+      else                                                                    lo = mid;
+    }
+    lower = hi;
+  }
+
+  if (haplotype_profile_log10_likelihood(obs, m, which, 1.0) >= target) {
+    upper = 1.0;
+  } else {
+    double lo = f_total, hi = 1.0;
+    for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
+      double mid = 0.5 * (lo + hi);
+      if (haplotype_profile_log10_likelihood(obs, m, which, mid) >= target) lo = mid;
+      else                                                                    hi = mid;
+    }
+    upper = lo;
+  }
+}
+
+/*! Write the selected haplotypes' total fitted frequency and its profile-likelihood bounds. */
 void identify_mutations_pileup::write_haplotype_frequency(cDiffEntry& de, const vector<haplotype_observation>& obs, const haplotype_model& m, const vector<bool>& which) const
 {
   double f_hat = 0.0, lower = 0.0, upper = 1.0;
 
   if ((m.n > 0) && (which.size() == m.f.size())) {
-    double f_total = 0.0;
-    for (size_t h = 0; h < m.f.size(); h++) { if (which[h]) f_total += m.f[h]; }
-    f_hat = f_total;
+    for (size_t h = 0; h < m.f.size(); h++) { if (which[h]) f_hat += m.f[h]; }
     // Below the half-read level the fit is reporting an absent component asymptotically, not a call.
     if (f_hat < 0.5 / static_cast<double>(m.n)) f_hat = 0.0;
-
-    const double pl_max = haplotype_profile_log10_likelihood(obs, m, which, f_total);
-    const double target = pl_max - kProfileLikelihoodLog10Drop;
-
-    if (haplotype_profile_log10_likelihood(obs, m, which, 0.0) >= target) {
-      lower = 0.0;
-    } else {
-      double lo = 0.0, hi = f_total;
-      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
-        double mid = 0.5 * (lo + hi);
-        if (haplotype_profile_log10_likelihood(obs, m, which, mid) >= target) hi = mid;
-        else                                                                    lo = mid;
-      }
-      lower = hi;
-    }
-
-    if (haplotype_profile_log10_likelihood(obs, m, which, 1.0) >= target) {
-      upper = 1.0;
-    } else {
-      double lo = f_total, hi = 1.0;
-      for (uint32_t i = 0; (i < 40) && ((hi - lo) > _polymorphism_precision_decimal); i++) {
-        double mid = 0.5 * (lo + hi);
-        if (haplotype_profile_log10_likelihood(obs, m, which, mid) >= target) lo = mid;
-        else                                                                    hi = mid;
-      }
-      upper = lo;
-    }
+    haplotype_frequency_bounds(obs, m, which, lower, upper);
   }
 
   de[FREQUENCY] = formatted_double(f_hat, _polymorphism_precision_places, true).to_string();
@@ -4295,16 +4304,78 @@ void identify_mutations_pileup::write_haplotype_frequency(cDiffEntry& de, const 
   de[FREQUENCY_UPPER] = formatted_double(upper, _polymorphism_precision_places, true).to_string();
 }
 
+/*! Write every haplotype's call onto a contiguous LN.
+
+  For each haplotype h of the run (index 0 = reference): its fitted frequency, and for the
+  non-reference ones the presence score (the fit with the haplotype's components held out against
+  the full fit, Bonferroni-corrected like every score here), the profile-likelihood bounds, and the
+  same verdict test_RA_evidence_POLYMORPHISM_mode applies to a column:
+
+    consensus     score >= the consensus (mutation) score cutoff AND upper bound >= the consensus
+                  frequency cutoff (cannot rule out that it is fixed)
+    polymorphism  otherwise, score >= the polymorphism score cutoff AND lower bound >= the
+                  polymorphism frequency cutoff (confidently present)
+    none          otherwise
+
+  The decision is made here, once, so that the predictor only reads it. The all-variant haplotype
+  (index 1) is also written under the plain frequency/score keys, and linked=1 says it is called.
+*/
+void identify_mutations_pileup::write_haplotype_calls(cDiffEntry& ln, const vector<string>& haplotypes, const vector<haplotype_observation>& obs,
+                                                      const haplotype_model& m, const vector<vector<bool> >& masks) const
+{
+  const size_t n_haplotypes = haplotypes.size();
+  const double present_threshold = (m.n > 0) ? 0.5 / static_cast<double>(m.n) : 1.0;
+
+  string frequencies, lowers, uppers, scores, predictions;
+  for (size_t h = 0; h < n_haplotypes; h++) {
+    double f = 0.0;
+    for (size_t k = 0; k < m.f.size(); k++) { if (masks[h][k]) f += m.f[k]; }
+    if (f < present_threshold) f = 0.0;
+    if (!frequencies.empty()) frequencies += ",";
+    frequencies += haplotypes[h] + ":" + formatted_double(f, _polymorphism_precision_places, true).to_string();
+    if (h == 0) continue;
+
+    double score = haplotype_presence_score(obs, m, masks[h]);
+    double lower = 0.0, upper = 1.0;
+    haplotype_frequency_bounds(obs, m, masks[h], lower, upper);
+
+    string prediction = "none";
+    if (!std::isnan(score) && (score >= _consensus_score_cutoff)
+        && ((_settings.consensus_frequency_cutoff <= 0.0) || (upper >= _settings.consensus_frequency_cutoff))) {
+      prediction = "consensus";
+    } else if (!std::isnan(score) && (score >= _polymorphism_score_cutoff)
+               && ((_settings.polymorphism_frequency_cutoff <= 0.0) || (lower >= _settings.polymorphism_frequency_cutoff))) {
+      prediction = "polymorphism";
+    }
+
+    string sep = (h > 1) ? "," : "";
+    scores += sep + haplotypes[h] + ":" + formatted_double(score, kMutationScorePrecision).to_string();
+    lowers += sep + haplotypes[h] + ":" + formatted_double(lower, _polymorphism_precision_places, true).to_string();
+    uppers += sep + haplotypes[h] + ":" + formatted_double(upper, _polymorphism_precision_places, true).to_string();
+    predictions += sep + haplotypes[h] + ":" + prediction;
+
+    if (h == 1) {
+      ln[FREQUENCY] = formatted_double(f, _polymorphism_precision_places, true).to_string();
+      ln[FREQUENCY_LOWER] = formatted_double(lower, _polymorphism_precision_places, true).to_string();
+      ln[FREQUENCY_UPPER] = formatted_double(upper, _polymorphism_precision_places, true).to_string();
+      ln[SCORE] = formatted_double(score, kMutationScorePrecision).to_string();
+      ln[LN_LINKED] = (prediction != "none") ? "1" : "0";
+    }
+  }
+  ln[LN_HAPLOTYPE_FREQUENCIES] = frequencies;
+  ln[LN_HAPLOTYPE_FREQUENCY_LOWER] = lowers;
+  ln[LN_HAPLOTYPE_FREQUENCY_UPPER] = uppers;
+  ln[LN_HAPLOTYPE_SCORES] = scores;
+  ln[LN_HAPLOTYPE_PREDICTIONS] = predictions;
+}
+
 /*! Write the LN entry for a run of two or more adjacent candidate columns.
 
-  linked=1 means the predictor should join the run's RA columns into ONE mutation carrying the
-  all-variant haplotype's frequency. That requires, all at once: the all-variant haplotype is
-  present (its presence score clears the polymorphism cutoff) at a frequency above the polymorphism
-  frequency cutoff; it accounts for at least --linkage-merge-fraction of every column's own variant
-  frequency, so no column's variant is mostly on some other haplotype; and no PARTIAL haplotype --
-  one carrying some but not all of the variant alleles -- is itself present above the frequency
-  cutoff, since that would be a second, separate event. Otherwise the LN is still written (linked=0)
-  so the haplotype counts can be inspected, and the columns stay separate mutations.
+  Every haplotype the run's reads support is fit together and each gets its own call
+  (write_haplotype_calls): the predictor then reports every called haplotype as a mutation of its
+  own, so an A-only lineage and an AC lineage at the same site come out as INS A and INS AC at
+  their own frequencies, rather than as one column's frequency plus a nested second insertion.
+  linked=1 records that the all-variant haplotype itself is called.
 */
 diff_entry_ptr_t identify_mutations_pileup::write_contiguous_LN(const linked_run& run, const vector<haplotype_observation>& obs,
                                                                 const vector<uint32_t>& observed_counts, uint32_t spanning_reads)
@@ -4335,29 +4406,9 @@ diff_entry_ptr_t identify_mutations_pileup::write_contiguous_LN(const linked_run
 
   vector<bool> all(n_haplotypes, true);
   haplotype_model m = fit_haplotype_frequencies(obs, all);
-  const size_t variant_h = 1;
-  double score = haplotype_presence_score(obs, m, one_haplotype(n_haplotypes, variant_h));
-  ln[SCORE] = formatted_double(score, kMutationScorePrecision).to_string();
-  write_haplotype_frequency(ln, obs, m, one_haplotype(n_haplotypes, variant_h));
-
-  const double f_variant = m.f[variant_h];
-  const double present_threshold = (m.n > 0) ? 0.5 / static_cast<double>(m.n) : 1.0;
-  bool linked = !std::isnan(score) && (score >= _polymorphism_score_cutoff)
-              && (f_variant >= _settings.polymorphism_frequency_cutoff);
-  for (size_t c = 0; linked && (c < run.columns.size()); c++) {
-    if (f_variant < _settings.linkage_merge_fraction * run.columns[c].variant_frequency) linked = false;
-  }
-  for (size_t h = 2; linked && (h < n_haplotypes); h++) {
-    // A partial haplotype carries a variant allele at some column and not at another.
-    bool has_variant = false, lacks_variant = false;
-    for (size_t c = 0; c < run.columns.size(); c++) {
-      if (run.haplotypes[h][c] == run.columns[c].variant_base) has_variant = true;
-      else lacks_variant = true;
-    }
-    if (has_variant && lacks_variant && (m.f[h] >= present_threshold)
-        && (m.f[h] >= _settings.polymorphism_frequency_cutoff)) linked = false;
-  }
-  ln[LN_LINKED] = linked ? "1" : "0";
+  vector<vector<bool> > masks(n_haplotypes);
+  for (size_t h = 0; h < n_haplotypes; h++) masks[h] = one_haplotype(n_haplotypes, h);
+  write_haplotype_calls(ln, run.haplotypes, obs, m, masks);
   ln[LN_REALIGNED] = "0";
 
   return _gd.add(ln);
@@ -4798,26 +4849,18 @@ void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t en
 
   vector<bool> all(n_joint, true);
   haplotype_model m = fit_haplotype_frequencies(obs, all);
-  const double present_threshold = (m.n > 0) ? 0.5 / static_cast<double>(m.n) : 1.0;
 
   for (size_t i = 0; i < n_members; i++) {
     const realignment_candidate& member = _realignment_candidates[begin + i];
     const size_t n_member_haplotypes = member.haplotypes.size();
 
-    // The joint haplotypes carrying this member's all-variant string.
-    vector<bool> variant_joint(n_joint, false);
-    for (size_t t = 0; t < n_joint; t++) variant_joint[t] = (tuples[t][i] == 1);
-
-    double score = haplotype_presence_score(obs, m, variant_joint);
+    // masks[h]: the joint haplotypes carrying this member's haplotype h.
+    vector<vector<bool> > masks(n_member_haplotypes, vector<bool>(n_joint, false));
+    for (size_t t = 0; t < n_joint; t++) masks[tuples[t][i]][t] = true;
 
     cDiffEntry& entry = *member.entry;
     entry[LN_PILEUP_FREQUENCY] = entry[FREQUENCY];
     entry[LN_REALIGNED] = "1";
-    write_haplotype_frequency(entry, obs, m, variant_joint);
-
-    // This member's frequency over each of its own haplotypes, summed over the joint ones.
-    vector<double> member_f(n_member_haplotypes, 0.0);
-    for (size_t t = 0; t < n_joint; t++) member_f[tuples[t][i]] += m.f[t];
 
     if (member.is_run) {
       // Reads by the member haplotype their best joint haplotype carries.
@@ -4835,29 +4878,17 @@ void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t en
       if (ambiguous > 0) haplotype_counts += ",other:" + to_string<uint32_t>(ambiguous);
       entry[LN_HAPLOTYPES] = haplotype_counts;
       entry[LN_SPANNING_READS] = to_string<uint32_t>(static_cast<uint32_t>(_fetched_reads.size()));
-      entry[SCORE] = formatted_double(score, kMutationScorePrecision).to_string();
 
-      // Re-decide the link from the refined fit. The per-column consistency check of the pileup
-      // decision no longer applies -- a realigned frequency may legitimately exceed every column's
-      // own, which is the point -- so what remains is presence of the all-variant haplotype and
-      // absence of any partial one.
-      bool linked = !std::isnan(score) && (score >= _polymorphism_score_cutoff)
-                  && (member_f[1] >= _settings.polymorphism_frequency_cutoff);
-      for (size_t h = 2; linked && (h < n_member_haplotypes); h++) {
-        bool has_variant = false, lacks_variant = false;
-        for (size_t c = 0; c < member.columns.size(); c++) {
-          if (member.haplotypes[h][c] == member.haplotypes[1][c]) has_variant = true;
-          else lacks_variant = true;
-        }
-        if (has_variant && lacks_variant && (member_f[h] >= present_threshold)
-            && (member_f[h] >= _settings.polymorphism_frequency_cutoff)) linked = false;
-      }
-      entry[LN_LINKED] = linked ? "1" : "0";
+      // Every haplotype's call is decided again from the refined fit.
+      write_haplotype_calls(entry, member.haplotypes, obs, m, masks);
     } else {
       // A single indel column: the RA keeps its column-based presence score (that is what
       // test_RA_evidence accepts it on) and takes the refined frequency, whose bounds the
       // frequency cutoffs are applied to.
-      entry[MAJOR_FREQUENCY] = formatted_double(max(member_f[0], member_f[1]), _polymorphism_precision_places, true).to_string();
+      write_haplotype_frequency(entry, obs, m, masks[1]);
+      double f_ref = 0.0, f_variant = 0.0;
+      for (size_t t = 0; t < n_joint; t++) { if (masks[0][t]) f_ref += m.f[t]; if (masks[1][t]) f_variant += m.f[t]; }
+      entry[MAJOR_FREQUENCY] = formatted_double(max(f_ref, f_variant), _polymorphism_precision_places, true).to_string();
     }
   }
 }

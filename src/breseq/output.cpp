@@ -4024,7 +4024,29 @@ string html_read_linkage_table_string(diff_entry_list_t& list_ref, bool show_det
     ss << td(ALIGN_RIGHT, nonbreaking(columns)) << endl;
     ss << td(ALIGN_CENTER, contiguous ? "adjacent" : "nearby") << endl;
     ss << td(ALIGN_CENTER, nonbreaking(c[LN_REF_HAPLOTYPE] + "&rarr;" + c[LN_NEW_HAPLOTYPE])) << endl;
-    ss << td(ALIGN_LEFT, nonbreaking(substitute(c[LN_HAPLOTYPES], ",", " "))) << endl;
+
+    // Haplotypes: "<string>:<reads>" from the counts, with the fitted frequency appended for an
+    // adjacent run, e.g. "AC:8 (16%)".
+    {
+      map<string, string> fitted;
+      if (c.entry_exists(LN_HAPLOTYPE_FREQUENCIES)) {
+        vector<string> items = split(c[LN_HAPLOTYPE_FREQUENCIES], ",");
+        for (size_t k = 0; k < items.size(); k++) {
+          size_t colon = items[k].rfind(':');
+          if (colon != string::npos) fitted[items[k].substr(0, colon)] = items[k].substr(colon + 1);
+        }
+      }
+      vector<string> cells;
+      vector<string> items = split(c[LN_HAPLOTYPES], ",");
+      for (size_t k = 0; k < items.size(); k++) {
+        size_t colon = items[k].rfind(':');
+        string name = (colon == string::npos) ? items[k] : items[k].substr(0, colon);
+        string cell = items[k];
+        if (fitted.count(name)) cell += " (" + Html_Mutation_Table_String::freq_to_string(fitted[name]) + ")";
+        cells.push_back(cell);
+      }
+      ss << td(ALIGN_LEFT, nonbreaking(join(cells, " "))) << endl;
+    }
     ss << td(ALIGN_RIGHT, nonbreaking(c[LN_SPANNING_READS])) << endl;
     if (c.entry_exists(FREQUENCY)) {
       ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
@@ -4034,10 +4056,23 @@ string html_read_linkage_table_string(diff_entry_list_t& list_ref, bool show_det
     }
     ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(SCORE) ? c[SCORE] : "&nbsp;")) << endl;
 
-    // What the item concluded: whether an adjacent run merges, or the phase of a nearby pair.
+    // What the item concluded: which haplotypes of an adjacent run are called (each becomes a
+    // mutation), or the phase of a nearby pair.
     string result;
-    if (contiguous) result = (c.entry_exists(LN_LINKED) && (c[LN_LINKED] == "1")) ? "linked" : "not linked";
-    else            result = c.entry_exists(LN_PHASE) ? c[LN_PHASE] : "";
+    if (contiguous) {
+      vector<string> called;
+      if (c.entry_exists(LN_HAPLOTYPE_PREDICTIONS)) {
+        vector<string> items = split(c[LN_HAPLOTYPE_PREDICTIONS], ",");
+        for (size_t k = 0; k < items.size(); k++) {
+          size_t colon = items[k].rfind(':');
+          if ((colon != string::npos) && (items[k].substr(colon + 1) != "none"))
+            called.push_back(items[k].substr(0, colon) + " " + items[k].substr(colon + 1));
+        }
+      }
+      result = called.empty() ? "none called" : "called: " + join(called, ", ");
+    } else {
+      result = c.entry_exists(LN_PHASE) ? c[LN_PHASE] : "";
+    }
     if (c.entry_exists(LN_REALIGNED) && (c[LN_REALIGNED] == "1")) result += " (realigned)";
     ss << td(ALIGN_LEFT, nonbreaking(result)) << endl;
 

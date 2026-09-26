@@ -212,6 +212,11 @@ namespace breseq {
   extern const char* LN_PHASE;
   extern const char* LN_REALIGNED;
   extern const char* LN_PILEUP_FREQUENCY;
+  extern const char* LN_HAPLOTYPE_FREQUENCIES;
+  extern const char* LN_HAPLOTYPE_FREQUENCY_LOWER;
+  extern const char* LN_HAPLOTYPE_FREQUENCY_UPPER;
+  extern const char* LN_HAPLOTYPE_SCORES;
+  extern const char* LN_HAPLOTYPE_PREDICTIONS;
 
   // For gdtools APPLY
   extern const char* HAS_BEEN_APPLIED;

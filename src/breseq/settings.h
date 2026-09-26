@@ -585,7 +585,6 @@ namespace breseq
     bool     no_linkage;                                          // Default = false
     bool     no_local_realignment;                                // Default = false
     uint32_t linkage_window;                                      // Default = 0 (= longest read)
-    double   linkage_merge_fraction;                              // Default = 0.8
     uint32_t linkage_minimum_shared_reads;                        // Default = 3
     uint32_t linkage_maximum_haplotypes;                          // Default = 8
     uint32_t linkage_realignment_flank;                           // Default = 0 (= longest read)

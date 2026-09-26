@@ -842,8 +842,16 @@ namespace breseq {
     double haplotype_presence_score(const vector<haplotype_observation>& obs, const haplotype_model& full, const vector<bool>& which) const;
     //! Maximum log10 likelihood with the TOTAL frequency of the haplotypes in `which` held at f_fixed.
     double haplotype_profile_log10_likelihood(const vector<haplotype_observation>& obs, const haplotype_model& full, const vector<bool>& which, double f_fixed) const;
+    //! Profile-likelihood bounds on the total frequency of the haplotypes in `which`.
+    void haplotype_frequency_bounds(const vector<haplotype_observation>& obs, const haplotype_model& m, const vector<bool>& which, double& lower, double& upper) const;
     //! Write the total frequency of the haplotypes in `which`, and its profile-likelihood bounds, onto an entry.
     void write_haplotype_frequency(cDiffEntry& de, const vector<haplotype_observation>& obs, const haplotype_model& m, const vector<bool>& which) const;
+    //! Write every haplotype's fitted frequency, bounds, presence score and consensus/polymorphism/none
+    //! call onto a contiguous LN, plus the all-variant haplotype's values under the plain keys and
+    //! linked=. masks[h] selects the fitted components that carry haplotype h (one component each for
+    //! a run fit on its own; a set of joint haplotypes after cluster realignment).
+    void write_haplotype_calls(cDiffEntry& ln, const vector<string>& haplotypes, const vector<haplotype_observation>& obs,
+                               const haplotype_model& m, const vector<vector<bool> >& masks) const;
     //! A mask selecting one haplotype.
     static vector<bool> one_haplotype(size_t n, size_t h) { vector<bool> v(n, false); v[h] = true; return v; }
     //! Write the LN entry for a run of two or more columns (linked=1 when the columns should merge).

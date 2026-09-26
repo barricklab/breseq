@@ -515,7 +515,6 @@ namespace breseq
     ("no-linkage", "Do not link RA evidence across pileup columns by the reads they share (LN evidence). By default in polymorphism mode, adjacent RA columns whose variant alleles occur in the same reads are merged into one INS/DEL/SUB with one frequency, and nearby polymorphic RA items are reported as cis/trans. Has no effect in consensus mode.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("no-local-realignment", "Do not re-score the reads spanning a linked RA cluster, or a polymorphic indel, against the candidate haplotype sequences. That re-scoring is what corrects the frequency of an indel that the aligner placed at different positions in different reads. Has no effect with --no-linkage or in consensus mode.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("linkage-window", "Farthest apart (in reference bases) two polymorphic RA items may be and still be reported as linked in cis or trans by the reads they share. (DEFAULT = 0, meaning the longest read length)", "", NORMAL_OPTION)
-    ("linkage-merge-fraction", "Merge adjacent RA columns into one mutation only when the frequency of the haplotype carrying all of their variant alleles is at least this fraction of each column's own variant frequency. (DEFAULT = 0.8)", "", EXPERT_OPTION)
     ("linkage-minimum-shared-reads", "Report a cis/trans linkage between two nearby RA items only when at least this many reads span both and carry a reference or variant allele at each. (DEFAULT = 3)", "", EXPERT_OPTION)
     ("linkage-maximum-haplotypes", "Most haplotypes fit at once over a run of linked RA columns; the reference and all-variant haplotypes are always included and the rest are the most frequently observed. (DEFAULT = 8)", "", EXPERT_OPTION)
     ("linkage-realignment-flank", "Reference bases on each side of a linked cluster included in the candidate haplotype sequences that spanning reads are re-scored against. (DEFAULT = 0, meaning the longest read length)", "", EXPERT_OPTION)
@@ -1319,8 +1318,6 @@ namespace breseq
       this->no_local_realignment = true;
     if (options.count("linkage-window"))
       this->linkage_window = from_string<uint32_t>(options["linkage-window"]);
-    if (options.count("linkage-merge-fraction"))
-      this->linkage_merge_fraction = from_string<double>(options["linkage-merge-fraction"]);
     if (options.count("linkage-minimum-shared-reads"))
       this->linkage_minimum_shared_reads = from_string<uint32_t>(options["linkage-minimum-shared-reads"]);
     if (options.count("linkage-maximum-haplotypes"))
@@ -1329,7 +1326,6 @@ namespace breseq
       this->linkage_realignment_flank = from_string<uint32_t>(options["linkage-realignment-flank"]);
     if (options.count("linkage-realignment-cluster-distance"))
       this->linkage_realignment_cluster_distance = from_string<uint32_t>(options["linkage-realignment-cluster-distance"]);
-    ASSERT(this->linkage_merge_fraction >= 0.0 && this->linkage_merge_fraction <= 1.0, "--linkage-merge-fraction must be between 0 and 1.");
     ASSERT(this->linkage_maximum_haplotypes >= 2, "--linkage-maximum-haplotypes must be at least 2.");
     if (this->polymorphism_log10_e_value_cutoff < 0) {
       options.addUsage("");
@@ -1713,7 +1709,6 @@ namespace breseq
     this->no_linkage = false;
     this->no_local_realignment = false;
     this->linkage_window = 0;
-    this->linkage_merge_fraction = 0.8;
     this->linkage_minimum_shared_reads = 3;
     this->linkage_maximum_haplotypes = 8;
     this->linkage_realignment_flank = 0;

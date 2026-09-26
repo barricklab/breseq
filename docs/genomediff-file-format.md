@@ -776,9 +776,12 @@ what the reads spanning the columns say, and it is the only thing that lets bres
 `RA` columns into one `INS`, `DEL` or `SUB` with one frequency in polymorphism mode. Two kinds exist:
 
 *   A **contiguous** LN (`contiguous=1`) covers a run of adjacent columns. Each read spanning the run
-    contributes its allele string, the run is fit as a mixture of haplotypes, and `linked=1` says the
-    haplotype carrying every column's variant explains the columns well enough that the predictor
-    should merge them (its frequency becomes the mutation's).
+    contributes its allele string, the run is fit as a mixture of haplotypes, and every haplotype
+    that is called (`haplotype_predictions`) becomes a mutation of its own at its fitted frequency.
+    So a site where one lineage carries an inserted A and another an inserted AC is reported as
+    `INS A` and `INS AC`, each at its own frequency, which is what a time course needs when one
+    mutation arose on top of another. `linked=1` says the haplotype carrying every column's variant
+    is itself called.
 *   A **nearby** LN (`contiguous=0`) compares two runs within a read length of each other and counts
     the reads spanning both by which alleles they pair up, giving a cis/trans reading. It never merges
     anything.
@@ -817,11 +820,19 @@ Notable name=value pairs:
 *   **contiguous** *\<0/1>* — 1 for a run of adjacent columns, 0 for the comparison of two nearby
     runs, whose second run is given by **position_2**, **insert_position_2**, **end_2**,
     **insert_end_2**.
-*   **linked** *\<0/1>* — 1 when the run's columns should be merged into one mutation. Requires the
-    all-variant haplotype to be present (its **score** clears the polymorphism score cutoff) above the
-    polymorphism frequency cutoff, to account for at least `--linkage-merge-fraction` of every
-    column's own variant frequency, and no partial haplotype (some but not all of the variant alleles)
-    to be present above the frequency cutoff.
+*   **haplotype_frequencies**, **haplotype_frequency_lower**, **haplotype_frequency_upper**,
+    **haplotype_scores**, **haplotype_predictions** — `<allele string>:<value>` lists over the run's
+    haplotypes (the reference string first; scores, bounds and predictions omit it): the fitted
+    frequency of each haplotype, its profile-likelihood bounds, the log10 evidence that it is present
+    at all, and the verdict `consensus`, `polymorphism` or `none`, decided exactly as an `RA` column
+    is (consensus when the score clears the consensus score cutoff and the upper bound the consensus
+    frequency cutoff; polymorphism when the score clears the polymorphism score cutoff and the lower
+    bound the polymorphism frequency cutoff). Every haplotype not `none` is reported as a mutation
+    carrying that frequency (1 when consensus); the mutation lists the LN among its evidence.
+*   **linked** *\<0/1>* — 1 when the all-variant haplotype is called.
+*   A column named in `--user-evidence-gd` is still reported on its own, at the column's frequency,
+    in addition to the haplotype mutations; a haplotype identical to that user mutation is not
+    reported twice.
 *   **ref_haplotype**, **new_haplotype** — the allele strings over the run's columns for the reference
     and for the all-variant haplotype, one character per column (`.` is a deletion, or no base at an
     inserted column). For a nearby LN, the two runs' strings joined by `/`.

@@ -206,6 +206,14 @@ namespace breseq {
   const char* LN_PHASE = "phase";
   const char* LN_REALIGNED = "realigned";
   const char* LN_PILEUP_FREQUENCY = "pileup_frequency";
+  // Per-haplotype calls over a run, "<allele string>:<value>" lists in the run's haplotype order,
+  // [0] being the reference string. Every haplotype whose prediction is not "none" becomes a
+  // mutation of its own.
+  const char* LN_HAPLOTYPE_FREQUENCIES = "haplotype_frequencies";
+  const char* LN_HAPLOTYPE_FREQUENCY_LOWER = "haplotype_frequency_lower";
+  const char* LN_HAPLOTYPE_FREQUENCY_UPPER = "haplotype_frequency_upper";
+  const char* LN_HAPLOTYPE_SCORES = "haplotype_scores";
+  const char* LN_HAPLOTYPE_PREDICTIONS = "haplotype_predictions";
 
   // For gdtools APPLY
   const char* HAS_BEEN_APPLIED = "_has_been_applied";

@@ -2147,24 +2147,47 @@ namespace breseq {
     ///
     // Read linkage (LN): which adjacent RA columns the pileup found to sit in the same reads.
     //
-    // In polymorphism mode this is the only license to join polymorphic columns into one
-    // INS/DEL/SUB. An LN names its columns by coordinate, not by RA id (ids are reassigned when the
-    // evidence files are merged), so each usable LN is indexed here by every column it spans. It
-    // is usable only if EVERY column of its span survived as an RA in this list -- one column
-    // rejected for strand bias, coverage or a homopolymer voids the link -- and all of those
-    // columns received the same consensus/polymorphism verdict, so a fixed column is never
-    // welded to a mixed one.
+    // In polymorphism mode a usable LN takes its columns over from the per-column join below:
+    // every haplotype the LN calls (haplotype_predictions) becomes one mutation carrying that
+    // haplotype's fitted frequency, so an A-only lineage and an AC lineage at one site are
+    // reported as INS A and INS AC rather than as one column's frequency and a nested second
+    // insertion. An LN names its columns by coordinate, not by RA id (ids are reassigned when the
+    // evidence files are merged). It is usable only if EVERY column of its span survived as an RA
+    // in this list -- one column rejected for strand bias, coverage or a homopolymer voids it --
+    // and at least one haplotype is called. A user-defined RA column counts as present, and is
+    // ALSO still reported on its own below, as user evidence always is.
     ///
-    map<string, diff_entry_ptr_t> ln_by_column;   // "seq_id:position.insert_position" -> LN
-    diff_entry_ptr_t mut_ln;                      // the LN licensing the mutation being built, if any
+    struct usable_linkage {
+      diff_entry_ptr_t ln;
+      vector<diff_entry_ptr_t> span;      //!< the RA of each column, in order
+      vector<string> haplotypes;          //!< allele strings, [0] = reference
+      vector<string> predictions;         //!< per haplotype: consensus / polymorphism / none ("" for [0])
+      vector<string> frequencies;         //!< per haplotype fitted frequency, as written
+    };
+    vector<usable_linkage> linkages;
+    set<string> consumed_columns;                  // "seq_id:position.insert_position" taken over by an LN
     if (settings.polymorphism_prediction) {
       map<string, diff_entry_ptr_t> ra_by_column;
       for (diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) {
         cDiffEntry& item = **ra_it;
-        if (item.entry_exists(USER_DEFINED)) continue;
-        if (item.entry_exists("reject") || item.entry_exists("deleted")) continue;
+        if (!item.entry_exists(USER_DEFINED) && (item.entry_exists("reject") || item.entry_exists("deleted"))) continue;
         ra_by_column[item[SEQ_ID] + ":" + item[POSITION] + "." + item[INSERT_POSITION]] = *ra_it;
       }
+
+      // "<hap>:<value>,<hap>:<value>" -> parallel name and value lists.
+      struct hap_list {
+        static void parse(const string& s, vector<string>& names, vector<string>& values) {
+          names.clear(); values.clear();
+          if (s.empty()) return;
+          vector<string> items = split(s, ",");
+          for (size_t k = 0; k < items.size(); k++) {
+            size_t colon = items[k].rfind(':');
+            if (colon == string::npos) continue;
+            names.push_back(items[k].substr(0, colon));
+            values.push_back(items[k].substr(colon + 1));
+          }
+        }
+      };
 
       diff_entry_list_t ln_list = gd.get_list(make_vector<gd_entry_type>(LN));
       for (diff_entry_list_t::iterator ln_it = ln_list.begin(); ln_it != ln_list.end(); ln_it++) {
@@ -2180,16 +2203,7 @@ namespace breseq {
           }
           continue;
         }
-
         if (!ln.entry_exists(LN_CONTIGUOUS) || (ln[LN_CONTIGUOUS] != "1")) continue;
-        if (!ln.entry_exists(LN_LINKED) || (ln[LN_LINKED] != "1")) {
-          // An unlinked run is still voided by a rejected column, for the same reason.
-          if (!ra_by_column.count(ln[SEQ_ID] + ":" + ln[POSITION] + "." + ln[INSERT_POSITION])
-              || !ra_by_column.count(ln[SEQ_ID] + ":" + ln[END] + "." + ln[LN_INSERT_END])) {
-            ln["reject"] = "RA_REJECTED";
-          }
-          continue;
-        }
 
         // Walk the span column by column with the adjacency rule used below, requiring an RA at
         // each step: after insert column k comes insert column k+1 if an RA exists there, otherwise
@@ -2199,27 +2213,38 @@ namespace breseq {
         int32_t insert = from_string<int32_t>(ln[INSERT_POSITION]);
         const int32_t end_position = from_string<int32_t>(ln[END]);
         const int32_t end_insert = from_string<int32_t>(ln[LN_INSERT_END]);
-        vector<diff_entry_ptr_t> span;
-        string prediction;
+        usable_linkage u;
+        u.ln = *ln_it;
         bool usable = true;
         while (usable) {
           map<string, diff_entry_ptr_t>::iterator found = ra_by_column.find(seq_id + ":" + to_string(position) + "." + to_string(insert));
           if (found == ra_by_column.end()) { usable = false; break; }
-          if (span.empty()) prediction = (*found->second)[PREDICTION];
-          else if ((*found->second)[PREDICTION] != prediction) { usable = false; break; }
-          span.push_back(found->second);
+          u.span.push_back(found->second);
           if ((position == end_position) && (insert == end_insert)) break;
           if ((position > end_position) || ((position == end_position) && (insert > end_insert))) { usable = false; break; }
           if (ra_by_column.count(seq_id + ":" + to_string(position) + "." + to_string(insert + 1))) insert++;
           else { position++; insert = 0; }
         }
-        if (!usable || (span.size() < 2)) {
+
+        vector<string> pred_names, freq_names;
+        hap_list::parse(ln.entry_exists(LN_HAPLOTYPE_PREDICTIONS) ? ln[LN_HAPLOTYPE_PREDICTIONS] : "", pred_names, u.predictions);
+        hap_list::parse(ln.entry_exists(LN_HAPLOTYPE_FREQUENCIES) ? ln[LN_HAPLOTYPE_FREQUENCIES] : "", u.haplotypes, u.frequencies);
+        // predictions cover haplotypes [1..]; frequencies cover [0..]. Line them up.
+        u.predictions.insert(u.predictions.begin(), "");
+        bool any_called = false;
+        for (size_t h = 1; h < u.predictions.size(); h++) { if (u.predictions[h] != "none") any_called = true; }
+        bool consistent = (u.haplotypes.size() == u.predictions.size()) && (u.haplotypes.size() >= 2)
+                          && (u.haplotypes[0].size() == u.span.size());
+        for (size_t h = 0; consistent && (h < u.haplotypes.size()); h++) consistent = (u.haplotypes[h].size() == u.span.size());
+
+        if (!usable || (u.span.size() < 2) || !consistent || !any_called) {
           ln["reject"] = "RA_REJECTED";
           continue;
         }
-        for (size_t k = 0; k < span.size(); k++) {
-          ln_by_column[seq_id + ":" + (*span[k])[POSITION] + "." + (*span[k])[INSERT_POSITION]] = *ln_it;
+        for (size_t k = 0; k < u.span.size(); k++) {
+          consumed_columns.insert(seq_id + ":" + (*u.span[k])[POSITION] + "." + (*u.span[k])[INSERT_POSITION]);
         }
+        linkages.push_back(u);
       }
     }
     
@@ -2267,11 +2292,11 @@ namespace breseq {
         continue;
       }
 
-      // The LN licensing this column to join its neighbors, if any.
-      diff_entry_ptr_t item_ln;
-      if (!item.entry_exists(USER_DEFINED)) {
-        map<string, diff_entry_ptr_t>::iterator found = ln_by_column.find(ra_seq_id + ":" + item[POSITION] + "." + item[INSERT_POSITION]);
-        if (found != ln_by_column.end()) item_ln = found->second;
+      // A column taken over by a usable LN is reported through the LN's haplotypes (below), unless
+      // the user asked about it, in which case it is also reported on its own.
+      if (!item.entry_exists(USER_DEFINED)
+          && consumed_columns.count(ra_seq_id + ":" + item[POSITION] + "." + item[INSERT_POSITION])) {
+        continue;
       }
 
 			bool same = false;
@@ -2285,14 +2310,9 @@ namespace breseq {
         
         // This code is only safe if every mutation has a frequency
         if (settings.polymorphism_prediction) {
-          // Two columns licensed by the same LN join whatever their frequencies; otherwise only
-          // consensus columns do.
-          bool linked = (mut_ln.get() != NULL) && (item_ln.get() == mut_ln.get());
-          if (!linked) {
-            if ( !ra_is_consensus || (mut[FREQUENCY] != "1") //don't join polymorphisms
-                || (mut[SEQ_ID] != item[SEQ_ID]) )
-              same = false;
-          }
+          if ( !ra_is_consensus || (mut[FREQUENCY] != "1") //don't join polymorphisms
+              || (mut[SEQ_ID] != item[SEQ_ID]) )
+            same = false;
         }
 			}
       
@@ -2315,17 +2335,8 @@ namespace breseq {
         
         if (settings.polymorphism_prediction) {
           new_mut[FREQUENCY] = item.entry_exists(FREQUENCY) ? item.mutation_frequency() : "1";
-          // A linked run's frequency is the haplotype's, fit over the reads spanning every column,
-          // in place of the first column's own. A consensus run still snaps to 1.
-          if ((item_ln.get() != NULL) && !ra_is_consensus) {
-            new_mut[FREQUENCY] = (*item_ln)[FREQUENCY];
-          }
-          if (item_ln.get() != NULL) {
-            new_mut._evidence.push_back(item_ln->_id);
-            new_mut["_linked"] = "1";
-          }
         }
-        mut_ln = item_ln;
+        if (item.entry_exists(USER_DEFINED)) new_mut["_user_defined"] = "1";
 				mut = new_mut;
 			}
 			else
@@ -2341,7 +2352,71 @@ namespace breseq {
 		}
 		//don't forget the last one
 		if (!first_time) muts.push_back(mut);
-    
+
+    ///
+    // One mutation per called haplotype of each usable LN. A haplotype's mutation is built from
+    // the columns where its allele string differs from the reference string, split into maximal
+    // adjacent groups (a haplotype that is reference at a middle column gives two mutations, as
+    // the per-column join would), and typed by the same code below. A haplotype identical to a
+    // user-defined mutation from the same columns is not emitted twice: the user's stays, with the
+    // column's frequency as user evidence always reports, and the LN still carries the haplotype's
+    // fitted frequency.
+    ///
+    for (size_t l = 0; l < linkages.size(); l++) {
+      const usable_linkage& u = linkages[l];
+      const string& ref_string = u.haplotypes[0];
+      for (size_t h = 1; h < u.haplotypes.size(); h++) {
+        if (u.predictions[h] == "none") continue;
+        const string& hap = u.haplotypes[h];
+        const string frequency = (u.predictions[h] == "consensus") ? "1" : u.frequencies[h];
+
+        vector<cDiffEntry> groups;
+        bool open = false;
+        for (size_t c = 0; c < hap.size(); c++) {
+          if (hap[c] == ref_string[c]) { open = false; continue; }
+          cDiffEntry& column = *u.span[c];
+          string ref_base = (ref_string[c] == '.') ? "" : string(1, ref_string[c]);
+          string new_base = (hap[c] == '.') ? "" : string(1, hap[c]);
+          if (!open) {
+            cDiffEntry g;
+            g._evidence = make_vector<string>(column._id);
+            g("seq_id", column[SEQ_ID])
+             ("position", column[POSITION])
+             ("start", column[POSITION])
+             ("end", column[POSITION])
+             ("insert_start", column[INSERT_POSITION])
+             ("insert_end", column[INSERT_POSITION])
+             ("ref_seq", ref_base)
+             ("new_seq", new_base);
+            g[FREQUENCY] = frequency;
+            g["_linked"] = "1";
+            groups.push_back(g);
+            open = true;
+          } else {
+            cDiffEntry& g = groups.back();
+            g("end", column[POSITION])("insert_end", column[INSERT_POSITION]);
+            g["ref_seq"] += ref_base;
+            g["new_seq"] += new_base;
+            g._evidence.push_back(column._id);
+          }
+        }
+        for (size_t g = 0; g < groups.size(); g++) {
+          groups[g]._evidence.push_back(u.ln->_id);
+          bool duplicate_of_user = false;
+          for (size_t k = 0; k < muts.size(); k++) {
+            const cDiffEntry& um = muts[k];
+            if (!um.entry_exists("_user_defined")) continue;
+            if ((um.get(SEQ_ID) == groups[g][SEQ_ID]) && (um.get("start") == groups[g]["start"]) && (um.get("end") == groups[g]["end"])
+                && (um.get("insert_start") == groups[g]["insert_start"]) && (um.get("insert_end") == groups[g]["insert_end"])
+                && (um.get("ref_seq") == groups[g]["ref_seq"]) && (um.get("new_seq") == groups[g]["new_seq"])) {
+              duplicate_of_user = true;
+            }
+          }
+          if (!duplicate_of_user) muts.push_back(groups[g]);
+        }
+      }
+    }
+
 		///
 		// Finally, convert these items into the fields needed for the various types of mutations
 		///
@@ -2439,6 +2514,7 @@ namespace breseq {
 			mut.erase("insert_start");
 			mut.erase("insert_end");
       mut.erase("_linked");
+      mut.erase("_user_defined");
 
 			gd.add(mut);
 		}

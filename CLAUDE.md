@@ -291,9 +291,13 @@ number), `UN` (unknown), `SC` (soft clipping), `DP` (discordant pair), `MP` (mis
 
 `LN` is produced in polymorphism mode only (`--no-linkage` turns it off). RA is called one pileup
 column at a time, so the predictor refuses to join two *polymorphic* RA columns into one
-INS/DEL/SUB (`mutation_predictor.cpp`, `predictRAtoSNPorDELorINSorSUB`) unless a `contiguous=1
-linked=1` LN says the reads carry both variants together; the merged mutation then takes the LN's
-haplotype frequency. `identify_mutations_pileup` tags every per-read observation with a read
+INS/DEL/SUB (`mutation_predictor.cpp`, `predictRAtoSNPorDELorINSorSUB`) on its own. A `contiguous=1`
+LN whose columns all survived as RAs takes those columns over: every haplotype it calls
+(`haplotype_predictions`, decided in `write_haplotype_calls` with the same rule as an RA column)
+becomes one mutation at that haplotype's fitted frequency, so an A-only lineage and an AC lineage
+at one site come out as `INS A` and `INS AC` (flat), never as `INS A` at the summed frequency plus a
+nested `INS C` at insert position 2. A `--user-evidence-gd` column is still reported on its own as
+well; a haplotype identical to it is not emitted twice. `identify_mutations_pileup` tags every per-read observation with a read
 ordinal (assigned at the read's leftmost column, keyed by the htslib record pointer) and keeps each
 candidate column's observations until the pileup is a read length past it. **An LN names its
 columns by coordinate, never by RA id**: `merge_preserving_duplicates` reassigns every id when the

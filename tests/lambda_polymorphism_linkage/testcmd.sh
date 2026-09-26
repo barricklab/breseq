@@ -26,6 +26,8 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 #   DEL 17240 3            one unit of the ACGACGACG repeat at 17240-17248.
 #   DEL 22368 1            one A of the AAAAAAA homopolymer at 22368-22374.
 # mutB (20%):
+#   INS A at 10000         the same site as mutA's AC: two haplotypes (A-only and AC) that must be
+#                          reported as INS A and INS AC at their own frequencies.
 #   SNP 12005 T>C          5 bp from mutA's 12000, on the OTHER genotype: a phase=trans LN.
 #   SNP 16000 T>G          a lone control.
 #
