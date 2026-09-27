@@ -326,7 +326,12 @@ haplotypes the all-reference and all-variant tuples are kept first (by index sum
 clone cluster would lose its true haplotype to the pairs). A fetched read must cover the cluster's
 columns untrimmed, plus the base after an inserted column, and nothing more: requiring a base
 beyond a SNP on each side dropped three quarters of the reference reads at one 36-bp-library site,
-because their right trim covered that base. Clusters are fetched serially (one BAM
+because their right trim covered that base. The two sides of a read split across a junction
+(`-M1`/`-M2`, `XJ` tag) are fetched like any read but **pinned at the junction edge**: the edge
+breseq wrote with a trim of 0 must start after / end at the haplotype index the breakpoint maps
+to (`hap_after`/`hap_at` from `candidate_haplotype_sequence`), so the DP cannot slide or extend a
+piece across the breakpoint, while its outer end stays free. Excluding them, as before, starved
+every column within a read length of a junction of half its reads. Clusters are fetched serially (one BAM
 handle) and scored in parallel on `Settings::pool`, in batches; a cluster's job writes only its own
 entries, so results are the same at any `-j`. The step prints its wall time to stderr. Set
 `BRESEQ_REALIGN_DEBUG=<first position>` to dump per-read scores for one cluster (this also forces

@@ -902,6 +902,9 @@ namespace breseq {
       uint32_t window_start_1, window_end_1;      //!< reference window the haplotype sequences are spelled over
       int32_t ref_length;
       vector<string> hap_seqs;                    //!< joint haplotype sequences over the window
+      //! Per joint haplotype, reference window position -> haplotype index once that position's
+      //! base (hap_at) / its inserted bases too (hap_after) are placed; see candidate_haplotype_sequence.
+      vector<vector<int32_t> > hap_at, hap_after;
       //! The reads spanning the cluster. Held by pointer: bam_alignment's copy constructor leaves
       //! the wrapper pointing at the SOURCE record, so a vector that reallocates would leave every
       //! earlier element dangling.
@@ -927,13 +930,17 @@ namespace breseq {
     //! Re-score the reads over every recorded candidate and refine its frequency.
     void refine_by_local_realignment();
   protected:
-    //! Spell out haplotype h of a candidate over the reference window [window_start_1, window_end_1].
-    string candidate_haplotype_sequence(const realignment_candidate& c, size_t h, uint32_t window_start_1, uint32_t window_end_1) const;
+    //! Spell out haplotype h of a candidate over the reference window [window_start_1, window_end_1],
+    //! optionally with the reference-position -> haplotype-index maps a pinned read edge needs.
+    string candidate_haplotype_sequence(const realignment_candidate& c, size_t h, uint32_t window_start_1, uint32_t window_end_1,
+                                        vector<int32_t>* hap_at = NULL, vector<int32_t>* hap_after = NULL) const;
     //! log10 P(read | haplotype): the best alignment of the read's aligned bases to the haplotype
     //! sequence, scored with the error table. read_offset is where the read's first aligned base
     //! sits on the reference window; extra_length is how much longer than the reference the
-    //! haplotype is, which widens the band.
-    double realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length) const;
+    //! haplotype is, which widens the band. pin_start_j / pin_end_j (-1 = free) fix the haplotype
+    //! index the read must start after / end at, for the junction edge of a split read.
+    double realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length,
+                                        int32_t pin_start_j = -1, int32_t pin_end_j = -1) const;
 	};
 
   

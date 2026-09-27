@@ -4491,16 +4491,21 @@ void identify_mutations_pileup::write_nearby_LN(const linked_run& a, const linke
 /*! Collect one read overlapping the candidate being refined.
 
   The filters are the RA caller's: primary, mapped, uniquely placed. A read is kept only if its
-  aligned span, less the bases breseq trimmed at either end (XL/XR), reaches one base beyond the
-  candidate's columns on both sides -- it has to be able to say something about every column,
-  and about the base after an inserted column, before its allele string means anything.
+  aligned span, less the bases breseq trimmed at either end (XL/XR), covers the candidate's
+  columns and the base after an inserted column -- it has to be able to say something about every
+  column before its allele string means anything.
+
+  The two sides of a read split across a junction (-M1/-M2, tagged XJ) are kept as well. Each is
+  a read in its own right over the columns it covers, and leaving them out starves every column
+  within a read length of a junction of half its reads. What they cannot do is be re-aligned at
+  the edge where the read crosses to the other side: that edge is a breakpoint, not a read end,
+  and the scorer pins it (see score_candidate_cluster). breseq writes that edge with a trim of 0
+  (alignment.cpp, "a trustworthy boundary"), which is how it is recognized.
 */
 void identify_mutations_pileup::fetch_callback(const alignment_wrapper& a)
 {
   if (a.unmapped() || !a.is_primary() || a.is_redundant()) return;
   if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) return;
-  uint32_t junction_side;
-  if (a.aux_get_i("XJ", junction_side)) return;
 
   const uint32_t left = a.reference_start_1() + a.trim_left();
   const uint32_t right = (a.reference_end_1() > a.trim_right()) ? a.reference_end_1() - a.trim_right() : 0;
@@ -4514,13 +4519,21 @@ void identify_mutations_pileup::fetch_callback(const alignment_wrapper& a)
   The haplotype's allele string has one character per candidate column: at insert count 0 it
   replaces the reference base at that position ('.' deletes it); at insert count k it is the k-th
   base inserted after the position ('.' means none). Everything else is reference.
+
+  If asked, also maps each reference position p of the window (index p - window_start_1) to the
+  1-based haplotype index reached once p's own base has been placed (hap_at: the base itself, or
+  the last base before it when p is deleted) and once the bases inserted after p have been placed
+  too (hap_after). These are what pin a split read's junction edge to the haplotype.
 */
-string identify_mutations_pileup::candidate_haplotype_sequence(const realignment_candidate& c, size_t h, uint32_t window_start_1, uint32_t window_end_1) const
+string identify_mutations_pileup::candidate_haplotype_sequence(const realignment_candidate& c, size_t h, uint32_t window_start_1, uint32_t window_end_1,
+                                                               vector<int32_t>* hap_at, vector<int32_t>* hap_after) const
 {
   const char* ref = get_refseq(c.tid);
   const string& alleles = c.haplotypes[h];
   string s;
   s.reserve(window_end_1 - window_start_1 + 1 + alleles.size());
+  if (hap_at) hap_at->assign(window_end_1 - window_start_1 + 1, 0);
+  if (hap_after) hap_after->assign(window_end_1 - window_start_1 + 1, 0);
 
   size_t col = 0;
   for (uint32_t p = window_start_1; p <= window_end_1; p++) {
@@ -4530,10 +4543,12 @@ string identify_mutations_pileup::candidate_haplotype_sequence(const realignment
       col++;
     }
     if (base != '.') s += base;
+    if (hap_at) (*hap_at)[p - window_start_1] = static_cast<int32_t>(s.size());
     while ((col < c.columns.size()) && (c.columns[col].first == p) && (c.columns[col].second > 0)) {
       if (alleles[col] != '.') s += alleles[col];
       col++;
     }
+    if (hap_after) (*hap_after)[p - window_start_1] = static_cast<int32_t>(s.size());
   }
   return s;
 }
@@ -4562,7 +4577,8 @@ string identify_mutations_pileup::candidate_haplotype_sequence(const realignment
   that carries it, so the approximation changes how confidently such a read prefers its haplotype,
   never which one it prefers.
 */
-double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length) const
+double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length,
+                                                                int32_t pin_start_j, int32_t pin_end_j) const
 {
   const bool reversed = a.reversed();
   const int32_t q_start_0 = a.query_start_0();
@@ -4670,8 +4686,14 @@ double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignme
 #define BAND_GET(T, i, j) band_cell::get((T), (i), (j), W, col_shift)
 #define BAND_AT(T, i, j)  band_cell::at((T), (i), (j), W, col_shift)
 
-  // Row 0: nothing of the read consumed. Free start anywhere on the haplotype (within the window).
-  for (int32_t j = max(0, -col_shift); (j <= m) && (j - 0 + col_shift < W); j++) BAND_AT(M, 0, j) = 0.0;
+  // Row 0: nothing of the read consumed. Free start anywhere on the haplotype (within the
+  // window) -- or, for a split read whose junction edge is on the left, only after haplotype
+  // base pin_start_j, so its first base must sit where the breakpoint puts it.
+  if (pin_start_j >= 0) {
+    if ((pin_start_j <= m) && (pin_start_j + col_shift >= 0) && (pin_start_j + col_shift < W)) BAND_AT(M, 0, pin_start_j) = 0.0;
+  } else {
+    for (int32_t j = max(0, -col_shift); (j <= m) && (j - 0 + col_shift < W); j++) BAND_AT(M, 0, j) = 0.0;
+  }
 
   for (int32_t i = 1; i <= n; i++) {
     int32_t jlo = max(1, i + read_offset - band);
@@ -4699,9 +4721,14 @@ double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignme
     }
   }
 
-  // Free end on the haplotype: the best way to have consumed the whole read.
+  // Free end on the haplotype: the best way to have consumed the whole read -- or, for a split
+  // read whose junction edge is on the right, the way that ends at haplotype base pin_end_j.
   double best = NEG;
-  for (int32_t j = 0; j <= m; j++) best = max(best, max(BAND_GET(M, n, j), BAND_GET(I, n, j)));
+  if (pin_end_j >= 0) {
+    if (pin_end_j <= m) best = max(BAND_GET(M, n, pin_end_j), BAND_GET(I, n, pin_end_j));
+  } else {
+    for (int32_t j = 0; j <= m; j++) best = max(best, max(BAND_GET(M, n, j), BAND_GET(I, n, j)));
+  }
 #undef BAND_GET
 #undef BAND_AT
   if (best <= NEG) {
@@ -4920,7 +4947,9 @@ void identify_mutations_pileup::prepare_candidate_cluster(realignment_cluster& c
   c.ref_length = static_cast<int32_t>(c.window_end_1 - c.window_start_1 + 1);
 
   c.hap_seqs.resize(n_joint);
-  for (size_t t = 0; t < n_joint; t++) c.hap_seqs[t] = candidate_haplotype_sequence(c.joint, t, c.window_start_1, c.window_end_1);
+  c.hap_at.resize(n_joint);
+  c.hap_after.resize(n_joint);
+  for (size_t t = 0; t < n_joint; t++) c.hap_seqs[t] = candidate_haplotype_sequence(c.joint, t, c.window_start_1, c.window_end_1, &c.hap_at[t], &c.hap_after[t]);
 
   _fetched_reads.clear();
   do_fetch(string(target_name(tid)) + ":" + to_string(_fetch_cover_start_1) + "-" + to_string(_fetch_cover_end_1));
@@ -4956,9 +4985,27 @@ void identify_mutations_pileup::score_candidate_cluster(const realignment_cluste
     // Where the read's first aligned base falls on the reference window; reads start before the
     // first column, where every haplotype still matches the reference.
     const int32_t read_offset = static_cast<int32_t>(a.reference_start_1()) - static_cast<int32_t>(c.window_start_1);
+    // A side of a read split across a junction is pinned at the edge where it crosses to the
+    // other side (the edge written with a trim of 0): its first or last aligned base must land
+    // where the breakpoint puts it on each haplotype, and it cannot be slid or extended across
+    // the junction. Its other edge is an ordinary read end and stays free.
+    uint32_t junction_side;
+    const bool split_read = a.aux_get_i("XJ", junction_side);
+    const bool pin_left = split_read && (a.trim_left() == 0);
+    const bool pin_right = split_read && (a.trim_right() == 0);
+    const int32_t start_in_window = static_cast<int32_t>(a.reference_start_1()) - static_cast<int32_t>(c.window_start_1);   // index of the first aligned base
+    const int32_t end_in_window = static_cast<int32_t>(a.reference_end_1()) - static_cast<int32_t>(c.window_start_1);       // index of the last aligned base
     for (size_t t = 0; t < n_joint; t++) {
       const int32_t extra_length = static_cast<int32_t>(c.hap_seqs[t].size()) - c.ref_length;
-      o.log10_pr[t] = realignment_log10_likelihood(a, c.hap_seqs[t], read_offset, extra_length);
+      int32_t pin_start_j = -1, pin_end_j = -1;
+      if (pin_left) {
+        // Everything before the first base, inserted bases after the previous position included.
+        pin_start_j = (start_in_window >= 1) ? c.hap_after[t][start_in_window - 1] : 0;
+      }
+      if (pin_right && (end_in_window >= 0) && (end_in_window < static_cast<int32_t>(c.hap_at[t].size()))) {
+        pin_end_j = c.hap_at[t][end_in_window];
+      }
+      o.log10_pr[t] = realignment_log10_likelihood(a, c.hap_seqs[t], read_offset, extra_length, pin_start_j, pin_end_j);
     }
     o.log10_pr_max = -numeric_limits<double>::max();
     for (size_t t = 0; t < n_joint; t++) o.log10_pr_max = max(o.log10_pr_max, o.log10_pr[t]);

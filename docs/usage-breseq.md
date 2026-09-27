@@ -85,7 +85,9 @@ lone SNPs included, and also turns linkage and re-scoring on in consensus mode, 
 re-scoring is what recovers a fixed indel whose reads the aligner split over several columns; in
 consensus mode a linked run's haplotype is called only when it is confidently the majority. `none`
 keeps the linkage but skips the re-scoring (the old `--no-local-realignment` still works and means
-this). Re-scoring uses the `-j` threads.
+this). Re-scoring uses the `-j` threads. The two sides of a read that was split across a new
+junction take part too, held fixed at the edge where the read crosses to the other side, so a
+column near a junction is scored with all of its reads.
 
 `--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`, `--no-pair-distance-prediction`
 
