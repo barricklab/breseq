@@ -586,9 +586,17 @@ namespace breseq
     double polymorphism_precision_decimal;                        // Default = 0.000001
     uint32_t polymorphism_precision_places;                       // Default = 3 for mixed base | 8 for polymorphism
 
-    //! Settings: Read linkage (LN evidence) between RA columns. Polymorphism mode only.
+    //! Settings: Read linkage (LN evidence) between RA columns, and the local realignment that
+    //! refines the linked (or every) RA column. Polymorphism mode only unless --realign all.
+    //!
+    //! --realign modes. LINKED is today's default: polymorphism mode only, re-scoring linked runs
+    //! and polymorphic indel columns. ALL turns linkage and re-scoring on in consensus mode too,
+    //! and makes every RA column a candidate. NONE keeps the linkage but skips the re-scoring.
+    enum eRealignMode { REALIGN_NONE, REALIGN_LINKED, REALIGN_ALL };
     bool     no_linkage;                                          // Default = false
-    bool     no_local_realignment;                                // Default = false
+    eRealignMode realign_mode;                                    // Default = REALIGN_LINKED
+    //! --realign all, or its consequences: LN evidence in consensus mode and every RA column re-scored.
+    bool realign_all() const { return realign_mode == REALIGN_ALL; }
     uint32_t linkage_window;                                      // Default = 0 (= longest read)
     uint32_t linkage_minimum_shared_reads;                        // Default = 3
     uint32_t linkage_maximum_haplotypes;                          // Default = 8

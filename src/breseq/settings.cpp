@@ -513,8 +513,9 @@ namespace breseq
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = OFF) ", "", NORMAL_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = OFF)", "", NORMAL_OPTION)
-    ("no-linkage", "Do not link RA evidence across pileup columns by the reads they share (LN evidence). By default in polymorphism mode, adjacent RA columns whose variant alleles occur in the same reads are merged into one INS/DEL/SUB with one frequency, and nearby polymorphic RA items are reported as cis/trans. Has no effect in consensus mode.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("no-local-realignment", "Do not re-score the reads spanning a linked RA cluster, or a polymorphic indel, against the candidate haplotype sequences. That re-scoring is what corrects the frequency of an indel that the aligner placed at different positions in different reads. Has no effect with --no-linkage or in consensus mode.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-linkage", "Do not link RA evidence across pileup columns by the reads they share (LN evidence). By default in polymorphism mode, adjacent RA columns whose variant alleles occur in the same reads are merged into one INS/DEL/SUB with one frequency, and nearby polymorphic RA items are reported as cis/trans. Has no effect in consensus mode unless --realign all is given.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("realign", "Which read alignment (RA) columns to re-score against candidate haplotype sequences after the pileup, which corrects the frequency of an indel that the aligner placed at different positions in different reads. 'linked': linked RA runs and polymorphic indel columns, in polymorphism mode only. 'all': every RA column, with read linkage (LN) evidence, in consensus mode as well as polymorphism mode. 'none': no re-scoring. Has no effect with --no-linkage.", "linked", NORMAL_OPTION)
+    ("no-local-realignment", "DEPRECATED: use --realign none instead.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("linkage-window", "Farthest apart (in reference bases) two polymorphic RA items may be and still be reported as linked in cis or trans by the reads they share. (DEFAULT = 0, meaning the longest read length)", "", NORMAL_OPTION)
     ("linkage-minimum-shared-reads", "Report a cis/trans linkage between two nearby RA items only when at least this many reads span both and carry a reference or variant allele at each. (DEFAULT = 3)", "", EXPERT_OPTION)
     ("linkage-maximum-haplotypes", "Most haplotypes fit at once over a run of linked RA columns; the reference and all-variant haplotypes are always included and the rest are the most frequently observed. (DEFAULT = 8)", "", EXPERT_OPTION)
@@ -1316,8 +1317,27 @@ namespace breseq
     // Read linkage (LN evidence)
     if (options.count("no-linkage"))
       this->no_linkage = true;
-    if (options.count("no-local-realignment"))
-      this->no_local_realignment = true;
+    if (options.count("realign")) {
+      string mode = options["realign"];
+      if (mode == "none") this->realign_mode = REALIGN_NONE;
+      else if (mode == "linked") this->realign_mode = REALIGN_LINKED;
+      else if (mode == "all") this->realign_mode = REALIGN_ALL;
+      else {
+        options.addUsage("");
+        options.addUsage("Value of --realign must be one of the following: none, linked, all.");
+        options.addUsage("");
+        options.addUsage("Value provided was: " + mode);
+        options.printUsage();
+        exit(-1);
+      }
+    }
+    // Backward compatibility: --no-local-realignment is now --realign none. Accept it, but warn.
+    if (options.count("no-local-realignment")) {
+      cerr << "WARNING: The --no-local-realignment option is DEPRECATED. It still works, but" << endl;
+      cerr << "         please use --realign none instead." << endl;
+      cerr << output_divider << endl;
+      this->realign_mode = REALIGN_NONE;
+    }
     if (options.count("linkage-window"))
       this->linkage_window = from_string<uint32_t>(options["linkage-window"]);
     if (options.count("linkage-minimum-shared-reads"))
@@ -1709,7 +1729,7 @@ namespace breseq
 
     //! Settings: Read linkage (LN evidence)
     this->no_linkage = false;
-    this->no_local_realignment = false;
+    this->realign_mode = REALIGN_LINKED;
     this->linkage_window = 0;
     this->linkage_minimum_shared_reads = 3;
     this->linkage_maximum_haplotypes = 8;

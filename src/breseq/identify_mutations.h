@@ -815,8 +815,11 @@ namespace breseq {
       //! 'O' = anything else (including a read covering only part of the run with mixed alleles).
       map<uint32_t, char> read_classes;
     };
+  public:
+    //! Whether RA columns are being linked (polymorphism mode or --realign all, and not --no-linkage).
+    bool linkage_enabled() const { return _linkage_enabled; }
   protected:
-    bool _linkage_enabled;                                  //!< polymorphism mode and not --no-linkage
+    bool _linkage_enabled;                                  //!< polymorphism mode or --realign all, and not --no-linkage
     uint32_t _linkage_window;                               //!< --linkage-window, resolved (0 -> longest read)
     unordered_map<const bam1_t*, uint32_t> _read_ordinal_by_record;  //!< live pileup reads -> read id
     uint32_t _next_read_ordinal;
@@ -888,13 +891,33 @@ namespace breseq {
       uint32_t first_position() const { return columns.front().first; }
       uint32_t last_position() const { return columns.back().first; }
     };
+    //! One cluster of consecutive candidates, prepared for scoring (prepare_candidate_cluster) and
+    //! then scored (score_candidate_cluster), possibly on another thread.
+    struct realignment_cluster {
+      realignment_cluster() : begin(0), end(0), first_position(0), window_start_1(0), window_end_1(0), ref_length(0) {}
+      size_t begin, end;                          //!< members: _realignment_candidates[begin, end)
+      realignment_candidate joint;                //!< every member's columns, and every joint haplotype's allele string
+      vector<vector<size_t> > tuples;             //!< joint haplotype t as one haplotype index per member
+      uint32_t first_position;
+      uint32_t window_start_1, window_end_1;      //!< reference window the haplotype sequences are spelled over
+      int32_t ref_length;
+      vector<string> hap_seqs;                    //!< joint haplotype sequences over the window
+      //! The reads spanning the cluster. Held by pointer: bam_alignment's copy constructor leaves
+      //! the wrapper pointing at the SOURCE record, so a vector that reallocates would leave every
+      //! earlier element dangling.
+      vector<bam_alignment_ptr> reads;
+    };
   protected:
     vector<realignment_candidate> _realignment_candidates;
-    //! Refine one cluster of candidates (consecutive entries of _realignment_candidates) together.
-    void refine_candidate_cluster(size_t begin, size_t end, uint32_t flank);
-    //! Reads collected by fetch_callback() for the candidate being refined. Held by pointer:
-    //! bam_alignment's copy constructor leaves the wrapper pointing at the SOURCE record, so a
-    //! vector that reallocates would leave every earlier element dangling.
+    //! Serial: build a cluster's joint haplotypes and fetch its spanning reads.
+    void prepare_candidate_cluster(realignment_cluster& c, size_t begin, size_t end, uint32_t flank);
+    //! Thread-safe: score a prepared cluster's reads, refit, and write its members' entries.
+    void score_candidate_cluster(const realignment_cluster& c) const;
+    static void score_cluster_thread_helper(int id, const identify_mutations_pileup* imp, const realignment_cluster* c) {
+      (void)id;
+      imp->score_candidate_cluster(*c);
+    }
+    //! Reads collected by fetch_callback() for the cluster being prepared; moved into the cluster.
     vector<bam_alignment_ptr> _fetched_reads;
     uint32_t _fetch_cover_start_1;               //!< reference span every fetched read must cover ...
     uint32_t _fetch_cover_end_1;                 //!< ... untrimmed, to be kept
@@ -910,7 +933,7 @@ namespace breseq {
     //! sequence, scored with the error table. read_offset is where the read's first aligned base
     //! sits on the reference window; extra_length is how much longer than the reference the
     //! haplotype is, which widens the band.
-    double realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length);
+    double realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length) const;
 	};
 
   

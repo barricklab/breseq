@@ -474,7 +474,7 @@ void cErrorTable::allocate_table() {
     Find which line of the table corresponds to the given covariates.
 */
 
-uint32_t cErrorTable::covariates_to_index(const covariate_values_t& cv) {
+uint32_t cErrorTable::covariates_to_index(const covariate_values_t& cv) const {
 
   // Calculate the row index in which to record the observation
   uint32_t idx = 0;
@@ -1104,7 +1104,7 @@ bool cErrorTable::alignment_position_to_covariates(const pileup_wrapper& a, int3
   return true;
 }
 
-double cErrorTable::get_log10_prob(covariate_values_t& cv) {
+double cErrorTable::get_log10_prob(covariate_values_t& cv) const {
 
   assert(m_log10_prob_table.size() > 0);
   uint32_t i = covariates_to_index(cv);
@@ -1113,7 +1113,7 @@ double cErrorTable::get_log10_prob(covariate_values_t& cv) {
   return m_log10_prob_table[i];
 }
   
-double cErrorTable::get_prob(covariate_values_t& cv) {
+double cErrorTable::get_prob(covariate_values_t& cv) const {
   
   assert(m_prob_table.size() > 0);
   uint32_t i = covariates_to_index(cv);

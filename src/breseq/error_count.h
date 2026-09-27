@@ -148,7 +148,7 @@ namespace breseq {
 
       //* Helper functions
       void allocate_table();
-      uint32_t covariates_to_index(const covariate_values_t& cv);
+      uint32_t covariates_to_index(const covariate_values_t& cv) const;
       void index_to_covariates(const uint32_t idx, covariate_values_t& cv);
 
       void read_covariates(const string& colnames)
@@ -214,9 +214,11 @@ namespace breseq {
       }
       
       //* accessors
-      double get_log10_prob(covariate_values_t& cv);
-   
-      double get_prob(covariate_values_t& cv);
+      // Both const: the tables are fixed once loaded, so these are safe to call from several
+      // threads at once (local realignment scores clusters in parallel).
+      double get_log10_prob(covariate_values_t& cv) const;
+
+      double get_prob(covariate_values_t& cv) const;
 
       
     protected:

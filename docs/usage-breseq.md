@@ -69,16 +69,23 @@ Entries in the applied GenomeDiff must be valid against the reference (the run s
 and polymorphic mutations (a `frequency` other than 1) are skipped with a warning, exactly as in
 `gdtools APPLY`.
 
-`--no-linkage`, `--no-local-realignment`, `--linkage-window <bp>`
+`--no-linkage`, `--realign <mode>`, `--linkage-window <bp>`
 
 In polymorphism mode, adjacent read alignment (RA) columns whose variant alleles occur in the same
 reads are merged into one INS, DEL or SUB with one frequency, and nearby polymorphic RA items are
 reported as cis or trans, on the basis of read linkage (LN) evidence. The reads spanning each such
 cluster, and each polymorphic indel, are then re-scored against the candidate haplotype sequences
 to refine the frequency, which corrects for an indel that the aligner placed differently in
-different reads. `--no-linkage` turns all of this off, `--no-local-realignment` keeps the linkage
-but not the re-scoring, and `--linkage-window` sets how far apart two items may be and still be
-compared (default: the longest read length). Neither has any effect in consensus mode.
+different reads. `--no-linkage` turns all of this off, and `--linkage-window` sets how far apart
+two items may be and still be compared (default: the longest read length).
+
+`--realign` chooses which RA columns are re-scored. `linked` (the default) is the behavior above:
+linked runs and polymorphic indels, in polymorphism mode only. `all` re-scores every RA column,
+lone SNPs included, and also turns linkage and re-scoring on in consensus mode, where the
+re-scoring is what recovers a fixed indel whose reads the aligner split over several columns; in
+consensus mode a linked run's haplotype is called only when it is confidently the majority. `none`
+keeps the linkage but skips the re-scoring (the old `--no-local-realignment` still works and means
+this). Re-scoring uses the `-j` threads.
 
 `--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`, `--no-pair-distance-prediction`
 

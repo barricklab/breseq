@@ -2156,6 +2156,12 @@ namespace breseq {
     // in this list -- one column rejected for strand bias, coverage or a homopolymer voids it --
     // and at least one haplotype is called. A user-defined RA column counts as present, and is
     // ALSO still reported on its own below, as user evidence always is.
+    //
+    // In consensus mode (LN exists there only under --realign all) the same takeover applies, but
+    // only a haplotype called CONSENSUS counts and becomes a mutation, as only a consensus column
+    // does below; an LN with no consensus haplotype is set aside and its columns fall through to
+    // the per-column join, so a run whose refined fit is not a majority never silences columns
+    // that pass on their own.
     ///
     struct usable_linkage {
       diff_entry_ptr_t ln;
@@ -2166,7 +2172,9 @@ namespace breseq {
     };
     vector<usable_linkage> linkages;
     set<string> consumed_columns;                  // "seq_id:position.insert_position" taken over by an LN
-    if (settings.polymorphism_prediction) {
+    // A haplotype call that lets its LN take over, and is reported as a mutation.
+    const string ln_called_prediction = settings.polymorphism_prediction ? "" : "consensus";   // "" = any call
+    if (settings.polymorphism_prediction || settings.realign_all()) {
       map<string, diff_entry_ptr_t> ra_by_column;
       for (diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) {
         cDiffEntry& item = **ra_it;
@@ -2232,7 +2240,10 @@ namespace breseq {
         // predictions cover haplotypes [1..]; frequencies cover [0..]. Line them up.
         u.predictions.insert(u.predictions.begin(), "");
         bool any_called = false;
-        for (size_t h = 1; h < u.predictions.size(); h++) { if (u.predictions[h] != "none") any_called = true; }
+        for (size_t h = 1; h < u.predictions.size(); h++) {
+          if (u.predictions[h] == "none") continue;
+          if (ln_called_prediction.empty() || (u.predictions[h] == ln_called_prediction)) any_called = true;
+        }
         bool consistent = (u.haplotypes.size() == u.predictions.size()) && (u.haplotypes.size() >= 2)
                           && (u.haplotypes[0].size() == u.span.size());
         for (size_t h = 0; consistent && (h < u.haplotypes.size()); h++) consistent = (u.haplotypes[h].size() == u.span.size());
@@ -2367,6 +2378,7 @@ namespace breseq {
       const string& ref_string = u.haplotypes[0];
       for (size_t h = 1; h < u.haplotypes.size(); h++) {
         if (u.predictions[h] == "none") continue;
+        if (!ln_called_prediction.empty() && (u.predictions[h] != ln_called_prediction)) continue;
         const string& hap = u.haplotypes[h];
         const string frequency = (u.predictions[h] == "consensus") ? "1" : u.frequencies[h];
 
@@ -2388,7 +2400,8 @@ namespace breseq {
              ("insert_end", column[INSERT_POSITION])
              ("ref_seq", ref_base)
              ("new_seq", new_base);
-            g[FREQUENCY] = frequency;
+            // Consensus-mode mutations carry no frequency, as in the per-column join above.
+            if (settings.polymorphism_prediction) g[FREQUENCY] = frequency;
             g["_linked"] = "1";
             groups.push_back(g);
             open = true;

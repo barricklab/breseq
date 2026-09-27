@@ -810,7 +810,9 @@ what the reads spanning the columns say, and it is the only thing that lets bres
     the reads spanning both by which alleles they pair up, giving a cis/trans reading. It never merges
     anything.
 
-Produced in polymorphism mode only. Pass `--no-linkage` to turn it off. Columns are named by
+Produced in polymorphism mode, and in consensus mode under `--realign all` (where a haplotype is
+called `consensus` only when it is confidently the majority, exactly as an `RA` column is). Pass
+`--no-linkage` to turn it off. Columns are named by
 coordinate, not by `RA` id, because ids are renumbered when evidence files are merged. LN items carry
 no gene annotation. In the HTML output an LN is shown only on the evidence page of the mutation it
 licensed, beneath that mutation's `RA` table; unlinked runs and nearby (cis/trans) items are recorded
@@ -871,8 +873,11 @@ Notable name=value pairs:
     shared reads carry both variants, `trans` when nearly none do and each variant is seen on its own.
     A summary of the counts, not a test.
 *   **realigned** *\<0/1>* — 1 when the frequency was refined by re-scoring the spanning reads against
-    the candidate haplotype sequences (see `--no-local-realignment`); **pileup_frequency** then keeps
-    the column-based value it replaced.
+    the candidate haplotype sequences (see `--realign`); **pileup_frequency** then keeps the
+    column-based value it replaced. The same two keys appear on an `RA` column that was re-scored
+    on its own (a polymorphic indel by default, every column under `--realign all`), whose
+    `frequency`, bounds and major/minor base then come from the re-scoring while
+    `allele_frequencies` and the coverage counts remain the column's.
 *   **reject** — `RA_REJECTED` when a column of the run was itself rejected, which voids the link.
 
 ### UN: Unknown base evidence

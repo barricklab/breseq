@@ -289,11 +289,14 @@ Evidence types: `RA` (read alignment), `MC` (missing coverage), `JC` (new juncti
 number), `UN` (unknown), `SC` (soft clipping), `DP` (discordant pair), `MP` (missing pair),
 `PD` (pair distance), `LN` (read linkage between RA columns)
 
-`LN` is produced in polymorphism mode only (`--no-linkage` turns it off). RA is called one pileup
+`LN` is produced in polymorphism mode by default, and in consensus mode only under `--realign all`
+(`--no-linkage` turns it off in either). RA is called one pileup
 column at a time, so the predictor refuses to join two *polymorphic* RA columns into one
 INS/DEL/SUB (`mutation_predictor.cpp`, `predictRAtoSNPorDELorINSorSUB`) on its own. A `contiguous=1`
 LN whose columns all survived as RAs takes those columns over: every haplotype it calls
-(`haplotype_predictions`, decided in `write_haplotype_calls` with the same rule as an RA column)
+(`haplotype_predictions`, decided in `write_haplotype_calls` with the same rule as an RA column:
+the UPPER frequency bound against the consensus cutoff in polymorphism mode, the LOWER bound in
+consensus mode, where only a `consensus` haplotype counts as called and becomes a mutation)
 becomes one mutation at that haplotype's fitted frequency, so an A-only lineage and an AC lineage
 at one site come out as `INS A` and `INS AC` (flat), never as `INS A` at the summed frequency plus a
 nested `INS C` at insert position 2. A `--user-evidence-gd` column is still reported on its own as
@@ -305,15 +308,29 @@ per-stage evidence files are merged, and `reassign_unique_ids` clears the eviden
 non-mutation entry, so an evidence-to-evidence id reference cannot survive the Output stage.
 
 After the pileup, `refine_by_local_realignment` re-scores the reads spanning every linked run and
-every polymorphic indel column against the candidate haplotype *sequences* (a banded alignment
-whose emission terms are error-table probabilities) and refits the frequency (`realigned=1`,
-`pileup_frequency=` keeps the column value). It runs in stage 08, not Output, because it needs the
-error table whose directory is deleted at the end of the run. **Candidates within
+every polymorphic indel column (every RA column under `--realign all`; nothing under `--realign
+none`, the replacement for the deprecated `--no-local-realignment`) against the candidate haplotype
+*sequences* (a banded alignment whose emission terms are error-table probabilities, stored
+band-only; a read base below `--base-quality-cutoff` is scored as an N, as the column caller skips
+it, or a quality-2 tail votes for whatever it spells) and refits the frequency (`realigned=1`,
+`pileup_frequency=` keeps the column value; a
+single column also gets its major/minor base swapped when the variant overtakes the reference,
+without which consensus mode would delete it). It runs in stage 08, not Output, because it needs
+the error table whose directory is deleted at the end of the run. **Candidates within
 `--linkage-realignment-cluster-distance` (20 bp) are refined together against the cross product of
 their haplotypes.** Scored alone, a run's window carries its neighbor's indel as reference and the
 reads that have that indel pay for it least against whichever haplotype changes the length the same
 way: in `tests/lambda_polymorphism` the 12% T→CA next to the 81% homopolymer A insertion came back at
-98% that way. Set `BRESEQ_REALIGN_DEBUG=<first position>` to dump per-read scores for one cluster.
+98% that way. A cluster is capped at 8 members, and when the cross product is cut to 16 joint
+haplotypes the all-reference and all-variant tuples are kept first (by index sum alone a five-SNP
+clone cluster would lose its true haplotype to the pairs). A fetched read must cover the cluster's
+columns untrimmed, plus the base after an inserted column, and nothing more: requiring a base
+beyond a SNP on each side dropped three quarters of the reference reads at one 36-bp-library site,
+because their right trim covered that base. Clusters are fetched serially (one BAM
+handle) and scored in parallel on `Settings::pool`, in batches; a cluster's job writes only its own
+entries, so results are the same at any `-j`. The step prints its wall time to stderr. Set
+`BRESEQ_REALIGN_DEBUG=<first position>` to dump per-read scores for one cluster (this also forces
+inline scoring so the dump stays ordered).
 
 `CN`, `DP`, `MP` and `PD` are predicted by **default**; turn each off with
 `--no-copy-number-prediction`, `--no-discordant-pair-prediction`, `--no-missing-pair-prediction`,

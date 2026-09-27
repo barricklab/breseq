@@ -27,6 +27,9 @@
 #include "pd_evidence.h"
 #include "coverage_output.h"
 
+#include <chrono>
+#include <future>
+
 using namespace std;
 
 namespace breseq {
@@ -76,10 +79,11 @@ void identify_mutations(
 								print_per_position_file
 							);
 	imp.do_pileup(settings.call_mutations_seq_id_set());
-  // Re-score the reads over every linked run and polymorphic indel against the candidate haplotype
-  // sequences. Done here rather than in the Output stage because it needs the error table, whose
-  // stage directory is removed once the run completes.
-  if (settings.polymorphism_prediction && !settings.no_linkage && !settings.no_local_realignment) {
+  // Re-score the reads over every linked run and polymorphic indel (every RA column under
+  // --realign all) against the candidate haplotype sequences. Done here rather than in the Output
+  // stage because it needs the error table, whose stage directory is removed once the run
+  // completes. Linkage itself is polymorphism mode only unless --realign all (see the constructor).
+  if (imp.linkage_enabled() && (settings.realign_mode != Settings::REALIGN_NONE)) {
     imp.refine_by_local_realignment();
   }
   if (settings.predict_soft_clipping) imp.add_sc_evidence(summary, ref_seq_info);
@@ -899,10 +903,13 @@ identify_mutations_pileup::identify_mutations_pileup(
   _error_table.set_read_file_partition(&read_groups(),
                                        make_read_file_partition(read_groups(), settings.read_file_sets));
 
-  // Read linkage (LN evidence) is a polymorphism-mode question: in consensus mode adjacent RA
-  // columns are already joined by the predictor, and a fixed mutation's columns have nothing to
-  // link. The window is how far apart two columns may be and still be spanned by one read.
-  _linkage_enabled = _settings.polymorphism_prediction && !_settings.no_linkage;
+  // Read linkage (LN evidence) is by default a polymorphism-mode question: in consensus mode
+  // adjacent RA columns are already joined by the predictor, and a fixed mutation's columns have
+  // nothing to link. --realign all turns it on in consensus mode too, because the local
+  // realignment it licenses is what recovers a fixed indel whose reads the aligner split over
+  // several columns. The window is how far apart two columns may be and still be spanned by one
+  // read.
+  _linkage_enabled = (_settings.polymorphism_prediction || _settings.realign_all()) && !_settings.no_linkage;
   _linkage_window = _settings.linkage_window;
   if (_linkage_window == 0) _linkage_window = summary.sequence_conversion.read_length_max;
   if (_linkage_window == 0) _linkage_window = 1;
@@ -3974,12 +3981,12 @@ void identify_mutations_pileup::linkage_close_run()
 
   // Record what local realignment will revisit: every multi-column run, and every single column
   // that is an indel (the calls whose per-column frequency depends most on where each read's
-  // aligner put the gap).
-  if (!_settings.no_local_realignment) {
+  // aligner put the gap) -- or, under --realign all, every single column.
+  if (_settings.realign_mode != Settings::REALIGN_NONE) {
     const linked_column& first = run.columns.front();
-    bool single_indel = (run.columns.size() == 1) && ((first.ref_base == '.') || (first.variant_base == '.'))
-                        && (first.ra_entry.get() != NULL) && (run.haplotypes.size() >= 2);
-    if ((ln.get() != NULL) || single_indel) {
+    bool single_column = (run.columns.size() == 1) && (first.ra_entry.get() != NULL) && (run.haplotypes.size() >= 2);
+    bool single_indel = single_column && ((first.ref_base == '.') || (first.variant_base == '.'));
+    if ((ln.get() != NULL) || single_indel || (single_column && _settings.realign_all())) {
       realignment_candidate cand;
       cand.tid = run.tid;
       for (size_t c = 0; c < run.columns.size(); c++)
@@ -4339,9 +4346,14 @@ void identify_mutations_pileup::write_haplotype_calls(cDiffEntry& ln, const vect
     double lower = 0.0, upper = 1.0;
     haplotype_frequency_bounds(obs, m, masks[h], lower, upper);
 
+    // The consensus test reads the UPPER bound in polymorphism mode ("can we still rule out that
+    // it is fixed") and the LOWER bound in consensus mode ("is it confidently the majority"),
+    // exactly as test_RA_evidence_POLYMORPHISM_mode / _CONSENSUS_mode do for a column. See the
+    // note at test_RA_evidence_CONSENSUS_mode before trying to make the two agree.
+    const double consensus_bound = _settings.polymorphism_prediction ? upper : lower;
     string prediction = "none";
     if (!std::isnan(score) && (score >= _consensus_score_cutoff)
-        && ((_settings.consensus_frequency_cutoff <= 0.0) || (upper >= _settings.consensus_frequency_cutoff))) {
+        && ((_settings.consensus_frequency_cutoff <= 0.0) || (consensus_bound >= _settings.consensus_frequency_cutoff))) {
       prediction = "consensus";
     } else if (!std::isnan(score) && (score >= _polymorphism_score_cutoff)
                && ((_settings.polymorphism_frequency_cutoff <= 0.0) || (lower >= _settings.polymorphism_frequency_cutoff))) {
@@ -4550,7 +4562,7 @@ string identify_mutations_pileup::candidate_haplotype_sequence(const realignment
   that carries it, so the approximation changes how confidently such a read prefers its haplotype,
   never which one it prefers.
 */
-double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length)
+double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignment& a, const string& hap, int32_t read_offset, int32_t extra_length) const
 {
   const bool reversed = a.reversed();
   const int32_t q_start_0 = a.query_start_0();
@@ -4591,11 +4603,17 @@ double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignme
   vector<double> lp_ins(n + 1, 0.0);                                             // [i]: P(r_i | ref .)
   vector<vector<double> > lp_del(n + 2, vector<double>(base_list_size, 0.0));  // [slot][b]: P(. | ref b, slot q)
   vector<double> lp_none(n + 2, 0.0);                                            // [slot]: P(. | ref ., slot q)
+  // A base below --base-quality-cutoff is treated like an N: the column caller skips such bases
+  // outright, and scoring them here would let a run of quality-2 bases (Illumina's marker for an
+  // unusable read tail, which on a reverse read lands mid-window) vote for whatever they happen
+  // to spell. On one LTEE clone that turned a clean 100% SNP into 84% SNP plus 16% of a third
+  // allele that only quality-2 bases carried.
+  const uint8_t quality_floor = static_cast<uint8_t>(min<uint32_t>(_settings.base_quality_cutoff, 255));
   for (int32_t i = 1; i <= n; i++) {
     for (uint8_t b = 0; b < base_list_size; b++) {
       double pr;
-      if (rb[i] == base_list_N_index) {
-        pr = uniform_prob;   // an N carries no information
+      if ((rb[i] == base_list_N_index) || (rq[i] < quality_floor)) {
+        pr = uniform_prob;   // an N, or a base too poor to count, carries no information
       } else {
         cv.quality() = rq[i]; cv.obs_base() = rb[i]; cv.ref_base() = b;
         pr = correct_mapping_prob * _error_table.get_prob(cv) + incorrect_mapping_prob * uniform_prob;
@@ -4625,41 +4643,67 @@ double identify_mutations_pileup::realignment_log10_likelihood(const bam_alignme
 
   // Banded DP. Read base i is expected near haplotype position i + read_offset; the band allows
   // the read's own sequencing indels plus the whole length change between haplotypes.
+  //
+  // Only the band is stored: row i holds haplotype positions [i + read_offset - band - 1,
+  // i + read_offset + band + 1], one wider on each side than the cells computed for it, because
+  // the recurrence reads row i-1 at j-1 and j for every computed j of row i (and the free-start
+  // row 0 has to be readable there too). A cell outside a row's stored window reads as NEG, which
+  // is exactly the value it would have held in a full matrix: nothing outside [jlo, jhi] is ever
+  // written. So the scores are identical to the full-matrix version, at 1/(m/band) the memory,
+  // which is what made this call cheap enough to run over every RA column.
   const int32_t band = 8 + abs(extra_length);
   const double NEG = -numeric_limits<double>::max();
-  vector<vector<double> > M(n + 1, vector<double>(m + 1, NEG)), I(n + 1, vector<double>(m + 1, NEG)), D(n + 1, vector<double>(m + 1, NEG));
+  const int32_t W = 2 * band + 3;                          // stored cells per row
+  const int32_t col_shift = band + 1 - read_offset;        // column of haplotype position j in row i is j - i + col_shift
+  vector<double> M(static_cast<size_t>(n + 1) * W, NEG), I(static_cast<size_t>(n + 1) * W, NEG), D(static_cast<size_t>(n + 1) * W, NEG);
+  // Read a cell; NEG when (i, j) lies outside row i's window.
+  struct band_cell {
+    static inline double get(const vector<double>& T, int32_t i, int32_t j, int32_t W, int32_t col_shift) {
+      const int32_t c = j - i + col_shift;
+      if ((c < 0) || (c >= W)) return -numeric_limits<double>::max();
+      return T[static_cast<size_t>(i) * W + c];
+    }
+    static inline double& at(vector<double>& T, int32_t i, int32_t j, int32_t W, int32_t col_shift) {
+      return T[static_cast<size_t>(i) * W + (j - i + col_shift)];
+    }
+  };
+#define BAND_GET(T, i, j) band_cell::get((T), (i), (j), W, col_shift)
+#define BAND_AT(T, i, j)  band_cell::at((T), (i), (j), W, col_shift)
 
-  // Row 0: nothing of the read consumed. Free start anywhere on the haplotype.
-  for (int32_t j = 0; j <= m; j++) M[0][j] = 0.0;
+  // Row 0: nothing of the read consumed. Free start anywhere on the haplotype (within the window).
+  for (int32_t j = max(0, -col_shift); (j <= m) && (j - 0 + col_shift < W); j++) BAND_AT(M, 0, j) = 0.0;
 
   for (int32_t i = 1; i <= n; i++) {
     int32_t jlo = max(1, i + read_offset - band);
     int32_t jhi = min(m, i + read_offset + band);
     for (int32_t j = jlo; j <= jhi; j++) {
       // Match: read base i against haplotype base j.
-      double from_m = (M[i-1][j-1] > NEG) ? M[i-1][j-1] + ((i > 1) ? lp_none[i] : 0.0) : NEG;
-      double from_i = I[i-1][j-1];
-      double from_d = D[i-1][j-1];
+      const double m_prev = BAND_GET(M, i-1, j-1);
+      double from_m = (m_prev > NEG) ? m_prev + ((i > 1) ? lp_none[i] : 0.0) : NEG;
+      double from_i = BAND_GET(I, i-1, j-1);
+      double from_d = BAND_GET(D, i-1, j-1);
       double best = max(from_m, max(from_i, from_d));
       if (best > NEG) {
         double e = (hb[j] == base_list_N_index) ? log10(uniform_prob) : lp_obs[i][hb[j]];
-        M[i][j] = best + e;
+        BAND_AT(M, i, j) = best + e;
       }
       // Insertion: read base i with no haplotype base, after haplotype base j.
-      double ib = max(M[i-1][j], max(I[i-1][j], D[i-1][j]));
-      if (ib > NEG) I[i][j] = ib + lp_ins[i];
+      double ib = max(BAND_GET(M, i-1, j), max(BAND_GET(I, i-1, j), BAND_GET(D, i-1, j)));
+      if (ib > NEG) BAND_AT(I, i, j) = ib + lp_ins[i];
       // Deletion: haplotype base j with no read base, after read base i (slot i+1).
-      double db = max(M[i][j-1], max(D[i][j-1], I[i][j-1]));
+      double db = max(BAND_GET(M, i, j-1), max(BAND_GET(D, i, j-1), BAND_GET(I, i, j-1)));
       if (db > NEG) {
         double e = (hb[j] == base_list_N_index) ? log10(uniform_prob) : lp_del[i+1][hb[j]];
-        D[i][j] = db + e;
+        BAND_AT(D, i, j) = db + e;
       }
     }
   }
 
   // Free end on the haplotype: the best way to have consumed the whole read.
   double best = NEG;
-  for (int32_t j = 0; j <= m; j++) best = max(best, max(M[n][j], I[n][j]));
+  for (int32_t j = 0; j <= m; j++) best = max(best, max(BAND_GET(M, n, j), BAND_GET(I, n, j)));
+#undef BAND_GET
+#undef BAND_AT
   if (best <= NEG) {
     // The band excluded every alignment (a read far longer than its mapped span, say). Score it
     // as uninformative rather than impossible.
@@ -4680,53 +4724,99 @@ static bool realignment_candidate_before(const identify_mutations_pileup::realig
 /*! Re-score the reads over every recorded candidate and refine its frequency.
 
   Candidates are clustered when they lie within --linkage-realignment-cluster-distance of each
-  other, and each cluster is refined as one (refine_candidate_cluster). The value the column-based
-  fit gave every entry is kept as pileup_frequency so the two can be compared.
+  other, and each cluster is refined as one. The value the column-based fit gave every entry is
+  kept as pileup_frequency so the two can be compared.
+
+  The work is done in two phases, batch by batch. PREPARE (prepare_candidate_cluster) spells out
+  the cluster's joint haplotypes and fetches the reads spanning it; it is serial because every
+  fetch goes through the one BAM handle this pileup owns. SCORE (score_candidate_cluster) aligns
+  every fetched read to every haplotype, refits the mixture and writes the cluster's own entries;
+  it touches nothing shared but read-only tables, so one job per cluster runs on Settings::pool.
+  Clusters are disjoint by construction, so no two jobs write the same entry, and the result is
+  identical in any job order and at any -j. A batch bounds how many fetched reads are held at once.
+  With one thread, or when BRESEQ_REALIGN_DEBUG is set (its per-read dump must stay in order), the
+  clusters are scored inline instead.
 */
 void identify_mutations_pileup::refine_by_local_realignment()
 {
   if (_realignment_candidates.empty()) return;
-  cerr << "  Re-scoring reads over " << _realignment_candidates.size() << " linked runs and polymorphic indels..." << endl;
+  const chrono::steady_clock::time_point started = chrono::steady_clock::now();
+  cerr << "  Re-scoring reads over " << _realignment_candidates.size() << " linked runs and RA columns..." << endl;
 
   uint32_t flank = _settings.linkage_realignment_flank;
   if (flank == 0) flank = _linkage_window;
 
   stable_sort(_realignment_candidates.begin(), _realignment_candidates.end(), realignment_candidate_before);
 
+  // Cluster boundaries: [begin, end) over the sorted candidates. A cluster is capped at a fixed
+  // number of members: under --realign all a tract of SNPs a few bases apart would otherwise
+  // chain into one cluster whose joint haplotypes (2^members and up) no read could span anyway.
+  const size_t k_max_cluster_members = 8;
+  vector<pair<size_t, size_t> > ranges;
   size_t begin = 0;
   while (begin < _realignment_candidates.size()) {
     size_t end = begin + 1;
     uint32_t span_end = _realignment_candidates[begin].last_position();
     while ((end < _realignment_candidates.size())
+           && (end - begin < k_max_cluster_members)
            && (_realignment_candidates[end].tid == _realignment_candidates[begin].tid)
            && (_realignment_candidates[end].first_position() <= span_end + _settings.linkage_realignment_cluster_distance)) {
       span_end = max(span_end, _realignment_candidates[end].last_position());
       end++;
     }
-    refine_candidate_cluster(begin, end, flank);
+    ranges.push_back(make_pair(begin, end));
     begin = end;
   }
+
+  const size_t n_threads = max<size_t>(1, static_cast<size_t>(Settings::pool.size()));
+  const bool run_inline = (n_threads <= 1) || (getenv("BRESEQ_REALIGN_DEBUG") != NULL);
+  const size_t batch_size = max<size_t>(1, 4 * n_threads);
+
+  size_t next = 0;
+  while (next < ranges.size()) {
+    // Reserved to its final size before any job takes a pointer into it, so nothing moves.
+    vector<realignment_cluster> batch;
+    batch.reserve(min(batch_size, ranges.size() - next));
+    for (; (next < ranges.size()) && (batch.size() < batch_size); next++) {
+      batch.push_back(realignment_cluster());
+      prepare_candidate_cluster(batch.back(), ranges[next].first, ranges[next].second, flank);
+    }
+    if (run_inline) {
+      for (size_t k = 0; k < batch.size(); k++) score_candidate_cluster(batch[k]);
+    } else {
+      vector<future<void> > jobs;
+      jobs.reserve(batch.size());
+      for (size_t k = 0; k < batch.size(); k++)
+        jobs.push_back(Settings::pool.push(score_cluster_thread_helper, this, &batch[k]));
+      // get() also rethrows anything a job threw.
+      for (size_t k = 0; k < jobs.size(); k++) jobs[k].get();
+    }
+  }
+
+  const double seconds = chrono::duration<double>(chrono::steady_clock::now() - started).count();
+  cerr << "  Re-scored " << _realignment_candidates.size() << " candidates in " << ranges.size() << " clusters using "
+       << (run_inline ? 1 : n_threads) << " thread" << (((run_inline ? 1 : n_threads) == 1) ? "" : "s")
+       << " (" << formatted_double(seconds, 1).to_string() << " s)" << endl;
 
   _fetched_reads.clear();
   _realignment_candidates.clear();
 }
 
-/*! Refine one cluster of candidates together.
+/*! Prepare one cluster of candidates for scoring: joint haplotypes, window, and spanning reads.
 
   The cluster's haplotypes are every combination of its members' haplotypes (each member's
   reference, all-variant and observed partial strings), so a read carrying one member's variant is
   scored against sequences that carry it and pays nothing for it when judging another member. All
-  of them are spelled out over one reference window, every read spanning the whole cluster is
-  scored against each, and the mixture is refit from those scores. A member's refined frequency is
-  the total over the joint haplotypes that carry its all-variant string; its presence score and
-  bounds are the set-based versions of the same tests.
+  of them are spelled out over one reference window.
 
   The cross product is ordered so that combinations of reference and all-variant strings come
   first and partial strings later, and it is cut off at a fixed size; what is cut is the least
   supported combination of the least supported partials.
 */
-void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t end, uint32_t flank)
+void identify_mutations_pileup::prepare_candidate_cluster(realignment_cluster& c, size_t begin, size_t end, uint32_t flank)
 {
+  c.begin = begin;
+  c.end = end;
   const size_t n_members = end - begin;
   if (n_members == 0) return;
   const realignment_candidate& first_member = _realignment_candidates[begin];
@@ -4734,16 +4824,13 @@ void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t en
   const uint32_t tlen = target_length(tid);
 
   // The cluster as one candidate: all members' columns in order, haplotypes filled in below.
-  realignment_candidate cluster;
-  cluster.tid = tid;
-  vector<size_t> member_offset(n_members, 0);   // where each member's columns start in the cluster's
+  c.joint.tid = tid;
   for (size_t i = 0; i < n_members; i++) {
-    member_offset[i] = cluster.columns.size();
     const realignment_candidate& m = _realignment_candidates[begin + i];
-    cluster.columns.insert(cluster.columns.end(), m.columns.begin(), m.columns.end());
+    c.joint.columns.insert(c.joint.columns.end(), m.columns.begin(), m.columns.end());
   }
-  const uint32_t first_position = cluster.columns.front().first;
-  const uint32_t last_position = cluster.columns.back().first;
+  c.first_position = c.joint.columns.front().first;
+  const uint32_t last_position = c.joint.columns.back().first;
 
   // Enumerate joint haplotypes as tuples of member haplotype indices.
   const size_t k_max_joint_haplotypes = max<size_t>(16, 2 * _settings.linkage_maximum_haplotypes);
@@ -4776,63 +4863,109 @@ void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t en
       if (i == n_members) break;
     }
   }
-  // Reference/variant combinations first (index sum), then by the tuple itself.
+  // Choose which tuples survive the cut: those made only of reference and all-variant strings
+  // before any with a partial string, and among those the all-reference and all-variant tuples
+  // first, then the ones a single member away from either, and so on outward (the key is the
+  // number of partial indices, then the smaller of the variant and reference counts). By index
+  // sum alone, the all-variant tuple -- the true haplotype of every read in a clone -- would be
+  // the LAST to survive, and a five-member cluster would lose it to the pairs. The survivors are
+  // then listed by index sum, as before, so the order the fit sees is unchanged wherever the cut
+  // makes no difference.
   {
-    vector<pair<size_t, vector<size_t> > > keyed;
+    vector<pair<vector<size_t>, vector<size_t> > > keyed;
     for (size_t t = 0; t < tuples.size(); t++) {
-      size_t key = 0;
-      for (size_t i = 0; i < n_members; i++) key += tuples[t][i];
+      size_t partial = 0, variant = 0, reference = 0;
+      for (size_t i = 0; i < n_members; i++) {
+        if (tuples[t][i] >= 2) partial++;
+        else if (tuples[t][i] == 1) variant++;
+        else reference++;
+      }
+      vector<size_t> key;
+      key.push_back(partial);
+      key.push_back(min(variant, reference));
       keyed.push_back(make_pair(key, tuples[t]));
     }
     sort(keyed.begin(), keyed.end());
-    tuples.clear();
-    for (size_t t = 0; (t < keyed.size()) && (t < k_max_joint_haplotypes); t++) tuples.push_back(keyed[t].second);
+    vector<pair<size_t, vector<size_t> > > survivors;
+    for (size_t t = 0; (t < keyed.size()) && (t < k_max_joint_haplotypes); t++) {
+      size_t sum = 0;
+      for (size_t i = 0; i < n_members; i++) sum += keyed[t].second[i];
+      survivors.push_back(make_pair(sum, keyed[t].second));
+    }
+    sort(survivors.begin(), survivors.end());
+    c.tuples.clear();
+    for (size_t t = 0; t < survivors.size(); t++) c.tuples.push_back(survivors[t].second);
   }
-  const size_t n_joint = tuples.size();
+  const size_t n_joint = c.tuples.size();
   for (size_t t = 0; t < n_joint; t++) {
     string s;
-    for (size_t i = 0; i < n_members; i++) s += _realignment_candidates[begin + i].haplotypes[tuples[t][i]];
-    cluster.haplotypes.push_back(s);
+    for (size_t i = 0; i < n_members; i++) s += _realignment_candidates[begin + i].haplotypes[c.tuples[t][i]];
+    c.joint.haplotypes.push_back(s);
   }
 
-  // The reads must reach one base past the cluster's columns on each side (see fetch_callback).
-  _fetch_cover_start_1 = (first_position > 1) ? first_position - 1 : 1;
-  _fetch_cover_end_1 = min(tlen, last_position + 1);
+  // The reads must cover every column, untrimmed, and the base after an inserted column (see
+  // fetch_callback). Nothing more: a read whose last base IS the column says all there is to say
+  // about a substitution or a deletion there, and requiring one base beyond it on each side threw
+  // out, on a 36-bp library, three quarters of the reference-carrying reads at a SNP whose
+  // variant reads happened to start a few bases earlier.
+  _fetch_cover_start_1 = c.first_position;
+  _fetch_cover_end_1 = last_position;
+  for (size_t k = 0; k < c.joint.columns.size(); k++) {
+    if (c.joint.columns[k].second > 0) _fetch_cover_end_1 = max(_fetch_cover_end_1, c.joint.columns[k].first + 1);
+  }
+  _fetch_cover_end_1 = min(tlen, _fetch_cover_end_1);
 
-  const uint32_t window_start_1 = (first_position > flank + 1) ? first_position - flank - 1 : 1;
-  const uint32_t window_end_1 = min(tlen, last_position + flank + 1);
-  const int32_t ref_length = static_cast<int32_t>(window_end_1 - window_start_1 + 1);
+  c.window_start_1 = (c.first_position > flank + 1) ? c.first_position - flank - 1 : 1;
+  c.window_end_1 = min(tlen, last_position + flank + 1);
+  c.ref_length = static_cast<int32_t>(c.window_end_1 - c.window_start_1 + 1);
 
-  vector<string> hap_seqs(n_joint);
-  for (size_t t = 0; t < n_joint; t++) hap_seqs[t] = candidate_haplotype_sequence(cluster, t, window_start_1, window_end_1);
+  c.hap_seqs.resize(n_joint);
+  for (size_t t = 0; t < n_joint; t++) c.hap_seqs[t] = candidate_haplotype_sequence(c.joint, t, c.window_start_1, c.window_end_1);
 
   _fetched_reads.clear();
   do_fetch(string(target_name(tid)) + ":" + to_string(_fetch_cover_start_1) + "-" + to_string(_fetch_cover_end_1));
-  if (_fetched_reads.empty()) return;
+  c.reads.swap(_fetched_reads);
+}
+
+/*! Score one prepared cluster and refine its members.
+
+  Every read spanning the whole cluster is scored against each joint haplotype, and the mixture
+  is refit from those scores. A member's refined frequency is the total over the joint haplotypes
+  that carry its all-variant string; its presence score and bounds are the set-based versions of
+  the same tests.
+
+  Safe to run concurrently with other clusters: it reads the reference, the error table and the
+  settings, and writes only this cluster's own entries.
+*/
+void identify_mutations_pileup::score_candidate_cluster(const realignment_cluster& c) const
+{
+  const size_t n_members = c.end - c.begin;
+  if ((n_members == 0) || c.reads.empty()) return;
+  const size_t n_joint = c.tuples.size();
 
   // Score every read against every joint haplotype.
-  const bool debug = getenv("BRESEQ_REALIGN_DEBUG") && (first_position == static_cast<uint32_t>(atoi(getenv("BRESEQ_REALIGN_DEBUG"))));
+  const bool debug = getenv("BRESEQ_REALIGN_DEBUG") && (c.first_position == static_cast<uint32_t>(atoi(getenv("BRESEQ_REALIGN_DEBUG"))));
   vector<haplotype_observation> obs;
-  obs.reserve(_fetched_reads.size());
-  vector<size_t> best_joint(_fetched_reads.size(), n_joint);   // n_joint = ambiguous
-  for (size_t r = 0; r < _fetched_reads.size(); r++) {
-    const bam_alignment& a = *_fetched_reads[r];
+  obs.reserve(c.reads.size());
+  vector<size_t> best_joint(c.reads.size(), n_joint);   // n_joint = ambiguous
+  for (size_t r = 0; r < c.reads.size(); r++) {
+    const bam_alignment& a = *c.reads[r];
     haplotype_observation o;
     o.read_id = static_cast<uint32_t>(r);
     o.log10_pr.assign(n_joint, 0.0);
     // Where the read's first aligned base falls on the reference window; reads start before the
     // first column, where every haplotype still matches the reference.
-    const int32_t read_offset = static_cast<int32_t>(a.reference_start_1()) - static_cast<int32_t>(window_start_1);
+    const int32_t read_offset = static_cast<int32_t>(a.reference_start_1()) - static_cast<int32_t>(c.window_start_1);
     for (size_t t = 0; t < n_joint; t++) {
-      const int32_t extra_length = static_cast<int32_t>(hap_seqs[t].size()) - ref_length;
-      o.log10_pr[t] = realignment_log10_likelihood(a, hap_seqs[t], read_offset, extra_length);
+      const int32_t extra_length = static_cast<int32_t>(c.hap_seqs[t].size()) - c.ref_length;
+      o.log10_pr[t] = realignment_log10_likelihood(a, c.hap_seqs[t], read_offset, extra_length);
     }
     o.log10_pr_max = -numeric_limits<double>::max();
     for (size_t t = 0; t < n_joint; t++) o.log10_pr_max = max(o.log10_pr_max, o.log10_pr[t]);
     if (debug) {
       cerr << "REALIGN " << a.read_name() << " start=" << a.reference_start_1() << " rev=" << a.reversed()
            << " mq=" << a.mapping_quality() << " cigar=" << a.cigar_string();
-      for (size_t t = 0; t < n_joint; t++) cerr << " " << cluster.haplotypes[t] << "=" << o.log10_pr[t];
+      for (size_t t = 0; t < n_joint; t++) cerr << " " << c.joint.haplotypes[t] << "=" << o.log10_pr[t];
       cerr << endl;
     }
     o.r.assign(n_joint, 0.0);
@@ -4851,12 +4984,12 @@ void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t en
   haplotype_model m = fit_haplotype_frequencies(obs, all);
 
   for (size_t i = 0; i < n_members; i++) {
-    const realignment_candidate& member = _realignment_candidates[begin + i];
+    const realignment_candidate& member = _realignment_candidates[c.begin + i];
     const size_t n_member_haplotypes = member.haplotypes.size();
 
     // masks[h]: the joint haplotypes carrying this member's haplotype h.
     vector<vector<bool> > masks(n_member_haplotypes, vector<bool>(n_joint, false));
-    for (size_t t = 0; t < n_joint; t++) masks[tuples[t][i]][t] = true;
+    for (size_t t = 0; t < n_joint; t++) masks[c.tuples[t][i]][t] = true;
 
     cDiffEntry& entry = *member.entry;
     entry[LN_PILEUP_FREQUENCY] = entry[FREQUENCY];
@@ -4868,7 +5001,7 @@ void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t en
       uint32_t ambiguous = 0;
       for (size_t r = 0; r < best_joint.size(); r++) {
         if (best_joint[r] == n_joint) ambiguous++;
-        else best_counts[tuples[best_joint[r]][i]]++;
+        else best_counts[c.tuples[best_joint[r]][i]]++;
       }
       string haplotype_counts;
       for (size_t h = 0; h < n_member_haplotypes; h++) {
@@ -4877,18 +5010,30 @@ void identify_mutations_pileup::refine_candidate_cluster(size_t begin, size_t en
       }
       if (ambiguous > 0) haplotype_counts += ",other:" + to_string<uint32_t>(ambiguous);
       entry[LN_HAPLOTYPES] = haplotype_counts;
-      entry[LN_SPANNING_READS] = to_string<uint32_t>(static_cast<uint32_t>(_fetched_reads.size()));
+      entry[LN_SPANNING_READS] = to_string<uint32_t>(static_cast<uint32_t>(c.reads.size()));
 
       // Every haplotype's call is decided again from the refined fit.
       write_haplotype_calls(entry, member.haplotypes, obs, m, masks);
     } else {
-      // A single indel column: the RA keeps its column-based presence score (that is what
+      // A single column: the RA keeps its column-based presence score (that is what
       // test_RA_evidence accepts it on) and takes the refined frequency, whose bounds the
       // frequency cutoffs are applied to.
       write_haplotype_frequency(entry, obs, m, masks[1]);
       double f_ref = 0.0, f_variant = 0.0;
       for (size_t t = 0; t < n_joint; t++) { if (masks[0][t]) f_ref += m.f[t]; if (masks[1][t]) f_variant += m.f[t]; }
       entry[MAJOR_FREQUENCY] = formatted_double(max(f_ref, f_variant), _polymorphism_precision_places, true).to_string();
+      // The majority allele can change hands once the reads are re-scored, and the predictor and
+      // test_RA_evidence read it off major_base (a consensus-mode entry whose major base is the
+      // reference is DELETED). Swap the pair, and the coverage that goes with each, but only when
+      // the column's two alleles are the reference and the variant: a third allele is not in the
+      // fit and its record is left alone.
+      const bool variant_is_major = (f_variant > f_ref);
+      const bool pair_is_ref_and_new = ((entry[MAJOR_BASE] == entry[REF_BASE]) && (entry[MINOR_BASE] == entry[NEW_BASE]))
+                                    || ((entry[MAJOR_BASE] == entry[NEW_BASE]) && (entry[MINOR_BASE] == entry[REF_BASE]));
+      if (pair_is_ref_and_new && (variant_is_major != (entry[MAJOR_BASE] == entry[NEW_BASE]))) {
+        swap(entry[MAJOR_BASE], entry[MINOR_BASE]);
+        swap(entry[MAJOR_COV], entry[MINOR_COV]);
+      }
     }
   }
 }
