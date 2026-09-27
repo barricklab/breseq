@@ -1084,7 +1084,18 @@ bool cErrorTable::alignment_position_to_covariates(const pileup_wrapper& a, int3
     // may nothave inserted bases at all of those positons, so cap at indel.
     int32_t max_offset = insert_count;
     if (indel < max_offset) max_offset = indel;
-    q_pos_0 += max_offset + 1 - a.reversed(); 
+
+    //## A read with no base at this inserted position observes '.' (no insertion) only if it
+    //## has an aligned base on the far side of the slot. A read whose alignment ENDS at this
+    //## base says nothing about what follows it. For an ordinary read that base is inside the
+    //## right-end trim and never gets here; the side of a junction-split read (-M1/-M2) at its
+    //## breakpoint is written untrimmed, and on the reverse strand the "next base in read
+    //## direction" below is the base itself, so ~60 such pieces at one IS150 edge were counted
+    //## as reference at an insert column and held a fixed 1-base insertion at 56%. Forward reads
+    //## were already excluded by the bounds check further down; this makes both strands agree.
+    if ((indel < insert_count) && (a.query_position_0() + indel + 1 > q_end_0)) return false;
+
+    q_pos_0 += max_offset + 1 - a.reversed();
             
     //## Check bounds: it's possible to go past the end of the read because
     //## this is the last base of this read, but other reads have inserted bases
