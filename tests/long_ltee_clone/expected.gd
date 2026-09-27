@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	18:32:14 13 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision ab1f45113c04
+#=CREATED	15:07:15 27 Sep 2026
+#=PROGRAM	breseq 0.50.0 revision 23039a3d6c0d
 #=COMMAND	./src/breseq/breseq -j 7 -o ./tests/long_ltee_clone -r ./tests/long_ltee_clone/../data/downloads/ltee_REL606/REL606.gbk ./tests/long_ltee_clone/../data/downloads/ena_SRR2589061/SRR2589061_1.fastq.gz ./tests/long_ltee_clone/../data/downloads/ena_SRR2589061/SRR2589061_2.fastq.gz
 #=REFSEQ	./tests/long_ltee_clone/../data/downloads/ltee_REL606/REL606.gbk
 #=READSEQ	./tests/long_ltee_clone/../data/downloads/ena_SRR2589061/SRR2589061_1.fastq.gz
