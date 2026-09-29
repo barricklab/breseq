@@ -4099,7 +4099,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
     switch (mut._type)
     {
       case SNP:{
-        annotate_1_mutation(mut, mut.get_reference_coordinate_start().get_position(), mut.get_reference_coordinate_end().get_position(), false, ignore_pseudogenes);
+        annotate_1_mutation(mut, mut.get_reference_coordinate_start().get_position(), mut.get_reference_coordinate_end().get_position(), false, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
       } break;
         
       case SUB:
@@ -4110,7 +4110,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       case MOB:
       case AMP:
       case INV: {
-        annotate_1_mutation(mut, mut.get_reference_coordinate_start().get_position(), mut.get_reference_coordinate_end().get_position());
+        annotate_1_mutation(mut, mut.get_reference_coordinate_start().get_position(), mut.get_reference_coordinate_end().get_position(), false, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
       } break;
         
       case JC:
@@ -4118,7 +4118,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       case PD:{
         cDiffEntry side_1;
         side_1[SEQ_ID] = mut["side_1_seq_id"];
-        annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true);
+        annotate_1_mutation(side_1, from_string<int32_t>(mut["side_1_position"]), from_string<int32_t>(mut["side_1_position"]), true, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
         //copy over entries with prefix
         for(diff_entry_map_t::iterator it=side_1.begin(); it!=side_1.end(); it++)
         {
@@ -4127,7 +4127,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         
         cDiffEntry side_2;
         side_2[SEQ_ID] = mut["side_2_seq_id"];
-        annotate_1_mutation(side_2, from_string<int32_t>(mut["side_2_position"]), from_string<int32_t>(mut["side_2_position"]), true);
+        annotate_1_mutation(side_2, from_string<int32_t>(mut["side_2_position"]), from_string<int32_t>(mut["side_2_position"]), true, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
         //copy over entries with prefix
         for(diff_entry_map_t::iterator it=side_2.begin(); it!=side_2.end(); it++)
         {
@@ -4137,15 +4137,15 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       } break;
         
       case RA:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
+        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]), false, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
       } break;
         
       case MC:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]));
+        annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]), false, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
       } break;
         
       case CN:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]));
+        annotate_1_mutation(mut, from_string<int32_t>(mut["start"]), from_string<int32_t>(mut["end"]), false, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
       } break;
 
       case SC:
@@ -4153,7 +4153,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         // Annotate the single soft-clipping / missing-pair position like a JC side
         // (repeat_override=true) so that gene/product/annotation fields are populated for the
         // evidence item.
-        annotate_1_mutation(mut, from_string<int32_t>(mut[POSITION]), from_string<int32_t>(mut[POSITION]), true);
+        annotate_1_mutation(mut, from_string<int32_t>(mut[POSITION]), from_string<int32_t>(mut[POSITION]), true, ignore_pseudogenes, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
       } break;
 
       default:{
