@@ -1267,13 +1267,19 @@ int do_annotate(int argc, char* argv[])
 	vector<string> gd_titles;
 	bool polymorphism_search_found(false);
 	
+	// Annotation options, used by every output format that annotates
+	bool ignore_pseudogenes = options.count("ignore-pseudogenes");
+	double inactivating_overlap_fraction = from_string<double>(options["inactivating-overlap-fraction"]);
+	int32_t inactivating_size_cutoff = from_string<int32_t>(options["inactivating-size-cutoff"]);
+	int32_t promoter_distance = from_string<int32_t>(options["promoter-distance"]);
+	
   if (output_format == "HTML") {
 		
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, &polymorphism_search_found, compare_mode, options, uout);
 
 		uout("Annotating mutations");
 		
-		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode, kBreseq_large_mutation_size_cutoff, false, from_string<double>(options["inactivating-overlap-fraction"]), from_string<uint32_t>(options["inactivating-size-cutoff"]), from_string<uint32_t>(options["promoter-distance"]) );
+		ref_seq_info.annotate_mutations(gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
 		
     uout("Writing output HTML file", output_file_name);
 		
@@ -1296,7 +1302,7 @@ int do_annotate(int argc, char* argv[])
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
 				
 		uout("Annotating mutations");
-		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
+		ref_seq_info.annotate_mutations(gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
 		
 		uout("Writing output Genome Diff file", options["output"]);
 		
@@ -1347,7 +1353,7 @@ int do_annotate(int argc, char* argv[])
 		gd.remove_group(cGenomeDiff::EVIDENCE);
 		
 		uout("Annotating mutations");
-		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
+		ref_seq_info.annotate_mutations(gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
 		
 		Settings settings;
 		MutationTableOptions mutation_table_options(settings);
@@ -1366,7 +1372,7 @@ int do_annotate(int argc, char* argv[])
 			cGenomeDiff this_gd(*it);
 			cGenomeDiff this_ev(*it);
 			
-			ref_seq_info.annotate_mutations(this_gd, false, options.count("ignore-pseudogenes"), compare_mode);
+			ref_seq_info.annotate_mutations(this_gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
 			
 			// Add extra TEXT annotations
 			if (options.count("add-text-fields")) {
@@ -1400,7 +1406,7 @@ int do_annotate(int argc, char* argv[])
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
 		
 		uout("Annotating mutations");
-		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
+		ref_seq_info.annotate_mutations(gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
 		
 		uout("Writing output JSON file", output_file_name);
 		
