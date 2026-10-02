@@ -1,0 +1,28 @@
+LOCUS       genbank_wrap             240 bp    DNA     linear   UNK 01-JAN-2020
+DEFINITION  Synthetic reference with long qualifiers for testing GenBank line
+            wrapping.
+ACCESSION   genbank_wrap
+FEATURES             Location/Qualifiers
+     source          1..240
+                     /organism="synthetic construct"
+     gene            13..225
+                     /locus_tag="wrap_0001"
+     CDS             13..225
+                     /locus_tag="wrap_0001"
+                     /product="N-acetylgalactosamine-N,N'-diacetylbacillosaminyl-diphospho-undecaprenol
+                     4-alpha-N-acetylgalactosaminyltransferase"
+                     /note="A long free-text note made of ordinary words, so that it must
+                     wrap across several lines at spaces; its source is
+                     https://example.org/genbank/wrapping/a-single-token-longer-than-one-line.html
+                     for details."
+                     /function="a value with ""quoted words"" on its first line
+                     and ""more quoted words"" starting a continuation line"
+                     /transl_table=11
+                     /translation="MPGYRSLSATSQNLGMLLSRRSLSTRLATSGLKKNGLTNRLLLT
+                     DYPRYTSTPTARCSNTKWQSTVSTLK"
+ORIGIN
+        1 cttgttggcc caatgccggg gtaccgtagt ttgtctgcga cctcacaaaa tttgggcatg
+       61 cttttatccc gacgctctct atccacacga ttggcgacgt cggggctcaa gaagaatggg
+      121 ttgacgaatc gtttgctctt aacagactat ccccgctaca cctcgacgcc aacagcgaga
+      181 tgctcaaata cgaagtggca atcaacagtt tctacgttga aataagtgtg aatcgcttaa
+//

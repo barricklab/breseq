@@ -183,8 +183,8 @@ FEATURES             Location/Qualifiers
                      /name="yafE"
                      /note="b0210"
                      /phase=0
-                     /product="predicted S-adenosyl-L-methionine-dependent meth
-                     yltransferase"
+                     /product="predicted S-adenosyl-L-methionine-dependent
+                     methyltransferase"
                      /protein_id="kribb:ECB_00203"
                      /transl_table=11
                      /translation="MSGLPQGRPTFVAAQNVSTVVAYDLSAHMLDVVAQAAEVRQLKN
@@ -209,8 +209,8 @@ FEATURES             Location/Qualifiers
                      /name="mltD"
                      /note="b0211"
                      /phase=0
-                     /product="predicted membrane-bound lytic murein transglyco
-                     sylase D"
+                     /product="predicted membrane-bound lytic murein
+                     transglycosylase D"
                      /protein_id="kribb:ECB_00204"
                      /transl_table=11
                      /translation="MKAKAILLASVLLVGCQSTGNVQQHAQSLSAAGQGEAAKFTSQA
@@ -265,8 +265,8 @@ FEATURES             Location/Qualifiers
                      /name="yafS"
                      /note="b0213"
                      /phase=0
-                     /product="predicted S-adenosyl-L-methionine-dependent meth
-                     yltransferase"
+                     /product="predicted S-adenosyl-L-methionine-dependent
+                     methyltransferase"
                      /protein_id="kribb:ECB_00206"
                      /transl_table=11
                      /translation="MKPARVPQTVVAPDRWGDLPWGELYRKALERQLNPWFTKMYGFH
@@ -480,8 +480,8 @@ FEATURES             Location/Qualifiers
                      /name="yafV"
                      /note="b0219"
                      /phase=0
-                     /product="predicted C-N hydrolase family amidase, NAD(P)-b
-                     inding"
+                     /product="predicted C-N hydrolase family amidase,
+                     NAD(P)-binding"
                      /protein_id="kribb:ECB_00214"
                      /transl_table=11
                      /translation="MPGLKITLLQQPLVWMDGPANLRHFDRQLEGITGRDVIVLPEMF
@@ -641,7 +641,7 @@ FEATURES             Location/Qualifiers
                      /note="b0225"
                      /phase=0
                      /product="predicted toxin of the YafQ-DinJ toxin-antitoxin
-                      system"
+                     system"
                      /protein_id="kribb:ECB_00220"
                      /transl_table=11
                      /translation="MIQRDIEYSGQFSKDVKLAQKRHKDMNKLKYLMTLLINNTLPLP
@@ -664,7 +664,7 @@ FEATURES             Location/Qualifiers
                      /note="b0226"
                      /phase=0
                      /product="predicted antitoxin of YafQ-DinJ toxin-antitoxin
-                      system"
+                     system"
                      /protein_id="kribb:ECB_00221"
                      /transl_table=11
                      /translation="MAANAFVRARIDEDLKNQAADVLAGMGLTISDLVRITLTKVARE
@@ -726,8 +726,8 @@ FEATURES             Location/Qualifiers
                      /name="fhiA"
                      /note="promoterless fragment; also pseudo in K-12 MG1655"
                      /phase=0
-                     /product="promoterless fragment; also pseudo in K-12 MG165
-                     5"
+                     /product="promoterless fragment; also pseudo in K-12
+                     MG1655"
                      /pseudo=0
                      /type="gene"
                      /pseudo
@@ -751,8 +751,8 @@ FEATURES             Location/Qualifiers
                      /name="mbhA"
                      /note="promoterless fragment; also pseudo in K-12 MG1655"
                      /phase=0
-                     /product="promoterless fragment; also pseudo in K-12 MG165
-                     5"
+                     /product="promoterless fragment; also pseudo in K-12
+                     MG1655"
                      /pseudo=0
                      /type="gene"
                      /pseudo
@@ -813,8 +813,8 @@ FEATURES             Location/Qualifiers
                      /name="yafN"
                      /note="b0232"
                      /phase=0
-                     /product="predicted antitoxin of the YafO-YafN toxin-antit
-                     oxin system"
+                     /product="predicted antitoxin of the YafO-YafN
+                     toxin-antitoxin system"
                      /protein_id="kribb:ECB_00227"
                      /transl_table=11
                      /translation="MHRILAEKSVNITELRKNPAKYFIDQPVAVLSNNRPAGYLLSAS
@@ -837,7 +837,7 @@ FEATURES             Location/Qualifiers
                      /note="b0233"
                      /phase=0
                      /product="predicted toxin of the YafO-YafN toxin-antitoxin
-                      system"
+                     system"
                      /protein_id="kribb:ECB_00228"
                      /transl_table=11
                      /translation="MRVFKTKLIRLQLTAEELDALTADFISYKRDGVLPDIFGRDALY
@@ -860,8 +860,8 @@ FEATURES             Location/Qualifiers
                      /name="yafP"
                      /note="b0234"
                      /phase=0
-                     /product="predicted acyltransferase with acyl-CoA N-acyltr
-                     ansferase domain"
+                     /product="predicted acyltransferase with acyl-CoA
+                     N-acyltransferase domain"
                      /protein_id="kribb:ECB_00229"
                      /transl_table=11
                      /translation="MNNIQIRDYQPGDFQQLCAIFIRAVTMISSQHYSPQQIAAWAQI
@@ -1236,7 +1236,7 @@ FEATURES             Location/Qualifiers
                      /note="b0284"
                      /phase=0
                      /product="predicted oxidoreductase with molybdenum-binding
-                      domain"
+                     domain"
                      /protein_id="kribb:ECB_00243"
                      /transl_table=11
                      /translation="MKFDKPAGENPIDQLKVVGRPYDRIDGPLKTTGTARYAYEWHEE
@@ -1270,8 +1270,8 @@ FEATURES             Location/Qualifiers
                      /name="yagS"
                      /note="b0285"
                      /phase=0
-                     /product="predicted oxidoreductase with FAD-binding domain
-                     "
+                     /product="predicted oxidoreductase with FAD-binding
+                     domain"
                      /protein_id="kribb:ECB_00244"
                      /transl_table=11
                      /translation="MKAFTYERVNTPAEAALSAQRVPGAKFIAGGTNLLDLMKLEIET
@@ -1312,8 +1312,8 @@ FEATURES             Location/Qualifiers
                      /name="yagT"
                      /note="b0286"
                      /phase=0
-                     /product="predicted xanthine dehydrogenase, 2Fe-2S subunit
-                     "
+                     /product="predicted xanthine dehydrogenase, 2Fe-2S
+                     subunit"
                      /protein_id="kribb:ECB_00245"
                      /transl_table=11
                      /translation="MSNQGEYPEDNRVGKHEPHDFSLTRRDLIKVSAATAATAVVYPH
