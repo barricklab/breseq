@@ -2270,7 +2270,28 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& i
 // Example of nested parenthesis  
 //  /anticodon=(pos:complement(1144371..1144373),aa:Arg,
 //            seq:cct)
-  
+//
+// Example of escaped quotation marks (two in a row stand for one, on any line)
+//  /note="This is an example of ""escaped"" quotation marks"
+
+// Appends the text of one line of a quoted value, up to its closing quote, to value,
+// replacing each pair of quotes with one. Returns whether the closing quote was found.
+bool AppendGenBankQuotedLine(string s, string& value)
+{
+  size_t quote_pos;
+  while ((quote_pos = s.find('"')) != string::npos) {
+    if ((quote_pos + 1 < s.length()) && (s[quote_pos + 1] == '"')) {
+      value += s.substr(0, quote_pos + 1);
+      s.erase(0, quote_pos + 2); // this erases second quote copy
+      continue;
+    }
+    value += s.substr(0, quote_pos);
+    return true;
+  }
+  value += s;
+  return false;
+}
+
 void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::istream& in)
 {
   // delete leading slash
@@ -2288,41 +2309,17 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ist
   if (s[0] == '"') {
     string value;
     s.erase(0,1);
-    
-    size_t second_quote_pos = s.find("\"");
-    
-    // Skip cases of two quotes in a row, replacing with a single quote
-    while ((second_quote_pos != string::npos) && (second_quote_pos+1 < s.length())) {
-      if (s[second_quote_pos+1] != '"') break;
-      value += s.substr(0, second_quote_pos+1);
-      s.erase(0, second_quote_pos+2); // this erases second quote copy
-      second_quote_pos = s.find("\"");
-    }
-    
+
     // One liner
-    if (second_quote_pos != string::npos) {
-      s.erase(second_quote_pos,s.length());
-      value += s;
-      (*this)[tag] = value;
-      return;
-    }
-    
+    bool found_last_quote = AppendGenBankQuotedLine(s, value);
+
     // If the value is still quoted, we have to read additional lines until end quote
-    value += s;
-    
-    bool found_last_quote = false;
     while (!found_last_quote && !in.eof()) {
       breseq::getline(in, s);
       RemoveLeadingTrailingWhitespace(s);
-      
-      second_quote_pos = s.find("\"");
-      if (second_quote_pos != string::npos) {
-        s.erase(second_quote_pos,s.length());
-        found_last_quote = true;
-      }
-      
+
       if (tag != "translation") value += " ";
-      value += s;
+      found_last_quote = AppendGenBankQuotedLine(s, value);
     }
     assert(found_last_quote);
     
@@ -2632,18 +2629,48 @@ void cReferenceSequences::WriteGenBankFileHeader(std::ofstream& out, const cAnno
 }
 
 // Indents all lines after reaching a given char_per_line
-void GenBankPrintAligned(std::ofstream& out, const string& s, const size_t num_left_padding_spaces, const size_t char_per_line, const size_t first_line_chars=0) {
-  
+//
+// Readers (breseq's ReadGenBankTag, Biopython) join the continuation lines of a
+// qualifier with a space, except for /translation. So free text must only be
+// broken at a space (break_at_spaces=true), which is consumed by the line break.
+// A single word longer than a line is written whole, overlong, rather than cut.
+// With break_at_spaces=false, lines are chopped at exactly char_per_line.
+void GenBankPrintAligned(std::ofstream& out, const string& s, const size_t num_left_padding_spaces, const size_t char_per_line, const bool break_at_spaces, const size_t first_line_chars=0) {
+
   size_t i=0;
-  size_t end_i;
-  size_t c=first_line_chars;
   size_t padding = static_cast<size_t>(max<int32_t>(num_left_padding_spaces-first_line_chars, 0));
   while (i < s.length()) {
-    end_i = min<size_t>(i + char_per_line - padding - 1, s.length());
-    out << repeat_char(' ', padding) << s.substr(i, end_i - i + 1) << endl;
-    i=end_i+1;
+    size_t width = char_per_line - padding;
+    size_t line_end = s.length(); // one past the last char printed on this line
+    size_t next_i = s.length();   // where the next line starts
+
+    if (i + width < s.length()) {
+      if (!break_at_spaces) {
+        line_end = next_i = i + width;
+      } else {
+        // Last space that still fits (a space just past the line can be consumed too)
+        size_t space_pos = s.rfind(' ', i + width);
+        if ( (space_pos == string::npos) || (space_pos <= i) ) {
+          // No space in this line: write the whole overlong word
+          space_pos = s.find(' ', i + width);
+        }
+        if (space_pos != string::npos) {
+          line_end = space_pos;
+          next_i = space_pos + 1;
+        }
+      }
+    }
+
+    out << repeat_char(' ', padding) << s.substr(i, line_end - i) << endl;
+    i = next_i;
     padding = num_left_padding_spaces;
   }
+}
+
+// Quotes a free-text qualifier value, escaping each quotation mark inside it by doubling it
+string GenBankQuotedValue(const string& value)
+{
+  return "\"" + substitute(value, "\"", "\"\"") + "\"";
 }
 
 string GenBankCoordsString(const cFeatureLocationList& locs)
@@ -2716,9 +2743,10 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
         
         int32_t value_int;
         if (is_integer(feat[*tag_it], value_int) && (always_quote.find(*tag_it) == always_quote.end()) ) {
-          GenBankPrintAligned(out, "/" + *tag_it + "=" + to_string(value_int), 21, 79);
+          GenBankPrintAligned(out, "/" + *tag_it + "=" + to_string(value_int), 21, 79, true);
         } else {
-          GenBankPrintAligned(out, "/" + *tag_it + "=\"" + feat[*tag_it] + "\"", 21, 79);
+          // Only /translation is continued without a space by readers, so it alone is chopped mid-word
+          GenBankPrintAligned(out, "/" + *tag_it + "=" + GenBankQuotedValue(feat[*tag_it]), 21, 79, *tag_it != "translation");
         }
       }
     } else {
@@ -2727,16 +2755,16 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
         
         int32_t value_int;
         if (is_integer(tag_it->second, value_int) && (always_quote.find(tag_it->first) == always_quote.end()) ) {
-          GenBankPrintAligned(out, "/" + tag_it->first + "=" + to_string(value_int), 21, 79);
+          GenBankPrintAligned(out, "/" + tag_it->first + "=" + to_string(value_int), 21, 79, true);
         } else {
-          GenBankPrintAligned(out, "/" + tag_it->first + "=\"" + tag_it->second + "\"", 21, 79);
+          GenBankPrintAligned(out, "/" + tag_it->first + "=" + GenBankQuotedValue(tag_it->second), 21, 79, tag_it->first != "translation");
         }
       }
     }
     
     // Handle pseudo separately, so it is always printed
     if (feat.m_pseudo) {
-      GenBankPrintAligned(out, "/pseudo", 21, 79);
+      GenBankPrintAligned(out, "/pseudo", 21, 79, true);
     }
 
   }
