@@ -1,0 +1,9 @@
+##gff-version 3
+##sequence-region	p_1	1	66
+##original-file-name	p_1	tests/breseq_convert_reference_gff3_unsafe_seq_id/../data/unsafe_seq_ids/unsafe_seq_id.gff3
+p_1	.	CDS	1	66	.	+	0	ID=gene1;Name=geneA;locus_tag=P1_0001;product=a gene named in a feature row
+p_1	.	region	1	66	.	+	.	ID=p(1);Is_circular=true;Name=p(1)
+##FASTA
+>p_1
+ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCG
+GGCTGA

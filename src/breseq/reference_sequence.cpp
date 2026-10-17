@@ -51,7 +51,10 @@ namespace breseq {
   const int32_t cReferenceSequences::k_promoter_distance = 150;
 
 
-  const string cReferenceSequences::safe_seq_id_name_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-+−";
+  // ASCII only, on purpose: this is a byte set, so a multibyte character in it would admit
+  // its bytes one at a time and let an unrelated character sharing one of them through
+  // half-rewritten. (It carried a Unicode minus sign, U+2212, for years.)
+  const string cReferenceSequences::safe_seq_id_name_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-+";
 
 
   const vector<string> snp_types = make_vector<string>("synonymous")("nonsynonymous")("nonsense")("noncoding")("pseudogene")("intergenic");
@@ -1379,7 +1382,7 @@ void cReferenceSequences::VerifyFeatureLocations()
       this_seq.m_description = on_seq.get_description();
       this_seq.m_length = on_seq.get_sequence_length();
       this_seq.set_file_format("FASTA");
-      this_seq.set_sequence_loaded_from_file(file_name, "FASTA");
+      this_seq.set_sequence_loaded_from_file(file_name);
     }
   }
     
@@ -1465,6 +1468,7 @@ void cReferenceSequences::VerifyFeatureLocations()
           stringstream ls(line);
           string x, seq_id, original_file_name;
           ls >> x >> seq_id >> original_file_name;
+          seq_id = safe_seq_id_name(seq_id);
           this->add_seq(seq_id, file_name);
           this->m_seq_id_to_original_file_name[seq_id] = original_file_name;
           continue;
@@ -1535,7 +1539,9 @@ void cReferenceSequences::VerifyFeatureLocations()
       
       // Handle columns up to the last one, "attributes"
       // Column 1: "seqid"
-      seq_id = split_line[0];
+      // Made safe like the ##sequence-region and FASTA names, or a feature row naming a
+      // contig the file spells unsafely registers a second contig with no sequence.
+      seq_id = safe_seq_id_name(split_line[0]);
       // Column 2: "source"
       feature["source"] = split_line[1];
       // Column 3: "type"

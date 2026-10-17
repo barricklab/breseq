@@ -247,3 +247,20 @@ For all sequence formats:
     replaced with \[`_`\].
 3.  In gene descriptions, the character \[`|`\] is replaced with
     \[`;`\].
+4.  In sequence ids (a FASTA header, a GenBank `LOCUS`, `VERSION` or
+    `ACCESSION` name, a GFF3 `##sequence-region` or feature row), only
+    letters, digits and the characters \[`.-+_`\] are kept. Any other
+    character is replaced with \[`_`\], runs of underscores collapse to
+    one, and leading and trailing underscores are removed, so
+    `P-Ant1_(_ColE1` becomes `P-Ant1_ColE1`. Every output file, including
+    the GenomeDiff, names the sequence by the converted id. _breseq_ warns
+    when it converts one, and `breseq CONVERT-REFERENCE --list-seq-ids
+    reference.gbk` prints each sequence's name in the file beside the id
+    _breseq_ uses, so a tool reading _breseq_'s output can be told what to
+    call a sequence before running it.
+
+    These ids are deliberately not the GFF3 specification's own escaping,
+    which percent-encodes a character such as `(` as `%28`: `|` separates
+    values in _breseq_'s annotations and `__` divides the two sides of a
+    junction's name, and an encoded id would reach every tool that reads a
+    GenomeDiff.

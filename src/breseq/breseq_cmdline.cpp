@@ -606,6 +606,7 @@ int do_convert_reference(int argc, char* argv[]) {
   options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
   options("output,o", "Output reference file path (Default = output.*)").isOutputFile();
   options("isescan-results,s", "Path to CSV file output by isescan. Existing mobile_element, repeat_region, and transposon,  annotations will be replaced with these results.").isInputFile();
+  options("list-seq-ids", "Load the input reference files and print one line per sequence, the name in the file and the seq id breseq uses for it, separated by a tab. Nothing else is written; -o names a file to print to instead of standard output.", TAKES_NO_ARGUMENT);
   options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", NORMAL_OPTION);
 
 	options.processCommandArgs(argc, argv);
@@ -676,6 +677,22 @@ int do_convert_reference(int argc, char* argv[]) {
     cerr << "+++   Adding isescan results..." << endl;
     cout << "  Input : " << options["isescan-results"] << endl;
     refs.ReadISEScan(options["isescan-results"]);
+  }
+
+  if (options.count("list-seq-ids")) {
+    cerr << "+++   Listing seq ids..." << endl;
+    ofstream out_file;
+    if (options.count("output")) {
+      out_file.open(options["output"].c_str());
+      ASSERT(out_file.is_open(), "Could not open output file: " + options["output"]);
+    }
+    ostream& out = options.count("output") ? static_cast<ostream&>(out_file) : cout;
+    for (cReferenceSequences::iterator it = refs.begin(); it != refs.end(); ++it) {
+      out << refs.original_seq_id_name(it->m_seq_id) << "\t" << it->m_seq_id << endl;
+    }
+    end_progress_line();
+    cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
+    return 0;
   }
 
   cerr << "+++   Writing reference file..." << endl;

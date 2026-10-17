@@ -675,8 +675,11 @@ public:
         m_features_loaded_from_file = file_name;
       }
     
-      void set_sequence_loaded_from_file(const string& file_name, bool allow_reload = false) {
-        ASSERT(allow_reload || (m_sequence_loaded_from_file.size() == 0), "Duplicate information for sequence found in file '" + file_name + "'!\nDNA sequence for sequence '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.\nCheck that you do not have duplicate sequence names/IDs in your reference files.")
+      // No allow_reload: a second sequence under one id is never what anybody meant, and the
+      // FASTA reader once passed a string where that bool went, which read as true and let a
+      // second record silently replace the first.
+      void set_sequence_loaded_from_file(const string& file_name) {
+        ASSERT(m_sequence_loaded_from_file.size() == 0, "Duplicate information for sequence found in file '" + file_name + "'!\nDNA sequence for sequence '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.\nCheck that you do not have duplicate sequence names/IDs in your reference files.\nTwo names that differ only by characters not allowed in a seq id become the same id (see the conversion warnings above).")
         m_sequence_loaded_from_file = file_name;
       }
     
@@ -833,6 +836,8 @@ public:
     bool m_initialized;
     bool m_use_safe_seq_ids;
     map<string,string> m_seq_id_to_original_file_name;
+    // seq id -> the name the input file gave it, recorded only where safe_seq_id_name changed it
+    map<string,string> m_seq_id_to_original_name;
 
     //!< Currently supported file types.
     enum FileType {UNKNOWN, GENBANK, FASTA, GFF3, BULL};
@@ -1284,20 +1289,33 @@ public:
       }
       s = new_s;
       
-      // Also remove any leading or trailing underscores
-      pos = s.find_first_of(safe_seq_id_name_characters);
-      s.replace(0, pos, "");
-
-      pos = s.find_last_of(safe_seq_id_name_characters);
-      s.replace(pos+1, s.size()-pos+1, "");
+      // Also remove any leading or trailing underscores. (This used to look for the first
+      // and last *allowed* character, and '_' is one, so it removed nothing: 'p(1)' came
+      // out as 'p_1_'.)
+      pos = s.find_first_not_of('_');
+      s.erase(0, (pos == string::npos) ? s.size() : pos);
+      pos = s.find_last_not_of('_');
+      if (pos != string::npos) s.erase(pos + 1);
       
-      ASSERT(s.find_first_of(safe_seq_id_name_characters) != string::npos, "Seq id [" + input + "] does not contain any valid characters.");
+      ASSERT(!s.empty(), "Seq id [" + input + "] does not contain any valid characters.");
       
       if (s != input) {
-        WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods (.), dashes(-), plus (+) and minus (−) signs, and single underscores (_) are allowed in seq ids.");
+        // Warn once per name: a GFF3 spells the same seq id on its ##sequence-region line,
+        // every feature row and its FASTA header.
+        bool seen = (m_seq_id_to_original_name.count(s) && (m_seq_id_to_original_name[s] == input));
+        m_seq_id_to_original_name[s] = input;
+        if (!seen) WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods (.), dashes (-), plus signs (+), and single underscores (_) are allowed in seq ids.");
       }
       
       return s;
+    }
+    
+    // The name the input file gave a sequence, before safe_seq_id_name; the seq id itself
+    // where nothing was changed. CONVERT-REFERENCE --list-seq-ids prints the two side by side.
+    string original_seq_id_name(const string& seq_id) const
+    {
+      map<string,string>::const_iterator it = m_seq_id_to_original_name.find(seq_id);
+      return (it == m_seq_id_to_original_name.end()) ? seq_id : it->second;
     }
     
     static string GFF3EscapeString(const string& s)

@@ -1,0 +1,7 @@
+##gff-version 3
+##sequence-region	p(1)	1	66
+p(1)	.	region	1	66	.	+	.	ID=p(1);Name=p(1);Is_circular=true
+p(1)	.	CDS	1	66	.	+	0	ID=gene1;Name=geneA;locus_tag=P1_0001;product=a gene named in a feature row
+##FASTA
+>p(1)
+ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGA
