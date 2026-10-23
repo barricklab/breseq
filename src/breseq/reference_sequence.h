@@ -510,6 +510,7 @@ public:
                 || ((*this)["type"] == "rRNA")
                 || ((*this)["type"] == "tRNA")
                 || ((*this)["type"] == "ncRNA")
+                || ((*this)["type"] == "tmRNA")
                 || ((*this)["type"] == "RNA")
         );
       }

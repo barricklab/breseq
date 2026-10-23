@@ -110,6 +110,7 @@ The types that _breseq_ recognizes are:
 -   `rRNA` (ribosomal RNA)
 -   `tRNA` (transfer RNA)
 -   `ncRNA` (noncoding RNA)
+-   `tmRNA` (transfer-messenger RNA)
 -   `RNA` (generic RNA)
 -   `mobile_element` (transposon or other mobile DNA element)
 -   `repeat_region` (transposon or other mobile DNA element)
