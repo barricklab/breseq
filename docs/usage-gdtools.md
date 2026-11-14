@@ -176,3 +176,39 @@ Each line says that `Variant_seq` replaces the reference bases from `start` to
 - A mutation `within` another one is omitted with a warning. Its position counts
   bases of the new sequence, so it has no reference coordinate.
 
+
+### gdtools FILTER (or gdtools REMOVE)
+
+Usage:
+
+    gdtools REMOVE [-o output.gd] -c condition1 [-c condition2 ...] input.gd
+    gdtools REMOVE [-o output.gd] --clear-ids input.gd
+
+Removes entries from a GenomeDiff file for which **all** of the supplied
+conditions are true. Evidence entries (`RA`, `JC`, `MC`, ...) are removed as
+well, unless `-e`/`--preserve-evidence` is supplied.
+
+`-I`/`--clear-ids` writes a dot (`.`) in the id and parent-ids columns of every
+entry that remains. breseq numbers mutations `1..n` and lists the ids of the
+evidence supporting each one, so inserting or deleting a single mutation
+renumbers all of the entries after it. In a file kept under version control that
+turns a one-line change into a whole-file change. With the ids cleared, each
+line stands on its own and a diff shows only the mutations that really changed.
+A file written this way still passes `gdtools VALIDATE` and can be read by every
+other command.
+
+Validation entries (`CURA`, `TSEQ`, `PFGE`, `PFLP`, ...) are removed along with
+the evidence, because the id in a mutation's parent-ids field was all that tied
+a validation entry to that mutation; clearing the ids would leave it attached to
+nothing. Supply `-e`/`--preserve-evidence` to keep evidence and validation
+entries, but note that entries which differed only by id then become identical,
+which the GenomeDiff writer rejects.
+
+Clearing ids discards which evidence supported which mutation, so keep the
+original breseq output if that matters. `--clear-ids` cannot be combined with
+`--renumber`, and it is refused for a file in which any entry has a `before` or
+`within` field, because the values of those fields are entry ids.
+
+Conditions are not required when `--clear-ids` is given:
+
+    gdtools REMOVE -I -o clean.gd input.gd

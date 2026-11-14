@@ -1822,6 +1822,7 @@ int do_remove_gd(int argc, char* argv[])
 	options("condition,c", "Condition for removing entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". Both field names and field values are case-sensitive. You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed.");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
 	options("renumber,n","Renumber IDs of entries that remain after performing filtering.", TAKES_NO_ARGUMENT);
+	options("clear-ids,I","Write a dot (.) in the id and parent-ids columns of every entry that remains, so that adding or removing one mutation does not renumber the others. Validation entries (CURA, TSEQ, PFGE, ...) are removed as well, because an id is all that tied them to a mutation; supply --preserve-evidence to keep them. Cannot be combined with --renumber. Refused if any remaining entry has a 'before' or 'within' field, because the values of those fields refer to entry ids.", TAKES_NO_ARGUMENT);
 	options("comment,m","Instead of removing filtered entries, comment them out in the output GD file.", TAKES_NO_ARGUMENT);
 	options("verbose,v","Print information about why entries were removed to the console.", TAKES_NO_ARGUMENT);
 
@@ -1854,6 +1855,9 @@ int do_remove_gd(int argc, char* argv[])
 	options.addUsage("Remove all but unassigned JC evidence (takes two commands). Needs -e option.");
 	options.addUsage("  gdtools REMOVE -e -c \"ASSIGNED=1\" -o intermediate.gd input.gd");
 	options.addUsage("  gdtools REMOVE -e -c \"type != JC\" -o final.gd intermediate.gd");
+	options.addUsage("");
+	options.addUsage("Keep only the mutations, with no ids, so that the file does not renumber when it is edited");
+	options.addUsage("  gdtools REMOVE -I -o clean.gd input.gd");
 	
 	if (options.count("help")) {
 		options.printUsage();
@@ -1869,15 +1873,26 @@ int do_remove_gd(int argc, char* argv[])
     return -1;
   }
 
-  if (!options.count("condition")) {
+  // --clear-ids on its own is a valid request: it rewrites the id columns without filtering
+  if (!options.count("condition") && !options.count("clear-ids")) {
     options.addUsage("");
-    options.addUsage("You must supply at least one condition argument.");
+    options.addUsage("You must supply at least one condition argument (or the --clear-ids option).");
     options.printUsage();
     return -1;
   }
-  vector<string> filters = from_string<vector<string> >(options["condition"]);
 
-  assert(filters.size());
+  if (options.count("clear-ids") && options.count("renumber")) {
+    options.addUsage("");
+    options.addUsage("The --clear-ids and --renumber options cannot be combined.");
+    options.printUsage();
+    return -1;
+  }
+
+  vector<string> filters;
+  if (options.count("condition")) {
+    filters = from_string<vector<string> >(options["condition"]);
+    assert(filters.size());
+  }
 
   uout("Reading input GD file", options.getArgv(0));
   cGenomeDiff gd(options.getArgv(0));
@@ -1951,14 +1966,16 @@ int do_remove_gd(int argc, char* argv[])
 		}
 	}
 	
-	uout("Filtering GD entries");
-	
+	if (filters.size()) uout("Filtering GD entries");
+
 	// Perform filtering
+	// With no conditions (--clear-ids on its own) every entry would match vacuously,
+	// so the loop is skipped rather than removing everything.
 	cGenomeDiff new_gd;
 	diff_entry_list_t* mutable_entry_list = gd.get_mutable_list_ptr();
 	diff_entry_list_t::iterator it = mutable_entry_list->begin();
 	bool advance_iterator;
-  while (it != mutable_entry_list->end()) {
+  while (filters.size() && (it != mutable_entry_list->end())) {
 		advance_iterator = true;
     cDiffEntry& de = **it;
 
@@ -2060,7 +2077,40 @@ int do_remove_gd(int argc, char* argv[])
 		gd2.merge(gd, true);
 		gd = gd2;
 	}
-	
+
+	// Clear the ids - if requested
+	if(options.count("clear-ids"))
+	{
+		uout("Clearing GD entry ids");
+
+		// The values of these fields are mutation ids (as id or id:copy_index),
+		// so clearing the ids would leave them pointing at nothing.
+		diff_entry_list_t remaining = gd.get_list();
+		for (diff_entry_list_t::iterator it = remaining.begin(); it != remaining.end(); it++) {
+			cDiffEntry& de = **it;
+			for (vector<string>::const_iterator key_it = gd_keys_with_ids.begin(); key_it != gd_keys_with_ids.end(); key_it++) {
+				if (de.count(*key_it)) {
+					ERROR("Cannot use --clear-ids on a GD file with a '" + *key_it + "' field, because its value refers to an entry id:\n" + de.as_string());
+					return -1;
+				}
+			}
+		}
+
+		// A validation entry is tied to the mutation it validates only through the id in that
+		// mutation's parent-ids field, so clearing the ids leaves it attached to nothing.
+		// Remove these entries along with the evidence, unless asked to keep them.
+		if (!options.count("preserve-evidence")) {
+			gd.remove_group(cGenomeDiff::VALIDATION);
+		}
+
+		diff_entry_list_t to_clear = gd.get_list();
+		for (diff_entry_list_t::iterator it = to_clear.begin(); it != to_clear.end(); it++) {
+			cDiffEntry& de = **it;
+			de._id = ".";
+			de._evidence.clear();
+		}
+	}
+
   uout("Writing output GD file", options["output"]);
   gd.write(options["output"]);
   return 0;

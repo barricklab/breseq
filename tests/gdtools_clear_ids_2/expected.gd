@@ -1,0 +1,4 @@
+#=GENOME_DIFF	1.0
+#=TITLE	gdtools_clear_ids_2
+DEL	.	.	NC_001416	977257	1
+SNP	.	.	NC_001416	1329516	T

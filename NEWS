@@ -1,1 +1,8 @@
  
+* gdtools FILTER/REMOVE: new -I/--clear-ids option, which writes a dot (.) in
+  the id and parent-ids columns of the entries that remain, so that editing a
+  GenomeDiff file does not renumber every entry after the change. Conditions
+  (-c) are now optional when this option is given. It is refused together with
+  --renumber, and for files with 'before' or 'within' fields, whose values are
+  entry ids. Validation entries (CURA, TSEQ, PFGE, ...) are removed along with
+  the evidence, since an id was all that tied them to a mutation.
