@@ -1535,7 +1535,22 @@ int do_assemble_unmatched(int argc, char* argv[])
   
   return 0;
 }
-  
+
+// Registers the files bowtie2-build writes for index_base -- <index_base>.{1,2,3,4,rev.1,rev.2}.bt2,
+// or .bt2l for a large index -- for deletion at done_key, and nothing else.
+//
+// Not "<index_base>*". The index shares its directory with the per-read-file alignments, which are
+// named <read file base name>.stage1.bam, .reference.bam or .candidate_junction.bam, so that glob
+// also matched every alignment of a read file whose name begins "reference" (02_reference_alignment)
+// or "candidate_junction" (04_candidate_junction_alignment). Stage 02's done step then deleted the
+// reads' stage1.bam before preprocessing could read it, and the run died with "Could not open bam
+// file". No read-file output ends in .bt2 or .bt2l.
+static void track_bowtie2_index_files(Settings& settings, const string& done_key, const string& index_base)
+{
+  settings.track_intermediate_file(done_key, index_base + ".*.bt2");
+  settings.track_intermediate_file(done_key, index_base + ".*.bt2l");
+}
+
 int breseq_default_action(int argc, char* argv[])
 {
 	///
@@ -1941,7 +1956,7 @@ int breseq_default_action(int argc, char* argv[])
     string reference_fasta_file_name = settings.reference_fasta_file_name;
     string command = "bowtie2-build -q " + double_quote(settings.reference_fasta_file_name) + " " + double_quote(reference_hash_file_name);
     SYSTEM(command);
-    settings.track_intermediate_file(settings.reference_alignment_done_file_name, settings.reference_hash_file_name + "*");
+    track_bowtie2_index_files(settings, settings.reference_alignment_done_file_name, settings.reference_hash_file_name);
 
     ////// For each read file set (paired or unpaired)
     bool do_2_stage_alignment = settings.bowtie2_stage2.size() != 0;
@@ -2166,7 +2181,7 @@ int breseq_default_action(int argc, char* argv[])
 			{
         string command = "bowtie2-build -q " + double_quote(candidate_junction_fasta_file_name) + " " + double_quote(candidate_junction_hash_file_name);
         SYSTEM(command);
-        settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
+        track_bowtie2_index_files(settings, settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name);
 
         /// align reads to candidate junction sequences
         vector<cReadFile> flat_junc_align_files = settings.read_file_sets.flat_files();

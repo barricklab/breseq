@@ -9,9 +9,9 @@
 # the jc_frequency and cn_frequency they were combined from. The reads are generated at test time,
 # into output_sim/ (removed by do_clean), so no read data is committed.
 #
-# The reference-genome reads are deliberately NOT named reference_*: stage 02 removes its bowtie2
-# index with "rm -f 02_reference_alignment/reference*", which also deletes such a read file's
-# reference_reads.stage1.bam.
+# The reference-genome reads are deliberately named reference_*: stage 02 used to remove its bowtie2
+# index with "rm -f 02_reference_alignment/reference*", which also deleted such a read file's
+# reference_reads.stage1.bam (see track_bowtie2_index_files in breseq_cmdline.cpp).
 #
 SELF=`dirname ${BASH_SOURCE}`
 TEST_CORES=4
@@ -32,7 +32,7 @@ TESTCMD="\
     && ${BRESEQ} SIMULATE-READS \
         ${REFERENCE_ARG} \
         -c 20 -l 100 --seed 1 \
-        -o ${SIMDIR}/ancestor_reads.fastq \
+        -o ${SIMDIR}/reference_reads.fastq \
     && ${BRESEQ} SIMULATE-READS \
         -r ${SIMDIR}/amplified.fasta \
         -c 60 -l 100 --seed 2 \
@@ -42,7 +42,7 @@ TESTCMD="\
         -p \
         -o ${SELF} \
         ${REFERENCE_ARG} \
-        ${SIMDIR}/ancestor_reads.fastq \
+        ${SIMDIR}/reference_reads.fastq \
         ${SIMDIR}/amplified_reads.fastq \
     "
 
