@@ -228,7 +228,9 @@ struct Html_Mutation_Table_String : public string
     //! Returns "" when either bound is missing, which is what keeps an absent interval from
     //! rendering as a confident "100-100%".
     static string freq_range_to_string(const string& lower, const string& upper);
-    string freq_cols(vector<string> freq_list);//!< Used in Item_Lines()
+    //! mean_copy_numbers: the cells are a merged AMP row's per-sample mean copy numbers, shaded as
+    //! fixed from fixed_list rather than from a value of 1.
+    string freq_cols(vector<string> freq_list, bool mean_copy_numbers = false, const vector<bool>& fixed_list = vector<bool>());//!< Used in Item_Lines()
     size_t total_cols; //!< Shared between Factory Methods, set in Header_Line()
 
     //!Parameters

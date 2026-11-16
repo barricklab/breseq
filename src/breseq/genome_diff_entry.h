@@ -53,6 +53,11 @@ namespace breseq {
   //! One-sided 95% per endpoint (90% two-sided). The frequency cutoffs test THESE, not FREQUENCY.
   extern const char* FREQUENCY_LOWER;
   extern const char* FREQUENCY_UPPER;
+  //! Polymorphism-mode AMP only: the frequency the junction reads and the relative coverage each
+  //! imply on their own, on the same scale (and with the same new_copy_number) as FREQUENCY, which
+  //! is their inverse-variance combination. Diagnostics: they are not capped at 1.
+  extern const char* JC_FREQUENCY;
+  extern const char* CN_FREQUENCY;
 
   // REJECT = comma delimited list of why evidence was rejected according to statistical criteria
   // Evidence is not rejected but is masked because it should not be used to predict mutations

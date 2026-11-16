@@ -845,7 +845,7 @@ int do_not_evidence(int argc, char *argv[])
 //   If it is NULL then nothing happens and compare_mode is honored
 //   If it is not null then it returns TRUE/FALSE whether polymorphisms were found and swtiches the output to compare mode
 //      if there is only one file provided but it has polymorphisms. This is only needed for HTML output!
-void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool* polymorphism_search_found, bool compare_mode, AnyOption& options, UserOutput& uout)
+void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool* polymorphism_search_found, bool compare_mode, AnyOption& options, UserOutput& uout, bool merge_amp_endpoints = false)
 {
 	
 	if (polymorphism_search_found != NULL) {
@@ -904,9 +904,9 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 	// Then add frequency columns for all genome diffs
 	if (compare_mode || ( (polymorphism_search_found != NULL) && (*polymorphism_search_found) ) ) {
 		uout("Tabulating frequencies of mutations across all files");
-		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"), options.count("population-aware"));
+		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"), options.count("population-aware"), false, merge_amp_endpoints);
 	}
-	
+
 }
 
 
@@ -1091,7 +1091,9 @@ int do_annotate(int argc, char* argv[])
 	
   if (output_format == "HTML") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, &polymorphism_search_found, compare_mode, options, uout);
+		// Tables merge AMPs at the same endpoints into one row, valued by mean copy number (see
+		// tabulate_mutation_frequencies_from_multiple_gds); GD/PHYLIP/FASTA output must not.
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, &polymorphism_search_found, compare_mode, options, uout, true);
 
 		// Renumber so the per-row data-key in the HTML matches the keys emitted by gdtools PHYLOGENY.
 		gd.reassign_unique_ids();
@@ -1166,7 +1168,7 @@ int do_annotate(int argc, char* argv[])
 
 		// Force compare mode
 		compare_mode = true;
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout, true);
 
 		// Remove evidence
 		gd.remove_group(cGenomeDiff::EVIDENCE);
@@ -1222,11 +1224,11 @@ int do_annotate(int argc, char* argv[])
 	} else if (output_format == "JSON") {
 		uout("Writing output JSON file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
-		
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout, true);
+
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
-		
+
 		uout("Writing output JSON file", output_file_name);
 		
 		// Add extra HTML annotations

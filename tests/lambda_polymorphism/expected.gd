@@ -1,8 +1,8 @@
 #=GENOME_DIFF	1.0
 #=TITLE	header
 #=AUTHOR	Jeffrey Barrick
-#=CREATED	19:00:12 26 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision 23039a3d6c0d
+#=CREATED	09:14:15 16 Nov 2026
+#=PROGRAM	breseq 0.50.0 revision 2db563856b58
 #=COMMAND	./src/breseq/breseq -j 4 --polymorphism-prediction --header-genome-diff tests/lambda_polymorphism/header.gd -o tests/lambda_polymorphism -r tests/lambda_polymorphism/../data/lambda/lambda.gbk tests/lambda_polymorphism/../data/lambda/lambda_mixed_population.fastq.gz
 #=TIME	20
 #=CLONE	A
@@ -115,7 +115,7 @@ RA	100	.	NC_001416	48486	0	T	C	allele_frequencies=A:2.06599388e-03,C:1.22266245e
 MC	101	.	NC_001416	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-189)	gene_product=–/DNA packaging protein	gene_strand=–/>	left_inside_cov=0	left_outside_cov=NA	locus_tag=–/lambdap01	right_inside_cov=0	right_outside_cov=153
 MC	102	.	NC_001416	21738	27733	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=80	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=22	right_outside_cov=102
 JC	103	.	NC_001416	21737	-1	NC_001416	27734	1	0	alignment_overlap=5	coverage_minus=37	coverage_plus=40	flanking_left=35	flanking_right=35	frequency=9.99999997e-01	frequency_lower=9.56901429e-01	frequency_upper=1.00000000e+00	junction_effective_depth=68.00	junction_mixture_iterations=3	junction_possible_overlap_registers=25	junction_possible_overlap_registers_before_trimming=29	key=NC_001416__21737__-1__NC_001416__27729__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_pos_hash_score=58	max_right=29	max_right_minus=29	max_right_plus=27	neg_log10_pos_hash_p_value=NT	new_junction_coverage=0.80	new_junction_read_count=68	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=68.00	pos_hash_score=40	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=orf-314	side_1_gene_position=coding (709/945 nt)	side_1_gene_product=Tail fiber	side_1_gene_strand=>	side_1_locus_tag=lambdap28	side_1_overlap=5	side_1_possible_overlap_registers=25	side_1_possible_overlap_registers_before_trimming=34	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.01	side_2_gene_name=ea59/int	side_2_gene_position=intergenic (-761/+78)	side_2_gene_product=ea59/integration protein	side_2_gene_strand=</<	side_2_locus_tag=lambdap82/lambdap33	side_2_overlap=0	side_2_possible_overlap_registers=25	side_2_possible_overlap_registers_before_trimming=29	side_2_read_count=1	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=77
-CN	104	.	NC_001416	21701	27700	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	relative_coverage=0	tile_size=100
+CN	104	.	NC_001416	21701	27700	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	relative_coverage=0	relative_coverage_se=0	tile_size=100
 UN	105	.	NC_001416	1	8
 UN	106	.	NC_001416	21738	27731
 UN	107	.	NC_001416	48502	48502

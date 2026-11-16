@@ -5469,6 +5469,145 @@ namespace breseq {
     return static_cast<int32_t>(round(from_string<double>(cn_item[COPY_NUMBER])));
   }
 
+  // POLYMORPHISM MODE: the copy number and frequency of an amplification, from its junction and its
+  // copy-number evidence together.
+  //
+  // In a population where a fraction f carries the block at N copies and the rest at one, neither
+  // signal can tell f from N. What both measure is the MEAN copy number of the block per genome,
+  // L = 1 + f (N - 1):
+  //
+  //  - The junction joining the end of one copy to the start of the next occurs N - 1 times in an
+  //    amplified genome, and each reference boundary of the block once in every genome. So the JC's
+  //    frequency, new / (new + reference), is j = (L - 1) / L, and L = 1 / (1 - j). Its variance, by
+  //    the delta method on the binomial variance of j over the junction's effective depth n, is
+  //    j / (n (1 - j)^3).
+  //  - The CN entry's relative_coverage is L directly, and relative_coverage_se its standard error.
+  //
+  // The two are combined as an inverse-variance mean. Then, because only L is determined, the AMP
+  // reports the SMALLEST whole new_copy_number (at least 2) that keeps the frequency at or below 1,
+  // so [frequency] stays on the scale every consumer of a mutation's frequency assumes (APPLY,
+  // PHYLOGENY, COUNT, VCF, the HTML tables all read exactly 1 as fixed). N is chosen from the LOWER
+  // confidence bound of L, not from L itself: ceil(L) would turn a fixed duplication measured at
+  // 2.03 into three copies in half the population. The frequency is then snapped to 1 when its upper
+  // bound reaches the consensus cutoff, the same test MOB applies to its combined junction counts.
+  struct cPolymorphicAmpEstimate {
+    bool   have_jc, have_cn;
+    double jc_L, cn_L;   // each signal's own mean copy number
+    double L, se;        // combined, and its standard error (0 when no variance is known)
+    cPolymorphicAmpEstimate() : have_jc(false), have_cn(false), jc_L(0), cn_L(0), L(0), se(0) {}
+  };
+
+  // The run's SYSTEMATIC coverage error, as a fraction of the level, for the variance terms below.
+  //
+  // relative_coverage_se says how well the windows of one segment pin down its mean, which for a
+  // long segment is very well indeed -- 0.015 over 25 kb on an LTEE clone. It says nothing about the
+  // coverage bias that survives CNery's GC and ori-ter corrections, and that bias is far larger: the
+  // same clone's FIXED duplication measured 2.26 copies, and with only the standard error to go on
+  // its lower bound cleared 2, so it was reported as three copies in 63% of the population.
+  //
+  // The run shows how big that bias is in the levels it called where nothing happened: segments
+  // near single copy (CN between 0.5 and 1.5, other than 1) are, in a clone, coverage bias that beat
+  // the HMM's state-change cost. The root mean square of their departure from 1 is the estimate
+  // (0.11 on that clone). In a population, a real low-level event among them inflates it, which only
+  // makes the copy-number call more cautious. When there are none, the bias was too small to produce
+  // a level on the CN grid at all, so half the grid spacing bounds it.
+  static double estimate_cn_relative_bias(const Settings& settings, diff_entry_list_t& cn)
+  {
+    double sum_sq = 0.0;
+    uint32_t n = 0;
+    for (diff_entry_list_t::iterator it = cn.begin(); it != cn.end(); it++) {
+      cDiffEntry& c = **it;
+      double level = from_string<double>(c[COPY_NUMBER]);
+      if ((level <= 0.5) || (level >= 1.5) || (level == 1.0)) continue;
+      if (!c.entry_exists("relative_coverage")) continue;
+      double d = from_string<double>(c["relative_coverage"]) - 1.0;
+      sum_sq += d * d;
+      n++;
+    }
+    double floor = settings.copy_number_resolution / 2.0;
+    return (n > 0) ? max(floor, sqrt(sum_sq / n)) : floor;
+  }
+
+  // relative_bias: estimate_cn_relative_bias(). Applied to BOTH estimates as (bias * L)^2 on top of
+  // their sampling variance: junction read counts carry the same kind of error (mapping and
+  // alignment differences between the new junction and the reference boundaries), which their
+  // binomial variance does not see either.
+  static bool estimate_polymorphic_amp(const cDiffEntry* jc, cDiffEntry& cn, double relative_bias, cPolymorphicAmpEstimate& e)
+  {
+    e = cPolymorphicAmpEstimate();
+    double jc_var = 0.0, cn_var = 0.0;
+    bool jc_has_var = false, cn_has_var = false;
+
+    if ((jc != NULL) && jc->entry_exists(FREQUENCY) && (jc->get(FREQUENCY) != "NA")) {
+      double j = from_string<double>(jc->get(FREQUENCY));
+      double n_eff = jc->entry_exists("junction_effective_depth")
+                     ? from_string<double>(jc->get("junction_effective_depth")) : 0.0;
+      if ((j >= 0.0) && (j < 1.0)) {
+        e.have_jc = true;
+        e.jc_L = 1.0 / (1.0 - j);
+        if (n_eff > 0.0) {
+          // A half-read pseudocount keeps the variance positive when no read (or every read)
+          // supports the junction, where the plain binomial variance would claim certainty.
+          double j_tilde = (j * n_eff + 0.5) / (n_eff + 1.0);
+          jc_var = j_tilde / (n_eff * pow(1.0 - j_tilde, 3));
+          jc_has_var = true;
+        }
+      }
+    }
+
+    if (cn.entry_exists("relative_coverage")) {
+      e.have_cn = true;
+      e.cn_L = from_string<double>(cn["relative_coverage"]);
+      if (cn.entry_exists("relative_coverage_se") && (cn["relative_coverage_se"] != "NA")) {
+        double se = from_string<double>(cn["relative_coverage_se"]);
+        if (se > 0.0) { cn_var = se * se; cn_has_var = true; }
+      }
+    }
+
+    if (relative_bias > 0.0) {
+      if (e.have_jc) { jc_var += pow(relative_bias * e.jc_L, 2); jc_has_var = true; }
+      if (e.have_cn) { cn_var += pow(relative_bias * e.cn_L, 2); cn_has_var = true; }
+    }
+
+    if (jc_has_var && cn_has_var) {
+      double w_jc = 1.0 / jc_var, w_cn = 1.0 / cn_var;
+      e.L = (w_jc * e.jc_L + w_cn * e.cn_L) / (w_jc + w_cn);
+      e.se = sqrt(1.0 / (w_jc + w_cn));
+    } else if (jc_has_var) {
+      e.L = e.jc_L; e.se = sqrt(jc_var);
+    } else if (cn_has_var) {
+      e.L = e.cn_L; e.se = sqrt(cn_var);
+    } else if (e.have_cn) {
+      e.L = e.cn_L;
+    } else if (e.have_jc) {
+      e.L = e.jc_L;
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  // Writes new_copy_number, frequency, jc_frequency and cn_frequency for an estimate that has passed
+  // the --polymorphism-amplification-copy-number-cutoff gate (so e.L > 1). See above for the rule.
+  static void assign_polymorphic_amp(const Settings& settings, const cPolymorphicAmpEstimate& e, cDiffEntry& mut)
+  {
+    const double z = 1.959964; // two-sided 95%
+    double L_lo = e.L - z * e.se;
+    double L_hi = e.L + z * e.se;
+
+    int32_t N = max(2, static_cast<int32_t>(ceil(L_lo - 1e-9)));
+    double f = min(1.0, (e.L - 1.0) / (N - 1));
+    if ((settings.consensus_frequency_cutoff > 0.0)
+        && ((L_hi - 1.0) / (N - 1) >= settings.consensus_frequency_cutoff))
+      f = 1.0;
+
+    const uint32_t places = settings.polymorphism_precision_places;
+    mut[NEW_COPY_NUMBER] = to_string<int32_t>(N);
+    mut[FREQUENCY] = (f == 1.0) ? "1" : formatted_double(f, places, true).to_string();
+    if (e.have_jc) mut[JC_FREQUENCY] = formatted_double((e.jc_L - 1.0) / (N - 1), places, true).to_string();
+    if (e.have_cn) mut[CN_FREQUENCY] = formatted_double((e.cn_L - 1.0) / (N - 1), places, true).to_string();
+  }
+
   // Orientation, in reference coordinates, of the NEW element copy a junction reports. This is the
   // same quantity a MOB's "strand" field carries and the same one cFeatureLocation::get_strand()
   // gives for an annotated copy, so all three are directly comparable.
@@ -5589,8 +5728,9 @@ namespace breseq {
   void MutationPredictor::predictJCplusCNtoAMP(Settings& settings, Summary& summary, cGenomeDiff& gd,
                                                diff_entry_list_t& jc, diff_entry_list_t& cn)
   {
-    (void)settings; (void)summary;
+    (void)summary;
     if (cn.empty()) return;
+    const double cn_relative_bias = settings.polymorphism_prediction ? estimate_cn_relative_bias(settings, cn) : 0.0;
 
     for (diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); ) {
       cDiffEntry& j = **jc_it;
@@ -5623,8 +5763,19 @@ namespace breseq {
 
       cDiffEntry* cn_item = cn_covering(cn, seq_id, side_1_position, side_2_position);
       if (cn_item == NULL) { jc_it++; continue; }
-      int32_t copies = cn_copies(*cn_item);
-      if (copies < 2) { jc_it++; continue; }
+
+      // Consensus mode: the CN call's whole copy number. Polymorphism mode: any gain, gated on the
+      // mean copy number the junction and coverage imply together (see estimate_polymorphic_amp).
+      int32_t copies = 0;
+      cPolymorphicAmpEstimate poly_estimate;
+      if (settings.polymorphism_prediction) {
+        if (from_string<double>((*cn_item)[COPY_NUMBER]) <= 1.0) { jc_it++; continue; }
+        if (!estimate_polymorphic_amp(&j, *cn_item, cn_relative_bias, poly_estimate)
+            || (poly_estimate.L < settings.polymorphism_amplification_copy_number_cutoff)) { jc_it++; continue; }
+      } else {
+        copies = cn_copies(*cn_item);
+        if (copies < 2) { jc_it++; continue; }
+      }
 
       // Right-shift to the highest coordinates that describe the same duplication, which is what
       // gdtools NORMALIZE enforces so that two runs reporting one event compare equal. A tandem block
@@ -5649,7 +5800,10 @@ namespace breseq {
       mut[SEQ_ID] = seq_id;
       mut[POSITION] = to_string<int32_t>(position);
       mut[SIZE] = to_string<int32_t>(size);
-      mut[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
+      if (settings.polymorphism_prediction)
+        assign_polymorphic_amp(settings, poly_estimate, mut);
+      else
+        mut[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
       gd.add(mut);
 
       jc_it = jc.erase(jc_it);
@@ -5659,8 +5813,9 @@ namespace breseq {
   void MutationPredictor::predictCNplusRepeatToAMP(Settings& settings, Summary& summary, cGenomeDiff& gd,
                                                    diff_entry_list_t& jc, diff_entry_list_t& cn)
   {
-    (void)settings; (void)summary;
+    (void)summary;
     if (cn.empty()) return;
+    const double cn_relative_bias = settings.polymorphism_prediction ? estimate_cn_relative_bias(settings, cn) : 0.0;
 
     // How far from a CN boundary the pre-existing copy may sit. The HMM only resolves to its tile
     // size and the amplified unit does not have to end exactly on the element, so this is loose:
@@ -5676,8 +5831,14 @@ namespace breseq {
 
     for (diff_entry_list_t::iterator ci = cn.begin(); ci != cn.end(); ci++) {
       cDiffEntry& c = **ci;
+      // Polymorphism mode takes any gain here and gates on the estimated mean copy number below,
+      // once it is known which junction (if any) anchors the block.
       int32_t copies = cn_copies(c);
-      if (copies < 2) continue;
+      if (settings.polymorphism_prediction) {
+        if (from_string<double>(c[COPY_NUMBER]) <= 1.0) continue;
+      } else if (copies < 2) {
+        continue;
+      }
 
       const string& seq_id = c[SEQ_ID];
       int32_t cn_start = from_string<int32_t>(c[START]);
@@ -5871,7 +6032,20 @@ namespace breseq {
         mut[SEQ_ID] = seq_id;
         mut[POSITION] = to_string<int32_t>(position);
         mut[SIZE] = to_string<int32_t>(size);
-        mut[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
+
+        if (settings.polymorphism_prediction) {
+          // Coverage only. A MOB anchor's junctions measure the insertion, not the amplification.
+          // An anchoring JC does join each block to the next, but its other side lies in a copy of
+          // the element and is redundant, so its frequency rests on one reference side and is not on
+          // the footing the estimate assumes: on an LTEE clone's fixed duplication it read 2.57
+          // copies (j = 0.61 where 0.5 was right), enough to drag the combined value past 2.
+          cPolymorphicAmpEstimate poly_estimate;
+          if (!estimate_polymorphic_amp(NULL, c, cn_relative_bias, poly_estimate)
+              || (poly_estimate.L < settings.polymorphism_amplification_copy_number_cutoff)) continue;
+          assign_polymorphic_amp(settings, poly_estimate, mut);
+        } else {
+          mut[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
+        }
 
         if (!mediated_family.empty()) {
           mut[MEDIATED] = mediated_family;

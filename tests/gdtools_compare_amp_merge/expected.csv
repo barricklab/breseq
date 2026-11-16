@@ -1,0 +1,3 @@
+"type","seq_id","position","mutation","S1","S2","S3","annotation","gene","description"
+"SNP","NC_001416","100","C→A","0","0","1","intergenic (–/-91)","– / → nu1","–/DNA packaging protein"
+"AMP","NC_001416","20001","5000 bp","2","1.75","3","amplification","[orf-401]–[ea31]","[orf-401], orf206b, orf-314, orf-194, ea47, [ea31]"

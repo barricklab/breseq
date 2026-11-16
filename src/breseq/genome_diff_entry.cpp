@@ -43,6 +43,8 @@ namespace breseq {
   // item can be rejected at a frequency that looks comfortably above its cutoff.
   const char* FREQUENCY_LOWER="frequency_lower";
   const char* FREQUENCY_UPPER="frequency_upper";
+  const char* JC_FREQUENCY="jc_frequency";
+  const char* CN_FREQUENCY="cn_frequency";
   const char* REJECT="reject";
   const char* POLYMORPHISM_REJECT="polymorphism_reject";
   const char* CONSENSUS_REJECT="consensus_reject";

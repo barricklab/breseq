@@ -65,7 +65,8 @@ void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequenc
     ingest_csv_for_seq_id(seq.m_seq_id, windows, break_pts_file_name, gd_file_name,
                           static_cast<int32_t>(seq.m_length),
                           group_scales.count(seq.m_seq_id) ? group_scales[seq.m_seq_id].corrected
-                                                          : compute_plot_scale(windows).corrected);
+                                                          : compute_plot_scale(windows).corrected,
+                          settings.polymorphism_prediction);
 
     // Recorded now because none of what it is derived from survives the run: this whole directory is
     // deleted once the pipeline completes, but Output still has to report how the analysis went.
@@ -644,7 +645,8 @@ void CNEvidence::ingest_csv_for_seq_id(
                                        const string& break_pts_file_name,
                                        const string& gd_file_name,
                                        int32_t sequence_length,
-                                       double single_copy_level
+                                       double single_copy_level,
+                                       bool write_standard_error
                                        )
 {
   uint32_t window_size = windows.size() ? static_cast<uint32_t>(windows[0].length) : 0;
@@ -706,6 +708,7 @@ void CNEvidence::ingest_csv_for_seq_id(
     // windows CNery actually used says what was measured, which is the honest answer when the only
     // alternative is inventing one.
     double coverage_sum = 0;
+    double coverage_sum_sq = 0;
     uint32_t coverage_n = 0;
     for (int pass = 0; (pass < 2) && (coverage_n == 0); pass++) {
       const bool allow_redundant = (pass == 1);
@@ -715,7 +718,9 @@ void CNEvidence::ingest_csv_for_seq_id(
           // On this sequence's single-copy level, not CNery's pooled one -- see single_copy_level.
           // Dividing each window rather than the mean is the same arithmetic, and keeps it obvious
           // that every value entering the sum is already on the scale the result is quoted in.
-          coverage_sum += windows[i].corrected_cov / single_copy_level;
+          const double v = windows[i].corrected_cov / single_copy_level;
+          coverage_sum += v;
+          coverage_sum_sq += v * v;
           coverage_n++;
         }
       }
@@ -731,9 +736,10 @@ void CNEvidence::ingest_csv_for_seq_id(
     // statsmodels (and now divided by a median of its values), and its trailing digits move whenever
     // that stack is re-resolved -- 0.035776 became
     // 0.0357757 on long_ltee_ara_m3_32k_mp2800 from nothing but a fresh conda env, failing the test on
-    // a difference of 2e-7. Nothing consumes that precision: the only reader is the CN evidence page,
-    // which renders this at two decimal places (output.cpp), and mutation prediction reads
-    // copy_number, never this. Three digits leaves about a thousandfold margin over that drift.
+    // a difference of 2e-7. Nothing consumes that precision: the CN evidence page renders this at
+    // two decimal places (output.cpp), and polymorphism-mode AMP prediction, which reads this and
+    // relative_coverage_se as the coverage estimate of a mean copy number, reports that at two.
+    // Three digits leaves about a thousandfold margin over that drift.
     //
     // Default float format, not fixed or scientific: fixed(3) would crush the small values that
     // matter most here (0.00117571 -> 0.001), and scientific would turn the clean 0 that a fully
@@ -741,6 +747,23 @@ void CNEvidence::ingest_csv_for_seq_id(
     ostringstream relative_coverage;
     relative_coverage << setprecision(3) << ((coverage_n > 0) ? (coverage_sum / coverage_n) : 0.0);
     item["relative_coverage"] = relative_coverage.str();
+
+    // Standard error of that mean, from the window-to-window spread. Polymorphism mode only, where
+    // it is the coverage term's weight in an AMP's inverse-variance mean copy number; consensus mode
+    // never reads it, and leaving it out there keeps every consensus golden unchanged. Windows are
+    // treated as independent, which CNery's non-overlapping tiles nearly are. "NA" with fewer than
+    // two windows, where there is no spread to measure.
+    if (write_standard_error) {
+      if (coverage_n >= 2) {
+        const double mean = coverage_sum / coverage_n;
+        const double var = max(0.0, (coverage_sum_sq - coverage_n * mean * mean) / (coverage_n - 1));
+        ostringstream se;
+        se << setprecision(3) << sqrt(var / coverage_n);
+        item["relative_coverage_se"] = se.str();
+      } else {
+        item["relative_coverage_se"] = "NA";
+      }
+    }
 
     gd.add(item);
   }

@@ -4813,6 +4813,24 @@ void draw_discordant_pairs_plot(Settings& settings, cReferenceSequences& ref_seq
 }
 
 
+// An AMP row from a gdtools compare table that stands for every copy number of one block, with each
+// sample's mean copy number in its column (see tabulate_mutation_frequencies_from_multiple_gds).
+// Only when those per-sample columns are what the table shows: a single-column table reads the
+// mutation's own [frequency], which is still an ordinary frequency.
+static bool amp_shows_mean_copy_numbers(const cDiffEntry& mut, const MutationTableOptions& options)
+{
+  return (mut._type == AMP) && mut.entry_exists("_amp_merged")
+         && ((options.gd_name_list_ref.size() > 1) || options.force_show_sample_headers);
+}
+
+// "5,000 bp x 2" -- or, for a merged compare row, the size alone, since the copies are per sample.
+static string amp_size_description(const cDiffEntry& mut, bool merged_row, bool with_commas)
+{
+  string size = with_commas ? commify(mut.get("size")) : mut.get("size");
+  if (merged_row) return size + " bp";
+  return size + " bp x " + mut.get("new_copy_number");
+}
+
 void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options)
 {
   //Preflight checks
@@ -5058,7 +5076,9 @@ void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
     } break;
       
     case AMP:{
-      html_mutation = mut["size"] + " bp x " + mut["new_copy_number"];
+      // The text fields feed gdtools COMPARE's TABLE, which always shows the per-sample columns, so
+      // the merge marker alone decides (MutationTableOptions there carries no sample names).
+      html_mutation = amp_size_description(mut, mut.entry_exists("_amp_merged"), false);
       html_mutation_annotation =
       from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
       "duplication" : "amplification";
@@ -5349,7 +5369,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
     } break;
       
     case AMP:{
-      html_mutation = nonbreaking(commify(mut["size"]) + " bp x " + mut["new_copy_number"]);
+      html_mutation = nonbreaking(amp_size_description(mut, amp_shows_mean_copy_numbers(mut, options), true));
       html_mutation_annotation =
       from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
       "duplication" : "amplification";
@@ -5602,7 +5622,9 @@ void Html_Mutation_Table_String::Item_Lines()
     // There are three possibilities for the frequency column(s)
     // (1) We don't want it at all. (Single genome no poly prediction)
     vector<string> freq_list;
-   
+    const bool mean_copy_numbers = amp_shows_mean_copy_numbers(mut, options);
+    vector<bool> fixed_list;
+
     // (2) We are in compare mode and need a column for each file
     if ((options.gd_name_list_ref.size() > 1) || (options.force_show_sample_headers)) {
       //for each gd
@@ -5610,6 +5632,7 @@ void Html_Mutation_Table_String::Item_Lines()
         string base_name = options.gd_name_list_ref[j];
         string key = "frequency_" + base_name;
         freq_list.push_back(mut.count(key) ? mut[key] : "0");
+        fixed_list.push_back(mut.entry_exists("_fixed_" + base_name));
       }
     }
     
@@ -5670,7 +5693,7 @@ void Html_Mutation_Table_String::Item_Lines()
     
     //Need if statement for C++
     if (freq_list.size() >= 1 && !freq_list[0].empty()) {
-      ss << freq_cols(freq_list) << endl;
+      ss << freq_cols(freq_list, mean_copy_numbers, fixed_list) << endl;
     }
     if (settings.lenski_format) {
       ss << "<!-- Lenski Format -->" << endl;
@@ -5785,15 +5808,17 @@ string Html_Mutation_Table_String::freq_range_to_string(const string& lower, con
 //      METHOD: freq_cols
 // DESCRIPTION: Helper function used in Item_Lines
 //===============================================================================
-string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
+string Html_Mutation_Table_String::freq_cols(vector<string> freq_list, bool mean_copy_numbers, const vector<bool>& fixed_list)
 {
   stringstream ss;
-  for (vector<string>::iterator itr = freq_list.begin();
-       itr != freq_list.end(); itr ++) {
-    string& freq = (*itr);
+  for (size_t i = 0; i < freq_list.size(); i++) {
+    string& freq = freq_list[i];
+    // A merged AMP row's cells are mean copy numbers, where 1 means "absent", not "fixed": whether
+    // that sample's call was fixed is carried separately.
+    bool is_fixed = mean_copy_numbers ? ((i < fixed_list.size()) && fixed_list[i]) : (freq == "1");
     if (options.shade_frequencies) {
       string bgcolor;
-      if (freq == "1") {
+      if (is_fixed) {
        bgcolor = "Blue";
       }
       if (!bgcolor.empty()) {
@@ -5802,6 +5827,14 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
       else {
         ss << td(ALIGN_RIGHT,"&nbsp;");
       }
+    }
+    else if (mean_copy_numbers) {
+      // Already formatted by the tabulation ("1.75", "2"). Blank where the sample lacks it, as an
+      // ordinary frequency of 0 is; D and ? pass through freq_to_string's markers.
+      bool numeric = !((freq == "D") || (freq == "?") || (freq == "H") || (freq == "NA") || freq.empty());
+      string cell = !numeric ? freq_to_string(freq, freq_list.size() > 1)
+                             : ((from_string<double>(freq) == 0.0) ? "" : (freq + "&times;"));
+      ss << td (string(CLASS_FREQ)+" "+string(ALIGN_RIGHT), cell);
     }
     else {
       ss << td (string(CLASS_FREQ)+" "+string(ALIGN_RIGHT), freq_to_string(freq, freq_list.size() > 1));

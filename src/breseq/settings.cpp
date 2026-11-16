@@ -553,6 +553,7 @@ namespace breseq
     ("predict-copy-number", "DEPRECATED: copy number (CN) evidence prediction is now the default. Use --no-copy-number-prediction to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
     ("no-copy-number-prediction", "Do not predict copy number variation (CN) evidence. CN prediction requires the separate CNery program (https://github.com/barricklab/CNery) on your PATH; if it is missing, breseq warns and skips CN rather than failing. Pass this flag to skip it silently. (DEFAULT=OFF, i.e. CN prediction is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("copy-number-resolution", "Spacing of the copy-number grid, in copies. POLYMORPHISM MODE ONLY: with --polymorphism-prediction, copy number is called on a continuous grid rather than on the integers, so a region can be reported at 1.4 copies, and this sets how finely that grid is spaced. Larger values call fewer, coarser levels; this is also what keeps residual coverage bias from being reported as a copy-number change, since a level is only called when it beats the cost of a state change. Rounded to the nearest spacing that divides 1.0 exactly, so single copy is always on the grid, and it must exceed the coverage a deleted region still shows (0.02). (DEFAULT = 0.1)", "", NORMAL_OPTION)
+    ("polymorphism-amplification-copy-number-cutoff", "POLYMORPHISM MODE ONLY: predict an amplification (AMP) only if the mean copy number of the amplified block across the population is at least this value. The mean copy number is 1 + frequency x (new_copy_number - 1): it is what the new junction reads and the relative coverage both measure, and it cannot be split into a copy number and a frequency on its own, so breseq reports the smallest whole new_copy_number that keeps the frequency at or below 1. Must be greater than 1. (DEFAULT = 1.5)", "", NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -863,6 +864,16 @@ namespace breseq
     ASSERT(this->copy_number_resolution <= 0.5,
            "Argument --copy-number-resolution (" + to_string<double>(this->copy_number_resolution) +
            ") must be 0.5 or less, or the grid has no level between zero and single copy.")
+
+    if (options.count("polymorphism-amplification-copy-number-cutoff")) {
+      ASSERT(options.count("polymorphism-prediction"),
+             "Argument --polymorphism-amplification-copy-number-cutoff applies only in polymorphism mode (-p/--polymorphism-prediction).\n"
+             "In consensus mode an amplification's copy number is called on the integers.")
+      this->polymorphism_amplification_copy_number_cutoff = from_string<double>(options["polymorphism-amplification-copy-number-cutoff"]);
+    }
+    ASSERT(this->polymorphism_amplification_copy_number_cutoff > 1.0,
+           "Argument --polymorphism-amplification-copy-number-cutoff (" + to_string<double>(this->polymorphism_amplification_copy_number_cutoff) +
+           ") must be greater than 1, the copy number of an unamplified block.")
 
     this->verbose = options.count("verbose");
     
@@ -1567,6 +1578,7 @@ namespace breseq
     this->copy_number_explicitly_requested = false;
     // Polymorphism mode only -- see settings.h for why 0.1 rather than CNery's own 0.05.
     this->copy_number_resolution = 0.1;
+    this->polymorphism_amplification_copy_number_cutoff = 1.5;
 		this->do_periodicity = false;
     
     //! DEBUG options

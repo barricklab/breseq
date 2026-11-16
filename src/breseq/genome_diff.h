@@ -302,12 +302,17 @@ public:
                                        bool jc_only_accepted,
                                        bool verbose = false);
 
+  //! merge_amp_endpoints: collapse AMP rows that differ only in new_copy_number into one row whose
+  //! per-sample value is the MEAN copy number, 1 + frequency * (new_copy_number - 1), marked
+  //! "_amp_merged" (with "_fixed_<title>" set where that sample's frequency was 1). For compare
+  //! TABLES only -- not for PHYLIP/FASTA genotypes, which read any value but 1 as missing.
   static void tabulate_mutation_frequencies_from_multiple_gds(cGenomeDiff& master_gd,
                                                      vector<cGenomeDiff>& gd_list,
                                                      vector<string> &title_list,
                                                      bool phylogeny_aware = false,
                                                      bool population_aware = false,
-                                                     bool verbose = false);
+                                                     bool verbose = false,
+                                                     bool merge_amp_endpoints = false);
 
   
   //!---- Format Conversion Functions: Member ---- !//

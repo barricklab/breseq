@@ -284,13 +284,18 @@ namespace breseq {
     // reference group that the average is quoted against. CNery's own numbers are pooled across
     // every reference sequence in the run, which is not a scale on which a statement about one
     // region of one sequence means anything.
+    //
+    // With write_standard_error (polymorphism mode), each entry also gets relative_coverage_se, the
+    // standard error of that average, which weighs the coverage against the junction reads when an
+    // AMP's mean copy number is estimated from both (mutation_predictor.cpp).
     static void ingest_csv_for_seq_id(
                                       const string& seq_id,
                                       const vector<cnery_window>& windows,
                                       const string& break_pts_file_name,
                                       const string& gd_file_name,
                                       int32_t sequence_length,
-                                      double single_copy_level
+                                      double single_copy_level,
+                                      bool write_standard_error
                                       );
 
     // Emits one gnuplot SVG over [plot_start, plot_end]. Windows outside that range are ignored.

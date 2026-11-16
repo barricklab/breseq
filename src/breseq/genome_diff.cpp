@@ -4312,7 +4312,8 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
                                                          vector<string> &title_list,
                                                          bool phylogeny_id_aware,
                                                          bool population_id_aware,
-                                                         bool verbose
+                                                         bool verbose,
+                                                         bool merge_amp_endpoints
                                                          )
 {
   // Create a list of unique titles, which may require some renaming
@@ -4410,6 +4411,72 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
         (*this_mut)[freq_key] = "?";
         continue;
       }
+    }
+  }
+
+  if (merge_amp_endpoints) {
+    // One row per amplified block. An AMP's new_copy_number is part of its identity, so the same
+    // block called at two copies in one sample and three in another lands on two rows above. In
+    // polymorphism mode that split is not even a difference in the data: only the mean copy number
+    // 1 + f (N - 1) is measured, and N is just the smallest whole number that keeps f <= 1, so two
+    // samples with nearly the same coverage can come out at N = 2 and N = 3. That mean is also the
+    // one value that compares across samples, so it is what each sample's cell shows.
+    //
+    // mediated= and mob_region= stay in the key: they change the sequence that is amplified.
+    diff_entry_list_t* entries = master_gd.get_mutable_list_ptr();
+    map<string, diff_entry_ptr_t> row_for_block;
+    for (diff_entry_list_t::iterator it = entries->begin(); it != entries->end(); ) {
+      cDiffEntry& amp = **it;
+      if (amp._type != AMP) { it++; continue; }
+
+      int32_t copies = from_string<int32_t>(amp[NEW_COPY_NUMBER]);
+      for (uint32_t i = 0; i < title_list.size(); i++) {
+        string freq_key = "frequency_" + title_list[i];
+        if (!amp.entry_exists(freq_key)) continue;
+        string v = amp[freq_key];
+        if ((v == "D") || (v == "?") || v.empty()) continue;
+        double f = from_string<double>(v);
+        if (f == 0.0) continue;
+        if (f == 1.0) amp["_fixed_" + title_list[i]] = "1";
+        ostringstream mean_copies;
+        mean_copies << fixed << setprecision(2) << (1.0 + f * (copies - 1));
+        string s = mean_copies.str();
+        s.erase(s.find_last_not_of('0') + 1);
+        if (!s.empty() && (s[s.size() - 1] == '.')) s.erase(s.size() - 1);
+        amp[freq_key] = s;
+      }
+      amp["_amp_merged"] = "1";
+
+      string block_key = amp[SEQ_ID] + "\t" + amp[POSITION] + "\t" + amp[SIZE]
+                       + "\t" + (amp.entry_exists(MEDIATED) ? amp[MEDIATED] : "")
+                       + "\t" + (amp.entry_exists(MOB_REGION) ? amp[MOB_REGION] : "");
+      map<string, diff_entry_ptr_t>::iterator found = row_for_block.find(block_key);
+      if (found == row_for_block.end()) {
+        row_for_block[block_key] = *it;
+        it++;
+        continue;
+      }
+
+      // Fold this row into the first one for the block. A sample matched at most one of them, so a
+      // numeric cell here replaces the other row's 0, D or ? for that sample.
+      cDiffEntry& keep = *(found->second);
+      for (uint32_t i = 0; i < title_list.size(); i++) {
+        string freq_key = "frequency_" + title_list[i];
+        if (!amp.entry_exists(freq_key)) continue;
+        string v = amp[freq_key];
+        bool numeric = !((v == "D") || (v == "?") || v.empty());
+        if (numeric && (from_string<double>(v) == 0.0)) continue;
+        string kv = keep.entry_exists(freq_key) ? keep[freq_key] : "0";
+        bool keep_numeric = !((kv == "D") || (kv == "?") || kv.empty());
+        if (numeric || (keep_numeric && (from_string<double>(kv) == 0.0))) {
+          keep[freq_key] = v;
+          if (amp.entry_exists("_fixed_" + title_list[i])) keep["_fixed_" + title_list[i]] = "1";
+        }
+      }
+      // The row's own copy number only decides "duplication" vs "amplification": take the largest.
+      if (copies > from_string<int32_t>(keep[NEW_COPY_NUMBER]))
+        keep[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
+      it = entries->erase(it);
     }
   }
 

@@ -314,7 +314,12 @@ namespace breseq
     //! whole point is small departures from single copy -- but it is why a CN entry near 1 on a
     //! short contig deserves suspicion.
     double copy_number_resolution;          // Default = 0.1 COMMAND-LINE OPTION
-    bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
+    //! POLYMORPHISM MODE ONLY. The smallest MEAN copy number of an amplified block across the
+    //! population -- 1 + frequency * (new_copy_number - 1), which is what both the junction reads and
+    //! the relative coverage measure -- for which an AMP is predicted. 1.5 is where the old gate,
+    //! round(copy_number) >= 2, sat.
+    double polymorphism_amplification_copy_number_cutoff; // Default = 1.5 COMMAND-LINE OPTION
+    bool do_periodicity;                   // Default = false COMMAND-LINE OPTION
     //! Validate options and all file/folder arguments, then exit without doing any work.
     //! A dry run creates nothing -- in particular it skips the command-line logging that
     //! would otherwise create the output directory (see Settings::log).
