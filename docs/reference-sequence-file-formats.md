@@ -260,6 +260,10 @@ For all sequence formats:
     _breseq_ uses, so a tool reading _breseq_'s output can be told what to
     call a sequence before running it.
 
+    A converted sequence id may be at most 100 characters long. _breseq_
+    names some of its output files after each sequence id, and stops at
+    the start of a run when an id is too long to fit in a file name.
+
     These ids are deliberately not the GFF3 specification's own escaping,
     which percent-encodes a character such as `(` as `%28`: `|` separates
     values in _breseq_'s annotations and `__` divides the two sides of a

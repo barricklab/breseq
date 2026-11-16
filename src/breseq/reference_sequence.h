@@ -1266,6 +1266,15 @@ public:
     
     static const string safe_seq_id_name_characters;
 
+    //! The breseq pipeline refuses a reference seq id longer than this. Several of its per-sequence
+    //! files are named after the seq id: @.coverage.tsv, @.cn_evidence.gd, cnery_out@_otr_results.json
+    //! and the other CNery files, @.overview.svg / @.cn_overview.svg / @.gc_bias.svg, and the MC plot
+    //! <seq_id>_<start>-<end>.svg (settings.cpp, output.cpp). The longest adds ~26 bytes to the id, and
+    //! filesystems cap a file name at 255 bytes (143 on ecryptfs). Only the pipeline checks this:
+    //! gdtools and CONVERT-REFERENCE write no per-sequence files, and --list-seq-ids must still be
+    //! able to show a user which id is too long.
+    static const size_t kMaxSeqIdLength = 100;
+
     string safe_seq_id_name(const string& input)
     {
       //

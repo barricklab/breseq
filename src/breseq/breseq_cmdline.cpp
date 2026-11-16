@@ -1607,6 +1607,18 @@ int breseq_default_action(int argc, char* argv[])
                                 settings.genbank_field_for_seq_id
                                 );
 
+    // Per-sequence output files are named after the seq id, so refuse one that would push a file
+    // name past the filesystem limit here rather than fail stages later on "Could not open file".
+    for (cReferenceSequences::const_iterator it = conv_ref_seq_info.begin(); it != conv_ref_seq_info.end(); it++) {
+      if (it->m_seq_id.size() > cReferenceSequences::kMaxSeqIdLength) {
+        ERROR("Reference seq id is " + to_string(it->m_seq_id.size()) + " characters long, more than the maximum of "
+              + to_string(cReferenceSequences::kMaxSeqIdLength) + ":\n  " + it->m_seq_id.substr(0, 60) + "...\n"
+              + "breseq names some output files after each seq id, and file names are limited in length.\n"
+              + "Shorten this sequence's FASTA header (or GenBank LOCUS/ACCESSION/VERSION name), or choose "
+              + "another GenBank field with --genbank-field-for-seq-id.");
+      }
+    }
+
     // --apply-check: the reads are analyzed against the reference with these mutations applied.
     // The applied copy tracks where each of its bases came from, and that map is what the Output
     // stage uses to report original coordinates next to every position.

@@ -55,6 +55,7 @@ namespace breseq {
   // its bytes one at a time and let an unrelated character sharing one of them through
   // half-rewritten. (It carried a Unicode minus sign, U+2212, for years.)
   const string cReferenceSequences::safe_seq_id_name_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-+";
+  const size_t cReferenceSequences::kMaxSeqIdLength; // value in the header; defined here since to_string() binds it by reference
 
 
   const vector<string> snp_types = make_vector<string>("synonymous")("nonsynonymous")("nonsense")("noncoding")("pseudogene")("intergenic");
