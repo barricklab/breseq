@@ -1799,7 +1799,7 @@ namespace breseq
 
 		this->converted_fastq_file_name = this->sequence_conversion_path + "/#.converted.fastq.gz";
 		this->unwanted_fasta_file_name = this->sequence_conversion_path + "/unwanted.fasta";
-		this->reference_trim_file_name = this->sequence_conversion_path + "/@.trims";
+		this->reference_trim_file_name = this->sequence_conversion_path + "/reference.@.trims"; // @ = sequence index
 		this->sequence_conversion_summary_file_name = this->sequence_conversion_path + "/summary.json";
 
     //! Paths: Read alignment
@@ -1853,7 +1853,7 @@ namespace breseq
 		this->candidate_junction_fasta_file_name = this->candidate_junction_path + "/candidate_junction.fasta";
     this->candidate_junction_detailed_file_name = this->candidate_junction_path + "/candidate_junction.detailed.txt";
 		this->candidate_junction_faidx_file_name = this->candidate_junction_path + "/candidate_junction.fasta.fai";
-    this->candidate_junction_trim_file_name = this->candidate_junction_path + "/@.trims";
+    this->candidate_junction_trim_file_name = this->candidate_junction_path + "/junction.@.trims"; // @ = sequence index
 
     //! Paths: Junction Alignment
 		this->candidate_junction_alignment_path = "04_candidate_junction_alignment";

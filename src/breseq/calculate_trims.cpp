@@ -137,7 +137,7 @@ SequenceTrims::SequenceTrims(const string& _in_seq)
 //  }
 }
 
-void calculate_trims( const string& in_fasta, const string& in_output_path) {
+void calculate_trims( const string& in_fasta, const string& in_trims_file_name) {
 
   // Load the sequence index
   string fai_filename(in_fasta);
@@ -166,10 +166,9 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
     const string seq(cseq);
     free((void*)cseq);
 
-    string output_filename(in_output_path);
-    output_filename += "/";
-    output_filename += bam_header->target_name[i];
-    output_filename += ".trims";
+    // Named by target index, not target name (see calculate_trims.h). Every reader must use the
+    // same index: read_trims(), junction_read_counter and identify_candidate_junctions all do.
+    string output_filename = Settings::file_name(in_trims_file_name, "@", to_string<int32_t>(i));
 
     calculate_trims_1(seq, output_filename);
 	}
@@ -288,7 +287,8 @@ void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, c
 {
   trims.resize(ref_seqs.size());
   for(uint32_t i = 0; i < ref_seqs.size(); i++) {
-    string this_file_name = Settings::file_name(in_trims_file_name, "@", ref_seqs[i].m_seq_id);
+    // Index i is the FAI/BAM target id: ref_seqs is loaded from the same FASTA, in file order.
+    string this_file_name = Settings::file_name(in_trims_file_name, "@", to_string<uint32_t>(i));
     trims[i].ReadFile(this_file_name, ref_seqs[i].m_length);
   }
 }

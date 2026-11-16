@@ -1824,7 +1824,7 @@ int breseq_default_action(int argc, char* argv[])
     samtools_faidx(settings.reference_fasta_file_name);
     
 		// calculate trim files
-		calculate_trims(settings.reference_fasta_file_name, settings.sequence_conversion_path);
+		calculate_trims(settings.reference_fasta_file_name, settings.reference_trim_file_name);
     settings.track_intermediate_file(settings.output_done_file_name, settings.sequence_conversion_path + "/*.trims");
 
 		// store summary information
@@ -2135,7 +2135,7 @@ int breseq_default_action(int argc, char* argv[])
       
       if (!file_empty(settings.candidate_junction_fasta_file_name.c_str())) {
         samtools_faidx(settings.candidate_junction_fasta_file_name);
-        calculate_trims(settings.candidate_junction_fasta_file_name, settings.candidate_junction_path);
+        calculate_trims(settings.candidate_junction_fasta_file_name, settings.candidate_junction_trim_file_name);
       }
 
       settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name);

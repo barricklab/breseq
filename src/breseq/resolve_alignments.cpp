@@ -3975,7 +3975,8 @@ junction_read_counter::junction_read_counter(const string& bam, const string& fa
 
   _trims_list.resize(num_targets());
   for (uint32_t tid = 0; tid < num_targets(); tid++) {
-    string this_file_name = Settings::file_name(trim_file_name, "@", target_name(tid));
+    // trims files are named by target index (see calculate_trims.h)
+    string this_file_name = Settings::file_name(trim_file_name, "@", to_string<uint32_t>(tid));
     _trims_list[tid].ReadFile(this_file_name, target_length(tid));
   }
 }

@@ -31,7 +31,11 @@ namespace breseq {
   class alignment_wrapper;
   class cReferenceSequences;
 
-  void calculate_trims( const string& in_fasta, const string& in_output_path);
+  //! Writes one trims file per sequence in in_fasta. in_trims_file_name is a template whose "@" is
+  //! replaced by the sequence's 0-based index in the FASTA (= its FAI/BAM target id), not its name:
+  //! candidate junction names embed their junction sequence and can exceed the filesystem's 255-byte
+  //! filename limit.
+  void calculate_trims( const string& in_fasta, const string& in_trims_file_name);
   void calculate_trims_1( const string& in_fasta, const string& in_output_path);
 
   /*! Trim classes

@@ -1555,8 +1555,9 @@ namespace breseq {
     // See junction_read_counter::count_confident_overlap_registers() in resolve_alignments.cpp
     // for the same math applied to real reads later in the pipeline.
     map<string, SequenceTrims> reference_trims_by_seq_id;
-    for (cReferenceSequences::const_iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
-      string this_file_name = Settings::file_name(settings.reference_trim_file_name, "@", it->m_seq_id);
+    uint32_t trims_seq_index = 0; // trims files are named by sequence index (see calculate_trims.h)
+    for (cReferenceSequences::const_iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++, trims_seq_index++) {
+      string this_file_name = Settings::file_name(settings.reference_trim_file_name, "@", to_string<uint32_t>(trims_seq_index));
       reference_trims_by_seq_id[it->m_seq_id].ReadFile(this_file_name, it->m_length);
     }
     uint32_t read_length_avg = static_cast<uint32_t>(round(summary.sequence_conversion.read_length_avg));
