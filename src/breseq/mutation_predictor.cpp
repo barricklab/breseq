@@ -4775,6 +4775,20 @@ namespace breseq {
       predictCNplusRepeatToAMP(settings, summary, gd, jc, cn);
     }
 
+    ///
+    // POLYMORPHISM MODE: evidence JC (+ CN below single copy), and CN + repeat => DEL mutations
+    ///
+    //
+    // After the missing-coverage deletion paths, which consume every fixed deletion's MC and JC, so
+    // only what a deletion present in PART of the population leaves behind reaches these. The
+    // junction-only case runs without CN evidence too, so this is not inside the block above.
+    if (settings.polymorphism_prediction) {
+      cerr << "  Predicting polymorphic deletions from junctions and copy number..." << endl;
+      set<cDiffEntry*> cn_used_for_deletions;
+      predictJCplusCNtoDEL(settings, summary, gd, jc, cn, cn_used_for_deletions);
+      predictCNplusRepeatToDEL(settings, summary, gd, cn, cn_used_for_deletions);
+    }
+
 		///
 		// evidence JC => INS, SUB, DEL mutations
     ///
@@ -5532,7 +5546,13 @@ namespace breseq {
   // their sampling variance: junction read counts carry the same kind of error (mapping and
   // alignment differences between the new junction and the reference boundaries), which their
   // binomial variance does not see either.
-  static bool estimate_polymorphic_amp(const cDiffEntry* jc, cDiffEntry& cn, double relative_bias, cPolymorphicAmpEstimate& e)
+  // loss: the event is a DELETION, not an amplification. The coverage term is the same -- the mean
+  // copy number L of the region, 1 - f when a fraction f of genomes lack it -- but the junction maps
+  // onto L differently. A deletion junction occurs once in each genome that has the deletion and
+  // each reference boundary once in each genome that does not, so j = f and L_J = 1 - j, with
+  // variance j (1 - j) / n directly.
+  static bool estimate_polymorphic_copy_number(const cDiffEntry* jc, cDiffEntry* cn_ptr, double relative_bias,
+                                               bool loss, cPolymorphicAmpEstimate& e)
   {
     e = cPolymorphicAmpEstimate();
     double jc_var = 0.0, cn_var = 0.0;
@@ -5542,20 +5562,22 @@ namespace breseq {
       double j = from_string<double>(jc->get(FREQUENCY));
       double n_eff = jc->entry_exists("junction_effective_depth")
                      ? from_string<double>(jc->get("junction_effective_depth")) : 0.0;
-      if ((j >= 0.0) && (j < 1.0)) {
+      if ((j >= 0.0) && (loss ? (j <= 1.0) : (j < 1.0))) {
         e.have_jc = true;
-        e.jc_L = 1.0 / (1.0 - j);
+        e.jc_L = loss ? (1.0 - j) : (1.0 / (1.0 - j));
         if (n_eff > 0.0) {
           // A half-read pseudocount keeps the variance positive when no read (or every read)
           // supports the junction, where the plain binomial variance would claim certainty.
           double j_tilde = (j * n_eff + 0.5) / (n_eff + 1.0);
-          jc_var = j_tilde / (n_eff * pow(1.0 - j_tilde, 3));
+          jc_var = loss ? (j_tilde * (1.0 - j_tilde) / n_eff)
+                        : (j_tilde / (n_eff * pow(1.0 - j_tilde, 3)));
           jc_has_var = true;
         }
       }
     }
 
-    if (cn.entry_exists("relative_coverage")) {
+    if ((cn_ptr != NULL) && cn_ptr->entry_exists("relative_coverage")) {
+      cDiffEntry& cn = *cn_ptr;
       e.have_cn = true;
       e.cn_L = from_string<double>(cn["relative_coverage"]);
       if (cn.entry_exists("relative_coverage_se") && (cn["relative_coverage_se"] != "NA")) {
@@ -5564,10 +5586,16 @@ namespace breseq {
       }
     }
 
+    // The bias is measured as a departure from single copy, so a loss -- a level between 0 and 1 --
+    // takes it as it is. A gain scales it with the level, coverage bias being multiplicative. Scaling
+    // a loss would give a region at zero coverage zero variance, and an infinite weight.
     if (relative_bias > 0.0) {
-      if (e.have_jc) { jc_var += pow(relative_bias * e.jc_L, 2); jc_has_var = true; }
-      if (e.have_cn) { cn_var += pow(relative_bias * e.cn_L, 2); cn_has_var = true; }
+      if (e.have_jc) { jc_var += pow(relative_bias * (loss ? 1.0 : e.jc_L), 2); jc_has_var = true; }
+      if (e.have_cn) { cn_var += pow(relative_bias * (loss ? 1.0 : e.cn_L), 2); cn_has_var = true; }
     }
+    // A variance of zero cannot be weighed against anything: treat it as unknown.
+    if (jc_var <= 0.0) jc_has_var = false;
+    if (cn_var <= 0.0) cn_has_var = false;
 
     if (jc_has_var && cn_has_var) {
       double w_jc = 1.0 / jc_var, w_cn = 1.0 / cn_var;
@@ -5606,6 +5634,31 @@ namespace breseq {
     mut[FREQUENCY] = (f == 1.0) ? "1" : formatted_double(f, places, true).to_string();
     if (e.have_jc) mut[JC_FREQUENCY] = formatted_double((e.jc_L - 1.0) / (N - 1), places, true).to_string();
     if (e.have_cn) mut[CN_FREQUENCY] = formatted_double((e.cn_L - 1.0) / (N - 1), places, true).to_string();
+  }
+
+  // The deletion counterpart, for an estimate made with loss = true: the frequency is f = 1 - L,
+  // with no copy number to choose. Returns false -- predict nothing -- when the LOWER bound of f
+  // falls short of --polymorphism-frequency-cutoff, the same lower-bound test MOB and the evidence
+  // types apply, so a coverage dip that bias alone could explain is not called. Snaps to 1 when the
+  // upper bound reaches the consensus cutoff.
+  static bool assign_polymorphic_del(const Settings& settings, const cPolymorphicAmpEstimate& e, cDiffEntry& mut)
+  {
+    const double z = 1.959964; // two-sided 95%
+    double f = 1.0 - e.L;
+    double f_lo = f - z * e.se;
+    double f_hi = f + z * e.se;
+
+    if ((settings.polymorphism_frequency_cutoff > 0.0) && (f_lo < settings.polymorphism_frequency_cutoff))
+      return false;
+    f = max(0.0, min(1.0, f));
+    if ((settings.consensus_frequency_cutoff > 0.0) && (f_hi >= settings.consensus_frequency_cutoff))
+      f = 1.0;
+
+    const uint32_t places = settings.polymorphism_precision_places;
+    mut[FREQUENCY] = (f == 1.0) ? "1" : formatted_double(f, places, true).to_string();
+    if (e.have_jc) mut[JC_FREQUENCY] = formatted_double(1.0 - e.jc_L, places, true).to_string();
+    if (e.have_cn) mut[CN_FREQUENCY] = formatted_double(1.0 - e.cn_L, places, true).to_string();
+    return true;
   }
 
   // Orientation, in reference coordinates, of the NEW element copy a junction reports. This is the
@@ -5735,6 +5788,9 @@ namespace breseq {
     for (diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); ) {
       cDiffEntry& j = **jc_it;
 
+      // Rejected junctions reach this list only when user-defined; see predictJCplusCNtoDEL.
+      if (j.number_reject_reasons() > 0) { jc_it++; continue; }
+
       // Same geometry predictJCtoINSorSUBorDEL derives, kept deliberately identical so the two agree
       // on what "points back upstream" means.
       if (j["side_1_seq_id"] != j["side_2_seq_id"]) { jc_it++; continue; }
@@ -5770,7 +5826,7 @@ namespace breseq {
       cPolymorphicAmpEstimate poly_estimate;
       if (settings.polymorphism_prediction) {
         if (from_string<double>((*cn_item)[COPY_NUMBER]) <= 1.0) { jc_it++; continue; }
-        if (!estimate_polymorphic_amp(&j, *cn_item, cn_relative_bias, poly_estimate)
+        if (!estimate_polymorphic_copy_number(&j, cn_item, cn_relative_bias, false, poly_estimate)
             || (poly_estimate.L < settings.polymorphism_amplification_copy_number_cutoff)) { jc_it++; continue; }
       } else {
         copies = cn_copies(*cn_item);
@@ -6040,7 +6096,7 @@ namespace breseq {
           // the footing the estimate assumes: on an LTEE clone's fixed duplication it read 2.57
           // copies (j = 0.61 where 0.5 was right), enough to drag the combined value past 2.
           cPolymorphicAmpEstimate poly_estimate;
-          if (!estimate_polymorphic_amp(NULL, c, cn_relative_bias, poly_estimate)
+          if (!estimate_polymorphic_copy_number(NULL, &c, cn_relative_bias, false, poly_estimate)
               || (poly_estimate.L < settings.polymorphism_amplification_copy_number_cutoff)) continue;
           assign_polymorphic_amp(settings, poly_estimate, mut);
         } else {
@@ -6057,6 +6113,189 @@ namespace breseq {
         gd.add(mut);
         break; // this CN region is accounted for
       }
+    }
+  }
+
+  // CNery's window size, read off any CN entry. CN prediction's default window when there is no CN
+  // entry to read it from -- in which case nothing below single copy was called either.
+  static int32_t cn_tile_size(diff_entry_list_t& cn)
+  {
+    for (diff_entry_list_t::iterator it = cn.begin(); it != cn.end(); it++) {
+      if ((*it)->entry_exists("tile_size")) {
+        int32_t t = from_string<int32_t>((**it)["tile_size"]);
+        if (t > 0) return t;
+      }
+    }
+    return 100;
+  }
+
+  // Whether a deletion already predicted (by the missing-coverage paths, in practice) covers at least
+  // half of [start, end]. CN entries are never consumed by the predictors that use them, so a fixed
+  // deletion keeps its copy-number-0 CN entry beside the DEL its MC became.
+  static bool covered_by_predicted_deletion(cGenomeDiff& gd, const string& seq_id, int32_t start, int32_t end)
+  {
+    int32_t length = end - start + 1;
+    diff_entry_list_t dels = gd.get_list(make_vector<gd_entry_type>(DEL));
+    for (diff_entry_list_t::iterator it = dels.begin(); it != dels.end(); it++) {
+      cDiffEntry& d = **it;
+      if (d[SEQ_ID] != seq_id) continue;
+      int32_t d_start = from_string<int32_t>(d[POSITION]);
+      int32_t d_end = d_start + from_string<int32_t>(d[SIZE]) - 1;
+      int32_t overlap = min(end, d_end) - max(start, d_start) + 1;
+      if (2 * overlap >= length) return true;
+    }
+    return false;
+  }
+
+  void MutationPredictor::predictJCplusCNtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                               diff_entry_list_t& jc, diff_entry_list_t& cn, set<cDiffEntry*>& cn_used)
+  {
+    (void)summary;
+    if (!settings.polymorphism_prediction) return;
+
+    const double cn_relative_bias = estimate_cn_relative_bias(settings, cn);
+    // A deletion this small spans at most a couple of CNery windows, too few for the HMM to call a
+    // level over (and a window that overlaps it only partly averages the loss away), so the junction
+    // has to stand alone. Above it, a deletion with no CN loss under it is not believed.
+    const int32_t max_junction_only_size = 2 * cn_tile_size(cn);
+
+    for (diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); ) {
+      cDiffEntry& j = **jc_it;
+
+      // Rejected junctions survive into this list only when user-defined (--user-evidence-gd), which
+      // asks for the junction to be REPORTED, not believed: such a one with no reads at all would
+      // otherwise be paired with whatever CN loss lies under it.
+      if (j.number_reject_reasons() > 0) { jc_it++; continue; }
+
+      // Same geometry predictJCtoINSorSUBorDEL derives for its deletions, kept identical.
+      if (j["side_1_seq_id"] != j["side_2_seq_id"]) { jc_it++; continue; }
+      if ((n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1)) { jc_it++; continue; }
+      int32_t side_1_strand = n(j["side_1_strand"]);
+      int32_t side_2_strand = n(j["side_2_strand"]);
+      if (side_1_strand == side_2_strand) { jc_it++; continue; }
+
+      // Decided by the strand of the ORIGINAL side 1, before the swap -- as in predictJCtoINSorSUBorDEL.
+      bool reverse_complement_unique_sequence = (side_1_strand == 1);
+
+      string seq_id = j["side_1_seq_id"];
+      int32_t side_1_position = n(j["side_1_position"]);
+      int32_t side_2_position = n(j["side_2_position"]);
+      if (side_2_position < side_1_position) {
+        swap(side_1_position, side_2_position);
+        swap(side_1_strand, side_2_strand);
+      }
+      // Lower side on the plus strand is a duplication (predictJCplusCNtoAMP's), not a deletion.
+      if (side_1_strand != -1) { jc_it++; continue; }
+
+      int32_t size = side_2_position - side_1_position - 1;
+      // At or below the cutoff this is predictJCtoINSorSUBorDEL's to make, from the junction alone.
+      if (size <= kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) { jc_it++; continue; }
+      int32_t del_start = side_1_position + 1;
+      int32_t del_end = side_2_position - 1;
+      // Mostly explained already, by a deletion the missing-coverage paths called.
+      if (covered_by_predicted_deletion(gd, seq_id, del_start, del_end)) { jc_it++; continue; }
+
+      cDiffEntry* cn_item = cn_covering(cn, seq_id, del_start, del_end);
+      if ((cn_item != NULL) && (from_string<double>((*cn_item)[COPY_NUMBER]) >= 1.0)) cn_item = NULL;
+      if ((cn_item == NULL) && (size > max_junction_only_size)) { jc_it++; continue; }
+
+      cPolymorphicAmpEstimate estimate;
+      if (!estimate_polymorphic_copy_number(&j, cn_item, cn_relative_bias, true, estimate)) { jc_it++; continue; }
+
+      cDiffEntry mut;
+      mut._evidence = make_vector<string>(j._id);
+      if (cn_item != NULL) mut._evidence.push_back(cn_item->_id);
+      if (j.entry_exists("unique_read_sequence")) {
+        // A deletion with sequence of its own in the gap, written as predictJCtoINSorSUBorDEL does.
+        mut._type = SUB;
+        string new_seq = j["unique_read_sequence"];
+        if (reverse_complement_unique_sequence) new_seq = reverse_complement(new_seq);
+        mut[NEW_SEQ] = new_seq;
+      } else {
+        mut._type = DEL;
+      }
+      mut[SEQ_ID] = seq_id;
+      mut[POSITION] = to_string<int32_t>(del_start);
+      mut[SIZE] = to_string<int32_t>(size);
+
+      if (!assign_polymorphic_del(settings, estimate, mut)) { jc_it++; continue; }
+
+      gd.add(mut);
+      if (cn_item != NULL) cn_used.insert(cn_item);
+      jc_it = jc.erase(jc_it);
+    }
+  }
+
+  void MutationPredictor::predictCNplusRepeatToDEL(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                                   diff_entry_list_t& cn, set<cDiffEntry*>& cn_used)
+  {
+    (void)summary;
+    if (!settings.polymorphism_prediction) return;
+    if (cn.empty()) return;
+
+    const double cn_relative_bias = estimate_cn_relative_bias(settings, cn);
+    // How far a CN boundary may sit from the repeat copy it stands for. The same allowance
+    // predictCNplusRepeatToAMP makes, for the same reason: CNery censors the windows inside a repeat,
+    // so a segment's edge lands somewhere in or beside the element, not on its end.
+    const int32_t kRepeatBoundarySlop = 3000;
+
+    for (diff_entry_list_t::iterator ci = cn.begin(); ci != cn.end(); ci++) {
+      cDiffEntry& c = **ci;
+      if (cn_used.count(&c)) continue;
+      double level = from_string<double>(c[COPY_NUMBER]);
+      if ((level < 0.0) || (level >= 1.0)) continue;
+
+      const string& seq_id = c[SEQ_ID];
+      if (ref_seq_info.seq_id_to_index(seq_id) >= ref_seq_info.size()) continue;
+      int32_t cn_start = from_string<int32_t>(c[START]);
+      int32_t cn_end   = from_string<int32_t>(c[END]);
+      if (covered_by_predicted_deletion(gd, seq_id, cn_start, cn_end)) continue;
+
+      // The closest pair of DIRECT copies of one family, one at each end: recombination between
+      // inverted copies inverts the region instead of deleting it.
+      cAnnotatedSequence& seq = ref_seq_info[seq_id];
+      cFeatureLocation* best_r1 = NULL;
+      cFeatureLocation* best_r2 = NULL;
+      int32_t best_distance = 0;
+      for (cFeatureLocationList::iterator i1 = seq.m_repeat_locations.begin(); i1 != seq.m_repeat_locations.end(); i1++) {
+        cFeatureLocation& r1 = *i1;
+        int32_t d1 = (cn_start < r1.get_start_1()) ? (r1.get_start_1() - cn_start)
+                   : ((cn_start > r1.get_end_1()) ? (cn_start - r1.get_end_1()) : 0);
+        if (d1 > kRepeatBoundarySlop) continue;
+        for (cFeatureLocationList::iterator i2 = seq.m_repeat_locations.begin(); i2 != seq.m_repeat_locations.end(); i2++) {
+          cFeatureLocation& r2 = *i2;
+          if (&r2 == &r1) continue;
+          if (r2.get_start_1() <= r1.get_end_1()) continue;
+          if ((*r2.get_feature())["name"] != (*r1.get_feature())["name"]) continue;
+          if (r2.get_strand() != r1.get_strand()) continue;
+          int32_t d2 = (cn_end < r2.get_start_1()) ? (r2.get_start_1() - cn_end)
+                     : ((cn_end > r2.get_end_1()) ? (cn_end - r2.get_end_1()) : 0);
+          if (d2 > kRepeatBoundarySlop) continue;
+          if ((best_r1 == NULL) || (d1 + d2 < best_distance)) {
+            best_r1 = &r1; best_r2 = &r2; best_distance = d1 + d2;
+          }
+        }
+      }
+      if (best_r1 == NULL) continue;
+
+      // predictMCplusJCtoDEL case (2)'s default: one copy survives, and it is the second that goes.
+      int32_t position = best_r1->get_end_1() + 1;
+      int32_t size = best_r2->get_end_1() - best_r1->get_end_1();
+      if (size <= kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) continue;
+
+      cPolymorphicAmpEstimate estimate;
+      if (!estimate_polymorphic_copy_number(NULL, &c, cn_relative_bias, true, estimate)) continue;
+
+      cDiffEntry mut(DEL);
+      mut._evidence = make_vector<string>(c._id);
+      mut[SEQ_ID] = seq_id;
+      mut[POSITION] = to_string<int32_t>(position);
+      mut[SIZE] = to_string<int32_t>(size);
+      mut["between"] = (*best_r1->get_feature())["name"];
+      if (!assign_polymorphic_del(settings, estimate, mut)) continue;
+
+      gd.add(mut);
+      cn_used.insert(&c);
     }
   }
 

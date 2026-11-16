@@ -127,7 +127,24 @@ namespace breseq {
     //! at the highest positions that give the same result, the convention gdtools NORMALIZE enforces
     //! so two runs of the same event compare equal.
     void predictCNplusRepeatToAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& cn);
-    
+
+    //! POLYMORPHISM MODE ONLY. A deletion present in part of the population leaves no missing
+    //! coverage, so predictMCplusJCtoDEL never sees it, and predictJCtoINSorSUBorDEL caps a
+    //! junction-only deletion at kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation. This takes the
+    //! deletion-shaped junctions both leave behind (larger than that cap) and predicts a DEL (or SUB,
+    //! with unique junction sequence) at a frequency from the junction and, when a CN region below
+    //! single copy covers it, the relative coverage too. Without such a region it predicts only
+    //! deletions too small for CN to resolve (at most two CN tiles), from the junction alone.
+    //! Used CN regions are recorded in cn_used, so predictCNplusRepeatToDEL does not explain them twice.
+    void predictJCplusCNtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& cn, set<cDiffEntry*>& cn_used);
+
+    //! POLYMORPHISM MODE ONLY. The polymorphic counterpart of predictMCplusJCtoDEL's case (2): a CN
+    //! region below single copy whose two ends each lie at a copy of the same repeat family, in the
+    //! same orientation, is a deletion between them by recombination -- which leaves no unique
+    //! junction, so its frequency comes from coverage alone. Coordinates follow case (2): the
+    //! second copy and the sequence between are deleted, and between= names the family.
+    void predictCNplusRepeatToDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& cn, set<cDiffEntry*>& cn_used);
+
     void filter_JC_indel_evidence(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
 
 
