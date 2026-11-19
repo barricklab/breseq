@@ -5628,12 +5628,24 @@ void Html_Mutation_Table_String::Item_Lines()
     // (2) We are in compare mode and need a column for each file
     if ((options.gd_name_list_ref.size() > 1) || (options.force_show_sample_headers)) {
       //for each gd
+      bool any_polymorphic = false;
       for (uint32_t j = 0; j < options.gd_name_list_ref.size(); j++) {
         string base_name = options.gd_name_list_ref[j];
         string key = "frequency_" + base_name;
         freq_list.push_back(mut.count(key) ? mut[key] : "0");
         fixed_list.push_back(mut.entry_exists("_fixed_" + base_name));
+
+        // A frequency strictly between 0 and 1. Cells can also hold '?', 'D', 'H', 'NA', or be
+        // empty, so parse strictly. A merged AMP row holds mean copy numbers, not frequencies.
+        const string& f = freq_list.back();
+        if (!mean_copy_numbers && !f.empty()) {
+          char* parse_end = NULL;
+          double value = strtod(f.c_str(), &parse_end);
+          if ((*parse_end == '\0') && (value > 0.0) && (value < 1.0)) any_polymorphic = true;
+        }
       }
+      // Highlight the row if the mutation is polymorphic in any sample
+      if (any_polymorphic) row_class = "polymorphism_table_row";
     }
     
     // (3) We want a single column (polymorphism prediction)

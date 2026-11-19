@@ -38,10 +38,23 @@ Type of output file to generate. See options below (DEFAULT=HTML)
 | PHYLIP | Alignment file suitable for input into PHYLIP                |
 | JSON   | JavaScript object notation file suitable for parsing         |
 
+`-c, --collapse-samples`
+
+Omit samples (columns) that have no mutations from HTML and TABLE
+output. By default every input file is shown as a sample, even one
+with no mutations, so a table records which samples were checked and
+found to have none.
+
 `input1.gd input2.gd ...  `
 
 Input file(s). This option may be entered multiple times to compare
 across files. REQUIRED
+
+In HTML and TABLE output, each input file is a sample with its own
+frequency column, even when only one file is given. The column is named
+by the file's `#=TITLE` metadata line, or by its file name (without the
+`.gd` suffix) if it has no title. A row is highlighted when the mutation
+is polymorphic (frequency between 0% and 100%) in any sample.
 
 !!! warning
     Some advanced attributes for mutations, such as **within** and

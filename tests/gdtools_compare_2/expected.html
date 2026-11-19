@@ -55,12 +55,15 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 </head>
 <body class="sticky_tables">
 <!--Output Html_Mutation_Table_String-->
-<div id="mutation_list">
+<div id="mutation_list" class="compare_table">
+<div class="sticky_left_mask"></div>
+<div class="sticky_top_mask"></div>
 <table class="report_table" border="0" cellspacing="1" cellpadding="3">
 <thead>
-<tr><th colspan="5" align="left" class="mutation_header_row">Predicted mutations</th></tr><tr>
+<tr><th colspan="6" align="left" class="mutation_header_row">Predicted mutations</th></tr><tr>
 <th class="position">position</th>
 <th class="mutation">mutation</th>
+<th class="freq">gd</th>
 <th class="annotation">annotation</th>
 <th class="gene">gene</th>
 <th class="description" width="100%">description</th>
@@ -74,6 +77,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="1_SNP_2">
 <td class="position" align="right" data-position="2">2</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">E20H</font>&nbsp;(<font class="mutation_in_codon">G</font>AA&rarr;<font class="mutation_in_codon">C</font>AC)&nbsp;</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -84,6 +88,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="2_SNP_59">
 <td class="position" align="right" data-position="59">59</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_synonymous">M1M</font>&nbsp;(<font class="mutation_in_codon">A</font>TG&rarr;<font class="mutation_in_codon">C</font>TG)&nbsp;&dagger;</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -94,6 +99,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="3_SNP_63">
 <td class="position" align="right" data-position="63">63</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;4/+614)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -104,6 +110,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="4_SNP_116">
 <td class="position" align="right" data-position="116">116</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;57/+561)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -114,6 +121,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="5_SNP_183">
 <td class="position" align="right" data-position="183">183</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;124/+494)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -124,6 +132,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="6_INS_239">
 <td class="position" align="right" data-position="239">239</td><!-- Position -->
 <td class="mutation" align="center">+GCTCTTGGCAA</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;180/+438)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -134,6 +143,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="7_SNP_248">
 <td class="position" align="right" data-position="248">248</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;189/+429)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -144,6 +154,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="8_SNP_339">
 <td class="position" align="right" data-position="339">339</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;280/+338)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -154,6 +165,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="9_DEL_515">
 <td class="position" align="right" data-position="515">515</td><!-- Position -->
 <td class="mutation" align="center">&Delta;2&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;456/+161)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -164,6 +176,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="10_INS_658">
 <td class="position" align="right" data-position="658">658</td><!-- Position -->
 <td class="mutation" align="center">+CAGATC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;599/+19)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>ndmB extra CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -174,6 +187,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="11_SNP_758">
 <td class="position" align="right" data-position="758">758</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">L448F</font>&nbsp;(TT<font class="mutation_in_codon">G</font>&rarr;TT<font class="mutation_in_codon">C</font>)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -184,6 +198,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="12_SNP_856">
 <td class="position" align="right" data-position="856">856</td><!-- Position -->
 <td class="mutation" align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsense">R416*</font>&nbsp;(<font class="mutation_in_codon">C</font>GA&rarr;<font class="mutation_in_codon">T</font>GA)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -194,6 +209,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="13_INS_871">
 <td class="position" align="right" data-position="871">871</td><!-- Position -->
 <td class="mutation" align="center">+GTGTTCGGGACTTCGG</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(163/357&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -204,6 +220,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="14_SNP_930">
 <td class="position" align="right" data-position="930">930</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">H391P</font>&nbsp;(C<font class="mutation_in_codon">A</font>T&rarr;C<font class="mutation_in_codon">C</font>T)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -214,6 +231,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="15_SNP_1007">
 <td class="position" align="right" data-position="1007">1,007</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">E365D</font>&nbsp;(GA<font class="mutation_in_codon">G</font>&rarr;GA<font class="mutation_in_codon">C</font>)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -224,6 +242,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="16_DEL_1082">
 <td class="position" align="right" data-position="1082">1,082</td><!-- Position -->
 <td class="mutation" align="center">&Delta;15&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;49/+323)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>putative gene</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -234,6 +253,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="17_INS_1106">
 <td class="position" align="right" data-position="1106">1,106</td><!-- Position -->
 <td class="mutation" align="center">+CAATTGAC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;73/+313)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>putative gene</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -244,6 +264,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="18_SNP_1127">
 <td class="position" align="right" data-position="1127">1,127</td><!-- Position -->
 <td class="mutation" align="center">G&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;94/+292)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>putative gene</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -254,6 +275,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="19_DEL_1292">
 <td class="position" align="right" data-position="1292">1,292</td><!-- Position -->
 <td class="mutation" align="center">&Delta;5&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;259/+123)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>putative gene</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -264,6 +286,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="20_SNP_1421">
 <td class="position" align="right" data-position="1421">1,421</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">*64K</font>&nbsp;(<font class="mutation_in_codon">T</font>AG&rarr;<font class="mutation_in_codon">A</font>AG)&nbsp;&ordm;</td>
 <td class="gene" align="center"><i>putative gene</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -274,6 +297,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="21_INS_1525">
 <td class="position" align="right" data-position="1525">1,525</td><!-- Position -->
 <td class="mutation" align="center">+TGGAGACACAA</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(84/190&nbsp;nt)</td>
 <td class="gene" align="center"><i>putative gene</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -284,6 +308,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="22_SNP_1585">
 <td class="position" align="right" data-position="1585">1,585</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">L9Q</font>&nbsp;(C<font class="mutation_in_codon">T</font>G&rarr;C<font class="mutation_in_codon">A</font>G)&nbsp;&ordm;</td>
 <td class="gene" align="center"><i>putative gene</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -294,6 +319,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="23_SNP_1657">
 <td class="position" align="right" data-position="1657">1,657</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;49/&#8209;221)</td>
 <td class="gene" align="center"><i>putative gene</i>&nbsp;&larr;&nbsp;/&nbsp;&rarr;&nbsp;<i>ndmA CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -304,6 +330,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="24_SNP_1736">
 <td class="position" align="right" data-position="1736">1,736</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;128/&#8209;142)</td>
 <td class="gene" align="center"><i>putative gene</i>&nbsp;&larr;&nbsp;/&nbsp;&rarr;&nbsp;<i>ndmA CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -314,6 +341,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="25_INS_1738">
 <td class="position" align="right" data-position="1738">1,738</td><!-- Position -->
 <td class="mutation" align="center">+AGCCGGCCACA</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(&#8209;130/&#8209;140)</td>
 <td class="gene" align="center"><i>putative gene</i>&nbsp;&larr;&nbsp;/&nbsp;&rarr;&nbsp;<i>ndmA CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -324,6 +352,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="26_DEL_2051">
 <td class="position" align="right" data-position="2051">2,051</td><!-- Position -->
 <td class="mutation" align="center">&Delta;10&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(174&#8209;183/756&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmA CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -334,6 +363,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="27_DEL_2113">
 <td class="position" align="right" data-position="2113">2,113</td><!-- Position -->
 <td class="mutation" align="center">&Delta;12&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(236&#8209;247/756&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmA CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -344,6 +374,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="28_INS_2243">
 <td class="position" align="right" data-position="2243">2,243</td><!-- Position -->
 <td class="mutation" align="center">+CGCC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(366/756&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmA CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -354,6 +385,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="29_DEL_2354">
 <td class="position" align="right" data-position="2354">2,354</td><!-- Position -->
 <td class="mutation" align="center">&Delta;11&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(477&#8209;487/756&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmA CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -364,6 +396,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="30_SNP_2360">
 <td class="position" align="right" data-position="2360">2,360</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_synonymous">K161K</font>&nbsp;(AA<font class="mutation_in_codon">A</font>&rarr;AA<font class="mutation_in_codon">G</font>)&nbsp;&ordm;</td>
 <td class="gene" align="center"><i>ndmA CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -374,6 +407,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="31_SNP_2361">
 <td class="position" align="right" data-position="2361">2,361</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">N162H</font>&nbsp;(<font class="mutation_in_codon">A</font>AC&rarr;<font class="mutation_in_codon">C</font>AC)&nbsp;&ordm;</td>
 <td class="gene" align="center"><i>ndmA CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -384,6 +418,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="32_DEL_2477">
 <td class="position" align="right" data-position="2477">2,477</td><!-- Position -->
 <td class="mutation" align="center">&Delta;9&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(600&#8209;608/756&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmA CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -394,6 +429,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="33_DEL_2727">
 <td class="position" align="right" data-position="2727">2,727</td><!-- Position -->
 <td class="mutation" align="center">&Delta;1&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(69/1068&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -404,6 +440,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="34_INS_2743">
 <td class="position" align="right" data-position="2743">2,743</td><!-- Position -->
 <td class="mutation" align="center">+GCCC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(85/1068&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -414,6 +451,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="35_SNP_2773">
 <td class="position" align="right" data-position="2773">2,773</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">M39L</font>&nbsp;(<font class="mutation_in_codon">A</font>TG&rarr;<font class="mutation_in_codon">T</font>TG)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -424,6 +462,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="36_DEL_3104">
 <td class="position" align="right" data-position="3104">3,104</td><!-- Position -->
 <td class="mutation" align="center">&Delta;6&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(446&#8209;451/1068&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -434,6 +473,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="37_INS_3148">
 <td class="position" align="right" data-position="3148">3,148</td><!-- Position -->
 <td class="mutation" align="center">+GCCTCTACC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(490/1068&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -444,6 +484,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="38_SNP_3163">
 <td class="position" align="right" data-position="3163">3,163</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">R169G</font>&nbsp;(<font class="mutation_in_codon">C</font>GG&rarr;<font class="mutation_in_codon">G</font>GG)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -454,6 +495,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="39_INS_3233">
 <td class="position" align="right" data-position="3233">3,233</td><!-- Position -->
 <td class="mutation" align="center">+GCGCTCGCCATTTTGGT</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(575/1068&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -464,6 +506,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="40_SNP_3255">
 <td class="position" align="right" data-position="3255">3,255</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_synonymous">V199V</font>&nbsp;(GT<font class="mutation_in_codon">T</font>&rarr;GT<font class="mutation_in_codon">G</font>)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -474,6 +517,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="41_DEL_3281">
 <td class="position" align="right" data-position="3281">3,281</td><!-- Position -->
 <td class="mutation" align="center">&Delta;2&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(623&#8209;624/1068&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -484,6 +528,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="42_SNP_3448">
 <td class="position" align="right" data-position="3448">3,448</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">N264Y</font>&nbsp;(<font class="mutation_in_codon">A</font>AC&rarr;<font class="mutation_in_codon">T</font>AC)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -494,6 +539,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="43_INS_3490">
 <td class="position" align="right" data-position="3490">3,490</td><!-- Position -->
 <td class="mutation" align="center">+TAGTTGAGGTTCCATAAC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(832/1068&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -504,6 +550,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="44_SNP_3640">
 <td class="position" align="right" data-position="3640">3,640</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">H328D</font>&nbsp;(<font class="mutation_in_codon">C</font>AT&rarr;<font class="mutation_in_codon">G</font>AT)&nbsp;</td>
 <td class="gene" align="center"><i>ndmB extra CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -514,6 +561,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="45_INS_3835">
 <td class="position" align="right" data-position="3835">3,835</td><!-- Position -->
 <td class="mutation" align="center">+GTCATGGGCA</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(74/332&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmC CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -524,6 +572,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="46_SNP_4174">
 <td class="position" align="right" data-position="4174">4,174</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">N168T</font>&nbsp;(A<font class="mutation_in_codon">A</font>C&rarr;A<font class="mutation_in_codon">C</font>C)&nbsp;</td>
 <td class="gene" align="center"><i>ndmC CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -534,6 +583,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="47_SNP_4417">
 <td class="position" align="right" data-position="4417">4,417</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">D249V</font>&nbsp;(G<font class="mutation_in_codon">A</font>C&rarr;G<font class="mutation_in_codon">T</font>C)&nbsp;</td>
 <td class="gene" align="center"><i>ndmC CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -544,6 +594,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="48_SNP_4418">
 <td class="position" align="right" data-position="4418">4,418</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_synonymous">D249V</font>&nbsp;(GA<font class="mutation_in_codon">C</font>&rarr;GT<font class="mutation_in_codon">C</font>)&nbsp;</td>
 <td class="gene" align="center"><i>ndmC CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -554,6 +605,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="49_DEL_4540">
 <td class="position" align="right" data-position="4540">4,540</td><!-- Position -->
 <td class="mutation" align="center">&Delta;17&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(537&#8209;553/613&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmC CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -564,6 +616,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="50_SNP_4664">
 <td class="position" align="right" data-position="4664">4,664</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">Q8L</font>&nbsp;(C<font class="mutation_in_codon">A</font>G&rarr;C<font class="mutation_in_codon">T</font>G)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -574,6 +627,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="51_SNP_4743">
 <td class="position" align="right" data-position="4743">4,743</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_synonymous">A34A</font>&nbsp;(GC<font class="mutation_in_codon">C</font>&rarr;GC<font class="mutation_in_codon">A</font>)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -584,6 +638,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="52_SNP_4861">
 <td class="position" align="right" data-position="4861">4,861</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">W74R</font>&nbsp;(<font class="mutation_in_codon">T</font>GG&rarr;<font class="mutation_in_codon">C</font>GG)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -594,6 +649,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="53_INS_5063">
 <td class="position" align="right" data-position="5063">5,063</td><!-- Position -->
 <td class="mutation" align="center">+GCCTTTCGGCTCCC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(422/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -604,6 +660,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="54_DEL_5158">
 <td class="position" align="right" data-position="5158">5,158</td><!-- Position -->
 <td class="mutation" align="center">&Delta;13&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(517&#8209;529/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -614,6 +671,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="55_SNP_5170">
 <td class="position" align="right" data-position="5170">5,170</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">L177V</font>&nbsp;(<font class="mutation_in_codon">T</font>TG&rarr;<font class="mutation_in_codon">G</font>TG)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -624,6 +682,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="56_DEL_5269">
 <td class="position" align="right" data-position="5269">5,269</td><!-- Position -->
 <td class="mutation" align="center">&Delta;19&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(628&#8209;646/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -634,6 +693,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="57_SNP_5665">
 <td class="position" align="right" data-position="5665">5,665</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">I342L</font>&nbsp;(<font class="mutation_in_codon">A</font>TT&rarr;<font class="mutation_in_codon">C</font>TT)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -644,6 +704,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="58_DEL_5726">
 <td class="position" align="right" data-position="5726">5,726</td><!-- Position -->
 <td class="mutation" align="center">&Delta;19&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(1085&#8209;1103/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -654,6 +715,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="59_SNP_5726">
 <td class="position" align="right" data-position="5726">5,726</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">K362I</font>&nbsp;(A<font class="mutation_in_codon">A</font>A&rarr;A<font class="mutation_in_codon">T</font>A)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -664,6 +726,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="60_DEL_5810">
 <td class="position" align="right" data-position="5810">5,810</td><!-- Position -->
 <td class="mutation" align="center">&Delta;1&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(1169/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -674,6 +737,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="61_INS_5827">
 <td class="position" align="right" data-position="5827">5,827</td><!-- Position -->
 <td class="mutation" align="center">+TAA</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(1186/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -684,6 +748,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="62_SNP_5872">
 <td class="position" align="right" data-position="5872">5,872</td><!-- Position -->
 <td class="mutation" align="center">G&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">A411P</font>&nbsp;(<font class="mutation_in_codon">G</font>CT&rarr;<font class="mutation_in_codon">C</font>CT)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -694,6 +759,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="63_INS_6163">
 <td class="position" align="right" data-position="6163">6,163</td><!-- Position -->
 <td class="mutation" align="center">+GTTTTCGCCCTA</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(1522/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -704,6 +770,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="64_SNP_6208">
 <td class="position" align="right" data-position="6208">6,208</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">L523M</font>&nbsp;(<font class="mutation_in_codon">T</font>TG&rarr;<font class="mutation_in_codon">A</font>TG)&nbsp;</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -714,6 +781,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="65_DEL_6278">
 <td class="position" align="right" data-position="6278">6,278</td><!-- Position -->
 <td class="mutation" align="center">&Delta;19&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(1637&#8209;1655/1767&nbsp;nt)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -724,6 +792,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="66_INS_6430">
 <td class="position" align="right" data-position="6430">6,430</td><!-- Position -->
 <td class="mutation" align="center">+TTGC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+22/&#8209;41)</td>
 <td class="gene" align="center"><i>ndmD CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&rarr;&nbsp;<i>gst9 CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -734,6 +803,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="67_SNP_6702">
 <td class="position" align="right" data-position="6702">6,702</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">Y78D</font>&nbsp;(<font class="mutation_in_codon">T</font>AC&rarr;<font class="mutation_in_codon">G</font>AC)&nbsp;</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -744,6 +814,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="68_INS_6975">
 <td class="position" align="right" data-position="6975">6,975</td><!-- Position -->
 <td class="mutation" align="center">+GTTCCGCCTTAG</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(505/645&nbsp;nt)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -754,6 +825,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="69_DEL_7017">
 <td class="position" align="right" data-position="7017">7,017</td><!-- Position -->
 <td class="mutation" align="center">&Delta;20&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(547&#8209;566/645&nbsp;nt)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;</td>
 <td class="description" align="left"></td>
@@ -764,6 +836,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="70_SNP_7174">
 <td class="position" align="right" data-position="7174">7,174</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+59/+1128)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -774,6 +847,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="71_DEL_7353">
 <td class="position" align="right" data-position="7353">7,353</td><!-- Position -->
 <td class="mutation" align="center">&Delta;10&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+238/+940)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -784,6 +858,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="72_SNP_7368">
 <td class="position" align="right" data-position="7368">7,368</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+253/+934)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -794,6 +869,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="73_SNP_7447">
 <td class="position" align="right" data-position="7447">7,447</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+332/+855)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -804,6 +880,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="74_SNP_7520">
 <td class="position" align="right" data-position="7520">7,520</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+405/+782)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -814,6 +891,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="75_SNP_7656">
 <td class="position" align="right" data-position="7656">7,656</td><!-- Position -->
 <td class="mutation" align="center">G&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+541/+646)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -824,6 +902,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="76_DEL_7815">
 <td class="position" align="right" data-position="7815">7,815</td><!-- Position -->
 <td class="mutation" align="center">&Delta;1&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+700/+487)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -834,6 +913,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="77_SNP_7895">
 <td class="position" align="right" data-position="7895">7,895</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+780/+407)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -844,6 +924,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="78_SNP_7968">
 <td class="position" align="right" data-position="7968">7,968</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+853/+334)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -854,6 +935,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="79_SNP_8037">
 <td class="position" align="right" data-position="8037">8,037</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+922/+265)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -864,6 +946,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="80_SNP_8110">
 <td class="position" align="right" data-position="8110">8,110</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+995/+192)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -874,6 +957,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="81_INS_8244">
 <td class="position" align="right" data-position="8244">8,244</td><!-- Position -->
 <td class="mutation" align="center">+GTACGCTCTTAA</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+1129/+58)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -884,6 +968,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="82_SNP_8301">
 <td class="position" align="right" data-position="8301">8,301</td><!-- Position -->
 <td class="mutation" align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">intergenic&nbsp;(+1186/+1)</td>
 <td class="gene" align="center"><i>gst9 CDS</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>chlR CDS</i></td>
 <td class="description" align="left">&#8211;/&#8211;</td>
@@ -894,6 +979,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="83_DEL_8346">
 <td class="position" align="right" data-position="8346">8,346</td><!-- Position -->
 <td class="mutation" align="center">&Delta;1&nbsp;bp</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(575/619&nbsp;nt)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -904,6 +990,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="84_INS_8395">
 <td class="position" align="right" data-position="8395">8,395</td><!-- Position -->
 <td class="mutation" align="center">+GGGGAGGACTCACTCACTAC</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(526/619&nbsp;nt)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -914,6 +1001,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="85_SNP_8419">
 <td class="position" align="right" data-position="8419">8,419</td><!-- Position -->
 <td class="mutation" align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_synonymous">L187L</font>&nbsp;(CT<font class="mutation_in_codon">G</font>&rarr;CT<font class="mutation_in_codon">T</font>)&nbsp;</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -924,6 +1012,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="86_SNP_8476">
 <td class="position" align="right" data-position="8476">8,476</td><!-- Position -->
 <td class="mutation" align="center">G&rarr;T</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_synonymous">A168A</font>&nbsp;(GC<font class="mutation_in_codon">C</font>&rarr;GC<font class="mutation_in_codon">A</font>)&nbsp;</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -934,6 +1023,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="87_INS_8503">
 <td class="position" align="right" data-position="8503">8,503</td><!-- Position -->
 <td class="mutation" align="center">+ACCTCGCTGTTCTT</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center">coding&nbsp;(418/619&nbsp;nt)</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -944,6 +1034,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="88_SNP_8577">
 <td class="position" align="right" data-position="8577">8,577</td><!-- Position -->
 <td class="mutation" align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">P135S</font>&nbsp;(<font class="mutation_in_codon">C</font>CT&rarr;<font class="mutation_in_codon">T</font>CT)&nbsp;</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -954,6 +1045,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="89_SNP_8648">
 <td class="position" align="right" data-position="8648">8,648</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;A</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">D111V</font>&nbsp;(G<font class="mutation_in_codon">A</font>C&rarr;G<font class="mutation_in_codon">T</font>C)&nbsp;</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>
@@ -964,6 +1056,7 @@ body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow:
 <tr class="normal_table_row" data-key="90_SNP_8920">
 <td class="position" align="right" data-position="8920">8,920</td><!-- Position -->
 <td class="mutation" align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td class="freq" align="right">100%</td>
 <td class="annotation" align="center"><font class="snp_type_nonsynonymous">E20H</font>&nbsp;(GA<font class="mutation_in_codon">A</font>&rarr;CA<font class="mutation_in_codon">C</font>)&nbsp;</td>
 <td class="gene" align="center"><i>chlR CDS</i>&nbsp;&larr;</td>
 <td class="description" align="left"></td>

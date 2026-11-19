@@ -841,33 +841,17 @@ int do_not_evidence(int argc, char *argv[])
 }
 
 
-// How does polymorphism_search_found work?
-//   If it is NULL then nothing happens and compare_mode is honored
-//   If it is not null then it returns TRUE/FALSE whether polymorphisms were found and swtiches the output to compare mode
-//      if there is only one file provided but it has polymorphisms. This is only needed for HTML output!
-void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool* polymorphism_search_found, bool compare_mode, AnyOption& options, UserOutput& uout, bool merge_amp_endpoints = false)
+// In compare_mode, every file becomes a sample: its mutation frequencies are tabulated into
+// frequency_<title> fields and its title is added to gd_titles (the table's column names).
+void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool compare_mode, AnyOption& options, UserOutput& uout, bool merge_amp_endpoints = false)
 {
-	
-	if (polymorphism_search_found != NULL) {
-		*polymorphism_search_found = false; // handles putting in the polymorphism column if only one file provided
-	}
-	
+	// --collapse is the deprecated name of --collapse-samples
+	const bool collapse_samples = options.count("collapse-samples") || options.count("collapse");
+
 	for (uint32_t i = 0; i < gd_path_names.size(); i++) {
 		uout("Reading input GD file",gd_path_names[i]);
 		cGenomeDiff single_gd(gd_path_names[i]);
-		
-		// This allows a switch to compare mode so the correct columns are present if polymorphisms are found so they can be displayed properly in HTML
-		if ((polymorphism_search_found != NULL) && !compare_mode && (i==0)) {
-			diff_entry_list_t muts = single_gd.mutation_list();
-			for(diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
-				cDiffEntry de = **it;
-				if (de.count(FREQUENCY) && from_string<double>(de[FREQUENCY]) != 1.0) {
-					*polymorphism_search_found = true;
-					break;
-				}
-			}
-		}
-		
+
 		if (strip_to_mutations_and_unknown) {
 			single_gd.remove_all_but_mutations_and_unknown();
 		}
@@ -881,7 +865,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 		}
 		
 		// Decide whether to merge in a new column
-		if ( (!options.count("collapse")) || (single_gd.mutation_list().size() > 0)) {
+		if ( !collapse_samples || (single_gd.mutation_list().size() > 0)) {
 			gd.merge(single_gd, false, options.count("phylogeny-aware"), options.count("population-aware"));
 			//cout << gd.get_list().size();
 			gd_list.push_back(single_gd); // it's important to add a copy that has UN items intact
@@ -902,7 +886,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
 	// Then add frequency columns for all genome diffs
-	if (compare_mode || ( (polymorphism_search_found != NULL) && (*polymorphism_search_found) ) ) {
+	if (compare_mode) {
 		uout("Tabulating frequencies of mutations across all files");
 		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"), options.count("population-aware"), false, merge_amp_endpoints);
 	}
@@ -926,7 +910,8 @@ int do_annotate(int argc, char* argv[])
 	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference sequence region (e.g., REL606:64722-65312)");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats. This option can only be used with a single input GD file (i.e., not in COMPARE mode). ", TAKES_NO_ARGUMENT);
-	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
+	options("collapse-samples,c", "Omit samples (columns) that have no mutations. By default every input sample is shown, even those with no mutations.", TAKES_NO_ARGUMENT);
+	options("collapse", "DEPRECATED: use --collapse-samples.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION);
 	options("inactivating-overlap-fraction", "Mutations within this fraction of the length of a gene from its beginning are assigned to the 'genes_inactivating' versus 'the genes_overlapping' list if they fulfill other criteria.", cReferenceSequences::k_inactivating_overlap_fraction);
 	options("inactivating-size-cutoff", "INS, DEL, and SUB mutations in genes that are longer than this length cutoff are always assigned to the 'genes_inactivating' list, even if they are in-frame or in noncoding genes.", cReferenceSequences::k_inactivating_size_cutoff);
 	options("promoter-distance", "Mutations upstream and within this distance of the beginning of a gene have it added to their 'genes_promoter' list.", cReferenceSequences::k_promoter_distance);
@@ -946,7 +931,7 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("  FASTA    Multi-FASTA alignment of genotypes for phylogenetic analysis");
 	options.addUsage("  JSON     JavaScript object notation file suitable for parsing");
 	options.addUsage("");
-	options.addUsage("When multiple GD files are provided, the #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix).");
+	options.addUsage("In HTML and TABLE output, each input GD file is a sample with its own frequency column, even when only one file is provided. The #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix). Samples with no mutations are shown unless --collapse-samples is used.");
 	options.addUsage("");
 	
 	options.addUsage("In output, frequencies of 'D' mean that this mutation occurs within");
@@ -1081,8 +1066,7 @@ int do_annotate(int argc, char* argv[])
 	cGenomeDiff gd;
 	vector<cGenomeDiff> gd_list;
 	vector<string> gd_titles;
-	bool polymorphism_search_found(false);
-	
+
 	// Annotation options, used by every output format that annotates
 	bool ignore_pseudogenes = options.count("ignore-pseudogenes");
 	double inactivating_overlap_fraction = from_string<double>(options["inactivating-overlap-fraction"]);
@@ -1090,10 +1074,14 @@ int do_annotate(int argc, char* argv[])
 	int32_t promoter_distance = from_string<int32_t>(options["promoter-distance"]);
 	
   if (output_format == "HTML") {
-		
+
+		// Force compare mode, as for TABLE output, so that every sample -- even a lone one, and
+		// even one with no mutations -- gets a frequency column named after it.
+		compare_mode = true;
+
 		// Tables merge AMPs at the same endpoints into one row, valued by mean copy number (see
 		// tabulate_mutation_frequencies_from_multiple_gds); GD/PHYLIP/FASTA output must not.
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, &polymorphism_search_found, compare_mode, options, uout, true);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, compare_mode, options, uout, true);
 
 		// Renumber so the per-row data-key in the HTML matches the keys emitted by gdtools PHYLOGENY.
 		gd.reassign_unique_ids();
@@ -1111,16 +1099,14 @@ int do_annotate(int argc, char* argv[])
 
     MutationTableOptions mt_options(settings);
 
-    if (polymorphism_search_found)
-      mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_titles;
-		mt_options.force_show_sample_headers = gd_path_names.size() > 1;
+		mt_options.force_show_sample_headers = true;
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
   } else if (output_format == "GD") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), compare_mode, options, uout);
 				
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
@@ -1155,20 +1141,20 @@ int do_annotate(int argc, char* argv[])
   } else if (output_format == "PHYLIP") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, compare_mode, options, uout);
 		gd.write_genotype_sequence_file("PHYLIP", output_file_name, gd, gd_list, ref_seq_info);
 		
 	} else if (output_format == "FASTA") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
 	
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, compare_mode, options, uout);
 		gd.write_genotype_sequence_file("FASTA", output_file_name, gd, gd_list, ref_seq_info);
 		
 	} else if (output_format == "TABLE") {
 
 		// Force compare mode
 		compare_mode = true;
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout, true);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, compare_mode, options, uout, true);
 
 		// Remove evidence
 		gd.remove_group(cGenomeDiff::EVIDENCE);
@@ -1224,7 +1210,7 @@ int do_annotate(int argc, char* argv[])
 	} else if (output_format == "JSON") {
 		uout("Writing output JSON file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout, true);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), compare_mode, options, uout, true);
 
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, ignore_pseudogenes, compare_mode, kBreseq_large_mutation_size_cutoff, false, inactivating_overlap_fraction, inactivating_size_cutoff, promoter_distance);
