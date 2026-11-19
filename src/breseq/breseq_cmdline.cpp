@@ -1683,23 +1683,38 @@ int breseq_default_action(int argc, char* argv[])
       s.num_bases = 0;
 
 
-      uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.get_total_length()));
+      // --limit-fold-coverage keeps reads (or read pairs) at even intervals through every file,
+      // at one fraction: the bases wanted divided by the bases there are. The reads analyzed are
+      // then spread through all of the input, in whatever order it is, where taking them from the
+      // start covered only the start of the genome for reads deposited sorted by reference
+      // position. The total is estimated from the start of each file, so that the reads are chosen
+      // as they are converted and the input is not read twice; the coverage achieved is approximate.
+      double read_keep_fraction = 1.0;
+      if (settings.read_file_coverage_fold_limit) {
+        const double read_file_base_limit = settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.get_total_length());
+        uint64_t estimated_total_bases = 0;
+        for (const auto& rfs : settings.read_file_sets) {
+          for (const auto& rf : rfs.m_files) {
+            estimated_total_bases += estimate_fastq_file_bases(settings.base_name_to_read_file_name(rf.m_base_name));
+          }
+        }
+        if (static_cast<double>(estimated_total_bases) > read_file_base_limit) {
+          read_keep_fraction = read_file_base_limit / static_cast<double>(estimated_total_bases);
+        }
+        cerr << "  COVERAGE LIMIT::" << settings.read_file_coverage_fold_limit << "-fold" << endl;
+        cerr << "    Estimated bases in read files: " << estimated_total_bases
+             << " (" << formatted_double(static_cast<double>(estimated_total_bases) / static_cast<double>(conv_ref_seq_info.get_total_length()), 1).to_string() << "-fold)" << endl;
+        if (read_keep_fraction < 1.0) {
+          cerr << "    Keeping this fraction of reads, evenly spaced through each file: " << formatted_double(read_keep_fraction, 4).to_string() << endl;
+        } else {
+          cerr << "    Keeping all reads" << endl;
+        }
+      }
 
-      // Iterate over read file sets (not flat files) so coverage-limit skips
-      // always apply to complete paired sets, never splitting a pair.
-      uint32_t set_index = 0;
+      // Iterate over read file sets (not flat files) so that a pair is never split.
       uint32_t flat_file_counter = 0;  // monotonically increasing per-file index for read naming
       for (const auto& rfs : settings.read_file_sets)
       {
-        // If we have reached the read limit or are within 1000 bases of it, skip this entire set.
-        // The 1000 buffer ensures enough reads were counted for error-rate calibration.
-        if ((settings.read_file_coverage_fold_limit) && (set_index != 0) && (s.num_bases + 1000 >= read_file_base_limit)) {
-          cerr << "  ::SKIPPED DUE TO REACHING COVERAGE LIMIT::" << endl;
-          set_index++;
-          flat_file_counter += rfs.m_files.size();
-          continue;
-        }
-
         if (rfs.is_paired()) {
           const cReadFile& rf_r1 = rfs.m_files[0];
           const cReadFile& rf_r2 = rfs.m_files[1];
@@ -1716,8 +1731,7 @@ int breseq_default_action(int argc, char* argv[])
               flat_file_counter + 2,
               settings.quality_score_trim,
               settings.filter_reads,
-              s.num_bases,
-              read_file_base_limit,
+              read_keep_fraction,
               settings.read_file_read_length_min,
               settings.read_file_max_same_base_fraction,
               settings.read_file_max_N_fraction,
@@ -1775,8 +1789,7 @@ int breseq_default_action(int argc, char* argv[])
                                                        flat_file_counter + 1,
                                                        settings.quality_score_trim,
                                                        settings.filter_reads,
-                                                       s.num_bases,
-                                                       read_file_base_limit,
+                                                       read_keep_fraction,
                                                        settings.read_file_read_length_min,
                                                        settings.read_file_max_same_base_fraction,
                                                        settings.read_file_max_N_fraction,
@@ -1828,7 +1841,6 @@ int breseq_default_action(int argc, char* argv[])
           flat_file_counter++;
         }
 
-        set_index++;
       }
       
       s.read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);

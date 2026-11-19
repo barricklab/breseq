@@ -22,6 +22,7 @@
 #define _BRESEQ_FASTQ_H_
 
 #include "common.h"
+
 #include "settings.h"
 #include "summary.h"
 #include "portable_random.h"
@@ -33,6 +34,50 @@ class cAnnotatedSequence;
 	/*! Interface for loading and manipulating files in FASTQ format.
    */
   
+  /*! estimate_fastq_file_bases
+
+      Estimates the number of bases in a FASTQ file (gzipped or not) without reading all of it.
+      Reads from the start of the file until FASTQ_ESTIMATE_COMPRESSED_BYTES of the file as stored
+      on disk have been consumed, then scales the bases seen by the fraction of the file that was.
+      A file smaller than that is read to its end, and its count is exact.
+
+      Used by --limit-fold-coverage to turn the requested coverage into the fraction of reads to
+      keep, so that the reads analyzed are drawn from the whole file and not from its start.
+   */
+  uint64_t estimate_fastq_file_bases(const string &file_name);
+
+  /*! Chooses which reads to keep for --limit-fold-coverage.
+
+      Reads (or read pairs) are kept at even intervals through the input: with a keep fraction of
+      0.25, every fourth one. The subset is therefore spread through the whole input however it is
+      ordered. Reads deposited from an aligned BAM arrive sorted by reference position, and taking
+      them from the start of the file instead covers only the start of the genome.
+
+      Nothing here is random, so the same input and the same limit always give the same reads. The
+      fraction is held as a 32-bit fixed-point step added to an accumulator, and a read is kept each
+      time the accumulator passes one. That is integer arithmetic only, so the choice is also the
+      same on every platform, which the tests that compare a committed expected.gd depend on.
+   */
+  class cReadSubsampler {
+    static const uint64_t ONE = static_cast<uint64_t>(1) << 32;
+    uint64_t m_step;          // keep fraction, in units of 1/2^32; ONE keeps every read
+    uint64_t m_accumulator;   // starts at one half, so the kept reads are centered in their intervals
+  public:
+    cReadSubsampler(const double keep_fraction)
+    : m_step( (keep_fraction >= 1.0) ? ONE
+              : (keep_fraction <= 0.0) ? 0
+              : static_cast<uint64_t>(keep_fraction * 4294967296.0) )
+    , m_accumulator(ONE / 2)
+    { }
+
+    bool keep() {
+      m_accumulator += m_step;
+      if (m_accumulator < ONE) return false;
+      m_accumulator -= ONE;
+      return true;
+    }
+  };
+
   /*! normalize_fastq
    
       Main function for this analysis. Prints summary information
@@ -44,8 +89,7 @@ class cAnnotatedSequence;
                                         const uint32_t file_index,
                                         const int32_t trim_end_on_base_quality,
                                         const bool filter_reads,
-                                        uint64_t current_read_file_bases,
-                                        const uint64_t read_file_base_limit,
+                                        const double read_keep_fraction,
                                         const uint32_t read_length_min,
                                         const double max_same_base_fraction,
                                         const double max_N_fraction,
@@ -78,8 +122,7 @@ class cAnnotatedSequence;
                                         const uint32_t r2_file_index,
                                         const int32_t trim_end_on_base_quality,
                                         const bool filter_reads,
-                                        uint64_t current_read_file_bases,
-                                        const uint64_t read_file_base_limit,
+                                        const double read_keep_fraction,
                                         const uint32_t read_length_min,
                                         const double max_same_base_fraction,
                                         const double max_N_fraction,

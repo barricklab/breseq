@@ -31,7 +31,7 @@ breseq -j 8 -l 80 -o output -r REL606.gbk read_file_1.fastq.gz read_file_1.fastq
 
 The `-j 8` option tells _breseq_ to use 8 computational threads for multi-threaded parts of the analysis (like mapping reads). You can set it to the number of cores on your machine's processor, though going higher than ~8 doesn't give much of an improvement in speed b/c some parts of the analysis can still only use one processor.
 
-The `-l 80` option tells _breseq_ to only examine enough reads that will give a nominal coverage of 80x at each position in the reference genome. It would be 80x if every single read mapped, but some won't, so usually it will be around 90-95% of this value. An average read-depth coverage of >40x is usually more than sufficient for calling mutations in clones. Using this option will greatly speed up the analysis if you have very large FASTQ files that might have 100x to 1000x or more of coverage. The extra reads don't help. 
+The `-l 80` option tells _breseq_ to only examine enough reads that will give a nominal coverage of 80x at each position in the reference genome. It would be 80x if every single read mapped, but some won't, so usually it will be around 90-95% of this value. An average read-depth coverage of >40x is usually more than sufficient for calling mutations in clones. Using this option will greatly speed up the analysis if you have very large FASTQ files that might have 100x to 1000x or more of coverage. The extra reads don't help. The reads that are examined are taken at even intervals throughout your read files, so it does not matter what order the reads are in. 
 
 The [_breseq_ usage](usage-breseq.md) page in the manual describes additional options.
 

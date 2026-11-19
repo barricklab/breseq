@@ -19,11 +19,53 @@
 *****************************************************************************/
 
 #include "fastq.h"
+
+#include <zlib.h>
 #include "reference_sequence.h"
 
 using namespace std;
 
 namespace breseq {
+
+  // How much of a FASTQ file, as stored on disk, estimate_fastq_file_bases() reads
+  static const uint64_t FASTQ_ESTIMATE_COMPRESSED_BYTES = 16 * 1024 * 1024;
+
+  uint64_t estimate_fastq_file_bases(const string &file_name)
+  {
+    uint64_t file_size = 0;
+    {
+      ifstream f(file_name.c_str(), ios::binary | ios::ate);
+      ASSERT(!f.fail(), "Could not open file: " + file_name);
+      file_size = static_cast<uint64_t>(f.tellg());
+    }
+    if (file_size == 0) return 0;
+
+    // gzopen reads a file that is not gzipped as it is, and gzoffset gives the position in the
+    // file on disk either way, which is what the scaling below needs.
+    gzFile gz = gzopen(file_name.c_str(), "rb");
+    ASSERT(gz != NULL, "Could not open file: " + file_name);
+
+    vector<char> buffer(1 << 20);
+    uint64_t bases = 0;
+    uint64_t consumed = 0;
+    uint8_t line_in_record = 0;   // 0 name, 1 sequence, 2 plus, 3 qualities
+    bool reached_end = false;
+    while (true) {
+      int n = gzread(gz, buffer.data(), static_cast<unsigned>(buffer.size()));
+      if (n <= 0) { reached_end = true; break; }
+      for (int i = 0; i < n; i++) {
+        const char c = buffer[i];
+        if (c == '\n') line_in_record = (line_in_record + 1) % 4;
+        else if ((line_in_record == 1) && (c != '\r')) bases++;
+      }
+      consumed = static_cast<uint64_t>(gzoffset(gz));
+      if (consumed >= FASTQ_ESTIMATE_COMPRESSED_BYTES) break;
+    }
+    gzclose(gz);
+
+    if (reached_end || (consumed == 0) || (consumed >= file_size)) return bases;
+    return static_cast<uint64_t>(static_cast<double>(bases) * static_cast<double>(file_size) / static_cast<double>(consumed));
+  }
   
   /*
    normalize_fastq
@@ -38,8 +80,7 @@ namespace breseq {
                                         const uint32_t file_index,
                                         const int32_t trim_end_on_base_quality,
                                         const bool filter_reads,
-                                        uint64_t current_read_file_bases,
-                                        const uint64_t read_file_base_limit,
+                                        const double read_keep_fraction,
                                         const uint32_t _read_length_min,
                                         const double _max_same_base_fraction,
                                         const double _max_N_fraction,
@@ -84,8 +125,6 @@ namespace breseq {
     }
     bool long_read_distribute_remainder = _long_read_distribute_remainder;
 
-    const uint64_t initial_current_read_file_bases = current_read_file_bases;
-
     // Same thresholds as cFastqQualityConverter::predict_fastq_file_format(), but
     // operating on an already-known min raw quality score.
     auto predict_format_from_min_quality_score = [&](uint8_t min_q) -> string {
@@ -116,7 +155,8 @@ namespace breseq {
       uint32_t read_length_min = numeric_limits<uint32_t>::max();
       uint32_t read_length_max = 0;
       bool     file_has_split_reads = false;
-      bool     reached_eof = true;
+      uint64_t num_filtered_coverage_limit_reads = 0;
+      uint64_t num_filtered_coverage_limit_bases = 0;
       // Synthetic long-read pairs: [0] is mate 1, [1] is mate 2. NOT included in num_reads/num_bases.
       uint64_t lp_num_reads[2] = {0, 0};
       uint64_t lp_num_bases[2] = {0, 0};
@@ -125,8 +165,7 @@ namespace breseq {
     };
 
     auto run_pass = [&](const string& pass_quality_format,
-                         std::function<bool(cFastqSequence&)> get_next_sequence,
-                         uint64_t starting_read_file_bases) -> AttemptResult
+                         std::function<bool(cFastqSequence&)> get_next_sequence) -> AttemptResult
     {
       AttemptResult r;
 
@@ -141,7 +180,8 @@ namespace breseq {
       vector<cFastqSequence> kept_pieces;
       vector<bool> piece_was_kept;
 
-      uint64_t local_current_read_file_bases = starting_read_file_bases;
+      // Started afresh in each pass, so a second pass with a corrected quality format keeps the same reads
+      cReadSubsampler subsampler(read_keep_fraction);
       uint32_t on_read = 1;
       cFastqSequence original_sequence;
 
@@ -155,6 +195,16 @@ namespace breseq {
           uint8_t this_score = static_cast<uint8_t>(original_sequence.m_qualities[i]);
           r.overall_min_quality_score = min(r.overall_min_quality_score, this_score);
           r.overall_max_quality_score = max(r.overall_max_quality_score, this_score);
+        }
+
+        // --limit-fold-coverage: a read that is not chosen still counts toward the original totals
+        // and the quality format above, and still takes its number, so that read names give the
+        // read's position in the input whatever the limit was.
+        if (!subsampler.keep()) {
+          r.num_filtered_coverage_limit_reads++;
+          r.num_filtered_coverage_limit_bases += original_sequence.length();
+          on_read++;
+          continue;
         }
 
         // truncate second name
@@ -293,11 +343,6 @@ namespace breseq {
 
           } // end filter read block
 
-          // The coverage limit counts every analyzed base, whichever output it ends up in
-          if (read_file_base_limit) {
-            local_current_read_file_bases += on_sequence.m_sequence.length();
-          }
-
           if (pair_this_read) {
             // Held back until we know which pieces of this read have a partner
             kept_pieces[i] = on_sequence;
@@ -336,15 +381,6 @@ namespace breseq {
               emit_mate(kept_pieces[i], 0, to_string(file_index + 1) + pair_suffix);
               emit_mate(kept_pieces[partner[i]], 1, to_string(file_index + 2) + pair_suffix);
             }
-          }
-        }
-
-        // check to see if we've reached the limit
-        // outside of loop b/c we always process complete input reads
-        if (read_file_base_limit) {
-          if (local_current_read_file_bases > read_file_base_limit) {
-            r.reached_eof = false;
-            break;
           }
         }
       }
@@ -399,13 +435,12 @@ namespace breseq {
       return input_fastq_file.read_sequence(seq, fqc_for_offset);
     };
 
-    AttemptResult result = run_pass(quality_format, get_buffered_then_stream, current_read_file_bases);
+    AttemptResult result = run_pass(quality_format, get_buffered_then_stream);
 
     // ---- Check whether the format predicted from the sniff matches the format
     // derived from the actual min/max quality scores seen over the whole file ----
     string corrected_quality_format = predict_format_from_min_quality_score(result.overall_min_quality_score);
 
-    cFastqFile* tail_count_stream = &input_fastq_file;
     unique_ptr<cFastqFile> fresh_input_fastq_file;
 
     if (corrected_quality_format != quality_format) {
@@ -423,26 +458,16 @@ namespace breseq {
         return fresh_input_fastq_file->read_sequence(seq, fresh_read_fqc);
       };
 
-      result = run_pass(quality_format, get_fresh, initial_current_read_file_bases);
-      tail_count_stream = fresh_input_fastq_file.get();
+      result = run_pass(quality_format, get_fresh);
     }
 
-    // If we stopped early due to read_file_base_limit, count (but don't convert/write)
-    // the remaining reads so the "filtered due to coverage limit" stats are accurate.
-    uint64_t num_filtered_coverage_limit_reads = 0;
-    uint64_t num_filtered_coverage_limit_bases = 0;
+    // Every pass reads the whole file, so the original totals already include the reads that
+    // --limit-fold-coverage did not choose.
+    uint64_t num_filtered_coverage_limit_reads = result.num_filtered_coverage_limit_reads;
+    uint64_t num_filtered_coverage_limit_bases = result.num_filtered_coverage_limit_bases;
 
-    if (!result.reached_eof) {
-      cFastqQualityConverter tail_fqc("ILLUMINA_1.3+", "SANGER");
-      cFastqSequence seq;
-      while (tail_count_stream->read_sequence(seq, tail_fqc)) {
-        num_filtered_coverage_limit_reads++;
-        num_filtered_coverage_limit_bases += seq.length();
-      }
-    }
-
-    uint64_t num_original_reads = result.num_original_reads + num_filtered_coverage_limit_reads;
-    uint64_t num_original_bases = result.num_original_bases + num_filtered_coverage_limit_bases;
+    uint64_t num_original_reads = result.num_original_reads;
+    uint64_t num_original_bases = result.num_original_bases;
 
     // Convert the overall min/max raw quality scores to SANGER for reporting
     cFastqQualityConverter final_fqc(quality_format, "SANGER");
@@ -562,8 +587,7 @@ namespace breseq {
                                         const uint32_t r2_file_index,
                                         const int32_t trim_end_on_base_quality,
                                         const bool filter_reads,
-                                        uint64_t current_read_file_bases,
-                                        const uint64_t read_file_base_limit,
+                                        const double read_keep_fraction,
                                         const uint32_t _read_length_min,
                                         const double _max_same_base_fraction,
                                         const double _max_N_fraction,
@@ -582,8 +606,6 @@ namespace breseq {
     format_to_chr_offset["SANGER"] = 33;
     format_to_chr_offset["SOLEXA"] = 64;
     format_to_chr_offset["ILLUMINA_1.3+"] = 64;
-
-    const uint64_t initial_current_read_file_bases = current_read_file_bases;
 
     auto predict_format_from_min_quality_score = [&](uint8_t min_q) -> string {
       string fmt = "SANGER";
@@ -612,14 +634,15 @@ namespace breseq {
 
     struct PairResult {
       FileResult r1, r2;
-      bool reached_eof = true;
+      // --limit-fold-coverage: pairs not chosen, counted per file
+      uint64_t num_filtered_coverage_limit_reads[2] = {0, 0};
+      uint64_t num_filtered_coverage_limit_bases[2] = {0, 0};
     };
 
     auto run_pass_paired = [&](
         const string& pass_quality_format,
         std::function<bool(cFastqSequence&)> get_next_r1,
-        std::function<bool(cFastqSequence&)> get_next_r2,
-        uint64_t starting_read_file_bases) -> PairResult
+        std::function<bool(cFastqSequence&)> get_next_r2) -> PairResult
     {
       PairResult pr;
 
@@ -633,7 +656,9 @@ namespace breseq {
       cFastqFile out_r1(r1_convert_file_name.c_str(), fstream::out, per_stream_threads);
       cFastqFile out_r2(r2_convert_file_name.c_str(), fstream::out, per_stream_threads);
 
-      uint64_t local_current_bases = starting_read_file_bases;
+      // One decision per pair, so mates are always kept or dropped together. Started afresh in each
+      // pass, so a second pass with a corrected quality format keeps the same pairs.
+      cReadSubsampler subsampler(read_keep_fraction);
       uint32_t on_read = 1;
       bool warned_long_reads = false;
       uint32_t long_read_trigger = (_long_read_trigger_length == 0) ? numeric_limits<uint32_t>::max() : _long_read_trigger_length;
@@ -662,6 +687,17 @@ namespace breseq {
           uint8_t q = static_cast<uint8_t>(orig_r2.m_qualities[i]);
           pr.r2.overall_min_quality_score = min(pr.r2.overall_min_quality_score, q);
           pr.r2.overall_max_quality_score = max(pr.r2.overall_max_quality_score, q);
+        }
+
+        // --limit-fold-coverage: a pair that is not chosen still counts toward the original totals
+        // and the quality format above, and still takes its number (see normalize_fastq).
+        if (!subsampler.keep()) {
+          pr.num_filtered_coverage_limit_reads[0]++;
+          pr.num_filtered_coverage_limit_bases[0] += orig_r1.length();
+          pr.num_filtered_coverage_limit_reads[1]++;
+          pr.num_filtered_coverage_limit_bases[1] += orig_r2.length();
+          on_read++;
+          continue;
         }
 
         orig_r1.m_name_plus = "";
@@ -770,14 +806,6 @@ namespace breseq {
 
         out_r1.write_sequence(orig_r1);
         out_r2.write_sequence(orig_r2);
-
-        if (read_file_base_limit) {
-          local_current_bases += orig_r1.length() + orig_r2.length();
-          if (local_current_bases > read_file_base_limit) {
-            pr.reached_eof = false;
-            break;
-          }
-        }
       }
 
       return pr;
@@ -832,13 +860,11 @@ namespace breseq {
       return r2_input.read_sequence(seq, r2_initial_fqc);
     };
 
-    PairResult result = run_pass_paired(quality_format, get_buffered_then_stream_r1, get_r2_stream, current_read_file_bases);
+    PairResult result = run_pass_paired(quality_format, get_buffered_then_stream_r1, get_r2_stream);
 
     // ---- Check format from R1's actual min quality score (same logic as normalize_fastq) ----
     string corrected_quality_format = predict_format_from_min_quality_score(result.r1.overall_min_quality_score);
 
-    cFastqFile* tail_count_r1_stream = &r1_input;
-    cFastqFile* tail_count_r2_stream = &r2_input;
     unique_ptr<cFastqFile> fresh_r1, fresh_r2;
 
     if (corrected_quality_format != quality_format) {
@@ -861,29 +887,15 @@ namespace breseq {
         return fresh_r2->read_sequence(seq, fresh_r2_fqc);
       };
 
-      result = run_pass_paired(quality_format, get_fresh_r1, get_fresh_r2, initial_current_read_file_bases);
-      tail_count_r1_stream = fresh_r1.get();
-      tail_count_r2_stream = fresh_r2.get();
+      result = run_pass_paired(quality_format, get_fresh_r1, get_fresh_r2);
     }
 
-    // If stopped early, count remaining reads in both files for stats accuracy
-    uint64_t num_filtered_coverage_limit_reads_r1 = 0;
-    uint64_t num_filtered_coverage_limit_bases_r1 = 0;
-    uint64_t num_filtered_coverage_limit_reads_r2 = 0;
-    uint64_t num_filtered_coverage_limit_bases_r2 = 0;
-
-    if (!result.reached_eof) {
-      cFastqQualityConverter tail_fqc("ILLUMINA_1.3+", "SANGER");
-      cFastqSequence seq;
-      while (tail_count_r1_stream->read_sequence(seq, tail_fqc)) {
-        num_filtered_coverage_limit_reads_r1++;
-        num_filtered_coverage_limit_bases_r1 += seq.length();
-      }
-      while (tail_count_r2_stream->read_sequence(seq, tail_fqc)) {
-        num_filtered_coverage_limit_reads_r2++;
-        num_filtered_coverage_limit_bases_r2 += seq.length();
-      }
-    }
+    // Every pass reads both files to the end, so the original totals already include the pairs
+    // that --limit-fold-coverage did not choose.
+    uint64_t num_filtered_coverage_limit_reads_r1 = result.num_filtered_coverage_limit_reads[0];
+    uint64_t num_filtered_coverage_limit_bases_r1 = result.num_filtered_coverage_limit_bases[0];
+    uint64_t num_filtered_coverage_limit_reads_r2 = result.num_filtered_coverage_limit_reads[1];
+    uint64_t num_filtered_coverage_limit_bases_r2 = result.num_filtered_coverage_limit_bases[1];
 
     // Convert raw min/max quality scores to SANGER for reporting
     cFastqQualityConverter final_fqc(quality_format, "SANGER");
@@ -898,8 +910,10 @@ namespace breseq {
       uint8_t min_q = (uint8_t)mm_seq.m_qualities[0] - format_to_chr_offset["SANGER"];
       uint8_t max_q = (uint8_t)mm_seq.m_qualities[1] - format_to_chr_offset["SANGER"];
 
-      uint64_t num_orig_reads = fr.num_original_reads + ncov_reads;
-      uint64_t num_orig_bases = fr.num_original_bases + ncov_bases;
+      // The original totals already include the reads --limit-fold-coverage did not choose
+      (void)ncov_bases;
+      uint64_t num_orig_reads = fr.num_original_reads;
+      uint64_t num_orig_bases = fr.num_original_bases;
       double avg = (fr.num_reads > 0) ? static_cast<double>(fr.num_bases) / static_cast<double>(fr.num_reads) : 0.0;
 
       return AnalyzeFastqSummary(
