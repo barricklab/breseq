@@ -1,19 +1,1 @@
  
-* breseq -l/--limit-fold-coverage now keeps reads (or read pairs) at even
-  intervals through the input, where it used to take reads from the start until
-  it had enough. Reads deposited from an aligned BAM come back sorted by
-  reference position, so the old behavior covered only the start of the genome
-  at the requested depth and left the rest with none. The fraction kept is the
-  bases wanted divided by the bases in all of the read files, estimated from
-  the start of each file so the input is still read once; the coverage achieved
-  is therefore approximate. With several read files the subset is now taken
-  from all of them, where later files used to be skipped once the limit was
-  reached. Nothing is random: the same input and limit always give the same
-  reads. Read names still number reads by their position in the input.
-* gdtools FILTER/REMOVE: new -I/--clear-ids option, which writes a dot (.) in
-  the id and parent-ids columns of the entries that remain, so that editing a
-  GenomeDiff file does not renumber every entry after the change. Conditions
-  (-c) are now optional when this option is given. It is refused together with
-  --renumber, and for files with 'before' or 'within' fields, whose values are
-  entry ids. Validation entries (CURA, TSEQ, PFGE, ...) are removed along with
-  the evidence, since an id was all that tied them to a mutation.

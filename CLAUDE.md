@@ -456,6 +456,7 @@ breseq writes to `-o <output_dir>` (default: current directory):
 ## Claude Code Workflow Rules
 
 - **Always ask before committing, merging, or pushing** — never do these automatically.
+- **Do not write to `NEWS`.** It is kept empty (autotools only needs the file to exist). Describe a change in its commit message, not in `NEWS`.
 - **Work in the current worktree** — all edits and builds happen here. Do not modify files in the main repository except:
   1. When running inside a git worktree, use the shared conda env at `../../../env` (i.e., `breseq/env` in the main repo) via `conda run -p ../../../env <command>`. If that env is absent, fall back to creating one locally as described in `DEVELOPER`.
   2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
