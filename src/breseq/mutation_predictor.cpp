@@ -1448,8 +1448,10 @@ namespace breseq {
             // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
             continue;
           }
+          // Consensus mode tests the frequency estimate itself, as for RA and JC evidence.
+          const double consensus_test_frequency = settings.polymorphism_prediction ? freq_upper : frequency;
           if ((settings.consensus_frequency_cutoff > 0.0)
-              && (freq_upper >= settings.consensus_frequency_cutoff)) {
+              && (consensus_test_frequency >= settings.consensus_frequency_cutoff)) {
             mut[FREQUENCY] = "1";
           } else if (!settings.polymorphism_prediction) {
             // Consensus mode reports only fixed differences; an intermediate frequency it cannot
@@ -1574,8 +1576,7 @@ namespace breseq {
 
     // A high identity on its own means nothing between paralogs that are identical in long stretches
     // everywhere; what marks the true register is that nothing else comes close. Note this deliberately
-    // does NOT use settings.consensus_frequency_cutoff, which is 0.50 in consensus mode -- low enough
-    // to admit wrong registers that measure 0.49.
+    // does NOT use settings.consensus_frequency_cutoff, which the user can lower.
     const double kMinRegisterIdentity = 0.85;
     const double kMinRegisterMargin = 0.25;
     const int32_t kRegisterMarginExclusion = 2 * read_length;

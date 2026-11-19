@@ -572,7 +572,7 @@ namespace breseq
 		// Tested against the LOWER 95% frequency bound in consensus mode ("confidently the majority")
 		// and against the UPPER bound in polymorphism mode ("cannot rule out fixed"), so the two
 		// defaults are not on the same scale. 0 = OFF.
-    double consensus_frequency_cutoff;                            // Default = 0.50 (consensus mode), 0.95 (polymorphism mode)
+    double consensus_frequency_cutoff;                            // Default = 0.80 (consensus mode), 0.95 (polymorphism mode)
     
     double polymorphism_log10_e_value_cutoff;                     // Default = mutation_log10_e_value_cutoff = 10
 		// Two independent bias tests, previously a single combined cutoff. Strand bias is the one

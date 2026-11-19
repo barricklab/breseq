@@ -3794,8 +3794,11 @@ void  assign_one_junction_read_counts(
     // real junctions for want of depth.
     bool below_floor = (settings.polymorphism_frequency_cutoff > 0.0)
                        && (freq_lower < settings.polymorphism_frequency_cutoff);
+    // Consensus mode asks more: the fitted frequency itself must reach the cutoff, as for RA
+    // evidence (see test_RA_evidence_CONSENSUS_mode).
+    const double consensus_test_frequency = settings.polymorphism_prediction ? freq_upper : new_junction_frequency_value;
     bool is_consensus = (settings.consensus_frequency_cutoff > 0.0)
-                        && (freq_upper >= settings.consensus_frequency_cutoff);
+                        && (consensus_test_frequency >= settings.consensus_frequency_cutoff);
 
     if (below_floor) {
       // Not confidently a junction at all. Rejected in both modes.

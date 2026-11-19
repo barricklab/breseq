@@ -499,33 +499,25 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
   
 // Returns whether it should be deleted
 //
-// CONSENSUS MODE asks one question of every position: is there evidence that the variant is the
-// MAJORITY allele. That gives two flat attempts, in order, each gated on the score and on the 95%
-// lower confidence bound of the variant frequency:
+// CONSENSUS MODE reports fixed differences. Two flat attempts, in order:
 //
-//   1. consensus     -- score clears mutation_log10_e_value_cutoff AND
-//                       L >= consensus_frequency_cutoff (0.50 by default: confidently a majority)
+//   1. consensus     -- score clears mutation_log10_e_value_cutoff AND the maximum-likelihood
+//                       variant frequency (the point estimate, not a confidence bound) is at or
+//                       above consensus_frequency_cutoff (0.80 by default)
 //   2. polymorphism  -- otherwise, score clears polymorphism_log10_e_value_cutoff AND
 //                       L >= polymorphism_frequency_cutoff (0.10 by default: confidently present)
 //   3. otherwise the position is dropped.
 //
-// Both tests read the LOWER bound, so a position is never accepted on thin coverage and never
-// rejected merely for having thin coverage -- only for failing to establish the claim being made.
+// The consensus test reads the point estimate on purpose. A lower-bound test against 0.50
+// ("confidently the majority") was tried and called fixed mutations at sites where two copies of a
+// repeat that differ at one base pile onto one reference copy: the variant sits near 50% in every
+// sample of a strain and is called in those where sampling noise puts the bound just over the
+// line. Requiring 0.80 of the reads keeps such sites out of the consensus calls; they are
+// reported as polymorphism evidence instead.
 //
-// DO NOT "unify" this with polymorphism mode, which reads the UPPER bound in the same slot. The
-// asymmetry is the whole point: the two modes carry opposite defaults. Here the fixed
-// interpretation is the default, so the question is "is the variant confidently the majority" and
-// the lower bound answers it. There the polymorphic interpretation is the default, so the question
-// is "can we still rule out that it is fixed" and the upper bound answers that.
-//
-// The temptation to unify comes from an argument that no longer applies. Under the exact
-// Clopper-Pearson bounds this used to use, the identity L(k of k) = alpha^(1/k) meant a lower-bound
-// test against 0.50 demanded ln(0.05)/ln(0.50) = 4.32 variant reads even at 100% frequency, so
-// genuine fixed variants were dropped for want of depth. Profile-likelihood bounds do not have that
-// floor -- at two decisive reads the lower bound is already 0.505 -- and measured over the test
-// goldens, 0 of 218 consensus-mode fixed variants now fail this test. Meanwhile switching this slot
-// to the upper bound would relabel two well-measured ~48% variants (at 115x and 292x coverage) as
-// fixed 100% mutations, which is exactly what the lower bound is here to prevent.
+// Polymorphism mode is different: its consensus test reads the UPPER bound, because there the
+// polymorphic interpretation is the default and the question is "can we still rule out that it is
+// fixed".
 //
 // The Fisher strand-bias and variant-strand-minimum filters are ON by default; the K-S quality-bias
 // and homopolymer filters are off. They are applied within whichever attempt they belong to so
@@ -544,13 +536,14 @@ bool test_RA_evidence_CONSENSUS_mode(
     lower = upper = from_string<double>(ra[FREQUENCY]);
 
   /////////////////////////////////
-  // 1. Is it the majority allele?
+  // 1. Is it a fixed difference?
   /////////////////////////////////
 
   if (score < settings.mutation_log10_e_value_cutoff) {
     ra.add_reject_reason("SCORE_CUTOFF");
   }
-  if ((settings.consensus_frequency_cutoff > 0.0) && (lower < settings.consensus_frequency_cutoff)) {
+  if ((settings.consensus_frequency_cutoff > 0.0)
+      && (from_string<double>(ra[FREQUENCY]) < settings.consensus_frequency_cutoff)) {
     ra.add_reject_reason("FREQUENCY_CUTOFF");
   }
   rejected_RA_consensus_coverage(ra, ref_seq_info, settings);
@@ -4347,10 +4340,9 @@ void identify_mutations_pileup::write_haplotype_calls(cDiffEntry& ln, const vect
     haplotype_frequency_bounds(obs, m, masks[h], lower, upper);
 
     // The consensus test reads the UPPER bound in polymorphism mode ("can we still rule out that
-    // it is fixed") and the LOWER bound in consensus mode ("is it confidently the majority"),
-    // exactly as test_RA_evidence_POLYMORPHISM_mode / _CONSENSUS_mode do for a column. See the
-    // note at test_RA_evidence_CONSENSUS_mode before trying to make the two agree.
-    const double consensus_bound = _settings.polymorphism_prediction ? upper : lower;
+    // it is fixed") and the maximum-likelihood frequency itself in consensus mode, exactly as
+    // test_RA_evidence_POLYMORPHISM_mode / _CONSENSUS_mode do for a column.
+    const double consensus_bound = _settings.polymorphism_prediction ? upper : f;
     string prediction = "none";
     if (!std::isnan(score) && (score >= _consensus_score_cutoff)
         && ((_settings.consensus_frequency_cutoff <= 0.0) || (consensus_bound >= _settings.consensus_frequency_cutoff))) {

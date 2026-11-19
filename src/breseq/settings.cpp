@@ -488,7 +488,7 @@ namespace breseq
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", NORMAL_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", NORMAL_OPTION)
-    ("consensus-frequency-cutoff", "Only predict consensus mutations when a 95% confidence bound on the variant allele frequency is at or above this value. Which bound is tested depends on the mode, because the two modes assume opposite defaults. In consensus mode the LOWER bound is tested, asking whether the variant is confidently the majority allele. In polymorphism mode the UPPER bound is tested, asking whether a fixed interpretation can still not be ruled out. (DEFAULT = consensus mode, 0.50; polymorphism mode, 0.95)", "", NORMAL_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is at or above this value. What is tested depends on the mode. In consensus mode it is the maximum-likelihood estimate of the frequency. In polymorphism mode it is the UPPER 95% confidence bound, asking whether a fixed interpretation can still not be ruled out. (DEFAULT = consensus mode, 0.80; polymorphism mode, 0.95)", "", NORMAL_OPTION)
     ("consensus-minimum-variant-coverage", "Only predict consensus mutations when at least this many reads support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("consensus-minimum-total-coverage", "Only predict consensus mutations when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
     ("consensus-minimum-variant-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
@@ -1177,9 +1177,8 @@ namespace breseq
       this->minimum_mapping_quality = 0;
       
       this->mutation_log10_e_value_cutoff = 10;
-      // Majority test: accept as consensus when the 95% lower confidence bound clears this, i.e.
-      // we are confident the variant is more than half the reads. Not an upper-bound test.
-      this->consensus_frequency_cutoff = 0.50;
+      // Tested against the maximum-likelihood variant frequency, not a confidence bound.
+      this->consensus_frequency_cutoff = 0.80;
       this->consensus_minimum_variant_coverage = 0;
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
