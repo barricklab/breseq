@@ -129,8 +129,10 @@ namespace breseq {
       // Add the entire length of this region
       index_1 += it->get_end_1() - it->get_start_1() + 1;
     }
-      
-    //ERROR("Cannot find index of position that is not within gene.");
+
+    // Not within the gene: index 0, which callers test for. Falling through with the
+    // accumulated length instead reported the gene's last base for a position outside it.
+    index_1 = 0;
   }
   
   // Clean up some strings to not use our separator characters
@@ -3249,10 +3251,11 @@ bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffE
   bool is_inactivating = false;
   
   // These coords are internal to the gene that was mutated (accounts for multiple sublocations)
+  // An index of 0 means that end of the mutation lies outside the gene.
   int32_t mutated_gene_index_start_1, mutated_gene_index_end_1;
-  int8_t mutated_gene_strand;
-  gene.genomic_position_to_index_strand_1(start, mutated_gene_index_start_1, mutated_gene_strand);
-  gene.genomic_position_to_index_strand_1(end, mutated_gene_index_end_1, mutated_gene_strand);
+  int8_t mutated_gene_start_strand, mutated_gene_end_strand;
+  gene.genomic_position_to_index_strand_1(start, mutated_gene_index_start_1, mutated_gene_start_strand);
+  gene.genomic_position_to_index_strand_1(end, mutated_gene_index_end_1, mutated_gene_end_strand);
   int32_t gene_inactivating_overlap_length = floor(inactivating_overlap_fraction * static_cast<double>(gene.get_length()));
   
   // Does the start or the end overlap the beginning portion of the gene that we consider at risk for inactivation?
@@ -3289,48 +3292,92 @@ bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffE
         // any codons overlapping the mutation. This gets a bit complicated...
         if ( !is_inactivating && (mut._type != DEL) ) {
 
-          // Get the full gene sequence
-          cAnnotatedSequence in_seq = (*this)[mut.get(SEQ_ID)];
+          // Get the full gene sequence (in gene orientation)
+          const cAnnotatedSequence& in_seq = (*this)[mut.get(SEQ_ID)];
           cString gene_seq = gene.get_nucleotide_sequence(in_seq);
-          
-          // Build new sequence for all affected codons
-          cString mutant_region_seq;
-          
-          // Part before mutation
-          int32_t codon_seq_start_1 = mutated_gene_index_start_1 - (mutated_gene_index_start_1-1) % 3;
-          
-          if (mut._type==INS) {
-            mutant_region_seq += gene_seq.substr(codon_seq_start_1-1, mutated_gene_index_start_1-codon_seq_start_1+1);
-          } else if (mut._type==SUB) {
-            mutant_region_seq += gene_seq.substr(codon_seq_start_1-1, mutated_gene_index_start_1-codon_seq_start_1);
+          const int32_t gene_length = static_cast<int32_t>(gene_seq.size());
+
+          // Everything below is in gene orientation: on the bottom strand the genomic start maps
+          // to the LARGER gene index, and the new bases must be reverse-complemented.
+          const int8_t gene_strand = (mutated_gene_start_strand != 0) ? mutated_gene_start_strand : mutated_gene_end_strand;
+          string new_seq = mut.get(NEW_SEQ);
+          if (gene_strand == -1) new_seq = reverse_complement(new_seq);
+
+          // The gene indices [first_1, last_1] of the reference bases that are replaced.
+          // An insertion replaces none (last_1 = first_1 - 1).
+          int32_t first_1 = 0, last_1 = -1;
+          bool can_check = true;
+
+          if (mut._type == INS) {
+            // Inserted after this gene index (the insertion follows the genomic position, which
+            // on the bottom strand is the base BEFORE it in gene orientation)
+            int32_t after_index_1 = (gene_strand == -1) ? mutated_gene_index_start_1 - 1 : mutated_gene_index_start_1;
+            // Inserted before the first or after the last base of the gene: no codon is changed
+            can_check = (mutated_gene_index_start_1 != 0) && (after_index_1 > 0) && (after_index_1 < gene_length);
+            first_1 = after_index_1 + 1;
+            last_1 = after_index_1;
           }
-        
-          // Substituted of inserted bases
-          mutant_region_seq += mut.get(NEW_SEQ);
-          
-          // Part after mutation
-          int32_t needed_bases_to_complete_codon = (3 - mutant_region_seq.size() % 3) % 3;
-          if (mut._type==INS) {
-            mutant_region_seq += gene_seq.substr(mutated_gene_index_end_1, needed_bases_to_complete_codon);
-          } else if (mut._type==SUB) {
-            mutant_region_seq += gene_seq.substr(mutated_gene_index_end_1, needed_bases_to_complete_codon);
-          }
-          
-          if (mutant_region_seq.size() % 3 != 0) {
-            WARN("Affected codon string does not have a length divisible by three:" + mutant_region_seq + "\n" + mut.as_string());
-          }
-          
-          // Iterate through codons checking for stop codons
-          uint32_t codon_start_pos_1 = 1;
-          while (codon_start_pos_1 < mutant_region_seq.size()) {
-            // We pick a codon number of 2 since no codon table has special stop codons...
-            char aa = this->translate_codon(mutant_region_seq.substr(codon_start_pos_1-1, 3), gene.translation_table, 2);
-            if (aa == '*') {
-              is_inactivating = true;
+          else { // SUB
+            int32_t ref_size = static_cast<int32_t>(end - start + 1);
+            if ((mutated_gene_index_start_1 != 0) && (mutated_gene_index_end_1 != 0)) {
+              first_1 = min(mutated_gene_index_start_1, mutated_gene_index_end_1);
+              last_1 = max(mutated_gene_index_start_1, mutated_gene_index_end_1);
             }
-            codon_start_pos_1 += 3;
+            else {
+              // The SUB extends past one end of the gene. Only the new bases that replace bases
+              // inside the gene can change its codons, and they can be identified only when the
+              // SUB does not change the length; otherwise we can't say which ones land in frame.
+              int32_t inside_index_1 = (mutated_gene_index_start_1 != 0) ? mutated_gene_index_start_1 : mutated_gene_index_end_1;
+              bool extends_upstream = (gene_strand == -1) ? (mutated_gene_index_end_1 == 0) : (mutated_gene_index_start_1 == 0);
+              int32_t inside_bases = extends_upstream ? inside_index_1 : gene_length - inside_index_1 + 1;
+
+              can_check = (inside_index_1 != 0) && (static_cast<int32_t>(new_seq.size()) == ref_size)
+                && (inside_bases > 0) && (inside_bases < ref_size);
+              if (can_check) {
+                if (extends_upstream) {
+                  new_seq = new_seq.substr(new_seq.size() - inside_bases);
+                  first_1 = 1;
+                  last_1 = inside_index_1;
+                } else {
+                  new_seq = new_seq.substr(0, inside_bases);
+                  first_1 = inside_index_1;
+                  last_1 = gene_length;
+                }
+              }
+            }
           }
-          
+
+          if (can_check) {
+
+            // Build new sequence for all affected codons
+            cString mutant_region_seq;
+
+            // Part of the first affected codon before the mutation
+            int32_t codon_seq_start_1 = first_1 - (first_1 - 1) % 3;
+            mutant_region_seq += gene_seq.substr(codon_seq_start_1 - 1, first_1 - codon_seq_start_1);
+
+            // Substituted or inserted bases
+            mutant_region_seq += new_seq;
+
+            // Part after mutation to complete the last affected codon
+            int32_t needed_bases_to_complete_codon = (3 - mutant_region_seq.size() % 3) % 3;
+            mutant_region_seq += gene_seq.substr(last_1, needed_bases_to_complete_codon);
+
+            // Only possible if the CDS length is not a multiple of three
+            if (mutant_region_seq.size() % 3 != 0) {
+              WARN("Affected codon string does not have a length divisible by three:" + mutant_region_seq + "\n" + mut.as_string());
+            }
+
+            // Iterate through complete codons checking for stop codons
+            for (size_t codon_start_pos_0 = 0; codon_start_pos_0 + 3 <= mutant_region_seq.size(); codon_start_pos_0 += 3) {
+              // We pick a codon number of 2 since no codon table has special stop codons...
+              char aa = this->translate_codon(mutant_region_seq.substr(codon_start_pos_0, 3), gene.translation_table, 2);
+              if (aa == '*') {
+                is_inactivating = true;
+              }
+            }
+          }
+
         }
       }
     }
