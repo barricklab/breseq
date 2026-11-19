@@ -930,8 +930,11 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("  PHYLIP   Alignment of genotypes in PHYLIP format for phylogenetic analysis");
 	options.addUsage("  FASTA    Multi-FASTA alignment of genotypes for phylogenetic analysis");
 	options.addUsage("  JSON     JavaScript object notation file suitable for parsing");
+	options.addUsage("  VCF      Multi-sample VCF with a GT:AF column per sample. GT is 1 when the");
+	options.addUsage("             mutation is present at any frequency (given by AF), 0 when it is");
+	options.addUsage("             absent, and '.' when it cannot be called ('?' or deleted).");
 	options.addUsage("");
-	options.addUsage("In HTML and TABLE output, each input GD file is a sample with its own frequency column, even when only one file is provided. The #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix). Samples with no mutations are shown unless --collapse-samples is used.");
+	options.addUsage("In HTML, TABLE, and VCF output, each input GD file is a sample with its own frequency column, even when only one file is provided. The #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix). Samples with no mutations are shown unless --collapse-samples is used.");
 	options.addUsage("");
 	
 	options.addUsage("In output, frequencies of 'D' mean that this mutation occurs within");
@@ -1008,9 +1011,11 @@ int do_annotate(int argc, char* argv[])
 		output_file_name = "output.csv";
   } else if (output_format == "JSON") {
 		output_file_name = "output.json";
+	} else if (output_format == "VCF") {
+		output_file_name = "output.vcf";
 	} else {
 		options.addUsage("");
-		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TABLE, TSV, CSV, PHYLIP, FASTA, JSON");
+		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TABLE, TSV, CSV, PHYLIP, FASTA, JSON, VCF");
 		options.printUsage();
 		return -1;
 	}
@@ -1138,6 +1143,16 @@ int do_annotate(int argc, char* argv[])
 		}
 		
     gd.write(output_file_name);
+  } else if (output_format == "VCF") {
+
+		// Force compare mode so that every sample, even a lone one, gets a column. AMPs are not merged
+		// across copy numbers: a merged AMP's per-sample value is a mean copy number, not a frequency.
+		compare_mode = true;
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, compare_mode, options, uout);
+
+		uout("Writing output VCF file", output_file_name);
+		gd.write_vcf(output_file_name, ref_seq_info, gd_titles);
+
   } else if (output_format == "PHYLIP") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
 		

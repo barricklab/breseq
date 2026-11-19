@@ -319,7 +319,8 @@ public:
 
   // ! VCF files
   void read_vcf(const string& filename);
-  void write_vcf(const string& filename, cReferenceSequences& ref_seq_info);
+  // With sample_names (gdtools COMPARE), each sample gets a GT:AF column from its frequency_<sample> field
+  void write_vcf(const string& filename, cReferenceSequences& ref_seq_info, const vector<string>& sample_names = vector<string>());
 
   //! GVF files
   void write_gvf(const string& filename, cReferenceSequences& ref_seq_info, bool snv_only = false, uint32_t max_sequence_length = 50);

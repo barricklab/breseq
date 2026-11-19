@@ -4952,8 +4952,9 @@ static bool average_evidence_score(const diff_entry_list_t& ev, double& average_
 
 // One VCF record. Neither REF nor ALT may be empty, so an insertion or a deletion takes in the base
 // before it (or the base after it, at the start of a sequence) as an anchor.
+// [samples] is appended as is: empty, or the FORMAT and per-sample columns with leading tabs.
 static string vcf_record(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t start, int32_t end, bool is_insertion,
-                         string ref, string alt, const string& qual, const string& info)
+                         string ref, string alt, const string& qual, const string& info, const string& samples = "")
 {
   int32_t pos = start;
   if (is_insertion) {
@@ -4972,11 +4973,36 @@ static string vcf_record(cReferenceSequences& ref_seq_info, const string& seq_id
       alt = anchor;
     }
   }
-  return seq_id + "\t" + to_string(pos) + "\t.\t" + ref + "\t" + alt + "\t" + qual + "\tPASS\t" + info;
+  return seq_id + "\t" + to_string(pos) + "\t.\t" + ref + "\t" + alt + "\t" + qual + "\tPASS\t" + info + samples;
 }
 
-void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_info)
+// The FORMAT column and one GT:AF column per sample, from the frequency_<sample> fields that gdtools
+// COMPARE tabulates. A sample's value is a frequency, or '?' (not enough coverage to call) or 'D'
+// (inside a deletion in that sample), which have no genotype. GT is haploid: 1 when the mutation is
+// present at any frequency (the level is in AF), 0 when it is absent.
+static string vcf_sample_columns(const cDiffEntry& mut, const vector<string>& sample_names)
 {
+  string s = "\tGT:AF";
+  for (vector<string>::const_iterator it = sample_names.begin(); it != sample_names.end(); ++it) {
+    string key = "frequency_" + *it;
+    string v = mut.entry_exists(key) ? mut.get(key) : "0";
+    char* parse_end = NULL;
+    double f = strtod(v.c_str(), &parse_end);
+    if (v.empty() || (*parse_end != '\0')) {
+      s += "\t.:.";
+    } else if (f > 0.0) {
+      s += "\t1:" + formatted_double(f, 4).to_string();
+    } else {
+      s += "\t0:0";
+    }
+  }
+  return s;
+}
+
+void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_info, const vector<string>& sample_names)
+{
+  const bool with_samples = !sample_names.empty();
+
   ofstream output( vcffile.c_str() );
   output << "##fileformat=VCFv4.1" << endl;
   output << "##fileDate=" << file_date("%Y%m%d") << endl;
@@ -4987,12 +5013,20 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
     output << "##contig=<ID=" << it->m_seq_id << ",length=" << it->get_sequence_length() << ">" << endl;
   }
 
-  output << "##INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">" << endl;
-  output << "##INFO=<ID=AD,Number=1,Type=Float,Description=\"Allele Depth (avg read count)\">" << endl;
-  output << "##INFO=<ID=DP,Number=1,Type=Float,Description=\"Total Depth (avg read count)\">" << endl;
-
-  // Write header line. There are no sample columns, since a GD file does not describe genotypes.
-  output << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" << endl;
+  // Write header line. Without sample names there are no sample columns, since a single GD file does
+  // not describe genotypes, and the mutation's frequency and read counts go in INFO. With them (gdtools
+  // COMPARE) each sample has a GT:AF column and INFO is empty: the merged entry's own frequency and
+  // read counts would describe only one of the samples.
+  if (with_samples) {
+    output << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Haploid genotype: 1 = mutation present at any frequency (see AF), 0 = absent, . = no call at this position\">" << endl;
+    output << "##FORMAT=<ID=AF,Number=A,Type=Float,Description=\"Frequency of the mutation in this sample\">" << endl;
+    output << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" << join(sample_names, "\t") << endl;
+  } else {
+    output << "##INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">" << endl;
+    output << "##INFO=<ID=AD,Number=1,Type=Float,Description=\"Allele Depth (avg read count)\">" << endl;
+    output << "##INFO=<ID=DP,Number=1,Type=Float,Description=\"Total Depth (avg read count)\">" << endl;
+    output << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" << endl;
+  }
 
   diff_entry_list_t muts = mutation_list();
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++) {
@@ -5009,9 +5043,13 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
     // Allele frequency
     double freq = mut.entry_exists(FREQUENCY) ? from_string<double>(mut[FREQUENCY]) : 1.0;
 
+    // Per-sample columns (empty without samples)
+    string samples = with_samples ? vcf_sample_columns(mut, sample_names) : "";
+
     // Insertions at one site (INS entries that differ in insert_position) would be records with the
     // same POS and REF, which tools that apply a VCF file treat as alternatives to one another, not
-    // as all being present. They are written as one record when they are at the same frequency.
+    // as all being present. They are written as one record when they are at the same frequency --
+    // in every sample, when there are samples.
     if (r.is_insertion) {
       diff_entry_list_t::iterator it_next = it;
       for (++it_next; it_next != muts.end(); ++it_next) {
@@ -5019,7 +5057,8 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         cSequenceReplacement next_r;
         string next_why_not;
         double next_freq = next_mut.entry_exists(FREQUENCY) ? from_string<double>(next_mut[FREQUENCY]) : 1.0;
-        if ( (next_mut._type != INS) || (mut._type != INS) || (next_freq != freq)
+        bool same_frequency = with_samples ? (vcf_sample_columns(next_mut, sample_names) == samples) : (next_freq == freq);
+        if ( (next_mut._type != INS) || (mut._type != INS) || !same_frequency
             || !mutation_as_sequence_replacement(*this, ref_seq_info, next_mut, next_r, next_why_not)
             || !next_r.is_insertion || (next_r.seq_id != r.seq_id) || (next_r.start != r.start) )
           break;
@@ -5028,15 +5067,18 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
       }
     }
 
-    vector<string> info_entries;
-    info_entries.push_back("AF=" + formatted_double(freq, 4).to_string());
+    string info = ".";
+    if (!with_samples) {
+      vector<string> info_entries;
+      info_entries.push_back("AF=" + formatted_double(freq, 4).to_string());
 
-    double new_read_count(0.0), total_read_count(0.0);
-    if (read_counts_for_entry(mut, new_read_count, total_read_count)) {
-      info_entries.push_back("AD=" + to_string<double>(new_read_count));
-      info_entries.push_back("DP=" + to_string<double>(total_read_count));
+      double new_read_count(0.0), total_read_count(0.0);
+      if (read_counts_for_entry(mut, new_read_count, total_read_count)) {
+        info_entries.push_back("AD=" + to_string<double>(new_read_count));
+        info_entries.push_back("DP=" + to_string<double>(total_read_count));
+      }
+      info = join(info_entries, ";");
     }
-    string info = join(info_entries, ";");
 
     // Quality
     // Gets carried forward from the supporting evidence (and averaged if multiple apply)
@@ -5055,15 +5097,15 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
       if (ref_seq_info.is_circular(r.seq_id) && (r.start <= length) && (r.end - length < r.start - 1)) {
         string before_origin, after_origin;
         split_replacement_at_origin(r.variant_seq, bases_before_origin, before_origin, after_origin);
-        output << vcf_record(ref_seq_info, r.seq_id, 1, r.end - length, false, r.reference_seq.substr(bases_before_origin), after_origin, qual, info) << endl;
-        output << vcf_record(ref_seq_info, r.seq_id, r.start, length, false, r.reference_seq.substr(0, bases_before_origin), before_origin, qual, info) << endl;
+        output << vcf_record(ref_seq_info, r.seq_id, 1, r.end - length, false, r.reference_seq.substr(bases_before_origin), after_origin, qual, info, samples) << endl;
+        output << vcf_record(ref_seq_info, r.seq_id, r.start, length, false, r.reference_seq.substr(0, bases_before_origin), before_origin, qual, info, samples) << endl;
       } else {
         WARN("Mutation cannot be written as VCF (will be omitted). It extends past the end of a linear reference sequence. If the sequence is actually circular, mark it CIRCULAR in the reference file (on the LOCUS line of a GenBank file, or with Is_circular=true on the region feature of a GFF3 file) and the mutation will be written as two records, one on each side of the origin.\n" + mut.as_string());
       }
       continue;
     }
 
-    output << vcf_record(ref_seq_info, r.seq_id, r.start, r.end, r.is_insertion, r.reference_seq, r.variant_seq, qual, info) << endl;
+    output << vcf_record(ref_seq_info, r.seq_id, r.start, r.end, r.is_insertion, r.reference_seq, r.variant_seq, qual, info, samples) << endl;
   }
 
   output.close();

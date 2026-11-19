@@ -37,6 +37,14 @@ Type of output file to generate. See options below (DEFAULT=HTML)
 | TSV    | Tab-separated values file suitable for input into R or Excel |
 | PHYLIP | Alignment file suitable for input into PHYLIP                |
 | JSON   | JavaScript object notation file suitable for parsing         |
+| VCF    | Multi-sample VCF with a `GT:AF` column for each sample       |
+
+In VCF output, a sample's `GT` is `1` when the mutation is present in it
+at any frequency (the frequency is its `AF`), `0` when the mutation is
+absent, and `.` when it cannot be called, because the sample has too few
+reads at that position or the position is inside a deletion in it. A
+single input GD file still gets its own sample column. To convert one GD
+file to a VCF without sample columns, use `gdtools CONVERT -f VCF`.
 
 `-c, --collapse-samples`
 
