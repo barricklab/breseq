@@ -1660,6 +1660,10 @@ int breseq_default_action(int argc, char* argv[])
       gd.valid_with_reference_sequences(conv_ref_seq_info, false);
     }
     
+    // Score given to every base of a read file whose bases all have one score (0 = never; see fastq.h)
+    const uint32_t constant_base_quality_replacement = settings.detect_constant_base_quality ? settings.constant_base_quality_replacement : 0;
+    s.constant_base_quality_replacement = constant_base_quality_replacement;
+
     // No conversion if already is sam mode
     if (!settings.aligned_sam_mode) {
 
@@ -1738,6 +1742,7 @@ int breseq_default_action(int argc, char* argv[])
               settings.read_file_long_read_trigger_length,
               settings.read_file_long_read_split_length,
               settings.read_file_long_read_distribute_remainder,
+              constant_base_quality_replacement,
               settings.num_processors
           );
           AnalyzeFastqSummary& s_r1 = paired_result.first;
@@ -1759,6 +1764,8 @@ int breseq_default_action(int argc, char* argv[])
           }
           s.reads[rf_r1.m_base_name] = s_r1;
           s.reads[rf_r2.m_base_name] = s_r2;
+          if (s_r1.replaced_constant_base_quality >= 0) s.constant_base_quality_files[rf_r1.m_base_name] = s_r1.replaced_constant_base_quality;
+          if (s_r2.replaced_constant_base_quality >= 0) s.constant_base_quality_files[rf_r2.m_base_name] = s_r2.replaced_constant_base_quality;
 
           flat_file_counter += 2;
 
@@ -1796,6 +1803,7 @@ int breseq_default_action(int argc, char* argv[])
                                                        settings.read_file_long_read_trigger_length,
                                                        settings.read_file_long_read_split_length,
                                                        settings.read_file_long_read_distribute_remainder,
+                                                       constant_base_quality_replacement,
                                                        settings.num_processors,
                                                        settings.read_file_long_read_pair_distance,
                                                        lp_convert_file_names[0],
@@ -1822,6 +1830,7 @@ int breseq_default_action(int argc, char* argv[])
               s.num_reads += s_lp[m].num_reads;
               s.num_bases += s_lp[m].num_bases;
               s.reads[lp_base_names[m]] = s_lp[m];
+              if (s_lp[m].replaced_constant_base_quality >= 0) s.constant_base_quality_files[lp_base_names[m]] = s_lp[m].replaced_constant_base_quality;
             }
             if ((s_lp[0].num_reads != 0) && (s_lp[1].num_reads != 0)) flat_file_counter += 2;
           }
@@ -1838,6 +1847,7 @@ int breseq_default_action(int argc, char* argv[])
           s.num_original_bases += s_rf.num_original_bases;
 
           s.reads[base_name] = s_rf;
+          if (s_rf.replaced_constant_base_quality >= 0) s.constant_base_quality_files[base_name] = s_rf.replaced_constant_base_quality;
           flat_file_counter++;
         }
 
@@ -1857,6 +1867,21 @@ int breseq_default_action(int argc, char* argv[])
       cerr << "    Original reads: " << setw(width_for_reads) << s.num_original_reads << " bases: " << setw(width_for_bases) << s.num_original_bases << endl;
       cerr << "    Analyzed reads: " << setw(width_for_reads) << s.num_reads << " bases: " << setw(width_for_bases) << s.num_bases << endl;
       
+    } else if (constant_base_quality_replacement) {
+      // The SAM records are copied as they are when they are loaded (stage 05, load_sam_only_alignments),
+      // and the scores are replaced there. Whether to replace them is decided here, for the whole file,
+      // so that it is settled before any record is written.
+      for (const auto& rf : settings.read_file_sets.flat_files()) {
+        string sam_file_name = settings.base_name_to_read_file_name(rf.m_base_name);
+        uint8_t constant_quality = 0;
+        cerr << "  READ FILE::" << rf.m_base_name << endl;
+        cerr << "    Checking base quality scores..." << endl;
+        if (sam_file_constant_base_quality(sam_file_name, constant_quality)) {
+          summary.sequence_conversion.constant_base_quality_files[rf.m_base_name] = constant_quality;
+          warn_constant_base_quality(sam_file_name, constant_quality, constant_base_quality_replacement);
+        }
+      }
+      summary.sequence_conversion.constant_base_quality_replacement = constant_base_quality_replacement;
     }
       
 		// create SAM faidx

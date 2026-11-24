@@ -186,6 +186,7 @@ void to_json(json& j, const AnalyzeFastqSummary& s)
     {"long_read_pair_source", s.long_read_pair_source},
     {"long_read_pair_mate", s.long_read_pair_mate},
     {"read_name_file_index", s.read_name_file_index},
+    {"replaced_constant_base_quality", s.replaced_constant_base_quality},
   };
 }
 
@@ -212,6 +213,7 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
   s.long_read_pair_source = j.count("long_read_pair_source") ? j.at("long_read_pair_source").get<string>() : "";
   s.long_read_pair_mate = j.count("long_read_pair_mate") ? j.at("long_read_pair_mate").get<uint32_t>() : 0;
   s.read_name_file_index = j.count("read_name_file_index") ? j.at("read_name_file_index").get<uint32_t>() : 0;
+  s.replaced_constant_base_quality = j.count("replaced_constant_base_quality") ? j.at("replaced_constant_base_quality").get<int32_t>() : -1;
 }
   
 // PreprocessAlignmentsSummary
@@ -276,6 +278,8 @@ void to_json(json& j, const SequenceConversionSummary& s)
     {"total_reference_sequence_length", s.total_reference_sequence_length},
     {"read_length_max", s.read_length_max},
     {"read_length_min", s.read_length_min},
+    {"constant_base_quality_files", s.constant_base_quality_files},
+    {"constant_base_quality_replacement", s.constant_base_quality_replacement},
   };
 }
 
@@ -291,6 +295,9 @@ void from_json(const json& j, SequenceConversionSummary& s)
   s.total_reference_sequence_length = j.at("total_reference_sequence_length").get<uint64_t>();
   s.read_length_max = j.at("read_length_max").get<uint32_t>();
   s.read_length_min = j.at("read_length_min").get<uint32_t>();
+  // Absent from summaries written before constant base qualities were detected
+  s.constant_base_quality_files = j.count("constant_base_quality_files") ? j.at("constant_base_quality_files").get<map<string, uint32_t> >() : map<string, uint32_t>();
+  s.constant_base_quality_replacement = j.count("constant_base_quality_replacement") ? j.at("constant_base_quality_replacement").get<uint32_t>() : 0;
 }
 
 // cErrorCountSummary
@@ -730,6 +737,9 @@ PublicReadSummary::PublicReadSummary(const Summary &s)
   total_aligned_bases = s.alignment_resolution.total_bases - s.alignment_resolution.total_unmapped_read_bases;
   total_fraction_aligned_reads = static_cast<double>(total_aligned_reads) / static_cast<double>(s.alignment_resolution.total_reads);
   total_fraction_aligned_bases = static_cast<double>(total_aligned_bases) / static_cast<double>(s.alignment_resolution.total_bases);
+
+  constant_base_quality_files = s.sequence_conversion.constant_base_quality_files;
+  constant_base_quality_replacement = s.sequence_conversion.constant_base_quality_replacement;
 }
 
   
@@ -820,6 +830,8 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   read_file_long_read_trigger_length = t.read_file_long_read_trigger_length;
   read_file_long_read_split_length = t.read_file_long_read_split_length;
   read_file_long_read_distribute_remainder = t.read_file_long_read_distribute_remainder;
+  detect_constant_base_quality = t.detect_constant_base_quality;
+  constant_base_quality_replacement = t.constant_base_quality_replacement;
   
   //! Settings: Read Alignment
   bowtie2_stage1 = t.bowtie2_stage1;
@@ -997,6 +1009,8 @@ void to_json(json& j, const PublicReadSummary& s)
     {"total_fraction_aligned_reads", s.total_fraction_aligned_reads},
     {"total_fraction_aligned_bases", s.total_fraction_aligned_bases},
     {"read_file", s.read_file},
+    {"constant_base_quality_files", s.constant_base_quality_files},
+    {"constant_base_quality_replacement", s.constant_base_quality_replacement},
   };
   
 }
@@ -1010,6 +1024,8 @@ void from_json(const json& j, PublicReadSummary& s)
   s.total_fraction_aligned_reads = get_double_or_default(j, "total_fraction_aligned_reads");
   s.total_fraction_aligned_bases = get_double_or_default(j, "total_fraction_aligned_bases");
   s.read_file = j.at("read_file").get<PublicReadFileSummaries>();
+  s.constant_base_quality_files = j.count("constant_base_quality_files") ? j.at("constant_base_quality_files").get<map<string, uint32_t> >() : map<string, uint32_t>();
+  s.constant_base_quality_replacement = j.count("constant_base_quality_replacement") ? j.at("constant_base_quality_replacement").get<uint32_t>() : 0;
 }
   
 // PublicReferenceFileSummary
@@ -1138,6 +1154,8 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"read_file_long_read_trigger_length", s.read_file_long_read_trigger_length},
       {"read_file_long_read_split_length", s.read_file_long_read_split_length},
       {"read_file_long_read_distribute_remainder", s.read_file_long_read_distribute_remainder},
+      {"detect_constant_base_quality", s.detect_constant_base_quality},
+      {"constant_base_quality_replacement", s.constant_base_quality_replacement},
       }
     },
     

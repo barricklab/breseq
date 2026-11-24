@@ -96,6 +96,10 @@ class cAnnotatedSequence;
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
+                                        // Quality score given to every base of a file whose bases
+                                        // all have one quality score (0 = keep them as they are).
+                                        // See kDefaultConstantBaseQualityReplacement below.
+                                        const uint32_t constant_base_quality_replacement,
                                         const uint32_t num_threads = 1,
                                         // EXPERIMENTAL synthetic pairs from long reads. When
                                         // long_read_pair_distance is nonzero, a split piece is
@@ -129,8 +133,33 @@ class cAnnotatedSequence;
                                         const uint32_t long_read_trigger_length,
                                         const uint32_t long_read_split_length,
                                         const bool long_read_distribute_remainder,
+                                        const uint32_t constant_base_quality_replacement,
                                         const uint32_t num_threads = 1
                                         );
+
+  //! Read files whose base quality scores carry no information
+  //
+  // Some read files give every base the same quality score. PacBio Sequel CLR reads downloaded from
+  // the SRA, for example, are all '!' (Q0). One value cannot tell good bases from bad ones, and Q0 is
+  // at or below --base-quality-cutoff, so as they stand every base would be ignored and the reads
+  // would yield no base-level evidence. When a file has only one quality score, breseq instead gives
+  // all of its bases one score above the cutoff, --constant-base-quality-replacement (default 20).
+  // The exact value matters little: error calibration (stage 07) measures the error rate of each
+  // quality score from the alignments, so the one score these bases share gets an error rate
+  // measured from the data like any other.
+  //
+  // Detected and replaced where qualities enter breseq: normalize_fastq/normalize_fastq_paired for
+  // FASTQ input, and, for --aligned-sam input, sam_file_constant_base_quality() during sequence
+  // conversion with the replacement made as the SAM records are loaded (load_sam_only_alignments).
+  const uint32_t kDefaultConstantBaseQualityReplacement = 20;
+  // Highest score a SANGER quality character can hold ('~')
+  const uint32_t kMaxSangerBaseQuality = 93;
+  // htslib stores a SAM QUAL of '*' (qualities absent) as this value for every base
+  const uint32_t kMissingBamBaseQuality = 0xff;
+
+  //! Prints the warning shown for each read file whose qualities are replaced.
+  //  original_quality is on the SANGER scale, or kMissingBamBaseQuality for a SAM QUAL of '*'.
+  void warn_constant_base_quality(const string& file_name, const uint32_t original_quality, const uint32_t replacement_quality);
   
   // Utility function for converting FASTQ files between formats
   void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format, bool reverse_complement = false);

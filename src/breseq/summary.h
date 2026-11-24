@@ -169,6 +169,11 @@ namespace breseq{
     uint32_t long_read_pair_mate = 0;
     // The file index that prefixes this file's read names ("<index>:<read>"); 0 = not recorded.
     uint32_t read_name_file_index = 0;
+    // Every base in the file had this one quality score (SANGER scale), so the scores were replaced
+    // with --constant-base-quality-replacement (see fastq.h); -1 = scores kept. When they were
+    // replaced, min_quality_score and max_quality_score are the replacement, the score the
+    // converted reads carry.
+    int32_t replaced_constant_base_quality = -1;
     
     AnalyzeFastqSummary()
     : read_length_min(0)
@@ -277,6 +282,12 @@ namespace breseq{
     uint64_t total_reference_sequence_length;
     uint32_t read_length_max;
     uint32_t read_length_min;
+    // Read files (base names) in which every base had one quality score, mapped to that score
+    // (SANGER scale; 255 = a SAM QUAL of '*'). Their scores were replaced with
+    // constant_base_quality_replacement (see fastq.h). Filled for FASTQ and --aligned-sam input
+    // alike; the --aligned-sam replacement itself is made later, as the SAM records are loaded.
+    map<string, uint32_t> constant_base_quality_files;
+    uint32_t constant_base_quality_replacement = 0;
     
     SequenceConversionSummary()
     : read_length_avg(0.0)
@@ -840,6 +851,11 @@ namespace breseq{
     double total_fraction_aligned_bases;
     
     PublicReadFileSummaries read_file;
+
+    // Read files whose bases all had one quality score -> that score; their scores were replaced
+    // with constant_base_quality_replacement (see SequenceConversionSummary).
+    map<string, uint32_t> constant_base_quality_files;
+    uint32_t constant_base_quality_replacement = 0;
     
     PublicReadSummary() {}
     PublicReadSummary(const Summary &s);
@@ -926,6 +942,8 @@ namespace breseq{
     uint32_t read_file_long_read_trigger_length;
     uint32_t read_file_long_read_split_length;
     bool read_file_long_read_distribute_remainder;
+    bool detect_constant_base_quality;
+    uint32_t constant_base_quality_replacement;
 
     
     //! Settings: Read Alignment

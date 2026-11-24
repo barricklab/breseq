@@ -2217,6 +2217,14 @@ void load_sam_only_alignments(
         
     reference_tam = new bam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
     
+    // Every base in this file has one quality score, found during sequence conversion: give each
+    // base the replacement score instead (see fastq.h)
+    const map<string, uint32_t>& constant_base_quality_files = summary.sequence_conversion.constant_base_quality_files;
+    const bool replace_base_qualities = (constant_base_quality_files.count(rf.m_base_name) != 0);
+    const uint8_t replacement_base_quality = static_cast<uint8_t>(summary.sequence_conversion.constant_base_quality_replacement);
+    if (replace_base_qualities) {
+      cerr << "    Replacing base quality scores with Q" << static_cast<uint32_t>(replacement_base_quality) << " (all bases had the same score)" << endl;
+    }
     
     ///
     //  Test each read for its matches to the reference and candidate junctions
@@ -2224,6 +2232,12 @@ void load_sam_only_alignments(
         
     alignment_list this_reference_alignments;
     while (reference_tam->read_alignments(this_reference_alignments, false)) {
+
+      if (replace_base_qualities) {
+        for (alignment_list::iterator it = this_reference_alignments.begin(); it != this_reference_alignments.end(); it++) {
+          memset((*it)->read_base_quality_bam_sequence(), replacement_base_quality, (*it)->read_length());
+        }
+      }
             
       // Grab this value before eligible alignments may remove all alignments
       uint32_t this_read_length = this_reference_alignments.front().get()->read_length();

@@ -20,6 +20,7 @@
 
 
 #include "settings.h"
+#include "fastq.h"
 
 #include "anyoption.h"
 #include "genome_diff.h"
@@ -355,6 +356,8 @@ namespace breseq
     ("long-read-split-length", "Split input reads in a file marked as having long reads into pieces that are at most this many bases long. Using values much larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 200, NORMAL_OPTION)
     ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("long-read-pair-distance", "Make synthetic read pairs from long reads: each piece of a split long read is paired with the piece this many bases downstream on the same read (the outer span of the pair; rounded to a whole number of pieces). Both pieces stay on the strand of the read they were cut from, so the pairs are FF with the first mate upstream. This lets discordant pair (DP), missing pair (MP) and pair distance (PD) evidence be predicted from long reads. Pieces without a partner are still used as unpaired reads. Set to 0 to split long reads into unpaired pieces only. (0 = OFF)", 2000, NORMAL_OPTION)
+    ("constant-base-quality-replacement", "If every base in a read file has the same base quality score, the scores carry no information. PacBio CLR reads downloaded from the SRA, for example, are all Q0, which is at or below --base-quality-cutoff, so every base would otherwise be ignored. For such a file, breseq prints a warning and gives every base this quality score instead. Its error rate is still calibrated from the data, as for any quality score. Applies to FASTQ and --aligned-sam input. Turn off with --no-constant-base-quality-replacement.", kDefaultConstantBaseQualityReplacement, NORMAL_OPTION)
+    ("no-constant-base-quality-replacement", "Keep the base quality scores of a read file as they are, even when every base has the same score (see --constant-base-quality-replacement).", TAKES_NO_ARGUMENT, EXPERT_OPTION)
     ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", NORMAL_OPTION)
     ;
     
@@ -750,6 +753,8 @@ namespace breseq
     this->read_file_long_read_split_length = from_string<uint32_t>(options["long-read-split-length"]);
     this->read_file_long_read_distribute_remainder = options.count("long-read-distribute-remainder");
     this->read_file_long_read_pair_distance = from_string<uint32_t>(options["long-read-pair-distance"]);
+    this->detect_constant_base_quality = !options.count("no-constant-base-quality-replacement");
+    this->constant_base_quality_replacement = from_string<uint32_t>(options["constant-base-quality-replacement"]);
     if (this->read_file_long_read_pair_distance && !this->paired_mapping) {
       // Only complain when the user asked for pairing explicitly; the default is nonzero, so a bare
       // --no-paired-mapping should not warn about an option that was never given.
@@ -888,6 +893,15 @@ namespace breseq
     //! Settings: Mutation Identification
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
     if (options.count("quality-score-trim")) this->quality_score_trim = this->base_quality_cutoff;
+
+    if (this->detect_constant_base_quality) {
+      ASSERT_NO_BACKTRACE((this->constant_base_quality_replacement >= 1) && (this->constant_base_quality_replacement <= kMaxSangerBaseQuality),
+             "Argument --constant-base-quality-replacement must be between 1 and " + to_string(kMaxSangerBaseQuality));
+      if (this->constant_base_quality_replacement <= this->base_quality_cutoff) {
+        WARN("--constant-base-quality-replacement (" + to_string(this->constant_base_quality_replacement) + ") is not above --base-quality-cutoff ("
+             + to_string(this->base_quality_cutoff) + "). Bases given this quality score will still be ignored.");
+      }
+    }
 
     this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-propagation-cutoff must be >= 0")
@@ -1556,6 +1570,8 @@ namespace breseq
     this->read_file_long_read_split_length = 200;
     this->read_file_long_read_distribute_remainder = false;
     this->read_file_long_read_pair_distance = 2000;
+    this->detect_constant_base_quality = true;
+    this->constant_base_quality_replacement = kDefaultConstantBaseQualityReplacement;
     this->paired_mapping = true;
     this->predict_discordant_pairs = true;
     this->predict_missing_pairs = true;

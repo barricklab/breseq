@@ -305,6 +305,9 @@ void plot_error_rates(const string& in_file, const string& out_file)
   // compute a degenerate yrange of [1:1] that gnuplot can't render.
   double min_error_rate = numeric_limits<double>::max();
   bool found_value = false;
+  // Lowest and highest quality scores with a value that is plotted
+  int32_t plotted_quality_min = numeric_limits<int32_t>::max();
+  int32_t plotted_quality_max = numeric_limits<int32_t>::min();
   for (size_t r = 0; r < rows.size(); r++) {
     for (size_t c = 1; c < col_names.size(); c++) {
       if (rows[r][c] == "NA") continue;
@@ -313,6 +316,9 @@ void plot_error_rates(const string& in_file, const string& out_file)
       double v = from_string<double>(rows[r][c]);
       if (v < min_error_rate) min_error_rate = v;
       found_value = true;
+      int32_t q = from_string<int32_t>(rows[r][0]);
+      plotted_quality_min = min(plotted_quality_min, q);
+      plotted_quality_max = max(plotted_quality_max, q);
     }
   }
   if (!found_value) return;
@@ -323,6 +329,22 @@ void plot_error_rates(const string& in_file, const string& out_file)
 
   int quality_min = from_string<int32_t>(rows.front()[0]);
   int quality_max = from_string<int32_t>(rows.back()[0]);
+
+  // Reads whose bases all have one quality score give a table with data for that one score only:
+  // a single row when the score is kept as it is (--no-constant-base-quality-replacement), which
+  // gave gnuplot an x range of zero width that it refuses to plot ("Can't plot with an empty x
+  // range!"), stopping breseq; or rows 0 to the replacement score with only the last one filled,
+  // which put every point on the right border. Center the one score in a range padded around it.
+  if (plotted_quality_min == plotted_quality_max) {
+    quality_min = plotted_quality_min;
+    quality_max = plotted_quality_max;
+  }
+  int x_range_min = quality_min;
+  int x_range_max = quality_max;
+  if (x_range_min == x_range_max) {
+    x_range_min--;
+    x_range_max++;
+  }
 
   // Fixed color per observed base, matching plot_error_rate.r's *_col variables.
   struct base_color { char base; string color; };
@@ -340,7 +362,7 @@ void plot_error_rates(const string& in_file, const string& out_file)
   s << "set border lw 2" << endl;
   s << "set xlabel 'Base quality score'" << endl;
   s << "set ylabel 'Error rate'" << endl;
-  s << "set xrange [" << quality_min << ":" << quality_max << "]" << endl;
+  s << "set xrange [" << x_range_min << ":" << x_range_max << "]" << endl;
   s << "set xtics " << quality_min << ", 5, " << quality_max << endl;
   s << "set logscale y" << endl;
   s << "set format y '10^{%T}'" << endl;

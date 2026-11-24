@@ -87,6 +87,7 @@ namespace breseq {
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
+                                        const uint32_t constant_base_quality_replacement,
                                         const uint32_t num_threads,
                                         const uint32_t long_read_pair_distance,
                                         const string &lp1_convert_file_name,
@@ -164,7 +165,10 @@ namespace breseq {
       uint32_t lp_read_length_max[2] = {0, 0};
     };
 
+    const char constant_base_quality_replacement_char = static_cast<char>(format_to_chr_offset["SANGER"] + constant_base_quality_replacement);
+
     auto run_pass = [&](const string& pass_quality_format,
+                         const bool replace_base_qualities,
                          std::function<bool(cFastqSequence&)> get_next_sequence) -> AttemptResult
     {
       AttemptResult r;
@@ -212,6 +216,12 @@ namespace breseq {
 
         // fastq quality convert
         fqc.convert_sequence(original_sequence);
+
+        // Every base in the file has the same score: it carries no information (see fastq.h).
+        // Replaced before trimming, which would otherwise act on the uninformative scores.
+        if (replace_base_qualities) {
+          original_sequence.m_qualities.assign(original_sequence.m_qualities.size(), constant_base_quality_replacement_char);
+        }
 
         // trim bad quality scores from the end
         if (trim_end_on_base_quality) {
@@ -435,21 +445,33 @@ namespace breseq {
       return input_fastq_file.read_sequence(seq, fqc_for_offset);
     };
 
-    AttemptResult result = run_pass(quality_format, get_buffered_then_stream);
+    // Whether every base has one quality score is decided from the same reads and checked
+    // against the whole file below, so that a file whose scores are informative is read only once
+    bool replace_base_qualities = (constant_base_quality_replacement != 0) && (sniffed_min_quality_score == sniffed_max_quality_score);
+
+    AttemptResult result = run_pass(quality_format, replace_base_qualities, get_buffered_then_stream);
 
     // ---- Check whether the format predicted from the sniff matches the format
     // derived from the actual min/max quality scores seen over the whole file ----
     string corrected_quality_format = predict_format_from_min_quality_score(result.overall_min_quality_score);
+    const bool file_has_constant_base_quality = (result.num_original_bases > 0) && (result.overall_min_quality_score == result.overall_max_quality_score);
+    const bool corrected_replace_base_qualities = (constant_base_quality_replacement != 0) && file_has_constant_base_quality;
 
     unique_ptr<cFastqFile> fresh_input_fastq_file;
 
-    if (corrected_quality_format != quality_format) {
+    if ((corrected_quality_format != quality_format) || (corrected_replace_base_qualities != replace_base_qualities)) {
 
-      cerr << "    Warning: Quality score format predicted from the first " << FASTQ_FORMAT_SNIFF_READS << " reads (" << quality_format
-           << ") did not match the format determined from the entire file (" << corrected_quality_format << ")." << endl;
+      if (corrected_quality_format != quality_format) {
+        cerr << "    Warning: Quality score format predicted from the first " << FASTQ_FORMAT_SNIFF_READS << " reads (" << quality_format
+             << ") did not match the format determined from the entire file (" << corrected_quality_format << ")." << endl;
+      }
+      if (corrected_replace_base_qualities != replace_base_qualities) {
+        cerr << "    Warning: Every base in the first " << FASTQ_FORMAT_SNIFF_READS << " reads had the same quality score, but the entire file has more than one." << endl;
+      }
       cerr << "    Re-converting FASTQ file using corrected quality score format..." << endl;
 
       quality_format = corrected_quality_format;
+      replace_base_qualities = corrected_replace_base_qualities;
 
       fresh_input_fastq_file.reset(new cFastqFile(file_name.c_str(), fstream::in, num_threads));
       cFastqQualityConverter fresh_read_fqc(quality_format, "SANGER");
@@ -458,7 +480,7 @@ namespace breseq {
         return fresh_input_fastq_file->read_sequence(seq, fresh_read_fqc);
       };
 
-      result = run_pass(quality_format, get_fresh);
+      result = run_pass(quality_format, replace_base_qualities, get_fresh);
     }
 
     // Every pass reads the whole file, so the original totals already include the reads that
@@ -478,10 +500,21 @@ namespace breseq {
     uint8_t min_quality_score = (uint8_t)min_max_sequence.m_qualities[0] - format_to_chr_offset["SANGER"];
     uint8_t max_quality_score = (uint8_t)min_max_sequence.m_qualities[1] - format_to_chr_offset["SANGER"];
 
+    // The converted reads carry the replacement, and stage 07 sizes its error table from these
+    int32_t replaced_constant_base_quality = -1;
+    if (replace_base_qualities) {
+      replaced_constant_base_quality = min_quality_score;
+      min_quality_score = static_cast<uint8_t>(constant_base_quality_replacement);
+      max_quality_score = static_cast<uint8_t>(constant_base_quality_replacement);
+    }
+
     uint32_t width_for_reads = to_string(num_original_reads).size();
     uint32_t width_for_bases = to_string(num_original_bases).size();
 
     cerr << "    Original base quality format: " << quality_format << " New format: SANGER"<< endl;
+    if (replace_base_qualities) {
+      warn_constant_base_quality(file_name, replaced_constant_base_quality, constant_base_quality_replacement);
+    }
     cerr << "    Original reads: " << num_original_reads << " bases: "<< num_original_bases << endl;
 
     if (num_filtered_coverage_limit_reads) {
@@ -548,6 +581,7 @@ namespace breseq {
                                  "SANGER",
                                  convert_file_name
                                  );
+    retval.replaced_constant_base_quality = replaced_constant_base_quality;
 
     // Synthetic long-read pairs get a summary per mate file. The original-read and filtered
     // counts stay with the file the reads came from (retval), so nothing is counted twice.
@@ -573,6 +607,7 @@ namespace breseq {
                                  "SANGER",
                                  lp_convert_file_names[m]
                                  );
+        lp_summaries[m]->replaced_constant_base_quality = replaced_constant_base_quality;
       }
     }
     return retval;
@@ -594,6 +629,7 @@ namespace breseq {
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
+                                        const uint32_t constant_base_quality_replacement,
                                         const uint32_t num_threads
                                         )
   {
@@ -639,8 +675,13 @@ namespace breseq {
       uint64_t num_filtered_coverage_limit_bases[2] = {0, 0};
     };
 
+    const char constant_base_quality_replacement_char = static_cast<char>(format_to_chr_offset["SANGER"] + constant_base_quality_replacement);
+
+    // replace_base_qualities_r1/_r2: every base of that file has one quality score (see fastq.h)
     auto run_pass_paired = [&](
         const string& pass_quality_format,
+        const bool replace_base_qualities_r1,
+        const bool replace_base_qualities_r2,
         std::function<bool(cFastqSequence&)> get_next_r1,
         std::function<bool(cFastqSequence&)> get_next_r2) -> PairResult
     {
@@ -705,6 +746,10 @@ namespace breseq {
 
         fqc.convert_sequence(orig_r1);
         fqc.convert_sequence(orig_r2);
+
+        // Replaced before trimming, which would otherwise act on the uninformative scores
+        if (replace_base_qualities_r1) orig_r1.m_qualities.assign(orig_r1.m_qualities.size(), constant_base_quality_replacement_char);
+        if (replace_base_qualities_r2) orig_r2.m_qualities.assign(orig_r2.m_qualities.size(), constant_base_quality_replacement_char);
 
         if (trim_end_on_base_quality) {
           fastq_sequence_trim_end_on_base_quality(orig_r1, trim_end_on_base_quality);
@@ -822,6 +867,7 @@ namespace breseq {
     buffered_reads.reserve(FASTQ_FORMAT_SNIFF_READS);
 
     uint8_t sniffed_min_quality_score = 255;
+    uint8_t sniffed_max_quality_score = 0;
 
     {
       cFastqSequence seq;
@@ -829,6 +875,7 @@ namespace breseq {
         for (uint32_t i = 0; i < seq.m_qualities.size(); i++) {
           uint8_t q = static_cast<uint8_t>(seq.m_qualities[i]);
           sniffed_min_quality_score = min(sniffed_min_quality_score, q);
+          sniffed_max_quality_score = max(sniffed_max_quality_score, q);
         }
         buffered_reads.push_back(seq);
         seq = cFastqSequence();
@@ -860,19 +907,39 @@ namespace breseq {
       return r2_input.read_sequence(seq, r2_initial_fqc);
     };
 
-    PairResult result = run_pass_paired(quality_format, get_buffered_then_stream_r1, get_r2_stream);
+    // Only R1 is sniffed, so R2 is first assumed to be like it; both are checked over the whole files
+    // below, and converted again if either guess was wrong.
+    bool replace_base_qualities_r1 = (constant_base_quality_replacement != 0) && (sniffed_min_quality_score == sniffed_max_quality_score);
+    bool replace_base_qualities_r2 = replace_base_qualities_r1;
+
+    PairResult result = run_pass_paired(quality_format, replace_base_qualities_r1, replace_base_qualities_r2, get_buffered_then_stream_r1, get_r2_stream);
 
     // ---- Check format from R1's actual min quality score (same logic as normalize_fastq) ----
     string corrected_quality_format = predict_format_from_min_quality_score(result.r1.overall_min_quality_score);
+    auto file_has_constant_base_quality = [](const FileResult& fr) -> bool {
+      return (fr.num_original_bases > 0) && (fr.overall_min_quality_score == fr.overall_max_quality_score);
+    };
+    const bool corrected_replace_base_qualities_r1 = (constant_base_quality_replacement != 0) && file_has_constant_base_quality(result.r1);
+    const bool corrected_replace_base_qualities_r2 = (constant_base_quality_replacement != 0) && file_has_constant_base_quality(result.r2);
+    const bool replacement_guess_wrong = (corrected_replace_base_qualities_r1 != replace_base_qualities_r1)
+                                      || (corrected_replace_base_qualities_r2 != replace_base_qualities_r2);
 
     unique_ptr<cFastqFile> fresh_r1, fresh_r2;
 
-    if (corrected_quality_format != quality_format) {
-      cerr << "    Warning: Quality score format predicted from the first " << FASTQ_FORMAT_SNIFF_READS << " reads (" << quality_format
-           << ") did not match the format determined from the entire file (" << corrected_quality_format << ")." << endl;
+    if ((corrected_quality_format != quality_format) || replacement_guess_wrong) {
+      if (corrected_quality_format != quality_format) {
+        cerr << "    Warning: Quality score format predicted from the first " << FASTQ_FORMAT_SNIFF_READS << " reads (" << quality_format
+             << ") did not match the format determined from the entire file (" << corrected_quality_format << ")." << endl;
+      }
+      if (replacement_guess_wrong) {
+        cerr << "    Warning: Whether every base has the same quality score, judged from the first " << FASTQ_FORMAT_SNIFF_READS
+             << " reads of R1, did not hold for the entire R1 and R2 files." << endl;
+      }
       cerr << "    Re-converting FASTQ files using corrected quality score format..." << endl;
 
       quality_format = corrected_quality_format;
+      replace_base_qualities_r1 = corrected_replace_base_qualities_r1;
+      replace_base_qualities_r2 = corrected_replace_base_qualities_r2;
 
       fresh_r1.reset(new cFastqFile(r1_file_name.c_str(), fstream::in, num_threads));
       fresh_r2.reset(new cFastqFile(r2_file_name.c_str(), fstream::in, num_threads));
@@ -887,7 +954,7 @@ namespace breseq {
         return fresh_r2->read_sequence(seq, fresh_r2_fqc);
       };
 
-      result = run_pass_paired(quality_format, get_fresh_r1, get_fresh_r2);
+      result = run_pass_paired(quality_format, replace_base_qualities_r1, replace_base_qualities_r2, get_fresh_r1, get_fresh_r2);
     }
 
     // Every pass reads both files to the end, so the original totals already include the pairs
@@ -902,7 +969,8 @@ namespace breseq {
 
     auto build_summary = [&](const FileResult& fr,
                               uint64_t ncov_reads, uint64_t ncov_bases,
-                              const string& convert_name) -> AnalyzeFastqSummary {
+                              const string& convert_name,
+                              const bool replaced_base_qualities) -> AnalyzeFastqSummary {
       cFastqSequence mm_seq;
       mm_seq.m_qualities.append(1, (char)fr.overall_min_quality_score);
       mm_seq.m_qualities.append(1, (char)fr.overall_max_quality_score);
@@ -910,13 +978,21 @@ namespace breseq {
       uint8_t min_q = (uint8_t)mm_seq.m_qualities[0] - format_to_chr_offset["SANGER"];
       uint8_t max_q = (uint8_t)mm_seq.m_qualities[1] - format_to_chr_offset["SANGER"];
 
+      // The converted reads carry the replacement, and stage 07 sizes its error table from these
+      int32_t replaced_constant_base_quality = -1;
+      if (replaced_base_qualities) {
+        replaced_constant_base_quality = min_q;
+        min_q = static_cast<uint8_t>(constant_base_quality_replacement);
+        max_q = static_cast<uint8_t>(constant_base_quality_replacement);
+      }
+
       // The original totals already include the reads --limit-fold-coverage did not choose
       (void)ncov_bases;
       uint64_t num_orig_reads = fr.num_original_reads;
       uint64_t num_orig_bases = fr.num_original_bases;
       double avg = (fr.num_reads > 0) ? static_cast<double>(fr.num_bases) / static_cast<double>(fr.num_reads) : 0.0;
 
-      return AnalyzeFastqSummary(
+      AnalyzeFastqSummary afs(
           fr.read_length_min,
           fr.read_length_max,
           avg,
@@ -935,10 +1011,12 @@ namespace breseq {
           "SANGER",
           convert_name
       );
+      afs.replaced_constant_base_quality = replaced_constant_base_quality;
+      return afs;
     };
 
-    AnalyzeFastqSummary s_r1 = build_summary(result.r1, num_filtered_coverage_limit_reads_r1, num_filtered_coverage_limit_bases_r1, r1_convert_file_name);
-    AnalyzeFastqSummary s_r2 = build_summary(result.r2, num_filtered_coverage_limit_reads_r2, num_filtered_coverage_limit_bases_r2, r2_convert_file_name);
+    AnalyzeFastqSummary s_r1 = build_summary(result.r1, num_filtered_coverage_limit_reads_r1, num_filtered_coverage_limit_bases_r1, r1_convert_file_name, replace_base_qualities_r1);
+    AnalyzeFastqSummary s_r2 = build_summary(result.r2, num_filtered_coverage_limit_reads_r2, num_filtered_coverage_limit_bases_r2, r2_convert_file_name, replace_base_qualities_r2);
 
     // Print combined summary for paired files
     uint64_t total_orig_reads = s_r1.num_original_reads + s_r2.num_original_reads;
@@ -950,6 +1028,8 @@ namespace breseq {
     uint32_t width_for_bases = to_string(total_orig_bases).size();
 
     cerr << "    Original base quality format: " << quality_format << " New format: SANGER" << endl;
+    if (replace_base_qualities_r1) warn_constant_base_quality(r1_file_name, s_r1.replaced_constant_base_quality, constant_base_quality_replacement);
+    if (replace_base_qualities_r2) warn_constant_base_quality(r2_file_name, s_r2.replaced_constant_base_quality, constant_base_quality_replacement);
     cerr << "    Original reads: " << total_orig_reads << " bases: " << total_orig_bases << endl;
 
     uint64_t total_cov_filtered = num_filtered_coverage_limit_reads_r1 + num_filtered_coverage_limit_reads_r2;
@@ -989,6 +1069,19 @@ namespace breseq {
     cerr << "    Analyzed reads: " << setw(width_for_reads) << total_reads << " bases: " << setw(width_for_bases) << total_bases << endl;
 
     return {s_r1, s_r2};
+  }
+
+  void warn_constant_base_quality(const string& file_name, const uint32_t original_quality, const uint32_t replacement_quality)
+  {
+    string original = (original_quality == kMissingBamBaseQuality)
+                      ? "no base quality scores (QUAL is '*')"
+                      : "the same base quality score (Q" + to_string(original_quality) + ")";
+    WARN("Every base in read file " + file_name + "\nhas " + original + ". These scores carry no information:\n"
+         "PacBio CLR reads downloaded from the SRA, for example, are all Q0. breseq will treat them as\n"
+         "uninformative and give every base in this file quality score Q" + to_string(replacement_quality) + " instead.\n"
+         "Its error rate is calibrated from the reads, as for any quality score.\n"
+         "Set the score with --constant-base-quality-replacement, or keep the original scores\n"
+         "with --no-constant-base-quality-replacement.");
   }
 
   // converts a sequence file

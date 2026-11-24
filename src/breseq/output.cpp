@@ -1321,6 +1321,21 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << endl;
   }
 
+  // Read files whose bases all had one quality score, which was replaced (see fastq.h)
+  const map<string, uint32_t>& constant_base_quality_files = summary.sequence_conversion.constant_base_quality_files;
+  if (!constant_base_quality_files.empty()) {
+    vector<string> file_descriptions;
+    for (map<string, uint32_t>::const_iterator it = constant_base_quality_files.begin(); it != constant_base_quality_files.end(); it++) {
+      string original = (it->second == kMissingBamBaseQuality) ? "no quality scores" : "Q" + to_string(it->second);
+      file_descriptions.push_back(it->first + " (" + original + ")");
+    }
+    HTML << "<p><b>Warning:</b> Every base in " << (file_descriptions.size() == 1 ? "read file " : "read files ") << join(file_descriptions, ", ")
+         << " had the same base quality score. These scores carry no information, so every base in "
+         << (file_descriptions.size() == 1 ? "this file" : "these files") << " was given quality score Q"
+         << summary.sequence_conversion.constant_base_quality_replacement
+         << " instead (--constant-base-quality-replacement). Its error rate was calibrated from the reads, as for any quality score." << endl;
+  }
+
   ////
   // Write paired-end mapping distance information
   ////

@@ -820,6 +820,11 @@ bool soft_clip_alignment_ends(
                               );
 
 // Class to read in bam format output by breseq
+//! Whether every base of a SAM/BAM file has one quality score, which is returned in quality (see
+//  kDefaultConstantBaseQualityReplacement in fastq.h). Stops reading at the first base whose score
+//  differs, so a file with informative scores is barely read; only a constant one is read to the end.
+bool sam_file_constant_base_quality(const string& file_name, uint8_t& quality);
+
 class bam_file {
   
 public:

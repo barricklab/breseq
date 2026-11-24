@@ -672,6 +672,38 @@ bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, i
   }
 }
 
+bool sam_file_constant_base_quality(const string& file_name, uint8_t& quality)
+{
+  samFile* in = hts_open(file_name.c_str(), "r");
+  ASSERT(in, "Could not open SAM/BAM file: " + file_name);
+  sam_hdr_t* header = sam_hdr_read(in);
+  ASSERT(header, "Could not read header of SAM/BAM file: " + file_name);
+  bam1_t* b = bam_init1();
+
+  bool seen_base = false;
+  bool constant = true;
+  int ret;
+  // Records without a sequence (a secondary alignment's SEQ of '*') have no qualities to compare
+  while (constant && ((ret = sam_read1(in, header, b)) >= 0)) {
+    const uint8_t* q = bam_get_qual(b);
+    for (int32_t i = 0; i < b->core.l_qseq; i++) {
+      if (!seen_base) {
+        quality = q[i];
+        seen_base = true;
+      } else if (q[i] != quality) {
+        constant = false;
+        break;
+      }
+    }
+  }
+  ASSERT(!constant || (ret == -1), "Error reading SAM/BAM file: " + file_name);
+
+  bam_destroy1(b);
+  sam_hdr_destroy(header);
+  hts_close(in);
+  return constant && seen_base;
+}
+
 bam_file::~bam_file()
 {
   if (m_bam_file) { hts_close(m_bam_file); m_bam_file=NULL; }
