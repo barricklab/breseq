@@ -845,7 +845,7 @@ diff_entry_list_t::iterator cGenomeDiff::remove(diff_entry_list_t::iterator remo
     while (evidence_id_it != test_mut->_evidence.end()) {
       advance_it = true;
       if (*evidence_id_it == (*remove_it)->_id) {
-        test_mut->_evidence.erase(evidence_id_it);
+        evidence_id_it = test_mut->_evidence.erase(evidence_id_it);
         advance_it = false;
       }
       if (advance_it) ++evidence_id_it;

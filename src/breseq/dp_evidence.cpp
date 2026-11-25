@@ -699,22 +699,38 @@ namespace breseq {
   // Robust innermost edge on ONE side: process that side's reads innermost-first and drop the innermost
   // whenever ITS inferred insert (at the position set by the next distinct read) is an outlier; stop at the
   // first read that fits and return its inner edge. `this_side` selects which side's inner edge varies.
+  //
+  // Several reads can share one inner edge, and they are peeled or kept as a group: the group is kept
+  // when ANY of its reads fits. This used to test only whichever read std::sort happened to put first,
+  // and libstdc++ and libc++ order equal elements differently, so Linux and macOS tested different
+  // reads and could stop at different edges. In tests/jc_is_copy_merge_1 that put one DP's IS side on
+  // a different IS630 copy on each platform (AP025630:35666 vs 32644). The comparator also breaks ties
+  // on every field, so pr's order no longer depends on the standard library.
   static int32_t dp_robust_edge(vector<dp_pair_ends> pr, bool this_is_side1,
                                 int32_t s_this, int32_t p_other, int32_t s_other, const dp_insert_model& m) {
-    // innermost-first sort by this side's inner edge
-    if (this_is_side1) sort(pr.begin(), pr.end(), [&](const dp_pair_ends&a,const dp_pair_ends&b){ return s_this==-1 ? a.i1>b.i1 : a.i1<b.i1; });
-    else               sort(pr.begin(), pr.end(), [&](const dp_pair_ends&a,const dp_pair_ends&b){ return s_this==-1 ? a.i2>b.i2 : a.i2<b.i2; });
     auto inner = [&](const dp_pair_ends& p){ return this_is_side1 ? p.i1 : p.i2; };
+    // innermost-first by this side's inner edge, then a total order on the remaining fields
+    sort(pr.begin(), pr.end(), [&](const dp_pair_ends& a, const dp_pair_ends& b) {
+      if (inner(a) != inner(b)) return (s_this == -1) ? (inner(a) > inner(b)) : (inner(a) < inner(b));
+      if (a.o1 != b.o1) return a.o1 < b.o1;
+      if (a.o2 != b.o2) return a.o2 < b.o2;
+      if (a.i1 != b.i1) return a.i1 < b.i1;
+      return a.i2 < b.i2;
+    });
     size_t i = 0;
     while (i + 1 < pr.size()) {
       size_t j = i + 1;
       while (j < pr.size() && inner(pr[j]) == inner(pr[i])) j++;   // next DISTINCT inner edge
       if (j >= pr.size()) break;
       int32_t p_rest = inner(pr[j]);
-      int32_t reach_this  = this_is_side1 ? dp_reach(p_rest, pr[i].o1, s_this) : dp_reach(p_rest, pr[i].o2, s_this);
-      int32_t reach_other = this_is_side1 ? dp_reach(p_other, pr[i].o2, s_other) : dp_reach(p_other, pr[i].o1, s_other);
-      if (m.BF_read(reach_this + reach_other) >= 1.0 / 3.0) break;  // innermost read fits -> keep
-      i = j;                                                        // outlier -> peel to next distinct edge
+      bool fits = false;
+      for (size_t g = i; g < j && !fits; g++) {
+        int32_t reach_this  = this_is_side1 ? dp_reach(p_rest, pr[g].o1, s_this) : dp_reach(p_rest, pr[g].o2, s_this);
+        int32_t reach_other = this_is_side1 ? dp_reach(p_other, pr[g].o2, s_other) : dp_reach(p_other, pr[g].o1, s_other);
+        fits = (m.BF_read(reach_this + reach_other) >= 1.0 / 3.0);
+      }
+      if (fits) break;  // a read at the innermost edge fits -> keep
+      i = j;            // every read there is an outlier -> peel to the next distinct edge
     }
     return inner(pr[i]);
   }
@@ -922,12 +938,12 @@ namespace breseq {
   }
 
   // Negative-binomial pmf P(X=c) parametrized by (size, mu): mean mu, variance mu + mu^2/size.
+  // dnbinom_mu (stats.h) is written not to cancel at the huge sizes a fit to a Poisson-like histogram
+  // returns; this used to repeat the cancelling textbook form, see the note there.
   static double dp_nbinom_pmf(int32_t c, double size, double mu)
   {
     if (!(size > 0.0) || !(mu > 0.0) || c < 0) return 0.0;
-    double prob = size / (size + mu);   // P(success); mean of failures = size*(1-prob)/prob = mu
-    return exp(lgamma(static_cast<double>(c) + size) - lgamma(size) - lgamma(static_cast<double>(c) + 1.0)
-               + size * log(prob) + static_cast<double>(c) * log(1.0 - prob));
+    return dnbinom_mu(static_cast<double>(c), size, mu);
   }
 
   // The per-position thinning CDF: probability that a reference position with crossing c, at relative
@@ -1051,15 +1067,36 @@ namespace breseq {
 
     // P(X >= k | X >= 1): the conditional tail, since only region pairs sharing at least one read
     // pair ever become an edge.
+    //
+    // Once P(X <= k-1) passes one half, the tail is summed upward from k instead of taken as 1 - below.
+    // For the k of a real junction (tens to hundreds of pairs against a mean of a few) the true tail is
+    // far below 1e-16, so 1 - below was pure rounding noise -- a multiple of 2^-53 set by the last bits
+    // of exp and lgamma, which differ between glibc and Apple's libm, so background_e_value differed
+    // between Linux and macOS (2.404e-14 vs 1.202e-14) on nearly every DP item.
+    double pmf(int32_t i) const {
+      return (size > 0.0) ? dp_nbinom_pmf(i, size, mu) : exp(-mu + i * log(mu) - lgamma(i + 1.0));
+    }
     double tail(int32_t k) const {
       if (!ok || k <= 1) return 1.0;
       double p0 = (size > 0.0) ? dp_nbinom_pmf(0, size, mu) : exp(-mu);
       double denom = 1.0 - p0;
       if (!(denom > 0.0)) return 1.0;
       double below = 0.0;                                    // P(X <= k-1)
-      for (int32_t i = 0; i < k; i++)
-        below += (size > 0.0) ? dp_nbinom_pmf(i, size, mu) : exp(-mu + i * log(mu) - lgamma(i + 1.0));
-      double above = 1.0 - below;
+      for (int32_t i = 0; i < k; i++) below += pmf(i);
+      double above;
+      if (below <= 0.5) {
+        above = 1.0 - below;
+      } else {
+        // Terms past the mode only shrink, so stop once one no longer changes the sum. The mode is
+        // below the mean, so i > mu means the terms are decreasing.
+        above = 0.0;
+        const int32_t i_max = k + 10000000;
+        for (int32_t i = k; i < i_max; i++) {
+          double t = pmf(i);
+          above += t;
+          if (static_cast<double>(i) > mu && (t == 0.0 || t <= above * 1e-17)) break;
+        }
+      }
       if (above < 0.0) above = 0.0;
       return above / denom;
     }
@@ -2374,7 +2411,8 @@ namespace breseq {
     // Lay pairs out by leftmost read coordinate for a tidy pileup.
     sort(reads.begin(), reads.end(), [](const dp_draw_read& a, const dp_draw_read& b) {
       if (a.read_start != b.read_start) return a.read_start < b.read_start;
-      return a.read_end < b.read_end;
+      if (a.read_end != b.read_end) return a.read_end < b.read_end;
+      return a.name < b.name;   // total order, so the lane layout does not depend on the std::sort
     });
 
     int n = static_cast<int>(reads.size());
@@ -2528,7 +2566,9 @@ namespace breseq {
 
     // Lay pairs out by their left (side_1) extent.
     sort(pairs.begin(), pairs.end(), [&](const dp_joined_pair& a, const dp_joined_pair& b) {
-      return min(j1(a.s1_start), j1(a.s1_end)) < min(j1(b.s1_start), j1(b.s1_end));
+      int64_t la = min(j1(a.s1_start), j1(a.s1_end)), lb = min(j1(b.s1_start), j1(b.s1_end));
+      if (la != lb) return la < lb;
+      return a.s1_name < b.s1_name;   // total order, so the lane layout does not depend on the std::sort
     });
 
     int n = static_cast<int>(pairs.size());

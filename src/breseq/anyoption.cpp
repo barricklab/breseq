@@ -117,9 +117,18 @@ namespace breseq {
 
 		strcpy( long_opt_prefix , "--" );
 
+		// The ioctl fails whenever stdin is not a terminal (CI, pipes, batch jobs), and it used to be
+		// unchecked: ws was left as stack garbage, so the usage text was wrapped to a random width.
+		// A width at or below USAGE_LEFT_COLUMN_WIDTH made word_wrap() insert newlines forever, which
+		// is how gdtools REMOVE in tests/gdtools_remove_4 spun for six minutes on an Ubuntu CI runner
+		// and died with std::bad_alloc before printing anything. A real terminal that narrow did the
+		// same. Fall back to 80 when there is no terminal, and never wrap narrower than kMinWrap.
 		struct winsize ws;
-    ioctl(0,TIOCGWINSZ,&ws);
-		terminal_width = (ws.ws_col==0) ? 80 : ws.ws_col;
+		memset(&ws, 0, sizeof(ws));
+		if (ioctl(0, TIOCGWINSZ, &ws) != 0) ws.ws_col = 0;
+		terminal_width = (ws.ws_col == 0) ? 80 : ws.ws_col;
+		const int kMinWrap = 20;
+		if (terminal_width < USAGE_LEFT_COLUMN_WIDTH + kMinWrap) terminal_width = USAGE_LEFT_COLUMN_WIDTH + kMinWrap;
 	}
 
 	void
@@ -1032,6 +1041,8 @@ namespace breseq {
 	{
     //cout << "Sentence:" << sentence << endl;
     //cout << width << endl;
+		// Below one column every character would be pushed onto a new line of its own, forever.
+		if (width < 1) width = 1;
 		string::iterator it = sentence.begin();
 		string::iterator last_space = sentence.begin();
     

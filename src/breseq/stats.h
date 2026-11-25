@@ -89,13 +89,39 @@ namespace breseq {
 
   // Negative binomial PMF in R's (size, mu) parametrization.
   // Equivalent to R's dnbinom(k, size=size, mu=mu).
+  //
+  // Written so that it does not cancel as size grows. In the textbook form,
+  // lngamma(k + size) - lngamma(size) + size*log(p) subtracts numbers of order size*log(size); at the
+  // size ~1e13 that a fit to an under-dispersed (Poisson-like) histogram drifts to, those are ~4e14 with
+  // an ulp of ~0.06, so the pmf carried several percent of noise. That noise is the last bits of
+  // lgamma/log, which differ between glibc and Apple's libm. fit_censored_negative_binomial minimizes
+  // an objective built from this pmf, so on such a histogram Nelder-Mead wandered through the noise and
+  // stopped at a different (mu, size) on each platform. That moved DP neg_log10_discordance_p_value by
+  // 0.1 between Linux and macOS (tests/jc_is_copy_merge_1). Regrouped:
+  //   log pmf = R - lgamma(k+1) + k*log(mu) - (size + k)*log1p(mu/size),
+  //   R = lgamma(k+size) - lgamma(size) - k*log(size).
+  // For size >= 10, R comes from the difference of the two Stirling series, in which the large terms
+  // cancel algebraically rather than numerically:
+  //   R = (size + k - 1/2)*log1p(k/size) - k + c(size + k) - c(size),
+  //   c(x) = 1/(12x) - 1/(360x^3) + 1/(1260x^5) - 1/(1680x^7)   (truncation error < 1e-12 at x >= 10).
+  // Below 10, lgamma(size) is small and the direct difference keeps its precision. Checked against a
+  // quad-precision reference for k in [0, 5e4], size in [0.01, 1e17], mu in [0.5, 3e4]: the absolute
+  // error in log pmf is at most 1.2e-10 on values near -5e5, where the textbook form reached inf.
   inline double dnbinom_mu(double k, double size, double mu)
   {
     ASSERT((size > 0) && (mu > 0), "Domain error in dnbinom_mu");
-    double p = size / (size + mu);
     double sign;
-    double log_pmf = lngamma(k + size, &sign) - lngamma(size, &sign) - lngamma(k + 1, &sign)
-                    + size * log(p) + k * log(1.0 - p);
+    double R;
+    if (size >= 10.0) {
+      auto stirling_c = [](double x) {
+        const double x2 = x * x;
+        return 1.0 / (12.0 * x) - 1.0 / (360.0 * x * x2) + 1.0 / (1260.0 * x * x2 * x2) - 1.0 / (1680.0 * x * x2 * x2 * x2);
+      };
+      R = (size + k - 0.5) * log1p(k / size) - k + stirling_c(size + k) - stirling_c(size);
+    } else {
+      R = lngamma(k + size, &sign) - lngamma(size, &sign) - k * log(size);
+    }
+    double log_pmf = R - lngamma(k + 1, &sign) + k * log(mu) - (size + k) * log1p(mu / size);
     return exp(log_pmf);
   }
 
