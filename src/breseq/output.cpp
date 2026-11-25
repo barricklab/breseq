@@ -1335,6 +1335,26 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
          << " told reliably from base qualities, and no setting is chosen from an inferred read type." << endl;
   }
 
+  // Mate-pair libraries, whose reads were cut at the junction adapter (see fastq.h)
+  {
+    vector<string> file_descriptions;
+    for (const auto& rfs : settings.read_file_sets) {
+      for (const auto& rf_file : rfs.m_files) {
+        map<string, AnalyzeFastqSummary>::const_iterator it = summary.sequence_conversion.reads.find(rf_file.m_base_name);
+        if ((it == summary.sequence_conversion.reads.end()) || !it->second.junction_adapter_trimmed) continue;
+        const AnalyzeFastqSummary& s = it->second;
+        double percent_trimmed = (s.num_original_reads > 0) ? 100.0 * static_cast<double>(s.num_junction_adapter_trimmed_reads) / static_cast<double>(s.num_original_reads) : 0.0;
+        file_descriptions.push_back(rf_file.m_base_name + " (" + s.junction_adapter_name + ", " + to_string(percent_trimmed, 1) + "% of reads cut)");
+      }
+    }
+    if (!file_descriptions.empty()) {
+      HTML << "<p><b>Warning:</b> " << (file_descriptions.size() == 1 ? "Read file " : "Read files ") << join(file_descriptions, ", ")
+           << (file_descriptions.size() == 1 ? " looks" : " look") << " like a mate-pair library: many reads contain the junction adapter."
+           << " A read through that adapter joins the two ends of a fragment several kb long, so breseq cut each such read at the adapter and kept the part before it."
+           << " For better results, process the reads with a tool made for mate-pair libraries before running breseq." << endl;
+    }
+  }
+
   // Read files whose bases all had one quality score, which was replaced (see fastq.h)
   const map<string, uint32_t>& constant_base_quality_files = summary.sequence_conversion.constant_base_quality_files;
   if (!constant_base_quality_files.empty()) {

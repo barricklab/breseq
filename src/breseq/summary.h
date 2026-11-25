@@ -178,6 +178,13 @@ namespace breseq{
     // fills in what it detected; stage 1 then overrides it with a type given on the command line.
     string read_type;
     string read_type_source;
+    // Mate-pair junction adapter (see fastq.h): which one, the fraction of the first reads that
+    // contain it, whether that made breseq cut the file's reads at it, and how much was cut.
+    string junction_adapter_name;
+    double junction_adapter_fraction = 0.0;
+    bool junction_adapter_trimmed = false;
+    uint64_t num_junction_adapter_trimmed_reads = 0;
+    uint64_t num_junction_adapter_trimmed_bases = 0;
     
     AnalyzeFastqSummary()
     : read_length_min(0)
@@ -960,6 +967,7 @@ namespace breseq{
     uint32_t read_file_long_read_split_length;
     bool read_file_long_read_distribute_remainder;
     bool detect_constant_base_quality;
+    bool trim_mate_pair_junction_adapters;
     uint32_t constant_base_quality_replacement;
 
     

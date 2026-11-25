@@ -1762,6 +1762,7 @@ int breseq_default_action(int argc, char* argv[])
               settings.read_file_long_read_split_length,
               settings.read_file_long_read_distribute_remainder,
               constant_base_quality_replacement,
+              settings.trim_mate_pair_junction_adapters,
               settings.num_processors
           );
           AnalyzeFastqSummary& s_r1 = paired_result.first;
@@ -1831,6 +1832,7 @@ int breseq_default_action(int argc, char* argv[])
                                                        settings.read_file_long_read_split_length,
                                                        settings.read_file_long_read_distribute_remainder,
                                                        constant_base_quality_replacement,
+                                                       settings.trim_mate_pair_junction_adapters,
                                                        settings.num_processors,
                                                        settings.read_file_long_read_pair_distance,
                                                        lp_convert_file_names[0],

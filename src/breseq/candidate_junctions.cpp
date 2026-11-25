@@ -2135,6 +2135,12 @@ namespace breseq {
         cout << "Unique read sequence: " << unique_read_seq_string << endl;
       }
     }
+
+    // Never a junction: the bases between the two sides are a mate-pair junction adapter, so the
+    // read joins the two ends of a library fragment, not two places in this genome (see MATE-PAIR
+    // JUNCTION ADAPTERS in fastq.h). Sequence conversion cuts these reads in a mate-pair library;
+    // this catches the ones it misses, and adapter chimeras in any library.
+    if (contains_mate_pair_junction_adapter_kmer(unique_read_seq_string)) return false;
     
     // Construct a sequence from a temporary DiffEntry
     cDiffEntry jc(JC);

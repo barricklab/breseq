@@ -100,6 +100,10 @@ class cAnnotatedSequence;
                                         // all have one quality score (0 = keep them as they are).
                                         // See kDefaultConstantBaseQualityReplacement below.
                                         const uint32_t constant_base_quality_replacement,
+                                        // Cut the reads of a mate-pair library at its junction
+                                        // adapter (see MATE-PAIR JUNCTION ADAPTERS below). The
+                                        // library is detected and reported either way.
+                                        const bool trim_mate_pair_junction_adapters,
                                         const uint32_t num_threads = 1,
                                         // EXPERIMENTAL synthetic pairs from long reads. When
                                         // long_read_pair_distance is nonzero, a split piece is
@@ -134,6 +138,7 @@ class cAnnotatedSequence;
                                         const uint32_t long_read_split_length,
                                         const bool long_read_distribute_remainder,
                                         const uint32_t constant_base_quality_replacement,
+                                        const bool trim_mate_pair_junction_adapters,
                                         const uint32_t num_threads = 1
                                         );
 
@@ -243,6 +248,93 @@ class cAnnotatedSequence;
   string read_type_source_description(const string& read_type_source);
 
   class cReadTypeDetector;
+
+  // MATE-PAIR JUNCTION ADAPTERS
+  //
+  // A mate-pair library circularizes each fragment of several kb and sequences across the
+  // junction, so a read is genome, then the junction adapter, then genome from the OTHER END of
+  // the fragment, kilobases away. Two protocols leave a known adapter there:
+  //
+  //   Illumina Nextera mate pair   CTGTCTCTTATACACATCT|AGATGTGTATAAGAGACAG   (two Tn5 mosaic ends
+  //                                back to back; its own reverse complement)
+  //   Cre-lox (454 and Illumina    TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACG   (a loxP site)
+  //   long mate pair)
+  //
+  // Such libraries are deposited as ordinary paired runs, and left alone they wreck the junction
+  // steps. Every read through the adapter is a chimera, breseq built candidate junctions whose
+  // unique sequence was the adapter, and each adapter read then seeded on hundreds of them under
+  // bowtie2 -k 2000: 37 minutes per file against 15 seconds for an ordinary library of the same
+  // genome (Nextera, DRR315860 against DRR315859), and 52 predicted junctions that were every one
+  // the Cre-lox adapter (SRR2084429, at 24-fold coverage).
+  //
+  // breseq protects itself in two places:
+  //
+  //  1. Sequence conversion counts the reads of the first sample that contain an exact adapter.
+  //     A file with at least kMatePairJunctionAdapterFraction of them is a mate-pair library
+  //     (26-51% of reads in five such runs; an ordinary library sequenced on the same flowcell
+  //     as one had 0.1%, from index hopping, which is why the gate is not zero). Its reads are
+  //     cut at the adapter, keeping the part before it: that piece keeps the mate-pair relation
+  //     to the other read of the pair, where the part after it belongs to the other end of the
+  //     fragment. breseq warns and reports it, since a tool made for mate-pair libraries
+  //     recovers more of the data. Files below the gate are not touched at all, so nothing
+  //     changes for any other library. --no-mate-pair-adapter-trimming keeps the reads as they
+  //     are; the library is still reported.
+  //
+  //  2. Candidate junctions whose unique read sequence contains adapter are never made
+  //     (CandidateJunctions::alignment_pair_to_candidate_junction), for the reads the trimming
+  //     misses -- adapters with indels or several errors, about 0.6% of reads -- and for any
+  //     library.
+  //
+  // A mate-pair library with no adapter at its junctions (the original Illumina protocol) cannot
+  // be handled this way and is not detected.
+  struct cMatePairJunctionAdapter {
+    string name;       // for messages: "Nextera mate-pair junction adapter"
+    string sequence;   // as given above; reads may contain it or its reverse complement
+  };
+  //! The known junction adapters.
+  const vector<cMatePairJunctionAdapter>& mate_pair_junction_adapters();
+
+  const double   kMatePairJunctionAdapterFraction = 0.02;    // of sampled reads with an exact adapter
+  const uint32_t kJunctionAdapterMaxMismatches = 2;          // allowed in either half of the adapter
+  const uint32_t kJunctionAdapterMinEndMatch = 10;           // bases of adapter a read may end in
+  const uint32_t kJunctionAdapterKmer = 12;                  // adapter k-mer that disqualifies a junction
+
+  //! Index (in mate_pair_junction_adapters()) of an adapter the sequence contains exactly, on
+  //  either strand; -1 if none.
+  int32_t exact_mate_pair_junction_adapter(const string& sequence);
+  //! Where to cut a read to remove a junction adapter and everything after it; string::npos if
+  //  it has none. Finds either half of an adapter, on either strand, with up to
+  //  kJunctionAdapterMaxMismatches mismatches, and a read that ends partway into one (at least
+  //  kJunctionAdapterMinEndMatch bases of it).
+  size_t mate_pair_junction_adapter_position(const string& sequence);
+  //! True if the sequence contains kJunctionAdapterKmer consecutive bases of a junction adapter.
+  bool contains_mate_pair_junction_adapter_kmer(const string& sequence);
+
+  //! Counts the junction adapters in the first reads of a file, to decide whether it is a
+  //  mate-pair library.
+  class cMatePairJunctionAdapterCounter {
+  public:
+    cMatePairJunctionAdapterCounter() : m_num_reads(0), m_counts(mate_pair_junction_adapters().size(), 0) {}
+    void add(const string& sequence)
+    {
+      m_num_reads++;
+      int32_t index = exact_mate_pair_junction_adapter(sequence);
+      if (index >= 0) m_counts[index]++;
+    }
+    //! Fraction of the reads with the most common adapter, and that adapter's name ("" if none)
+    double fraction(string& adapter_name) const
+    {
+      adapter_name = "";
+      size_t best = 0;
+      for (size_t i = 1; i < m_counts.size(); i++) if (m_counts[i] > m_counts[best]) best = i;
+      if ((m_num_reads == 0) || m_counts.empty() || (m_counts[best] == 0)) return 0.0;
+      adapter_name = mate_pair_junction_adapters()[best].name;
+      return static_cast<double>(m_counts[best]) / static_cast<double>(m_num_reads);
+    }
+  private:
+    uint64_t m_num_reads;
+    vector<uint64_t> m_counts;
+  };
 
   //! Feeds the first reads of a FASTQ file to a detector (breseq SUMMARIZE-FASTQ; the pipeline
   //  does this inside normalize_fastq, from the reads it has already buffered).

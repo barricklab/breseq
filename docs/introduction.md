@@ -61,6 +61,19 @@ the read names include the basecaller model: base qualities differ as much
 between libraries as between basecalling modes. _breseq_ still reports its
 best guess, but it will not choose any setting from that guess alone.
 
+_breseq_ recognizes Illumina mate-pair libraries whose reads contain a
+junction adapter (the Nextera mate-pair adapter or the Cre-lox adapter). A
+read through that adapter joins the two ends of a fragment several kilobases
+long, so it is not one piece of the genome. When at least 2% of the first
+reads in a file contain the adapter, _breseq_ warns that the file is a
+mate-pair library, cuts each such read at the adapter and keeps the part
+before it. It also never predicts a new junction whose unique sequence is
+one of these adapters, in any library. The `--no-mate-pair-adapter-trimming`
+option keeps the reads as they are. You will get more out of a mate-pair
+library by processing it with a tool made for the purpose before running
+_breseq_; this handling is there so that an unprocessed library still gives
+a usable result in normal time.
+
 _breseq_ was initially developed to analyze data from the Lenski
 long-term evolution experiment with *E. coli* [(Link to LTEE
 Website)](https://the-ltee.org).

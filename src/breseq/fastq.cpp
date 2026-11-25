@@ -74,6 +74,12 @@ namespace breseq {
 
    */
 
+  // Defined with the rest of the mate-pair junction adapter code, below
+  namespace {
+    size_t trim_mate_pair_junction_adapter(cFastqSequence& seq);
+    void warn_mate_pair_junction_adapter(const string& file_name, const double fraction, const string& adapter_name, const bool trimming);
+  }
+
   AnalyzeFastqSummary normalize_fastq(
                                         const string &file_name,
                                         const string &convert_file_name,
@@ -88,6 +94,7 @@ namespace breseq {
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
                                         const uint32_t constant_base_quality_replacement,
+                                        const bool trim_mate_pair_junction_adapters,
                                         const uint32_t num_threads,
                                         const uint32_t long_read_pair_distance,
                                         const string &lp1_convert_file_name,
@@ -149,6 +156,8 @@ namespace breseq {
       uint64_t num_bases = 0;
       uint64_t num_filtered_too_short_reads = 0;
       uint64_t num_filtered_too_short_bases = 0;
+      uint64_t num_junction_adapter_trimmed_reads = 0;
+      uint64_t num_junction_adapter_trimmed_bases = 0;
       uint64_t num_filtered_same_base_reads = 0;
       uint64_t num_filtered_same_base_bases = 0;
       uint64_t num_filtered_too_many_N_reads = 0;
@@ -166,6 +175,12 @@ namespace breseq {
     };
 
     const char constant_base_quality_replacement_char = static_cast<char>(format_to_chr_offset["SANGER"] + constant_base_quality_replacement);
+
+    // Decided from the first reads, below, before any pass runs
+    bool is_mate_pair_library = false;
+    bool trim_junction_adapter = false;
+    double junction_adapter_fraction = 0.0;
+    string junction_adapter_name;
 
     auto run_pass = [&](const string& pass_quality_format,
                          const bool replace_base_qualities,
@@ -221,6 +236,15 @@ namespace breseq {
         // Replaced before trimming, which would otherwise act on the uninformative scores.
         if (replace_base_qualities) {
           original_sequence.m_qualities.assign(original_sequence.m_qualities.size(), constant_base_quality_replacement_char);
+        }
+
+        // Mate-pair library: cut the read at the junction adapter (see fastq.h)
+        if (trim_junction_adapter) {
+          size_t removed = trim_mate_pair_junction_adapter(original_sequence);
+          if (removed) {
+            r.num_junction_adapter_trimmed_reads++;
+            r.num_junction_adapter_trimmed_bases += removed;
+          }
         }
 
         // trim bad quality scores from the end
@@ -415,10 +439,12 @@ namespace breseq {
     // are replaced, the qualities converted or replaced, and long reads split.
     cReadTypeDetector read_type_detector;
     bool sniffed_numerical_qualities = false;
+    cMatePairJunctionAdapterCounter junction_adapter_counter;
 
     {
       cFastqSequence seq;
       while ( (buffered_reads.size() < FASTQ_FORMAT_SNIFF_READS) && input_fastq_file.read_sequence(seq, prelim_fqc) ) {
+        junction_adapter_counter.add(seq.m_sequence);
         for (uint32_t i=0; i<seq.m_qualities.size(); i++) {
           uint8_t this_score = static_cast<uint8_t>(seq.m_qualities[i]);
           sniffed_min_quality_score = min(sniffed_min_quality_score, this_score);
@@ -432,6 +458,12 @@ namespace breseq {
     }
 
     string quality_format = predict_format_from_min_quality_score(sniffed_min_quality_score);
+
+    // A mate-pair library, judged from the same reads (see fastq.h). Set before the first pass,
+    // which captures it, and not revisited: a second pass must trim the same reads.
+    junction_adapter_fraction = junction_adapter_counter.fraction(junction_adapter_name);
+    is_mate_pair_library = (junction_adapter_fraction >= kMatePairJunctionAdapterFraction);
+    trim_junction_adapter = is_mate_pair_library && trim_mate_pair_junction_adapters;
 
     // Adjustment for buffered reads that were read in numerical-quality format using
     // the preliminary ILLUMINA_1.3+ offset (64), but should have used the chosen format's offset.
@@ -523,6 +555,11 @@ namespace breseq {
       warn_constant_base_quality(file_name, replaced_constant_base_quality, constant_base_quality_replacement);
     }
     cerr << "    Original reads: " << num_original_reads << " bases: "<< num_original_bases << endl;
+    if (is_mate_pair_library) warn_mate_pair_junction_adapter(file_name, junction_adapter_fraction, junction_adapter_name, trim_junction_adapter);
+    if (trim_junction_adapter) {
+      cerr << "    Mate-pair junction adapter trimmed from reads: " << result.num_junction_adapter_trimmed_reads
+           << " bases removed: " << result.num_junction_adapter_trimmed_bases << endl;
+    }
 
     if (num_filtered_coverage_limit_reads) {
       cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_coverage_limit_reads;
@@ -589,6 +626,11 @@ namespace breseq {
                                  convert_file_name
                                  );
     retval.replaced_constant_base_quality = replaced_constant_base_quality;
+    retval.junction_adapter_fraction = junction_adapter_fraction;
+    retval.junction_adapter_name = junction_adapter_name;
+    retval.junction_adapter_trimmed = trim_junction_adapter;
+    retval.num_junction_adapter_trimmed_reads = result.num_junction_adapter_trimmed_reads;
+    retval.num_junction_adapter_trimmed_bases = result.num_junction_adapter_trimmed_bases;
     // Numerical qualities were read with the preliminary offset whatever the format turned out to be
     read_type_detector.detect(sniffed_numerical_qualities ? static_cast<uint8_t>(prelim_offset) : format_to_chr_offset[quality_format],
                               retval.read_type, retval.read_type_source);
@@ -642,6 +684,7 @@ namespace breseq {
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
                                         const uint32_t constant_base_quality_replacement,
+                                        const bool trim_mate_pair_junction_adapters,
                                         const uint32_t num_threads
                                         )
   {
@@ -672,6 +715,8 @@ namespace breseq {
       uint64_t num_bases = 0;
       uint64_t num_filtered_too_short_reads = 0;
       uint64_t num_filtered_too_short_bases = 0;
+      uint64_t num_junction_adapter_trimmed_reads = 0;
+      uint64_t num_junction_adapter_trimmed_bases = 0;
       uint64_t num_filtered_same_base_reads = 0;
       uint64_t num_filtered_same_base_bases = 0;
       uint64_t num_filtered_too_many_N_reads = 0;
@@ -690,6 +735,12 @@ namespace breseq {
     const char constant_base_quality_replacement_char = static_cast<char>(format_to_chr_offset["SANGER"] + constant_base_quality_replacement);
 
     // replace_base_qualities_r1/_r2: every base of that file has one quality score (see fastq.h)
+    // Decided from the first reads of R1, below, before any pass runs (see fastq.h)
+    bool is_mate_pair_library = false;
+    bool trim_junction_adapter = false;
+    double junction_adapter_fraction = 0.0;
+    string junction_adapter_name;
+
     auto run_pass_paired = [&](
         const string& pass_quality_format,
         const bool replace_base_qualities_r1,
@@ -762,6 +813,15 @@ namespace breseq {
         // Replaced before trimming, which would otherwise act on the uninformative scores
         if (replace_base_qualities_r1) orig_r1.m_qualities.assign(orig_r1.m_qualities.size(), constant_base_quality_replacement_char);
         if (replace_base_qualities_r2) orig_r2.m_qualities.assign(orig_r2.m_qualities.size(), constant_base_quality_replacement_char);
+
+        // Mate-pair library: cut each read at the junction adapter (see fastq.h). A read cut
+        // shorter than --read-min-length takes its mate with it, below, like any short read.
+        if (trim_junction_adapter) {
+          size_t removed = trim_mate_pair_junction_adapter(orig_r1);
+          if (removed) { pr.r1.num_junction_adapter_trimmed_reads++; pr.r1.num_junction_adapter_trimmed_bases += removed; }
+          removed = trim_mate_pair_junction_adapter(orig_r2);
+          if (removed) { pr.r2.num_junction_adapter_trimmed_reads++; pr.r2.num_junction_adapter_trimmed_bases += removed; }
+        }
 
         if (trim_end_on_base_quality) {
           fastq_sequence_trim_end_on_base_quality(orig_r1, trim_end_on_base_quality);
@@ -884,10 +944,12 @@ namespace breseq {
     // Judged from R1 alone, like the quality format: the two files of a pair are one library
     cReadTypeDetector read_type_detector;
     bool sniffed_numerical_qualities = false;
+    cMatePairJunctionAdapterCounter junction_adapter_counter;
 
     {
       cFastqSequence seq;
       while ((buffered_reads.size() < FASTQ_FORMAT_SNIFF_READS) && r1_input.read_sequence(seq, prelim_fqc)) {
+        junction_adapter_counter.add(seq.m_sequence);
         for (uint32_t i = 0; i < seq.m_qualities.size(); i++) {
           uint8_t q = static_cast<uint8_t>(seq.m_qualities[i]);
           sniffed_min_quality_score = min(sniffed_min_quality_score, q);
@@ -903,6 +965,11 @@ namespace breseq {
     string quality_format = predict_format_from_min_quality_score(sniffed_min_quality_score);
 
     int32_t numerical_quality_offset_adjustment = prelim_offset - static_cast<int32_t>(format_to_chr_offset[quality_format]);
+
+    // A mate-pair library, judged from R1 like the quality format: both files are one library
+    junction_adapter_fraction = junction_adapter_counter.fraction(junction_adapter_name);
+    is_mate_pair_library = (junction_adapter_fraction >= kMatePairJunctionAdapterFraction);
+    trim_junction_adapter = is_mate_pair_library && trim_mate_pair_junction_adapters;
 
     size_t buffered_idx = 0;
     auto get_buffered_then_stream_r1 = [&](cFastqSequence& seq) -> bool {
@@ -1030,6 +1097,11 @@ namespace breseq {
           convert_name
       );
       afs.replaced_constant_base_quality = replaced_constant_base_quality;
+      afs.junction_adapter_fraction = junction_adapter_fraction;
+      afs.junction_adapter_name = junction_adapter_name;
+      afs.junction_adapter_trimmed = trim_junction_adapter;
+      afs.num_junction_adapter_trimmed_reads = fr.num_junction_adapter_trimmed_reads;
+      afs.num_junction_adapter_trimmed_bases = fr.num_junction_adapter_trimmed_bases;
       return afs;
     };
 
@@ -1053,6 +1125,11 @@ namespace breseq {
     if (replace_base_qualities_r1) warn_constant_base_quality(r1_file_name, s_r1.replaced_constant_base_quality, constant_base_quality_replacement);
     if (replace_base_qualities_r2) warn_constant_base_quality(r2_file_name, s_r2.replaced_constant_base_quality, constant_base_quality_replacement);
     cerr << "    Original reads: " << total_orig_reads << " bases: " << total_orig_bases << endl;
+    if (is_mate_pair_library) warn_mate_pair_junction_adapter(r1_file_name, junction_adapter_fraction, junction_adapter_name, trim_junction_adapter);
+    if (trim_junction_adapter) {
+      cerr << "    Mate-pair junction adapter trimmed from reads: " << (s_r1.num_junction_adapter_trimmed_reads + s_r2.num_junction_adapter_trimmed_reads)
+           << " bases removed: " << (s_r1.num_junction_adapter_trimmed_bases + s_r2.num_junction_adapter_trimmed_bases) << endl;
+    }
 
     uint64_t total_cov_filtered = num_filtered_coverage_limit_reads_r1 + num_filtered_coverage_limit_reads_r2;
     if (total_cov_filtered) {
@@ -1091,6 +1168,162 @@ namespace breseq {
     cerr << "    Analyzed reads: " << setw(width_for_reads) << total_reads << " bases: " << setw(width_for_bases) << total_bases << endl;
 
     return {s_r1, s_r2};
+  }
+
+  // ---- Mate-pair junction adapters (see fastq.h) ----
+
+  const vector<cMatePairJunctionAdapter>& mate_pair_junction_adapters()
+  {
+    static vector<cMatePairJunctionAdapter> adapters;
+    if (adapters.empty()) {
+      cMatePairJunctionAdapter nextera;
+      nextera.name = "Nextera mate-pair junction adapter";
+      nextera.sequence = "CTGTCTCTTATACACATCTAGATGTGTATAAGAGACAG";
+      adapters.push_back(nextera);
+      cMatePairJunctionAdapter cre_lox;
+      cre_lox.name = "Cre-lox mate-pair junction adapter";
+      cre_lox.sequence = "TCGTATAACTTCGTATAATGTATGCTATACGAAGTTATTACG";
+      adapters.push_back(cre_lox);
+    }
+    return adapters;
+  }
+
+  namespace {
+
+    // One strand of one adapter, as it may be read
+    struct JunctionAdapterPattern {
+      size_t adapter_index;
+      string sequence;
+      string first_half;
+      string second_half;
+    };
+
+    // Both strands of every adapter (one, for an adapter that is its own reverse complement)
+    const vector<JunctionAdapterPattern>& junction_adapter_patterns()
+    {
+      static vector<JunctionAdapterPattern> patterns;
+      if (patterns.empty()) {
+        const vector<cMatePairJunctionAdapter>& adapters = mate_pair_junction_adapters();
+        for (size_t i = 0; i < adapters.size(); i++) {
+          vector<string> strands;
+          strands.push_back(adapters[i].sequence);
+          string rc = reverse_complement(adapters[i].sequence);
+          if (rc != adapters[i].sequence) strands.push_back(rc);
+          for (size_t s = 0; s < strands.size(); s++) {
+            JunctionAdapterPattern p;
+            p.adapter_index = i;
+            p.sequence = strands[s];
+            p.first_half = p.sequence.substr(0, p.sequence.size() / 2);
+            p.second_half = p.sequence.substr(p.sequence.size() / 2);
+            patterns.push_back(p);
+          }
+        }
+      }
+      return patterns;
+    }
+
+    // First position at which pattern matches sequence with at most max_mismatches; npos if none
+    size_t find_with_mismatches(const string& sequence, const string& pattern, const uint32_t max_mismatches)
+    {
+      const size_t pattern_length = pattern.size();
+      if (sequence.size() < pattern_length) return string::npos;
+      const size_t last = sequence.size() - pattern_length;
+      for (size_t i = 0; i <= last; i++) {
+        uint32_t mismatches = 0;
+        size_t j = 0;
+        for (; j < pattern_length; j++) {
+          if ((sequence[i + j] != pattern[j]) && (++mismatches > max_mismatches)) break;
+        }
+        if (j == pattern_length) return i;
+      }
+      return string::npos;
+    }
+  }
+
+  int32_t exact_mate_pair_junction_adapter(const string& sequence)
+  {
+    const vector<JunctionAdapterPattern>& patterns = junction_adapter_patterns();
+    for (size_t p = 0; p < patterns.size(); p++)
+      if (sequence.find(patterns[p].sequence) != string::npos) return static_cast<int32_t>(patterns[p].adapter_index);
+    return -1;
+  }
+
+  size_t mate_pair_junction_adapter_position(const string& sequence)
+  {
+    const vector<JunctionAdapterPattern>& patterns = junction_adapter_patterns();
+    size_t cut = string::npos;
+
+    for (size_t p = 0; p < patterns.size(); p++) {
+      const JunctionAdapterPattern& pattern = patterns[p];
+
+      // The first half: the adapter starts here
+      size_t pos = find_with_mismatches(sequence, pattern.first_half, kJunctionAdapterMaxMismatches);
+      if ((pos != string::npos) && ((cut == string::npos) || (pos < cut))) cut = pos;
+
+      // The second half: the adapter started one first half before it, even if that half is too
+      // damaged to recognize or the read begins inside it
+      pos = find_with_mismatches(sequence, pattern.second_half, kJunctionAdapterMaxMismatches);
+      if (pos != string::npos) {
+        size_t start = (pos >= pattern.first_half.size()) ? pos - pattern.first_half.size() : 0;
+        if ((cut == string::npos) || (start < cut)) cut = start;
+      }
+    }
+    if (cut != string::npos) return cut;
+
+    // The read ends partway into the first half of an adapter
+    for (size_t p = 0; p < patterns.size(); p++) {
+      const string& first_half = patterns[p].first_half;
+      for (size_t length = first_half.size() - 1; length >= kJunctionAdapterMinEndMatch; length--) {
+        if ((sequence.size() >= length) && (sequence.compare(sequence.size() - length, length, first_half, 0, length) == 0)) {
+          size_t start = sequence.size() - length;
+          if ((cut == string::npos) || (start < cut)) cut = start;
+          break;
+        }
+      }
+    }
+    return cut;
+  }
+
+  bool contains_mate_pair_junction_adapter_kmer(const string& sequence)
+  {
+    if (sequence.size() < kJunctionAdapterKmer) return false;
+    const vector<JunctionAdapterPattern>& patterns = junction_adapter_patterns();
+    for (size_t p = 0; p < patterns.size(); p++) {
+      const string& adapter = patterns[p].sequence;
+      for (size_t i = 0; i + kJunctionAdapterKmer <= adapter.size(); i++) {
+        if (sequence.find(adapter.c_str() + i, 0, kJunctionAdapterKmer) != string::npos) return true;
+      }
+    }
+    return false;
+  }
+
+  namespace {
+    // Cuts a read at a junction adapter. Returns the number of bases removed (0 = no adapter).
+    size_t trim_mate_pair_junction_adapter(cFastqSequence& seq)
+    {
+      size_t cut = mate_pair_junction_adapter_position(seq.m_sequence);
+      if (cut == string::npos) return 0;
+      size_t removed = seq.m_sequence.size() - cut;
+      seq.m_sequence.erase(cut);
+      seq.m_qualities.erase(cut);
+      // The N and same-base filters work from these, which are counted as the read is read
+      memset(seq.m_base_counts, 0, sizeof(seq.m_base_counts));
+      for (size_t j = 0; j < seq.m_sequence.size(); j++) seq.m_base_counts[basechar2index(seq.m_sequence[j])]++;
+      return removed;
+    }
+
+    void warn_mate_pair_junction_adapter(const string& file_name, const double fraction, const string& adapter_name, const bool trimming)
+    {
+      WARN("Read file " + file_name + "\nlooks like a MATE-PAIR library: "
+           + formatted_double(100.0 * fraction, 1).to_string() + "% of its first reads contain the\n"
+           + adapter_name + ".\n"
+           "A read through that adapter joins the two ends of a fragment that is several kb long, so it\n"
+           "is not one piece of the genome. "
+           + (trimming ? string("breseq will cut these reads at the adapter and keep the part\nbefore it.")
+                       : string("These reads are being used as they are, because\n--no-mate-pair-adapter-trimming was given."))
+           + " For better results, process the reads with a tool made for mate-pair libraries\n"
+           "before running breseq.");
+    }
   }
 
   // ---- Read types (see fastq.h) ----

@@ -202,6 +202,11 @@ void to_json(json& j, const AnalyzeFastqSummary& s)
     {"replaced_constant_base_quality", s.replaced_constant_base_quality},
     {"read_type", s.read_type},
     {"read_type_source", s.read_type_source},
+    {"junction_adapter_name", s.junction_adapter_name},
+    {"junction_adapter_fraction", s.junction_adapter_fraction},
+    {"junction_adapter_trimmed", s.junction_adapter_trimmed},
+    {"num_junction_adapter_trimmed_reads", s.num_junction_adapter_trimmed_reads},
+    {"num_junction_adapter_trimmed_bases", s.num_junction_adapter_trimmed_bases},
   };
 }
 
@@ -232,6 +237,12 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
   // Absent from summaries written before read types existed
   s.read_type = j.count("read_type") ? j.at("read_type").get<string>() : "";
   s.read_type_source = j.count("read_type_source") ? j.at("read_type_source").get<string>() : "";
+  // Absent from summaries written before mate-pair junction adapters were detected
+  s.junction_adapter_name = j.count("junction_adapter_name") ? j.at("junction_adapter_name").get<string>() : "";
+  s.junction_adapter_fraction = j.count("junction_adapter_fraction") ? get_double_or_default(j, "junction_adapter_fraction") : 0.0;
+  s.junction_adapter_trimmed = j.count("junction_adapter_trimmed") ? j.at("junction_adapter_trimmed").get<bool>() : false;
+  s.num_junction_adapter_trimmed_reads = j.count("num_junction_adapter_trimmed_reads") ? j.at("num_junction_adapter_trimmed_reads").get<uint64_t>() : 0;
+  s.num_junction_adapter_trimmed_bases = j.count("num_junction_adapter_trimmed_bases") ? j.at("num_junction_adapter_trimmed_bases").get<uint64_t>() : 0;
 }
   
 // PreprocessAlignmentsSummary
@@ -858,6 +869,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   read_file_long_read_split_length = t.read_file_long_read_split_length;
   read_file_long_read_distribute_remainder = t.read_file_long_read_distribute_remainder;
   detect_constant_base_quality = t.detect_constant_base_quality;
+  trim_mate_pair_junction_adapters = t.trim_mate_pair_junction_adapters;
   constant_base_quality_replacement = t.constant_base_quality_replacement;
   
   //! Settings: Read Alignment
@@ -1191,6 +1203,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"read_file_long_read_split_length", s.read_file_long_read_split_length},
       {"read_file_long_read_distribute_remainder", s.read_file_long_read_distribute_remainder},
       {"detect_constant_base_quality", s.detect_constant_base_quality},
+      {"trim_mate_pair_junction_adapters", s.trim_mate_pair_junction_adapters},
       {"constant_base_quality_replacement", s.constant_base_quality_replacement},
       }
     },

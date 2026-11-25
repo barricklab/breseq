@@ -372,6 +372,7 @@ namespace breseq
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
     uint32_t read_file_long_read_pair_distance; // Default = 2000 COMMAND-LINE OPTION (0 = OFF)
     bool detect_constant_base_quality;          // Default = true COMMAND-LINE OPTION (disable with --no-constant-base-quality-replacement)
+    bool trim_mate_pair_junction_adapters;      // Default = true COMMAND-LINE OPTION (disable with --no-mate-pair-adapter-trimming; see fastq.h)
     uint32_t constant_base_quality_replacement; // Default = 20 COMMAND-LINE OPTION (see fastq.h)
     bool paired_mapping;                                     // Default = true COMMAND-LINE OPTION (disable with --no-paired-mapping)
     bool predict_discordant_pairs;                           // Default = true COMMAND-LINE OPTION (disable with --no-discordant-pair-prediction; requires paired-mapping)

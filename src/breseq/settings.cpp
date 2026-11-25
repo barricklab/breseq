@@ -373,6 +373,7 @@ namespace breseq
     ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("long-read-pair-distance", "Make synthetic read pairs from long reads: each piece of a split long read is paired with the piece this many bases downstream on the same read (the outer span of the pair; rounded to a whole number of pieces). Both pieces stay on the strand of the read they were cut from, so the pairs are FF with the first mate upstream. This lets discordant pair (DP), missing pair (MP) and pair distance (PD) evidence be predicted from long reads. Pieces without a partner are still used as unpaired reads. Set to 0 to split long reads into unpaired pieces only. (0 = OFF)", 2000, NORMAL_OPTION)
     ("constant-base-quality-replacement", "If every base in a read file has the same base quality score, the scores carry no information. PacBio CLR reads downloaded from the SRA, for example, are all Q0, which is at or below --base-quality-cutoff, so every base would otherwise be ignored. For such a file, breseq prints a warning and gives every base this quality score instead. Its error rate is still calibrated from the data, as for any quality score. Applies to FASTQ and --aligned-sam input. Turn off with --no-constant-base-quality-replacement.", kDefaultConstantBaseQualityReplacement, NORMAL_OPTION)
+    ("no-mate-pair-adapter-trimming", "Do not cut reads at mate-pair junction adapters. By default, when at least 2% of the first reads in a file contain the Nextera mate-pair or Cre-lox junction adapter, breseq treats the file as a mate-pair library and cuts each read at the adapter, keeping the part before it. With this option such a file is still reported, but its reads are used as they are. New junctions made of adapter sequence are never predicted either way.", TAKES_NO_ARGUMENT, EXPERT_OPTION)
     ("no-constant-base-quality-replacement", "Keep the base quality scores of a read file as they are, even when every base has the same score (see --constant-base-quality-replacement).", TAKES_NO_ARGUMENT, EXPERT_OPTION)
     ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", NORMAL_OPTION)
     ;
@@ -787,6 +788,7 @@ namespace breseq
     this->read_file_long_read_distribute_remainder = options.count("long-read-distribute-remainder");
     this->read_file_long_read_pair_distance = from_string<uint32_t>(options["long-read-pair-distance"]);
     this->detect_constant_base_quality = !options.count("no-constant-base-quality-replacement");
+    this->trim_mate_pair_junction_adapters = !options.count("no-mate-pair-adapter-trimming");
     this->constant_base_quality_replacement = from_string<uint32_t>(options["constant-base-quality-replacement"]);
     if (this->read_file_long_read_pair_distance && !this->paired_mapping) {
       // Only complain when the user asked for pairing explicitly; the default is nonzero, so a bare
@@ -1605,6 +1607,7 @@ namespace breseq
     this->read_file_long_read_distribute_remainder = false;
     this->read_file_long_read_pair_distance = 2000;
     this->detect_constant_base_quality = true;
+    this->trim_mate_pair_junction_adapters = true;
     this->constant_base_quality_replacement = kDefaultConstantBaseQualityReplacement;
     this->paired_mapping = true;
     this->predict_discordant_pairs = true;
