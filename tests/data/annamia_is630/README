@@ -1,0 +1,19 @@
+Data for the jc_is_copy_merge_* tests: one unique junction side joined to the same end of a
+multicopy IS element through two different copies of it.
+
+AP025630_is630_windows.gbk.gz is cut from the Annamia dubia NIES-4383 chromosome (GenBank
+AP025630, assembly GCA_055394725.1) with ISEScan IS annotations added as mobile_element features.
+It is the 23 windows listed in its DEFINITION line, joined in order into one linear sequence: every
+IS630_443 copy +/- 600 bp, plus wider windows around the junction. Only mobile_element features
+were kept; each one's /note gives its original coordinates.
+
+DRR285493_subset_{1,2}.fastq.gz are 5,868 read pairs from Illumina run DRR285493 (SRA), already
+renamed by breseq's sequence conversion: the pairs that align near the junction or the IS630_443
+ends involved, minus three pairs of the weaker candidate's support (so that its coverage-evenness
+score straddles the cutoff used by jc_is_copy_merge_2).
+
+In this sequence the unique side is AP025630:21294 (-1). Two candidate junctions join it to the 5'
+end of IS630_443 through copies ending at 33786 and 36808. Both copies differ from the consensus
+near that end, so the two junction sequences differ and are scored separately; both redundant IS
+sides are then normalized onto the consensus copy ending at 3353, so the two candidates resolve to
+the same JC entry.

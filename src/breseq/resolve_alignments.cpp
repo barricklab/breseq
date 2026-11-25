@@ -345,6 +345,100 @@ void write_held_discordant_pairs(Settings& settings, Summary& summary, cReferenc
                                  const SequenceTrimsList& trims_list, bam_file& resolved_reference_tam,
                                  vector<HeldDiscordantPair>& held_discordant_pairs);
 
+// A JC entry built from one recorded candidate junction, held until every candidate is built so
+// that candidates resolving to the same entry can be merged (see emit_one_jc_per_identity).
+struct ResolvedJunctionEntry {
+  cDiffEntry item;
+  JunctionTestInfo test_info;
+  bool passed;
+  ResolvedJunctionEntry(const cDiffEntry& _item, const JunctionTestInfo& _test_info, bool _passed)
+    : item(_item), test_info(_test_info), passed(_passed) {}
+};
+
+/*! Write one JC entry per identity to gd, and return how many candidates were merged away.
+
+    A JC entry's identity is only its positional columns (both sides and the resolved overlap), and
+    junction_to_diff_entry() rewrites those: it gives overlap to one side, moves a side to the end of
+    a nearby IS, and moves every REDUNDANT side onto the lowest-coordinate copy of its repeat family
+    whose sequence is the family consensus. So two candidate junctions can come out as one entry --
+    most often a unique side joined to the same end of an IS family through two different copies
+    (e.g. AP025630:1456605 and AP025630:1378324 both becoming AP025630:23352). Their junction
+    sequences differ, so they were scored as separate candidates, but once the copy is normalized
+    away they make the same claim, and writing both is a fatal duplicate in cGenomeDiff::write().
+
+    Each identity keeps its best-supported candidate: one that passed over one that was rejected,
+    then the higher pos_hash_score, then more spanning reads, then the smaller key, so the survivor
+    does not depend on the order candidates were resolved in. The survivor's test statistics are
+    kept as they are -- they are what its pass/fail decision was based on.
+
+    Read support is combined only where resolution already credited the reads to a junction. When
+    the survivor and a merged candidate both passed, the merged candidate's reads sit in the junction
+    BAM under its own key, so that key is listed in the survivor's merged_keys and
+    assign_one_junction_read_counts() counts its reads as support for the survivor. A REJECTED merged
+    candidate's reads were written back to the reference BAM as reference reads, so they are not
+    added: counting them for the junction as well would count them twice.
+ */
+static const char* kMergedJunctionKeys = "merged_keys";
+
+static uint32_t emit_one_jc_per_identity(
+                                         vector<ResolvedJunctionEntry>& entries,
+                                         cGenomeDiff& gd,
+                                         PosHashScoreDistribution& accepted_pos_hash_score_distribution
+                                         )
+{
+  // Is a better supported than b?
+  auto better = [](const ResolvedJunctionEntry& a, const ResolvedJunctionEntry& b) -> bool {
+    if (a.passed != b.passed) return a.passed;
+    if (a.test_info.pos_hash_score != b.test_info.pos_hash_score)
+      return a.test_info.pos_hash_score > b.test_info.pos_hash_score;
+    if (a.test_info.total_non_overlap_reads != b.test_info.total_non_overlap_reads)
+      return a.test_info.total_non_overlap_reads > b.test_info.total_non_overlap_reads;
+    return a.test_info.junction_id < b.test_info.junction_id;
+  };
+
+  // Group by identity (exactly the comparison cGenomeDiff's duplicate check uses), best first.
+  vector<size_t> order;
+  for (size_t i = 0; i < entries.size(); i++) order.push_back(i);
+  sort(order.begin(), order.end(), [&](size_t i, size_t j) -> bool {
+    int32_t c = cDiffEntry::compare(entries[i].item, entries[j].item);
+    if (c != 0) return c < 0;
+    return better(entries[i], entries[j]);
+  });
+
+  vector<bool> merged_away(entries.size(), false);
+  uint32_t num_merged = 0;
+  for (size_t g = 0; g < order.size(); ) {
+    ResolvedJunctionEntry& kept = entries[order[g]];
+    size_t h = g + 1;
+    for ( ; (h < order.size()) && (cDiffEntry::compare(kept.item, entries[order[h]].item) == 0); h++) {
+      const ResolvedJunctionEntry& dup = entries[order[h]];
+      merged_away[order[h]] = true;
+      num_merged++;
+
+      if (kept.passed && dup.passed) {
+        // KEY:side_1_continuation:side_2_continuation -- the continuations set this key's own
+        // counting window, which can differ from the survivor's (they depend on the copy's flanks).
+        string merged = dup.test_info.junction_id
+          + ":" + to_string<uint32_t>(dup.test_info.side_1_continuation)
+          + ":" + to_string<uint32_t>(dup.test_info.side_2_continuation);
+        kept.item[kMergedJunctionKeys] = kept.item.entry_exists(kMergedJunctionKeys)
+          ? kept.item[kMergedJunctionKeys] + "," + merged : merged;
+      }
+    }
+    g = h;
+  }
+
+  // Emit in the original order, so a run without merges writes exactly what it wrote before.
+  for (size_t i = 0; i < entries.size(); i++) {
+    if (merged_away[i]) continue;
+    if (entries[i].passed)
+      accepted_pos_hash_score_distribution.add_score(entries[i].test_info.pos_hash_score);
+    gd.add(entries[i].item);
+  }
+
+  return num_merged;
+}
+
 // Compares matches to candidate junctions with matches to original genome
 void resolve_alignments(
                         Settings& settings,
@@ -798,17 +892,18 @@ void resolve_alignments(
     deferred_failed_junction_test_info_list.sort();
   }
 
-  PosHashScoreDistribution accepted_pos_hash_score_distribution;
+  // Every recorded candidate becomes a JC entry, but two DIFFERENT candidates can resolve to the
+  // SAME entry, and cGenomeDiff::write() rejects that as a fatal duplicate. They are collected here
+  // and emitted one per identity below (see emit_one_jc_per_identity).
+  vector<ResolvedJunctionEntry> resolved_junction_entries;
+
   for(list<JunctionTestInfo>::iterator it = passed_junction_test_info_list.begin(); it != passed_junction_test_info_list.end(); it++)
   {
     JunctionTestInfo& junction_test_info = *it;
 		string key = junction_test_info.junction_id;
 		if (verbose) cout << key << endl;
 		cDiffEntry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
-		gd.add(item);
-
-		// save the score in the distribution
-		accepted_pos_hash_score_distribution.add_score(junction_test_info.pos_hash_score);
+		resolved_junction_entries.push_back(ResolvedJunctionEntry(item, junction_test_info, true));
 
 		// Create matches from UNIQUE sides of each match to reference genome
 		// this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
@@ -864,8 +959,14 @@ void resolve_alignments(
     for (vector<string>::iterator itr = junction_test_info.reject_reasons.begin(); itr != junction_test_info.reject_reasons.end(); itr++) {
       item.add_reject_reason(*itr);
     }
-		gd.add(item);
+		resolved_junction_entries.push_back(ResolvedJunctionEntry(item, junction_test_info, false));
 	}
+
+  PosHashScoreDistribution accepted_pos_hash_score_distribution;
+  uint32_t merged_junction_entries = emit_one_jc_per_identity(resolved_junction_entries, gd, accepted_pos_hash_score_distribution);
+  if (merged_junction_entries > 0) {
+    cout << "  Merged " << merged_junction_entries << " junction candidate(s) that resolved to the same JC entry as another candidate." << endl;
+  }
 
   // Post-streaming DP merge-back: vote the specific IS copy per unique locus and write the held
   // ambiguous discordant pairs into the still-open resolved reference SAM (see the helper below).
@@ -3387,7 +3488,7 @@ void  assign_one_junction_read_counts(
   if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
   if (verbose) cerr << "JUNCTION: start " << start << " end " << end << endl;
 
-  j[NEW_JUNCTION_READ_COUNT] = (junction_jrc.get() != NULL) ? to_string(junction_jrc->count(j["key"], start, end, empty_read_names, junction_read_names)) : "0";
+  uint32_t new_junction_read_count = (junction_jrc.get() != NULL) ? junction_jrc->count(j["key"], start, end, empty_read_names, junction_read_names) : 0;
 
   // Weighted counterparts of the raw counts above. The raw fields stay integers -- they are
   // user-facing and cGenomeDiff::read_counts_for_entry() parses them with from_string<uint32_t> --
@@ -3409,6 +3510,43 @@ void  assign_one_junction_read_counts(
     junction_weight_sq = junction_jrc->sum_weight_sq();
     junction_evidence = junction_jrc->counted_read_evidence();
   }
+
+  // Other passing candidate junctions that resolved to this same entry (see emit_one_jc_per_identity).
+  // Their reads are in the junction BAM under their own keys; count each in that key's own window
+  // (its own flanking and overlap from the key, its own continuations from the field) and add them
+  // to this junction's support. Their names join junction_read_names, so the side counts below
+  // exclude them exactly as they exclude this key's reads.
+  if ((junction_jrc.get() != NULL) && j.entry_exists(kMergedJunctionKeys)) {
+    vector<string> merged_list = split(j[kMergedJunctionKeys], ",");
+    for (vector<string>::iterator itm = merged_list.begin(); itm != merged_list.end(); itm++) {
+      // KEY:side_1_continuation:side_2_continuation, split from the right
+      size_t c2_pos = itm->rfind(':');
+      ASSERT((c2_pos != string::npos) && (c2_pos > 0), "Malformed " + string(kMergedJunctionKeys) + " entry: " + *itm);
+      size_t c1_pos = itm->rfind(':', c2_pos - 1);
+      ASSERT(c1_pos != string::npos, "Malformed " + string(kMergedJunctionKeys) + " entry: " + *itm);
+      string merged_key = itm->substr(0, c1_pos);
+      uint32_t merged_side_1_continuation = from_string<uint32_t>(itm->substr(c1_pos + 1, c2_pos - c1_pos - 1));
+      uint32_t merged_side_2_continuation = from_string<uint32_t>(itm->substr(c2_pos + 1));
+
+      JunctionInfo merged_info(merged_key);
+      int32_t merged_start = merged_info.flanking_left - merged_side_1_continuation;
+      int32_t merged_end = merged_start + abs(merged_info.alignment_overlap) + 1 + merged_side_2_continuation;
+      merged_start -= minimum_side_match_correction;
+      merged_end += minimum_side_match_correction;
+
+      map<string,bool> merged_read_names;
+      new_junction_read_count += junction_jrc->count(merged_key, merged_start, merged_end, junction_read_names, merged_read_names);
+      junction_weighted += junction_jrc->sum_weight();
+      junction_reference_weighted += junction_jrc->sum_complement();
+      junction_weight_sq += junction_jrc->sum_weight_sq();
+      const vector<junction_read_counter::read_evidence_t>& merged_evidence = junction_jrc->counted_read_evidence();
+      junction_evidence.insert(junction_evidence.end(), merged_evidence.begin(), merged_evidence.end());
+      junction_read_names.insert(merged_read_names.begin(), merged_read_names.end());
+
+      if (verbose) cerr << "MERGED JUNCTION " << merged_key << ": start " << merged_start << " end " << merged_end << endl;
+    }
+  }
+  j[NEW_JUNCTION_READ_COUNT] = (junction_jrc.get() != NULL) ? to_string(new_junction_read_count) : "0";
 
   if (settings.junction_debug) {
     ofile << "JUNCTION" << endl;
