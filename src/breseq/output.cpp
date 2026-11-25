@@ -1246,10 +1246,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   ////
   double overall_percent_reads_mapped = 0;
   bool show_read_split_legend = false;
+  bool show_read_type_inferred_legend = false;
 
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
-  HTML << start_tr() << th() << th("read file") << th("reads") <<
+  HTML << start_tr() << th() << th("read file") << th("type") << th("reads") <<
                     th("bases") <<  th("passed&nbsp;filters") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
   for (const auto& rfs : settings.read_file_sets)
   {
@@ -1258,7 +1259,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       HTML << start_tr("class=\"highlight_table_row\"");
       HTML << td();
       HTML << td(b("[paired] " + rfs.m_base_name));
-      HTML << td() << td() << td() << td() << td() << td();
+      HTML << td() << td() << td() << td() << td() << td() << td();
       HTML << end_tr();
     }
 
@@ -1279,6 +1280,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       show_read_split_legend = show_read_split_legend || s.reads_were_split;
       string name_label = rfs.is_paired() ? (fi == 0 ? "R1:&nbsp;" : "R2:&nbsp;") : "";
       HTML << td(name_label + base_name + (s.reads_were_split ? "<sup>&Dagger;</sup>" : ""));
+      // Read type (see READ TYPES in fastq.h); blank for a run directory from before it was recorded
+      // "(inferred)" unless it was given on the command line: breseq worked it out from the reads
+      const bool read_type_inferred = !rf_file.m_read_type.empty() && (rf_file.m_read_type_source != kReadTypeSourceSpecified);
+      show_read_type_inferred_legend = show_read_type_inferred_legend || read_type_inferred;
+      HTML << td(ALIGN_CENTER, substitute(rf_file.m_read_type, "-", "&#8209;") + (read_type_inferred ? "&nbsp;(inferred)" : ""));
 
       double read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
       HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
@@ -1296,6 +1302,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << start_tr("class=\"highlight_table_row\"");
   HTML << td();
   HTML << td(b("total"));
+  HTML << td();
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
   double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_bases) / static_cast<double>(summary.sequence_conversion.num_original_bases));
@@ -1319,6 +1326,13 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
            << " partner stay in the file the long reads came from.";
     }
     HTML << endl;
+  }
+
+  if (show_read_type_inferred_legend) {
+    HTML << "<p>An inferred read type was detected from the read names or, when they did not identify it, guessed from"
+         << " the read lengths and base qualities. To set it, prefix the read file with its type on the command line"
+         << " (for example, nanopore-hac:reads.fastq.gz). Whether nanopore reads are fast or high accuracy cannot be"
+         << " told reliably from base qualities, and no setting is chosen from an inferred read type." << endl;
   }
 
   // Read files whose bases all had one quality score, which was replaced (see fastq.h)

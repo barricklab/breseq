@@ -646,6 +646,7 @@ bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name, const cRead
     if (!it->library.empty())     hdr_text += "\tLB:" + it->library;
     if (!it->sample.empty())      hdr_text += "\tSM:" + it->sample;
     if (!it->description.empty()) hdr_text += "\tDS:" + it->description;
+    if (!it->platform.empty())    hdr_text += "\tPL:" + it->platform;
     hdr_text += "\n";
   }
 
@@ -702,6 +703,39 @@ bool sam_file_constant_base_quality(const string& file_name, uint8_t& quality)
   sam_hdr_destroy(header);
   hts_close(in);
   return constant && seen_base;
+}
+
+void sam_file_detect_read_type(const string& file_name, string& read_type, string& read_type_source)
+{
+  samFile* in = hts_open(file_name.c_str(), "r");
+  ASSERT(in, "Could not open SAM/BAM file: " + file_name);
+  sam_hdr_t* header = sam_hdr_read(in);
+  ASSERT(header, "Could not read header of SAM/BAM file: " + file_name);
+  bam1_t* b = bam_init1();
+
+  cReadTypeDetector detector;
+  string qualities;
+  while ((detector.num_reads() < kReadTypeSampleReads) && (sam_read1(in, header, b) >= 0)) {
+    // One record per read, and the whole read: a secondary or supplementary record repeats a
+    // read and may be hard-clipped
+    if (b->core.flag & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) continue;
+    if (b->core.l_qseq == 0) continue;
+
+    const uint8_t* q = bam_get_qual(b);
+    qualities.clear();
+    // A QUAL of '*' is stored as 0xff for every base: no qualities to judge by
+    if (q[0] != kMissingBamBaseQuality) {
+      qualities.resize(b->core.l_qseq);
+      for (int32_t i = 0; i < b->core.l_qseq; i++) qualities[i] = static_cast<char>(min<uint32_t>(q[i], kMaxSangerBaseQuality) + 33);
+    }
+    detector.add(bam_get_qname(b), "", qualities, b->core.l_qseq);
+  }
+
+  bam_destroy1(b);
+  sam_hdr_destroy(header);
+  hts_close(in);
+
+  detector.detect(33, read_type, read_type_source);
 }
 
 bam_file::~bam_file()

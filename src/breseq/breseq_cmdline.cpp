@@ -767,7 +767,26 @@ int do_summarize_fastq(int argc, char* argv[])
   
   input_format = cFastqQualityConverter::predict_fastq_file_format(input_file_name, num_original_reads, num_original_bases, read_length_min, read_length_max, min_quality_score, max_quality_score);
   
+  // Read type, from the first reads as in the pipeline, and the numbers it is guessed from when
+  // the read names do not say (see cReadTypeDetector)
+  map<string,uint8_t> format_to_chr_offset;
+  format_to_chr_offset["SANGER"] = 33;
+  format_to_chr_offset["SOLEXA"] = 64;
+  format_to_chr_offset["ILLUMINA_1.3+"] = 64;
+  const uint8_t chr_offset = format_to_chr_offset[input_format];
+  cReadTypeDetector read_type_detector;
+  sample_fastq_file_for_read_type(input_file_name, read_type_detector);
+  string read_type, read_type_source;
+  read_type_detector.detect(chr_offset, read_type, read_type_source);
+
   json j = json{
+    {"read_type", read_type},
+    {"read_type_source", read_type_source},
+    {"read_type_sample_reads", read_type_detector.num_reads()},
+    {"read_type_sample_read_length_99th_percentile", read_type_detector.read_length_percentile(0.99)},
+    {"read_type_sample_mean_quality", read_type_detector.mean_quality(chr_offset)},
+    {"read_type_sample_fraction_bases_Q60", read_type_detector.fraction_bases_at_least_quality(chr_offset, kReadTypeHiFiQuality)},
+    {"read_type_sample_distinct_qualities", read_type_detector.num_distinct_qualities()},
     //! Settings: Workflow
     {"num_reads", num_original_reads},
     {"num_bases", num_original_bases},
@@ -1747,6 +1766,14 @@ int breseq_default_action(int argc, char* argv[])
           );
           AnalyzeFastqSummary& s_r1 = paired_result.first;
           AnalyzeFastqSummary& s_r2 = paired_result.second;
+          // Init() gave both mates the same specified type, if either had one
+          resolve_read_type(r1_fastq, rf_r1.m_read_type, s_r1.read_type, s_r1.read_type_source);
+          s_r2.read_type = s_r1.read_type;
+          s_r2.read_type_source = s_r1.read_type_source;
+          s.read_file_types[rf_r1.m_base_name] = s_r1.read_type;
+          s.read_file_types[rf_r2.m_base_name] = s_r2.read_type;
+          s.read_file_type_sources[rf_r1.m_base_name] = s_r1.read_type_source;
+          s.read_file_type_sources[rf_r2.m_base_name] = s_r2.read_type_source;
           settings.track_intermediate_file(settings.alignment_correction_done_file_name, r1_conv);
           settings.track_intermediate_file(settings.alignment_correction_done_file_name, r2_conv);
 
@@ -1813,9 +1840,14 @@ int breseq_default_action(int argc, char* argv[])
                                                        );
           settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
           s_rf.read_name_file_index = flat_file_counter + 1;
+          resolve_read_type(fastq_file_name, rf.m_read_type, s_rf.read_type, s_rf.read_type_source);
+          s.read_file_types[base_name] = s_rf.read_type;
+          s.read_file_type_sources[base_name] = s_rf.read_type_source;
 
           if (make_long_read_pairs) {
             for (uint32_t m = 0; m < 2; m++) {
+              s_lp[m].read_type = s_rf.read_type;
+              s_lp[m].read_type_source = s_rf.read_type_source;
               settings.track_intermediate_file(settings.alignment_correction_done_file_name, lp_convert_file_names[m]);
               s_lp[m].long_read_pair_source = base_name;
               s_lp[m].long_read_pair_mate = m + 1;
@@ -1830,6 +1862,8 @@ int breseq_default_action(int argc, char* argv[])
               s.num_reads += s_lp[m].num_reads;
               s.num_bases += s_lp[m].num_bases;
               s.reads[lp_base_names[m]] = s_lp[m];
+              s.read_file_types[lp_base_names[m]] = s_lp[m].read_type;
+              s.read_file_type_sources[lp_base_names[m]] = s_lp[m].read_type_source;
               if (s_lp[m].replaced_constant_base_quality >= 0) s.constant_base_quality_files[lp_base_names[m]] = s_lp[m].replaced_constant_base_quality;
             }
             if ((s_lp[0].num_reads != 0) && (s_lp[1].num_reads != 0)) flat_file_counter += 2;
@@ -1867,21 +1901,47 @@ int breseq_default_action(int argc, char* argv[])
       cerr << "    Original reads: " << setw(width_for_reads) << s.num_original_reads << " bases: " << setw(width_for_bases) << s.num_original_bases << endl;
       cerr << "    Analyzed reads: " << setw(width_for_reads) << s.num_reads << " bases: " << setw(width_for_bases) << s.num_bases << endl;
       
-    } else if (constant_base_quality_replacement) {
-      // The SAM records are copied as they are when they are loaded (stage 05, load_sam_only_alignments),
-      // and the scores are replaced there. Whether to replace them is decided here, for the whole file,
-      // so that it is settled before any record is written.
+    } else {
       for (const auto& rf : settings.read_file_sets.flat_files()) {
         string sam_file_name = settings.base_name_to_read_file_name(rf.m_base_name);
-        uint8_t constant_quality = 0;
         cerr << "  READ FILE::" << rf.m_base_name << endl;
-        cerr << "    Checking base quality scores..." << endl;
-        if (sam_file_constant_base_quality(sam_file_name, constant_quality)) {
-          summary.sequence_conversion.constant_base_quality_files[rf.m_base_name] = constant_quality;
-          warn_constant_base_quality(sam_file_name, constant_quality, constant_base_quality_replacement);
+
+        string read_type, read_type_source;
+        sam_file_detect_read_type(sam_file_name, read_type, read_type_source);
+        resolve_read_type(sam_file_name, rf.m_read_type, read_type, read_type_source);
+        summary.sequence_conversion.read_file_types[rf.m_base_name] = read_type;
+        summary.sequence_conversion.read_file_type_sources[rf.m_base_name] = read_type_source;
+
+        // The SAM records are copied as they are when they are loaded (stage 05, load_sam_only_alignments),
+        // and the scores are replaced there. Whether to replace them is decided here, for the whole file,
+        // so that it is settled before any record is written.
+        if (constant_base_quality_replacement) {
+          uint8_t constant_quality = 0;
+          cerr << "    Checking base quality scores..." << endl;
+          if (sam_file_constant_base_quality(sam_file_name, constant_quality)) {
+            summary.sequence_conversion.constant_base_quality_files[rf.m_base_name] = constant_quality;
+            warn_constant_base_quality(sam_file_name, constant_quality, constant_base_quality_replacement);
+          }
         }
       }
       summary.sequence_conversion.constant_base_quality_replacement = constant_base_quality_replacement;
+    }
+
+    // -x was written for fast-basecalled nanopore reads, and nothing turns it on for them
+    if (!settings.nanopore_fast) {
+      vector<string> nanopore_fast_files;
+      for (const auto& rt : summary.sequence_conversion.read_file_types) {
+        if ((rt.second != kReadTypeNanopore) && (rt.second != kReadTypeNanoporeFast)) continue;
+        // not the synthetic mate files cut from a file that is already listed
+        map<string, AnalyzeFastqSummary>::const_iterator reads_it = summary.sequence_conversion.reads.find(rt.first);
+        if ((reads_it != summary.sequence_conversion.reads.end()) && (reads_it->second.long_read_pair_mate != 0)) continue;
+        nanopore_fast_files.push_back(rt.first);
+      }
+      if (!nanopore_fast_files.empty()) {
+        cerr << "  NOTE: These read files appear to be fast-basecalled nanopore reads: " << join(nanopore_fast_files, ", ") << endl;
+        cerr << "        Consider the -x/--nanopore-fast option, which rejects the indels in homopolymers" << endl;
+        cerr << "        that are common errors in such reads. It is not applied automatically." << endl;
+      }
     }
       
 		// create SAM faidx
@@ -1917,6 +1977,15 @@ int breseq_default_action(int argc, char* argv[])
   
   
   // Reload certain information into settings from summary to make re-entrant
+
+  // --> read types, detected or specified, for both kinds of input. Done before the sets are
+  //     rebuilt below so that the synthetic long-read mate files copy their source file's type.
+  for (const auto& rt : summary.sequence_conversion.read_file_types) {
+    map<string, string>::const_iterator source_it = summary.sequence_conversion.read_file_type_sources.find(rt.first);
+    settings.read_file_sets.set_read_type(rt.first, rt.second,
+                                          (source_it != summary.sequence_conversion.read_file_type_sources.end()) ? source_it->second : "");
+  }
+
   // Aligned SAM mode knows nothing of read limits, so unused.
   
   if (!settings.aligned_sam_mode) {

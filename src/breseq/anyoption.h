@@ -339,6 +339,13 @@ struct PathOption
 		//! metadata. `label` is the noun used in messages, e.g. "Read file".
 		void setPositionalArgumentsRole(PathRole role, const string& label);
 
+		//! Function that turns a positional argument into the path to check, for commands
+		//! whose positional arguments are a path with something attached (breseq's
+		//! <read type>:<path>). The argument itself is returned unchanged by getArgv().
+		void setPositionalArgumentsPathFilter(string (*filter)(const string&)) { positional_path_filter = filter; }
+		string positionalArgumentPath(const string& argument) const
+		{ return positional_path_filter ? positional_path_filter(argument) : argument; }
+
 		//! Every path role registered on this object, in declaration order.
 		const vector<PathOption>& getPathOptions() const { return path_options; }
 
@@ -412,6 +419,7 @@ struct PathOption
 
 		/* path validation */
 		vector<PathOption> path_options;     /* options (and positional args) that name paths */
+		string (*positional_path_filter)(const string&) = NULL;
 		string m_last_declared_option;       /* name as declared, for the chainable markers */
 		bool m_last_declared_has_argument;
 

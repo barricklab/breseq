@@ -100,6 +100,11 @@ namespace breseq
 		uint32_t m_paired_end_group;  // indicates what file contains paired reads
 		uint32_t m_error_group;       // indicates what other read files have the same error rates
 		uint32_t m_id;                // index used to refer to this fastq file in BAM
+    // Read type and how it was decided (see READ TYPES in fastq.h). From Init() on this holds only
+    // a type given as a <type>:<path> prefix; a detected type is filled in once stage 1 has run
+    // (or been reloaded), so it is "" before then for a file without a prefix.
+    string m_read_type;
+    string m_read_type_source;
 
     cReadFile()
     {
@@ -141,7 +146,29 @@ namespace breseq
     cReadFileSets(const vector<string>& read_file_names, bool sam_files, bool allow_paired = false) { Init(read_file_names, sam_files, allow_paired); };
     ~cReadFileSets() { };
 
+    // A read file name may carry a read type prefix, <type>:<path> (see READ TYPES in fastq.h).
+    // The prefix is removed before anything else looks at the name.
     void Init(const vector<string>& read_file_names, bool sam_files, bool allow_paired = false);
+
+    // Sets the read type of the file with this base name, in whichever set holds it.
+    void set_read_type(const string& base_name, const string& read_type, const string& read_type_source)
+    {
+      for (auto& rfs : *this)
+        for (auto& rf : rfs.m_files)
+          if (rf.m_base_name == base_name) {
+            rf.m_read_type = read_type;
+            rf.m_read_type_source = read_type_source;
+          }
+    }
+
+    // True if any read file has this read type. Only meaningful once stage 1 has run.
+    bool any_read_type(const string& read_type) const
+    {
+      for (const auto& rfs : *this)
+        for (const auto& rf : rfs.m_files)
+          if (rf.m_read_type == read_type) return true;
+      return false;
+    }
     string base_name_to_read_file_name(const string& base_name);
 
     // Returns base names of all individual files (flat, across all sets).
@@ -335,6 +362,7 @@ namespace breseq
     //! Settings: Read File Options
     vector<string> read_file_names;             // REQUIRED COMMAND-LINE OPTION
     bool aligned_sam_mode;                      // Default = false COMMAND-LINE OPTION
+    bool nanopore_fast = false;                 // -x/--nanopore-fast was given (it acts through the options it presets)
     double  read_file_coverage_fold_limit;      // Default = 0 (OFF) COMMAND-LINE OPTION
     uint32_t read_file_read_length_min;         // Default = 18 COMMAND-LINE OPTION
     double read_file_max_same_base_fraction;    // Default = 0.9 COMMAND-LINE OPTION

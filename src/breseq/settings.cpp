@@ -130,7 +130,8 @@ namespace breseq
     for (vector<string>::const_iterator it = read_file_names.begin(); it < read_file_names.end(); it++)
     {
       cReadFile rf;
-      rf.m_original_file_name = *it;
+      rf.m_original_file_name = split_read_type_prefix(*it, rf.m_read_type);
+      if (!rf.m_read_type.empty()) rf.m_read_type_source = kReadTypeSourceSpecified;
 
       if (used_original_names.find(rf.m_original_file_name) != used_original_names.end()) {
         WARN("Duplicate read file path provided: " + rf.m_original_file_name + "\nThis file will only be used as input once.");
@@ -209,6 +210,18 @@ namespace breseq
           string canonical = name_a;
           canonical[k] = 'X';
           rfs.m_base_name = canonical;
+
+          // The two files of a pair are one library: a read type given for one is the other's too
+          cReadFile& mate_a = all_files[i];
+          cReadFile& mate_b = all_files[j];
+          if (!mate_a.m_read_type.empty() && !mate_b.m_read_type.empty() && (mate_a.m_read_type != mate_b.m_read_type)) {
+            ERROR("Paired read files were given different read types:\n"
+                  + mate_a.m_read_type + ":" + mate_a.m_original_file_name + "\n"
+                  + mate_b.m_read_type + ":" + mate_b.m_original_file_name);
+          }
+          if (mate_a.m_read_type.empty()) { mate_a.m_read_type = mate_b.m_read_type; mate_a.m_read_type_source = mate_b.m_read_type_source; }
+          if (mate_b.m_read_type.empty()) { mate_b.m_read_type = mate_a.m_read_type; mate_b.m_read_type_source = mate_a.m_read_type_source; }
+
           if (name_a[k] == '1') {
             rfs.m_files.push_back(all_files[i]);  // R1
             rfs.m_files.push_back(all_files[j]);  // R2
@@ -331,6 +344,9 @@ namespace breseq
     options.addUsage("Run the breseq pipeline for predicting mutations from haploid microbial re-sequencing data.");
     options.addUsage("");
     options.addUsage("FASTQ read files (which may be gzipped) are input as the last unnamed argument(s).");
+    options.addUsage("The type of reads in each file is detected from its read names and base qualities.");
+    options.addUsage("To set it, prefix the file with its read type, as in nanopore-hac:reads.fastq.gz.");
+    options.addUsage("Read types: illumina, nanopore-fast, nanopore-hac, pacbio-clr, pacbio-hifi");
     options.addUsage("");
     options.addUsage("Allowed Options");
     
@@ -609,7 +625,9 @@ namespace breseq
     ;
 
     // The trailing unnamed arguments are the read files (FASTQ, or SAM under --aligned-sam).
+    // Each may be prefixed with its read type (ont-hac:reads.fastq.gz), which is not part of the path.
     options.setPositionalArgumentsRole(INPUT_FILE, "Read file");
+    options.setPositionalArgumentsPathFilter(strip_read_type_prefix);
 
     options.processCommandArgs(argc, argv);
     
@@ -665,6 +683,21 @@ namespace breseq
     for (int32_t i = 0; i < options.getArgc(); i++)
     {
       string read_file_name = options.getArgv(i);
+
+      // A <type>:<path> prefix that is not a read type is far more likely a typo than a file with
+      // a colon in its name, and "file does not exist" would not say so.
+      string read_type;
+      split_read_type_prefix(read_file_name, read_type);
+      size_t colon_pos = read_file_name.find(":");
+      if (read_type.empty() && (colon_pos != string::npos) && (read_file_name.find("/") > colon_pos) && !path_exists(read_file_name)) {
+        options.addUsage("");
+        options.addUsage("Unrecognized read type prefix \"" + read_file_name.substr(0, colon_pos) + "\" on read file argument: " + read_file_name);
+        options.addUsage("Valid read types are: " + join(read_type_names(), ", "));
+        options.printUsage();
+        exit(-1);
+      }
+
+      // Kept WITH the prefix: cReadFileSets::Init() removes it and records the type
       this->read_file_names.push_back(read_file_name);
     }
     this->aligned_sam_mode = options.count("aligned-sam");
@@ -1234,6 +1267,7 @@ namespace breseq
     // still wins over the preset.
 
     if (options.count("nanopore-fast")) {
+      this->nanopore_fast = true;
       this->consensus_reject_indel_homopolymer_length = 4;
       this->polymorphism_reject_indel_homopolymer_length = 4;
       this->polymorphism_no_indels = true;
@@ -2058,6 +2092,9 @@ namespace breseq
       rg.library     = sanitize_sam_tag_value(it->m_base_name);
       rg.sample      = sanitize_sam_tag_value(this->sample_name);
       rg.description = sanitize_sam_tag_value("breseq read files: " + join(member_base_names, ","));
+      // The files of a set have one read type. It is known once stage 1 has run, which is before
+      // any BAM is written.
+      if (!it->m_files.empty()) rg.platform = read_type_platform(it->m_files.front().m_read_type);
       return_value.push_back(rg);
     }
 

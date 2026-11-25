@@ -411,6 +411,11 @@ namespace breseq {
     uint8_t sniffed_min_quality_score = 255;
     uint8_t sniffed_max_quality_score = 0;
 
+    // The read type is judged from the same reads, as they are in the file: before the names
+    // are replaced, the qualities converted or replaced, and long reads split.
+    cReadTypeDetector read_type_detector;
+    bool sniffed_numerical_qualities = false;
+
     {
       cFastqSequence seq;
       while ( (buffered_reads.size() < FASTQ_FORMAT_SNIFF_READS) && input_fastq_file.read_sequence(seq, prelim_fqc) ) {
@@ -419,6 +424,8 @@ namespace breseq {
           sniffed_min_quality_score = min(sniffed_min_quality_score, this_score);
           sniffed_max_quality_score = max(sniffed_max_quality_score, this_score);
         }
+        read_type_detector.add(seq.m_name, seq.m_name_comment, seq.m_qualities, seq.length());
+        sniffed_numerical_qualities = sniffed_numerical_qualities || seq.m_numerical_qualities;
         buffered_reads.push_back(seq);
         seq = cFastqSequence();
       }
@@ -582,6 +589,9 @@ namespace breseq {
                                  convert_file_name
                                  );
     retval.replaced_constant_base_quality = replaced_constant_base_quality;
+    // Numerical qualities were read with the preliminary offset whatever the format turned out to be
+    read_type_detector.detect(sniffed_numerical_qualities ? static_cast<uint8_t>(prelim_offset) : format_to_chr_offset[quality_format],
+                              retval.read_type, retval.read_type_source);
 
     // Synthetic long-read pairs get a summary per mate file. The original-read and filtered
     // counts stay with the file the reads came from (retval), so nothing is counted twice.
@@ -608,6 +618,8 @@ namespace breseq {
                                  lp_convert_file_names[m]
                                  );
         lp_summaries[m]->replaced_constant_base_quality = replaced_constant_base_quality;
+        lp_summaries[m]->read_type = retval.read_type;
+        lp_summaries[m]->read_type_source = retval.read_type_source;
       }
     }
     return retval;
@@ -869,6 +881,10 @@ namespace breseq {
     uint8_t sniffed_min_quality_score = 255;
     uint8_t sniffed_max_quality_score = 0;
 
+    // Judged from R1 alone, like the quality format: the two files of a pair are one library
+    cReadTypeDetector read_type_detector;
+    bool sniffed_numerical_qualities = false;
+
     {
       cFastqSequence seq;
       while ((buffered_reads.size() < FASTQ_FORMAT_SNIFF_READS) && r1_input.read_sequence(seq, prelim_fqc)) {
@@ -877,6 +893,8 @@ namespace breseq {
           sniffed_min_quality_score = min(sniffed_min_quality_score, q);
           sniffed_max_quality_score = max(sniffed_max_quality_score, q);
         }
+        read_type_detector.add(seq.m_name, seq.m_name_comment, seq.m_qualities, seq.length());
+        sniffed_numerical_qualities = sniffed_numerical_qualities || seq.m_numerical_qualities;
         buffered_reads.push_back(seq);
         seq = cFastqSequence();
       }
@@ -1017,6 +1035,10 @@ namespace breseq {
 
     AnalyzeFastqSummary s_r1 = build_summary(result.r1, num_filtered_coverage_limit_reads_r1, num_filtered_coverage_limit_bases_r1, r1_convert_file_name, replace_base_qualities_r1);
     AnalyzeFastqSummary s_r2 = build_summary(result.r2, num_filtered_coverage_limit_reads_r2, num_filtered_coverage_limit_bases_r2, r2_convert_file_name, replace_base_qualities_r2);
+    read_type_detector.detect(sniffed_numerical_qualities ? static_cast<uint8_t>(prelim_offset) : format_to_chr_offset[quality_format],
+                              s_r1.read_type, s_r1.read_type_source);
+    s_r2.read_type = s_r1.read_type;
+    s_r2.read_type_source = s_r1.read_type_source;
 
     // Print combined summary for paired files
     uint64_t total_orig_reads = s_r1.num_original_reads + s_r2.num_original_reads;
@@ -1069,6 +1091,396 @@ namespace breseq {
     cerr << "    Analyzed reads: " << setw(width_for_reads) << total_reads << " bases: " << setw(width_for_bases) << total_bases << endl;
 
     return {s_r1, s_r2};
+  }
+
+  // ---- Read types (see fastq.h) ----
+
+  const char* const kReadTypeIllumina     = "illumina";
+  const char* const kReadTypeNanopore     = "nanopore";
+  const char* const kReadTypeNanoporeFast = "nanopore-fast";
+  const char* const kReadTypeNanoporeHAC  = "nanopore-hac";
+  const char* const kReadTypePacBio       = "pacbio";
+  const char* const kReadTypePacBioCLR    = "pacbio-clr";
+  const char* const kReadTypePacBioHiFi   = "pacbio-hifi";
+  const char* const kReadTypeUnknown      = "unknown";
+
+  const char* const kReadTypeSourceSpecified = "specified";
+  const char* const kReadTypeSourceHeader    = "header";
+  const char* const kReadTypeSourceQuality   = "quality";
+
+  vector<string> read_type_names()
+  {
+    return make_vector<string>(kReadTypeIllumina)(kReadTypeNanopore)(kReadTypeNanoporeFast)(kReadTypeNanoporeHAC)
+      (kReadTypePacBio)(kReadTypePacBioCLR)(kReadTypePacBioHiFi)(kReadTypeUnknown);
+  }
+
+  string canonical_read_type(const string& name)
+  {
+    // Synonyms are brefito's (LONG_READ_TYPE_SYNONYMS and its illumina-* layout names). breseq
+    // works out pairing from the file names, so every Illumina layout is just "illumina".
+    static map<string,string> synonyms;
+    if (synonyms.empty()) {
+      vector<string> names = read_type_names();
+      for (vector<string>::const_iterator it = names.begin(); it != names.end(); it++) synonyms[*it] = *it;
+      synonyms["ont"]          = kReadTypeNanopore;
+      synonyms["ont-fast"]     = kReadTypeNanoporeFast;
+      synonyms["ont-raw"]      = kReadTypeNanoporeFast;
+      synonyms["nanopore-raw"] = kReadTypeNanoporeFast;
+      synonyms["ont-hac"]      = kReadTypeNanoporeHAC;
+      synonyms["ont-hq"]       = kReadTypeNanoporeHAC;
+      synonyms["nanopore-hq"]  = kReadTypeNanoporeHAC;
+      // Super accuracy is not told apart from high accuracy
+      synonyms["nanopore-sup"] = kReadTypeNanoporeHAC;
+      synonyms["ont-sup"]      = kReadTypeNanoporeHAC;
+      synonyms["illumina-se"]     = kReadTypeIllumina;
+      synonyms["illumina-pe"]     = kReadTypeIllumina;
+      synonyms["illumina-r1"]     = kReadTypeIllumina;
+      synonyms["illumina-r2"]     = kReadTypeIllumina;
+      synonyms["illumina-pair"]   = kReadTypeIllumina;
+      synonyms["illumina-paired"] = kReadTypeIllumina;
+    }
+    map<string,string>::const_iterator it = synonyms.find(to_lower(name));
+    return (it == synonyms.end()) ? "" : it->second;
+  }
+
+  bool is_nanopore_read_type(const string& read_type)
+  {
+    return (read_type == kReadTypeNanopore) || (read_type == kReadTypeNanoporeFast)
+        || (read_type == kReadTypeNanoporeHAC);
+  }
+
+  bool is_long_read_type(const string& read_type)
+  {
+    return is_nanopore_read_type(read_type) || (read_type == kReadTypePacBio)
+        || (read_type == kReadTypePacBioCLR) || (read_type == kReadTypePacBioHiFi);
+  }
+
+  string read_type_platform(const string& read_type)
+  {
+    // The values the SAM specification lists for @RG PL
+    if (read_type == kReadTypeIllumina) return "ILLUMINA";
+    if (is_nanopore_read_type(read_type)) return "ONT";
+    if (is_long_read_type(read_type)) return "PACBIO";
+    return "";
+  }
+
+  string read_type_source_description(const string& read_type_source)
+  {
+    if (read_type_source == kReadTypeSourceSpecified) return "specified on the command line";
+    if (read_type_source == kReadTypeSourceHeader) return "detected from read names";
+    if (read_type_source == kReadTypeSourceQuality) return "guessed from read lengths and base qualities";
+    return "not determined";
+  }
+
+  void sample_fastq_file_for_read_type(const string& file_name, cReadTypeDetector& detector)
+  {
+    cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
+    cFastqQualityConverter fqc("SANGER", "SANGER");
+    cFastqSequence seq;
+    while ((detector.num_reads() < kReadTypeSampleReads) && input_fastq_file.read_sequence(seq, fqc))
+      detector.add(seq.m_name, seq.m_name_comment, seq.m_qualities, seq.length());
+  }
+
+  void resolve_read_type(const string& file_name, const string& specified_read_type,
+                         string& read_type, string& read_type_source)
+  {
+    if (specified_read_type.empty()) {
+      cerr << "    Read type: " << read_type;
+      if (!read_type_source.empty()) cerr << " (" << read_type_source_description(read_type_source) << ")";
+      cerr << endl;
+      return;
+    }
+
+    // Different platforms are a contradiction whatever the evidence. Within a platform only read
+    // names are worth contradicting the user with, and "nanopore"/"pacbio" contradict no subtype.
+    const string specified_platform = read_type_platform(specified_read_type);
+    const string detected_platform = read_type_platform(read_type);
+    const bool specified_is_generic = (specified_read_type == kReadTypeNanopore) || (specified_read_type == kReadTypePacBio);
+    const bool disagrees = !detected_platform.empty() && !specified_platform.empty()
+      && ( (detected_platform != specified_platform)
+        || ((read_type_source == kReadTypeSourceHeader) && !specified_is_generic && (read_type != specified_read_type)) );
+
+    cerr << "    Read type: " << specified_read_type << " (" << read_type_source_description(kReadTypeSourceSpecified) << ")" << endl;
+    if (disagrees) {
+      WARN("Read file " + file_name + "\nwas given the read type " + specified_read_type + ", but its reads look like "
+           + read_type + " (" + read_type_source_description(read_type_source) + ").\n"
+           "The read type given on the command line will be used.");
+    }
+
+    read_type = specified_read_type;
+    read_type_source = kReadTypeSourceSpecified;
+  }
+
+  string split_read_type_prefix(const string& read_file_argument, string& read_type)
+  {
+    read_type = "";
+    size_t colon_pos = read_file_argument.find(":");
+    if ((colon_pos == string::npos) || (colon_pos == 0) || (colon_pos + 1 == read_file_argument.size()))
+      return read_file_argument;
+
+    string prefix_type = canonical_read_type(read_file_argument.substr(0, colon_pos));
+    if (prefix_type.empty()) return read_file_argument;
+
+    // A file that really is named "illumina:x.fastq" is that file
+    if (path_exists(read_file_argument)) return read_file_argument;
+
+    read_type = prefix_type;
+    return read_file_argument.substr(colon_pos + 1);
+  }
+
+  string strip_read_type_prefix(const string& read_file_argument)
+  {
+    string read_type;
+    return split_read_type_prefix(read_file_argument, read_type);
+  }
+
+  cReadTypeDetector::cReadTypeDetector()
+  : m_num_reads(0)
+  {
+    memset(m_header_votes, 0, sizeof(m_header_votes));
+    memset(m_quality_chr_counts, 0, sizeof(m_quality_chr_counts));
+  }
+
+  namespace {
+
+    bool all_digits(const string& s, size_t start = 0, size_t end = string::npos)
+    {
+      if (end == string::npos) end = s.size();
+      if (start >= end) return false;
+      for (size_t i = start; i < end; i++)
+        if (!isdigit(static_cast<unsigned char>(s[i]))) return false;
+      return true;
+    }
+
+    // m64011_190830_220126/101/ccs            HiFi (also .../ccs/fwd, by-strand)
+    // m54119U_210220_034433/66/0_11274        subread: CLR
+    // m140913_050931_42139_c1007..._s1_p0/9/0_8372   RS II subread
+    // Returns 0 if this is not a PacBio name, 1 for a subread, 2 for a CCS read.
+    int pacbio_name_kind(const string& token)
+    {
+      if ((token.size() < 8) || (token[0] != 'm') || !isdigit(static_cast<unsigned char>(token[1]))) return 0;
+      size_t slash_1 = token.find('/');
+      if (slash_1 == string::npos) return 0;
+      if (token.find('_') > slash_1) return 0;
+      size_t slash_2 = token.find('/', slash_1 + 1);
+      if (slash_2 == string::npos) return 0;
+      if (!all_digits(token, slash_1 + 1, slash_2)) return 0;
+      size_t slash_3 = token.find('/', slash_2 + 1);
+      string last = token.substr(slash_2 + 1, (slash_3 == string::npos) ? string::npos : slash_3 - slash_2 - 1);
+      if (last == "ccs") return 2;
+      size_t underscore = last.find('_');
+      if ((underscore != string::npos) && all_digits(last, 0, underscore) && all_digits(last, underscore + 1)) return 1;
+      return 0;
+    }
+
+    // HWI-ST1234:100:C0ABCACXX:6:1101:1234:2100      CASAVA 1.8+ (7 fields; 8 with a UMI)
+    // HWUSI-EAS100R:6:73:941:1973#0/1                older (5 fields)
+    // The last four numeric fields are lane:tile:x:y in both.
+    bool is_illumina_name(const string& token)
+    {
+      vector<string> fields = split(token, ":");
+      size_t first_numeric;
+      if ((fields.size() == 7) || (fields.size() == 8)) first_numeric = 3;
+      else if (fields.size() == 5) first_numeric = 1;
+      else return false;
+      if (fields[0].empty()) return false;
+      for (size_t i = first_numeric; i < first_numeric + 4; i++) {
+        string field = fields[i];
+        if (i == first_numeric + 3) {
+          // y carries the old-style "#index/mate" or "/mate" suffix
+          size_t end = field.find_first_of("#/");
+          if (end != string::npos) field.erase(end);
+        }
+        if (!all_digits(field)) return false;
+      }
+      return true;
+    }
+
+    // 8-4-4-4-12 hexadecimal digits: what every ONT basecaller names a read
+    //
+    // The SRA and ENA pass it on in several forms, all seen in real downloads: with a mate suffix
+    // (<uuid>/1), with the hyphens turned into underscores, and as <uuid>;<uuid> for a duplex read.
+    bool is_uuid(const string& token)
+    {
+      if (token.size() < 36) return false;
+      for (size_t i = 0; i < 36; i++) {
+        if ((i == 8) || (i == 13) || (i == 18) || (i == 23)) {
+          if ((token[i] != '-') && (token[i] != '_')) return false;
+        } else if (!isxdigit(static_cast<unsigned char>(token[i]))) return false;
+      }
+      if (token.size() == 36) return true;
+      if ((token[36] == '/') && all_digits(token, 37)) return true;
+      if (token[36] == ';') return is_uuid(token.substr(37));
+      return false;
+    }
+
+  } // anonymous namespace
+
+  cReadTypeDetector::HeaderEvidence cReadTypeDetector::classify_header(const string& _name, const string& _comment)
+  {
+    // The FASTQ reader splits the header at the first space, but tags written by samtools fastq -T
+    // follow the name after a TAB: split there too.
+    string name = _name;
+    string comment = _comment;
+    size_t tab_pos = name.find('\t');
+    if (tab_pos != string::npos) {
+      comment = name.substr(tab_pos + 1) + (comment.empty() ? "" : " " + comment);
+      name.erase(tab_pos);
+    }
+
+    // A dorado (or late guppy) model name ends in the accuracy and version: ..._400bps_hac@v4.3.0.
+    // It is in basecall_model_version_id=, or in an RG:Z: tag when the FASTQ came from a BAM.
+    // A super accuracy model is reported as high accuracy: the two are one read type.
+    if (comment.find("_sup@v") != string::npos) return kNanoporeHAC;
+    if (comment.find("_hac@v") != string::npos) return kNanoporeHAC;
+    if (comment.find("_fast@v") != string::npos) return kNanoporeFast;
+
+    // Any other ONT header: the accuracy is left to the quality scores
+    if ((comment.find("runid=") != string::npos) || (comment.find("basecall_model_version_id=") != string::npos)
+        || (comment.find("ch:i:") != string::npos))
+      return kNanopore;
+
+    // The name, then each field after it (SRA: "@SRR1.1 <original name> length=100")
+    string token = name;
+    size_t start = 0;
+    while (true) {
+      if (!token.empty()) {
+        int pacbio_kind = pacbio_name_kind(token);
+        if (pacbio_kind == 2) return kPacBioHiFi;
+        if (pacbio_kind == 1) return kPacBioCLR;
+        if (is_illumina_name(token)) return kIllumina;
+        if (is_uuid(token)) return kNanopore;
+      }
+      if (start >= comment.size()) break;
+      size_t end = comment.find_first_of(" \t", start);
+      if (end == string::npos) end = comment.size();
+      token = comment.substr(start, end - start);
+      start = end + 1;
+    }
+
+    return kNone;
+  }
+
+  void cReadTypeDetector::add(const string& name, const string& comment, const string& qualities, const size_t length)
+  {
+    m_num_reads++;
+    m_header_votes[classify_header(name, comment)]++;
+    m_read_lengths.push_back(static_cast<uint32_t>(length));
+    for (size_t i = 0; i < qualities.size(); i++)
+      m_quality_chr_counts[static_cast<uint8_t>(qualities[i])]++;
+  }
+
+  uint32_t cReadTypeDetector::read_length_percentile(const double fraction) const
+  {
+    if (m_read_lengths.empty()) return 0;
+    sort(m_read_lengths.begin(), m_read_lengths.end());
+    size_t index = static_cast<size_t>(fraction * static_cast<double>(m_read_lengths.size() - 1) + 0.5);
+    return m_read_lengths[min(index, m_read_lengths.size() - 1)];
+  }
+
+  double cReadTypeDetector::mean_quality(const uint8_t quality_chr_offset) const
+  {
+    double total_error = 0;
+    uint64_t num_bases = 0;
+    for (uint32_t c = 0; c < 256; c++) {
+      if (m_quality_chr_counts[c] == 0) continue;
+      double quality = static_cast<double>(c) - static_cast<double>(quality_chr_offset);
+      total_error += static_cast<double>(m_quality_chr_counts[c]) * pow(10.0, -quality / 10.0);
+      num_bases += m_quality_chr_counts[c];
+    }
+    if ((num_bases == 0) || (total_error <= 0)) return 0;
+    return -10.0 * log10(total_error / static_cast<double>(num_bases));
+  }
+
+  double cReadTypeDetector::fraction_bases_at_least_quality(const uint8_t quality_chr_offset, const uint32_t quality) const
+  {
+    uint64_t num_bases = 0, num_at_least = 0;
+    for (uint32_t c = 0; c < 256; c++) {
+      num_bases += m_quality_chr_counts[c];
+      if (c >= static_cast<uint32_t>(quality_chr_offset) + quality) num_at_least += m_quality_chr_counts[c];
+    }
+    return (num_bases == 0) ? 0 : static_cast<double>(num_at_least) / static_cast<double>(num_bases);
+  }
+
+  uint32_t cReadTypeDetector::num_distinct_qualities() const
+  {
+    uint32_t n = 0;
+    for (uint32_t c = 0; c < 256; c++) if (m_quality_chr_counts[c]) n++;
+    return n;
+  }
+
+  void cReadTypeDetector::detect(const uint8_t quality_chr_offset, string& read_type, string& read_type_source) const
+  {
+    read_type = kReadTypeUnknown;
+    read_type_source = "";
+    if (m_num_reads == 0) return;
+
+    // ---- Headers: trusted when most of the sampled reads agree ----
+    HeaderEvidence best = kNone;
+    for (uint32_t e = kNone + 1; e < kNumHeaderEvidence; e++)
+      if (m_header_votes[e] > m_header_votes[best] || (best == kNone)) best = static_cast<HeaderEvidence>(e);
+    const bool header_decides = (best != kNone) && (2 * m_header_votes[best] > m_num_reads);
+
+    // An ONT header without a model name still settles the platform; so does everything below
+    const bool nanopore_by_header = header_decides && (best == kNanopore);
+
+    if (header_decides && !nanopore_by_header) {
+      read_type_source = kReadTypeSourceHeader;
+      switch (best) {
+        case kIllumina:     read_type = kReadTypeIllumina; break;
+        case kNanoporeFast: read_type = kReadTypeNanoporeFast; break;
+        case kNanoporeHAC:  read_type = kReadTypeNanoporeHAC; break;
+        case kPacBioCLR:    read_type = kReadTypePacBioCLR; break;
+        case kPacBioHiFi:   read_type = kReadTypePacBioHiFi; break;
+        default: break;
+      }
+      return;
+    }
+
+    // ---- Lengths and qualities ----
+    read_type_source = kReadTypeSourceQuality;
+
+    if (!nanopore_by_header) {
+
+      // Short reads: nearly all under 700 bases, which clears merged 2x300 pairs, and none of
+      // 1000 or more. The second condition is for nanopore libraries of short fragments, which
+      // are mostly short reads but always have some long ones (SRR14995061: median 153 bases,
+      // longest of the sample 6400), where a short-read platform has a hard maximum. A nanopore
+      // file with no read that long and no usable names is still called illumina.
+      if ( (read_length_percentile(0.99) < kReadTypeLongReadLength)
+        && (read_length_percentile(1.0) < kReadTypeLongestShortRead) ) {
+        read_type = kReadTypeIllumina;
+        return;
+      }
+
+      // Every base one score: there are no real qualities. That is how PacBio subreads come
+      // from Sequel instruments on (all 7 sampled Sequel / Sequel II CLR runs).
+      const uint32_t num_distinct = num_distinct_qualities();
+      if (num_distinct <= 1) {
+        read_type = kReadTypePacBioCLR;
+        return;
+      }
+
+      // PacBio RS II subreads do have qualities, but only Q0-Q15 (all 5 sampled RS II runs), where
+      // even the worst nanopore sample seen (mean Q5) has 5% of its bases at Q20 or better.
+      if (fraction_bases_at_least_quality(quality_chr_offset, kReadTypeCLRMaximumQuality) < kReadTypeCLRMaximumQualityFraction) {
+        read_type = kReadTypePacBioCLR;
+        return;
+      }
+
+      // HiFi consensus qualities run to the top of the scale (Q93), which no single-pass
+      // basecaller reaches; newer instruments bin them into a handful of values instead, and a
+      // nanopore file has dozens of distinct values.
+      if ( (fraction_bases_at_least_quality(quality_chr_offset, kReadTypeHiFiQuality) >= kReadTypeHiFiQualityFraction)
+        || (num_distinct <= kReadTypeBinnedQualityValues) ) {
+        read_type = kReadTypePacBioHiFi;
+        return;
+      }
+    }
+
+    // Nanopore: the basecalling accuracy shows in the mean quality
+    const double q = mean_quality(quality_chr_offset);
+    read_type = (q < kReadTypeNanoporeHACMeanQuality) ? kReadTypeNanoporeFast : kReadTypeNanoporeHAC;
   }
 
   void warn_constant_base_quality(const string& file_name, const uint32_t original_quality, const uint32_t replacement_quality)
@@ -1331,10 +1743,17 @@ namespace breseq {
           // Delete any sequence name information after the first space...
           // Necessary for scrubbing SRA FASTQs, for example.
           { // block to keep inside this switch case
+            // ...but keep it aside: it is where the basecaller model or the original read
+            // name of an SRA download is, which cReadTypeDetector reads the read type from.
             size_t space_pos = sequence.m_name.find(" ");
-            if (space_pos != string::npos) 
+            if (space_pos != string::npos)
             {
+              sequence.m_name_comment.assign(sequence.m_name, space_pos + 1, string::npos);
               sequence.m_name.erase(space_pos);
+            }
+            else
+            {
+              sequence.m_name_comment.clear();
             }
           }
           

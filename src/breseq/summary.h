@@ -174,6 +174,10 @@ namespace breseq{
     // replaced, min_quality_score and max_quality_score are the replacement, the score the
     // converted reads carry.
     int32_t replaced_constant_base_quality = -1;
+    // Read type of the file and how it was decided (see READ TYPES in fastq.h). normalize_fastq
+    // fills in what it detected; stage 1 then overrides it with a type given on the command line.
+    string read_type;
+    string read_type_source;
     
     AnalyzeFastqSummary()
     : read_length_min(0)
@@ -288,6 +292,11 @@ namespace breseq{
     // alike; the --aligned-sam replacement itself is made later, as the SAM records are loaded.
     map<string, uint32_t> constant_base_quality_files;
     uint32_t constant_base_quality_replacement = 0;
+    // Read type of every read file (base name), and how it was decided (see READ TYPES in fastq.h).
+    // Filled for FASTQ and --aligned-sam input alike, and what cReadFile::m_read_type is restored
+    // from on a restart. For FASTQ input each file's AnalyzeFastqSummary says the same.
+    map<string, string> read_file_types;
+    map<string, string> read_file_type_sources;
     
     SequenceConversionSummary()
     : read_length_avg(0.0)
@@ -823,6 +832,8 @@ namespace breseq{
     uint64_t num_original_bases;
     uint64_t num_bases;
     bool reads_were_split;
+    string read_type;
+    string read_type_source;
     string quality_format_original;
     string quality_format;
     
@@ -856,7 +867,13 @@ namespace breseq{
     // with constant_base_quality_replacement (see SequenceConversionSummary).
     map<string, uint32_t> constant_base_quality_files;
     uint32_t constant_base_quality_replacement = 0;
-    
+    // Read type of every read file (base name), and how it was decided (see READ TYPES in fastq.h).
+    // Filled for FASTQ and --aligned-sam input alike, and what cReadFile::m_read_type is restored
+    // from on a restart (copied from SequenceConversionSummary). For FASTQ input each entry of
+    // read_file says the same.
+    map<string, string> read_file_types;
+    map<string, string> read_file_type_sources;
+
     PublicReadSummary() {}
     PublicReadSummary(const Summary &s);
   };

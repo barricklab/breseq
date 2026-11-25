@@ -162,6 +162,19 @@ void from_json(const json& j, CoverageSummary& s)
   s.relative_variance = get_double_or_default(j, "relative_variance");
 }
   
+// A map<string,string> member, or an empty map if the key is absent (a summary written before
+// the member existed). Read item by item: this json.hpp cannot convert a JSON object to
+// map<string,string> in one get<>() with a standard library that has string_view.
+static map<string, string> get_string_map_or_empty(const json& j, const string& key)
+{
+  map<string, string> return_value;
+  if (!j.count(key)) return return_value;
+  const json& object = j.at(key);
+  for (json::const_iterator it = object.begin(); it != object.end(); ++it)
+    return_value[it.key()] = it.value().get<string>();
+  return return_value;
+}
+
 // AnalyzeFastqSummary
 void to_json(json& j, const AnalyzeFastqSummary& s)
 {
@@ -187,6 +200,8 @@ void to_json(json& j, const AnalyzeFastqSummary& s)
     {"long_read_pair_mate", s.long_read_pair_mate},
     {"read_name_file_index", s.read_name_file_index},
     {"replaced_constant_base_quality", s.replaced_constant_base_quality},
+    {"read_type", s.read_type},
+    {"read_type_source", s.read_type_source},
   };
 }
 
@@ -214,6 +229,9 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
   s.long_read_pair_mate = j.count("long_read_pair_mate") ? j.at("long_read_pair_mate").get<uint32_t>() : 0;
   s.read_name_file_index = j.count("read_name_file_index") ? j.at("read_name_file_index").get<uint32_t>() : 0;
   s.replaced_constant_base_quality = j.count("replaced_constant_base_quality") ? j.at("replaced_constant_base_quality").get<int32_t>() : -1;
+  // Absent from summaries written before read types existed
+  s.read_type = j.count("read_type") ? j.at("read_type").get<string>() : "";
+  s.read_type_source = j.count("read_type_source") ? j.at("read_type_source").get<string>() : "";
 }
   
 // PreprocessAlignmentsSummary
@@ -280,6 +298,8 @@ void to_json(json& j, const SequenceConversionSummary& s)
     {"read_length_min", s.read_length_min},
     {"constant_base_quality_files", s.constant_base_quality_files},
     {"constant_base_quality_replacement", s.constant_base_quality_replacement},
+    {"read_file_types", s.read_file_types},
+    {"read_file_type_sources", s.read_file_type_sources},
   };
 }
 
@@ -298,6 +318,9 @@ void from_json(const json& j, SequenceConversionSummary& s)
   // Absent from summaries written before constant base qualities were detected
   s.constant_base_quality_files = j.count("constant_base_quality_files") ? j.at("constant_base_quality_files").get<map<string, uint32_t> >() : map<string, uint32_t>();
   s.constant_base_quality_replacement = j.count("constant_base_quality_replacement") ? j.at("constant_base_quality_replacement").get<uint32_t>() : 0;
+  // Absent from summaries written before read types existed
+  s.read_file_types = get_string_map_or_empty(j, "read_file_types");
+  s.read_file_type_sources = get_string_map_or_empty(j, "read_file_type_sources");
 }
 
 // cErrorCountSummary
@@ -712,6 +735,8 @@ PublicReadFileSummary::PublicReadFileSummary(const ReadFileSummary &rfs, const A
   num_bases = afs.num_bases;
   reads_were_split = afs.reads_were_split;
   quality_format_original = afs.quality_format_original;
+  read_type = afs.read_type;
+  read_type_source = afs.read_type_source;
   quality_format = afs.quality_format;
   
   num_aligned_reads = rfs.num_total_reads - rfs.num_unmapped_reads;
@@ -740,6 +765,8 @@ PublicReadSummary::PublicReadSummary(const Summary &s)
 
   constant_base_quality_files = s.sequence_conversion.constant_base_quality_files;
   constant_base_quality_replacement = s.sequence_conversion.constant_base_quality_replacement;
+  read_file_types = s.sequence_conversion.read_file_types;
+  read_file_type_sources = s.sequence_conversion.read_file_type_sources;
 }
 
   
@@ -948,6 +975,8 @@ void to_json(json& j, const PublicReadFileSummary& s)
     {"num_original_bases", s.num_original_bases},
     {"num_bases", s.num_bases},
     {"reads_were_split", s.reads_were_split},
+    {"read_type", s.read_type},
+    {"read_type_source", s.read_type_source},
     {"quality_format_original", s.quality_format_original},
     {"quality_format", s.quality_format},
     
@@ -974,6 +1003,8 @@ void from_json(const json& j, PublicReadFileSummary& s)
   s.num_original_bases = j.at("num_original_bases").get<uint64_t>();
   s.num_bases = j.at("num_bases").get<uint64_t>();
   s.reads_were_split = j.at("reads_were_split").get<bool>();
+  s.read_type = j.count("read_type") ? j.at("read_type").get<string>() : "";
+  s.read_type_source = j.count("read_type_source") ? j.at("read_type_source").get<string>() : "";
   s.quality_format_original = j.at("quality_format_original").get<string>();
   s.quality_format = j.at("quality_format").get<string>();
 
@@ -1011,6 +1042,8 @@ void to_json(json& j, const PublicReadSummary& s)
     {"read_file", s.read_file},
     {"constant_base_quality_files", s.constant_base_quality_files},
     {"constant_base_quality_replacement", s.constant_base_quality_replacement},
+    {"read_file_types", s.read_file_types},
+    {"read_file_type_sources", s.read_file_type_sources},
   };
   
 }
@@ -1026,6 +1059,9 @@ void from_json(const json& j, PublicReadSummary& s)
   s.read_file = j.at("read_file").get<PublicReadFileSummaries>();
   s.constant_base_quality_files = j.count("constant_base_quality_files") ? j.at("constant_base_quality_files").get<map<string, uint32_t> >() : map<string, uint32_t>();
   s.constant_base_quality_replacement = j.count("constant_base_quality_replacement") ? j.at("constant_base_quality_replacement").get<uint32_t>() : 0;
+  // Absent from summaries written before read types existed
+  s.read_file_types = get_string_map_or_empty(j, "read_file_types");
+  s.read_file_type_sources = get_string_map_or_empty(j, "read_file_type_sources");
 }
   
 // PublicReferenceFileSummary

@@ -825,6 +825,11 @@ bool soft_clip_alignment_ends(
 //  differs, so a file with informative scores is barely read; only a constant one is read to the end.
 bool sam_file_constant_base_quality(const string& file_name, uint8_t& quality);
 
+//! Detects the read type of a SAM/BAM file from its first reads (see cReadTypeDetector in fastq.h).
+//  Only the read names are available as headers: a FASTQ comment survives into a SAM file only
+//  as tags, and only if the aligner was told to copy it.
+void sam_file_detect_read_type(const string& file_name, string& read_type, string& read_type_source);
+
 class bam_file {
   
 public:

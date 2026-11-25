@@ -1242,7 +1242,7 @@ namespace breseq {
 			vector<string> values;
 			if (it->is_positional) {
 				for (int32_t i = 0; i < options.getArgc(); i++)
-					values.push_back(options.getArgv(i));
+					values.push_back(options.positionalArgumentPath(options.getArgv(i)));
 			} else {
 				// The EFFECTIVE value, which falls back to the registered default -- not
 				// count(), which is false for a default. breseq BAM2ALN/BAM2COV/BAM2DRP

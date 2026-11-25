@@ -36,6 +36,31 @@ caused by the high homopolymer indel error rates of this mode: no indel mutation
 will be called in homopolymer repeats of 4 or more bases. This option is not
 necessary for data processed in high-accuracy basecalling mode.
 
+_breseq_ records the type of reads in each read file: `illumina`,
+`nanopore-fast`, `nanopore-hac` (high or super accuracy basecalling),
+`pacbio-clr` or `pacbio-hifi`. It detects the type from the read names
+when they identify the platform or the basecaller model, and otherwise
+guesses it from the read lengths and base qualities. The type is shown in
+the read file table of the summary page (marked when it was a guess) and
+as the platform (`PL`) of the read group in the output BAM file. To set
+the type yourself, prefix the read file with it on the command line:
+
+```
+breseq -r reference.gbk nanopore-hac:long_reads.fastq.gz illumina:short_reads_R1.fastq.gz short_reads_R2.fastq.gz
+```
+
+The names (and synonyms such as `ont-hac` and `nanopore-sup`) are the ones
+[brefito](https://github.com/barricklab/brefito) uses. At present the read
+type is only recorded. It does not change how mutations are predicted, and
+`--nanopore-fast` is not turned on automatically for `nanopore-fast` reads;
+_breseq_ prints a note suggesting it instead.
+
+The platform (Illumina, Nanopore or PacBio) is detected reliably. Whether
+Nanopore reads were basecalled in fast or high-accuracy mode is not, unless
+the read names include the basecaller model: base qualities differ as much
+between libraries as between basecalling modes. _breseq_ still reports its
+best guess, but it will not choose any setting from that guess alone.
+
 _breseq_ was initially developed to analyze data from the Lenski
 long-term evolution experiment with *E. coli* [(Link to LTEE
 Website)](https://the-ltee.org).

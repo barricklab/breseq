@@ -1,0 +1,24 @@
+# file / detected read type / decided from
+illumina_old_names       illumina       header
+illumina_casava_names    illumina       header
+illumina_sra_names       illumina       header
+nanopore_fast_model      nanopore-fast  header
+nanopore_hac_model       nanopore-hac   header
+nanopore_sup_bam_tag     nanopore-hac   header
+pacbio_ccs_names         pacbio-hifi    header
+pacbio_subread_names     pacbio-clr     header
+short_no_names           illumina       quality
+long_q0                  pacbio-clr     quality
+long_rs2_qualities       pacbio-clr     quality
+long_hifi_qualities      pacbio-hifi    quality
+long_binned_qualities    pacbio-hifi    quality
+long_low_qualities       nanopore-fast  quality
+long_high_qualities      nanopore-hac   quality
+nanopore_names_no_model  nanopore-hac   quality
+# read type prefixes
+known type: exit 0, message found
+synonym, any case: exit 0, message found
+unknown type: exit 1, message found
+missing file: exit 1, message found
+pair, one type given: exit 0, message found
+pair, two types: exit 1, message found

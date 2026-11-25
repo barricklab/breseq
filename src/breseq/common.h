@@ -596,6 +596,7 @@ namespace breseq {
     string library;      // @RG LB -- the cReadFileSet base name (a read pair's shared name)
     string sample;       // @RG SM
     string description;  // @RG DS -- names the member read files
+    string platform;     // @RG PL -- from the set's read type (see READ TYPES in fastq.h); "" = omitted
   };
   typedef vector<cReadGroup> cReadGroupList;
 

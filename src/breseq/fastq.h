@@ -160,7 +160,151 @@ class cAnnotatedSequence;
   //! Prints the warning shown for each read file whose qualities are replaced.
   //  original_quality is on the SANGER scale, or kMissingBamBaseQuality for a SAM QUAL of '*'.
   void warn_constant_base_quality(const string& file_name, const uint32_t original_quality, const uint32_t replacement_quality);
-  
+
+  // READ TYPES
+  //
+  // Every read file has a read type: the sequencing platform and, for long reads, the kind of
+  // basecalling. It is either given on the command line as a prefix on the read file argument
+  // (ont-hac:reads.fastq.gz) or detected from the first reads of the file (cReadTypeDetector).
+  // The names are the ones brefito uses for the "type" column of its data.csv, synonyms included,
+  // so a brefito type can be handed to breseq as it is.
+  //
+  // The type is RECORDED ONLY at present (stage 1 log, summary.json, summary.html, @RG PL). No
+  // calling behavior depends on it yet; it is there so that per-type artifact handling has
+  // something to key on. Consumers should ask cReadFile::m_read_type.
+  //
+  // POLICY: no setting is to be chosen from a nanopore accuracy (fast versus hac) whose source is
+  // "quality" alone. That guess is kept because it is usually right and worth showing, but it
+  // fails by the dataset (see kReadTypeNanoporeHACMeanQuality below). Anything that changes
+  // behavior for fast-basecalled reads must have a model name from the read headers, a type
+  // given on the command line, or the indel error rate measured after mapping. Check
+  // cReadFile::m_read_type_source before acting on m_read_type.
+  extern const char* const kReadTypeIllumina;      // "illumina"
+  extern const char* const kReadTypeNanopore;      // "nanopore"       basecalling accuracy not known
+  extern const char* const kReadTypeNanoporeFast;  // "nanopore-fast"
+  extern const char* const kReadTypeNanoporeHAC;   // "nanopore-hac"   high or super accuracy: sup is not
+                                                   //                  a type of its own, "nanopore-sup"
+                                                   //                  is accepted as a synonym for this
+  extern const char* const kReadTypePacBio;        // "pacbio"         CLR or HiFi not known
+  extern const char* const kReadTypePacBioCLR;     // "pacbio-clr"
+  extern const char* const kReadTypePacBioHiFi;    // "pacbio-hifi"
+  extern const char* const kReadTypeUnknown;       // "unknown"        only for a file with no reads
+
+  // How a file's type was decided
+  extern const char* const kReadTypeSourceSpecified; // "specified"  prefix on the command line
+  extern const char* const kReadTypeSourceHeader;    // "header"     read names/comments identify it
+  extern const char* const kReadTypeSourceQuality;   // "quality"    guessed from lengths and qualities
+
+  // Thresholds of the guess from lengths and qualities (cReadTypeDetector::detect)
+  const uint32_t kReadTypeSampleReads = 10000;           // reads examined per file
+  const uint32_t kReadTypeLongReadLength = 700;          // 99th percentile read length of a long-read file...
+  const uint32_t kReadTypeLongestShortRead = 1000;       // ...or any read this long: no short-read platform makes one
+  const uint32_t kReadTypeHiFiQuality = 60;              // a base quality only consensus reads reach...
+  const double   kReadTypeHiFiQualityFraction = 0.1;     // ...and the fraction of bases that must have it
+  const uint32_t kReadTypeBinnedQualityValues = 10;      // at most this many distinct scores: binned
+  const uint32_t kReadTypeCLRMaximumQuality = 20;        // PacBio RS II subreads have no base this good...
+  const double   kReadTypeCLRMaximumQualityFraction = 0.001; // ...(allowing this fraction), nanopore reads do
+  // Nanopore accuracy from the mean quality (the quality of the mean error probability).
+  //
+  // Calibrated on samples of public runs whose basecalling mode is on record: ENA study ERP173262
+  // (bacterial isolates, R9.4.1 and R10.4.1, each called fast/hac/sup with Guppy and with Dorado;
+  // 16 fast, 16 hac and 16 sup samples), the three basecallers' calls of one R9.4.1 library in
+  // SRP416531, four other runs described as fast-basecalled, and dorado v5 hac/sup calls of three
+  // R10.4.1 flowcells (ONT open data giab_2025.01).
+  //
+  // Within ERP173262 fast is Q9.3-12.0 and hac Q11.9-13.7 (sup Q13.1-16.7): the classes touch, and
+  // 12.2 misclassifies one hac sample of the 48. No other statistic tried did better (arithmetic
+  // mean, median, mode, fraction of bases at Q20/Q30/Q40, median per-read quality).
+  //
+  // ACROSS datasets the mean quality reflects the library as much as the basecaller, and the
+  // guess fails by the dataset: every call of the SRP416531 library, sup included, is Q5-7 and so
+  // "fast"; one run described as Dorado fast is Q16 and so "hac". Over all 69 labelled samples
+  // 21 of 22 fast and 40 of 47 hac/sup are called correctly. Treat a type whose source is
+  // "quality" accordingly: a header that names the model, or a type given on the command line,
+  // is always better. (Base quality inside the reads' own homopolymer runs was tried too: fast
+  // calls score those bases relatively higher, but the ranges overlap as much.)
+  //
+  // What does separate the modes is the indel error rate AFTER mapping. For 14 E. coli samples of
+  // ERP173262 mapped with minimap2, indels per 100 aligned bases inside reference homopolymers of
+  // 4+ bases were 6.2-7.0 for fast against 1.7-4.8 for hac/sup, and deletions overall 1.8-2.8
+  // against 0.6-1.5. A rule that needs the fast/hac distinction should measure that (stage 07
+  // tabulates errors per read file) rather than rely on this guess.
+  const double   kReadTypeNanoporeHACMeanQuality = 12.2; // mean quality below this: fast
+
+  //! Canonical read type for a name or synonym (case-insensitive); "" if it is not one.
+  string canonical_read_type(const string& name);
+  //! Canonical read types, for help and error messages.
+  vector<string> read_type_names();
+  //! SAM @RG PL value for a read type ("ILLUMINA", "ONT", "PACBIO"); "" for unknown.
+  string read_type_platform(const string& read_type);
+  bool is_long_read_type(const string& read_type);
+  bool is_nanopore_read_type(const string& read_type);
+  //! Text for the stage 1 log and summary.html: "detected from read names", ...
+  string read_type_source_description(const string& read_type_source);
+
+  class cReadTypeDetector;
+
+  //! Feeds the first reads of a FASTQ file to a detector (breseq SUMMARIZE-FASTQ; the pipeline
+  //  does this inside normalize_fastq, from the reads it has already buffered).
+  void sample_fastq_file_for_read_type(const string& file_name, cReadTypeDetector& detector);
+
+  //! Settles a file's read type and prints the stage 1 log line for it.
+  //  read_type/read_type_source come in as detected and go out as decided: a type given on the
+  //  command line (specified_read_type, "" if none) wins, with a warning when the reads say otherwise.
+  void resolve_read_type(const string& file_name, const string& specified_read_type,
+                         string& read_type, string& read_type_source);
+
+  //! Splits a read file argument of the form <read type>:<path>.
+  //  The text before the first ':' is a prefix only if it is a read type name, so a path that
+  //  merely contains a colon is left alone. Returns the path; read_type is "" without a prefix.
+  string split_read_type_prefix(const string& read_file_argument, string& read_type);
+  //! Same, for callers that only want the path (AnyOption's positional path filter).
+  string strip_read_type_prefix(const string& read_file_argument);
+
+  /*! Guesses the read type of a file from its first reads.
+
+      Add each sampled read's name, the rest of its header line, its base quality characters as
+      they are in the file, and its length BEFORE any splitting; then ask for the type.
+
+      Read headers are trusted over everything else when most reads have one that identifies the
+      platform: a dorado/guppy basecaller model name, a PacBio movie/ZMW name, an Illumina
+      instrument:run:flowcell:lane:tile:x:y name. SRA downloads replace the name and only sometimes
+      keep the original after it, so every whitespace-separated field of the header is examined.
+
+      Otherwise the type is guessed from read lengths and base qualities, and reported with the
+      source "quality". The nanopore fast/hac/sup split by mean quality in particular is only a
+      best guess: the distributions overlap across chemistries and basecaller versions.
+   */
+  class cReadTypeDetector {
+  public:
+    cReadTypeDetector();
+
+    //! quality_chr_offset is 33 for SANGER-encoded characters, 64 for the old Illumina formats.
+    //  It may be given later, to detect(), when it is not yet known as reads are added.
+    void add(const string& name, const string& comment, const string& qualities, const size_t length);
+
+    void detect(const uint8_t quality_chr_offset, string& read_type, string& read_type_source) const;
+
+    // Statistics of the sample, for reporting and for calibrating the rules (SUMMARIZE-FASTQ)
+    uint64_t num_reads() const { return m_num_reads; }
+    uint32_t read_length_percentile(const double fraction) const;
+    //! Quality of the mean error probability over all sampled bases
+    double mean_quality(const uint8_t quality_chr_offset) const;
+    //! Fraction of sampled bases with at least this quality
+    double fraction_bases_at_least_quality(const uint8_t quality_chr_offset, const uint32_t quality) const;
+    uint32_t num_distinct_qualities() const;
+
+  private:
+    enum HeaderEvidence { kNone = 0, kIllumina, kNanopore, kNanoporeFast, kNanoporeHAC,
+                          kPacBioCLR, kPacBioHiFi, kNumHeaderEvidence };
+    static HeaderEvidence classify_header(const string& name, const string& comment);
+
+    uint64_t m_num_reads;
+    uint64_t m_header_votes[kNumHeaderEvidence];
+    uint64_t m_quality_chr_counts[256];
+    mutable vector<uint32_t> m_read_lengths;   // sorted on demand
+  };
+
   // Utility function for converting FASTQ files between formats
   void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format, bool reverse_complement = false);
   
@@ -170,6 +314,7 @@ class cAnnotatedSequence;
   struct cFastqSequence {
     public:
       string   m_name;        //@NAME
+      string   m_name_comment;//rest of the @NAME line after the first space (only read, never written)
       string   m_sequence;    //sequence
       string   m_name_plus;   //+NAME
       string   m_qualities;   //quality score characters
