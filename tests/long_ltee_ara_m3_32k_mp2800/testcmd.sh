@@ -44,18 +44,20 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 #
 # COVERAGE CAP: as served this run is ~384x, far above the 40-80x band the rest
 # of these tests were chosen for, and at ~35 bp per read that is 50 million reads. '-l 80'
-# caps what breseq PARSES at roughly 80-fold. The limit is applied inside
-# normalize_fastq_paired (see read_file_base_limit in breseq_cmdline.cpp), so it
-# truncates within the paired set -- it takes the head of the files in order and
-# never splits a pair, which is what makes the golden reproducible. The full
+# caps what breseq KEEPS at roughly 80-fold. Since 16b5ca64 the limit keeps read
+# pairs at even intervals through the files (it took the head of them before), with
+# integer arithmetic only and never splitting a pair, which is what makes the golden
+# reproducible. Every count quoted in these notes from before that commit was
+# measured on the head-of-file sample, a different set of reads. The full
 # 1.39 GB is still downloaded and md5-verified: the manifest checksum has to
 # cover exactly the bytes ENA serves, which is why the data is not subsampled on
 # disk instead. This is also the largest download of any test in the tree.
 #
 # EXPERIMENTAL PAIR EVIDENCE: this test runs the three PAIR predictors, and it is
 # the only place any of them see a kilobase-scale span. What they currently produce
-# here is MP 0, PD 28 (25 accepted) and DP 0 -- the zeros are expected and worth
-# pinning.
+# here is MP 0, PD 27 (25 accepted) and DP 138 (4 accepted, three of them deletions
+# of 22, 36 and 40 kb; 129 of the rest have a single bridging pair and are rejected
+# for it). The MP zero is expected and worth pinning.
 #
 # THE PD ENTRIES ARE NOT OVER-PREDICTION, which is the natural first reading of 25
 # calls against 2 to 7 on the short-insert paired tests. Every accepted one has

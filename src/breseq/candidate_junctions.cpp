@@ -1890,6 +1890,18 @@ namespace breseq {
       }
     }
     
+    // The survivor is chosen for its description (shortest sequence, closest coordinates), not for
+    // its support, so it takes the better-supported of the two position hashes. Without this a
+    // junction into a multicopy IS element loses reads at every merge: only a read's longest
+    // alignment pairs become candidates, copies that differ near the IS end are each the longest
+    // for a different subset of the reads, and the same junction arrives here as two candidates
+    // with part of the support each. An IS150 insertion with split reads at nine distinct
+    // registers reached this point as candidates scoring 3 and 2, kept the 2, and was dropped by
+    // a cutoff of 3 (LTEE ZDB30, smp/serB). The hashes are not combined: a read that ties between
+    // two copies is in both, under a different coordinate in each, and would count twice.
+    if (merge_from.read_begin_hash.size() > merge_into.read_begin_hash.size())
+      merge_into.read_begin_hash = merge_from.read_begin_hash;
+
     jcp1 = merge_into_p;
     jcp2 = merge_from_p;
 
