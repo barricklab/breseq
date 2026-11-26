@@ -981,7 +981,7 @@ identify_mutations_pileup::identify_mutations_pileup(
     }
 
     _pd_max_span = _settings.pair_distance_maximum_span;
-    if (_pd_max_span <= 0) _pd_max_span = static_cast<int32_t>(derived_span + 0.5);
+    if (_pd_max_span <= 0) _pd_max_span = pd_derived_maximum_span(derived_span / 2.0);
 
     // Matches the fallback in pd_evidence: a span no larger than the reads leaves nothing to bound.
     int32_t null_max_distance = (_pd_max_span > trunc) ? _pd_max_span : 0;

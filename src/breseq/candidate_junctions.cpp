@@ -22,6 +22,7 @@
 #include "candidate_junctions.h"
 
 #include "calculate_trims.h"
+#include "coverage_distribution.h"
 #include "fastq.h"
 
 using namespace std;
@@ -384,12 +385,15 @@ namespace breseq {
                                                  const vector<AlignmentSummary>& r1_alignments,
                                                  const vector<AlignmentSummary>& r2_alignments,
                                                  string& orientation_out,
-                                                 int64_t& distance_out
+                                                 int64_t& distance_out,
+                                                 uint32_t* tid_out = NULL,
+                                                 uint32_t* leftmost_out = NULL
                                                  )
   {
     bool found = false;
     int64_t best_distance = 0;
     string best_orientation;
+    uint32_t best_tid = 0, best_leftmost = 0;
 
     for (vector<AlignmentSummary>::const_iterator a = r1_alignments.begin(); a != r1_alignments.end(); a++) {
       for (vector<AlignmentSummary>::const_iterator b = r2_alignments.begin(); b != r2_alignments.end(); b++) {
@@ -408,6 +412,8 @@ namespace breseq {
           found = true;
           best_distance = distance;
           best_orientation = orientation;
+          best_tid = a->tid;
+          best_leftmost = min(a->start_1, b->start_1);
         }
       }
     }
@@ -415,6 +421,8 @@ namespace breseq {
     if (found) {
       orientation_out = best_orientation;
       distance_out = best_distance;
+      if (tid_out) *tid_out = best_tid;
+      if (leftmost_out) *leftmost_out = best_leftmost;
     }
     return found;
   }
@@ -520,7 +528,9 @@ namespace breseq {
                                              bam_file& PSAM2,
                                              uint32_t& i,
                                              ofstream* pair_pos_csv_r1,
-                                             ofstream* pair_pos_csv_r2
+                                             ofstream* pair_pos_csv_r2,
+                                             map<string, map<int64_t, uint32_t> >* region_distance_counts,
+                                             uint32_t region_size
                                              )
   {
     // Writes one sidecar row: the split read's name, then a 4-tuple (seq_id,F/R,start_1,end_1)
@@ -620,8 +630,11 @@ namespace breseq {
       if (matched && r1_mapped && r2_mapped && r1_is_stage1 && r2_is_stage1) {
         string orientation;
         int64_t distance;
-        if (best_pair_orientation_and_distance(r1_summary, r2_summary, orientation, distance)) {
+        uint32_t pair_tid = 0, pair_leftmost = 0;
+        if (best_pair_orientation_and_distance(r1_summary, r2_summary, orientation, distance, &pair_tid, &pair_leftmost)) {
           distance_counts[make_pair(orientation, distance)]++;
+          if (region_distance_counts && (region_size > 0))
+            (*region_distance_counts)[orientation + "," + to_string(pair_tid) + ":" + to_string(pair_leftmost / region_size)][distance]++;
         }
       }
 
@@ -676,11 +689,14 @@ namespace breseq {
     }
 
     map<pair<string, int64_t>, uint32_t> distance_counts;
+    map<string, map<int64_t, uint32_t> > region_distance_counts;
+    const uint32_t region_size = pair_distance_region_size(ref_seq_info.get_total_length());
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     out1, out2, output_sam_file_name_r1, output_sam_file_name_r2,
                                     distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, i,
                                     pair_pos_csv_r1.is_open() ? &pair_pos_csv_r1 : NULL,
-                                    pair_pos_csv_r2.is_open() ? &pair_pos_csv_r2 : NULL);
+                                    pair_pos_csv_r2.is_open() ? &pair_pos_csv_r2 : NULL,
+                                    &region_distance_counts, region_size);
 
     hts_close(out1);
     hts_close(out2);
@@ -693,6 +709,17 @@ namespace breseq {
       csv << it->first.first << "," << it->first.second << "," << it->second << endl;
     }
     csv.close();
+
+    // The same pairs by region of the reference (see HEAVY-TAILED LIBRARIES in coverage_distribution.h)
+    {
+      string region_csv_file_name = pair_distance_region_file_name(csv_file_name);
+      ofstream region_csv(region_csv_file_name.c_str());
+      ASSERT(region_csv.good(), "Could not open file for writing read-pair mapping statistics: " + region_csv_file_name);
+      region_csv << "orientation,region,distance,count" << endl;
+      for (map<string, map<int64_t, uint32_t> >::const_iterator rit = region_distance_counts.begin(); rit != region_distance_counts.end(); rit++)
+        for (map<int64_t, uint32_t>::const_iterator dit = rit->second.begin(); dit != rit->second.end(); dit++)
+          region_csv << rit->first << "," << dit->first << "," << dit->second << endl;
+    }
   }
 
   // Paired analogue of preprocess_one_sam_file: synchronously traverses R1's and R2's
@@ -728,12 +755,15 @@ namespace breseq {
     }
 
     map<pair<string, int64_t>, uint32_t> distance_counts;
+    map<string, map<int64_t, uint32_t> > region_distance_counts;
+    const uint32_t region_size = pair_distance_region_size(ref_seq_info.get_total_length());
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     NULL, NULL, reference_sam_file_name_r1, reference_sam_file_name_r2,
                                     distance_counts, true /* only called when do_preprocess is true */,
                                     BSAM, PSAM1, PSAM2, i,
                                     pair_pos_csv_r1.is_open() ? &pair_pos_csv_r1 : NULL,
-                                    pair_pos_csv_r2.is_open() ? &pair_pos_csv_r2 : NULL);
+                                    pair_pos_csv_r2.is_open() ? &pair_pos_csv_r2 : NULL,
+                                    &region_distance_counts, region_size);
 
     string csv_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
     ofstream csv(csv_file_name.c_str());
@@ -743,6 +773,17 @@ namespace breseq {
       csv << it->first.first << "," << it->first.second << "," << it->second << endl;
     }
     csv.close();
+
+    // The same pairs by region of the reference (see HEAVY-TAILED LIBRARIES in coverage_distribution.h)
+    {
+      string region_csv_file_name = pair_distance_region_file_name(csv_file_name);
+      ofstream region_csv(region_csv_file_name.c_str());
+      ASSERT(region_csv.good(), "Could not open file for writing read-pair mapping statistics: " + region_csv_file_name);
+      region_csv << "orientation,region,distance,count" << endl;
+      for (map<string, map<int64_t, uint32_t> >::const_iterator rit = region_distance_counts.begin(); rit != region_distance_counts.end(); rit++)
+        for (map<int64_t, uint32_t>::const_iterator dit = rit->second.begin(); dit != rit->second.end(); dit++)
+          region_csv << rit->first << "," << dit->first << "," << dit->second << endl;
+    }
   }
 
   /*! PreprocessAlignments::merge_sort_and_preprocess_alignments

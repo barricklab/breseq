@@ -2296,6 +2296,17 @@ namespace breseq {
         dp.add_reject_reason("DISCORDANT_PAIR_FREQUENCY");
       }
 
+      // The background floor is a statement about how many pairs two unrelated regions share by
+      // chance, and it was applied above to the candidate's shared-pair count, which comes from the
+      // coarse region-overlap heuristic. The pairs that actually bridge the placed breakpoint must
+      // meet it too: an item seeded on 10 shared pairs of which 2 bridge it is 2 pairs of evidence,
+      // and 2 is what the floor ruled out. (In a library whose discordant pairs were mostly its own
+      // long fragments, SRR21198993, 539 of 579 accepted items were below a floor of 8.) Rejected,
+      // not dropped, so the item is still in marginal.html with its counts.
+      if ((k_distinct > 0) && (k_distinct < min_pairs)) {
+        dp.add_reject_reason("DISCORDANT_PAIR_SUPPORT");
+      }
+
       // The original skew test, now only applied where it has power (see above).
       if (skew_has_power && !std::isnan(dp_score) && settings.discordant_pair_skew_cutoff > 0.0
           && dp_score > settings.discordant_pair_skew_cutoff) {
@@ -2308,14 +2319,16 @@ namespace breseq {
         dps.items_tested++;
         if (circular_dp) dps.items_ignored_circular++;
         vector<string> reasons = dp.get_reject_reasons();
-        bool by_freq = false, by_skew = false;
+        bool by_freq = false, by_skew = false, by_support = false;
         for (size_t i = 0; i < reasons.size(); i++) {
           if (reasons[i] == "DISCORDANT_PAIR_FREQUENCY") by_freq = true;
           if (reasons[i] == "CONCORDANT_PAIR_SKEW") by_skew = true;
+          if (reasons[i] == "DISCORDANT_PAIR_SUPPORT") by_support = true;
         }
         if (by_freq) dps.items_rejected_frequency++;
         if (by_skew) dps.items_rejected_skew++;
-        if (!by_freq && !by_skew && !circular_dp) dps.items_accepted++;
+        if (by_support) dps.items_rejected_support++;
+        if (!by_freq && !by_skew && !by_support && !circular_dp) dps.items_accepted++;
       }
 
       emitted_by_breakpoint[breakpoint_key] = dp_gd.add(dp);

@@ -754,6 +754,98 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   double z_multiplier = ndtri(1.0 - alpha);
   result.distance_cutoff = (result.mad > 0) ? (result.median + z_multiplier * result.mad / 0.6745) : result.median;
 
+  // HEAVY-TAILED LIBRARIES (see coverage_distribution.h). A MiSeq 2x300 library of a
+  // cyanobacterium (SRR21198993) had median 182 and upper MAD 41, hence a cutoff of 542, but its
+  // 99th percentile was 695 and its 99.9th was 947. So 2.9% of its ordinary pairs were discordant
+  // -- 84,000 of them, evenly spread (2.5% to 3.8% in every one of 110 regions), enough to pile
+  // up by chance into 570 accepted DP items, every one a pair of positions a few dozen bases apart.
+  if ((result.mad > 0) && (result.distance_cutoff < static_cast<double>(N))) {
+    const uint32_t rule_cutoff_i = static_cast<uint32_t>(ceil(result.distance_cutoff));
+    double beyond = 0;
+    for (uint32_t i = rule_cutoff_i + 1; i <= N; i++) beyond += n[i];
+
+    ifstream region_in(pair_distance_region_file_name(distribution_file_name).c_str());
+    if ((beyond > kPairDistanceMaximumTailFraction * total) && region_in.is_open()) {
+
+      // Per region: all pairs of the majority orientation, and the distances of those beyond the rule's cutoff
+      map<string, double> region_pairs;
+      map<string, map<uint32_t, double> > region_far;
+      string region_line;
+      getline(region_in, region_line); // header
+      while (getline(region_in, region_line)) {
+        if (region_line.empty()) continue;
+        vector<string> cells = split(region_line, ",");
+        if ((cells.size() != 4) || (cells[0] != majority_orientation)) continue;
+        const int64_t distance = from_string<int64_t>(cells[2]);
+        const double count = from_string<double>(cells[3]);
+        region_pairs[cells[1]] += count;
+        if (distance > static_cast<int64_t>(rule_cutoff_i)) region_far[cells[1]][static_cast<uint32_t>(distance)] += count;
+      }
+
+      // Usable regions, and the typical fraction of far pairs in one
+      vector<string> usable;
+      vector<double> far_fractions;
+      map<string, double> region_far_total;
+      for (map<string, double>::const_iterator it = region_pairs.begin(); it != region_pairs.end(); it++) {
+        if (it->second < kPairDistanceMinimumRegionPairs) continue;
+        double far = 0;
+        if (region_far.count(it->first))
+          for (map<uint32_t, double>::const_iterator f = region_far[it->first].begin(); f != region_far[it->first].end(); f++) far += f->second;
+        region_far_total[it->first] = far;
+        usable.push_back(it->first);
+        far_fractions.push_back(far / it->second);
+      }
+
+      if (usable.size() >= kPairDistanceMinimumRegions) {
+        sort(far_fractions.begin(), far_fractions.end());
+        const double typical_fraction = far_fractions[far_fractions.size() / 2];
+
+        // Set aside the regions with an excess of far pairs: a rearrangement's, not the library's
+        double kept_pairs = 0, kept_far = 0;
+        map<uint32_t, double> kept_far_distances;
+        size_t kept_regions = 0;
+        for (size_t r = 0; r < usable.size(); r++) {
+          const double pairs = region_pairs[usable[r]];
+          const double expected = typical_fraction * pairs;
+          if (region_far_total[usable[r]] > max(5.0, 3.0 * expected + 3.0 * sqrt(expected))) continue;
+          kept_regions++;
+          kept_pairs += pairs;
+          kept_far += region_far_total[usable[r]];
+          if (region_far.count(usable[r]))
+            for (map<uint32_t, double>::const_iterator f = region_far[usable[r]].begin(); f != region_far[usable[r]].end(); f++)
+              kept_far_distances[f->first] += f->second;
+        }
+
+        // Evenly spread far pairs are not all tail. Chimeric pairs (two unrelated fragments joined
+        // in library preparation) are evenly spread too, but at any distance up to the size of the
+        // reference, and no cutoff can take them in: in two LTEE libraries 0.37% and 1.04% of
+        // pairs were far, most of them chimeric, and following them moved the cutoff to 1.9 Mb and
+        // 3.0 Mb. Pairs beyond kPairDistanceChimericMultiple times the rule's cutoff are taken to
+        // be chimeric (a chimera is as likely at any distance, so next to none are nearer than
+        // that) and are left discordant: the tail is what remains, and only it moves the cutoff,
+        // which therefore can never pass that multiple.
+        double chimeric_far = 0;
+        for (map<uint32_t, double>::const_iterator f = kept_far_distances.begin(); f != kept_far_distances.end(); f++)
+          if (static_cast<double>(f->first) > kPairDistanceChimericMultiple * rule_cutoff_i) chimeric_far += f->second;
+
+        const double allowed_far = kPairDistanceMaximumTailFraction * kept_pairs + chimeric_far;
+        if ((kept_regions >= kPairDistanceMinimumRegions) && (kept_far > allowed_far)) {
+          // Move the cutoff out until only the allowed fraction of these regions' pairs is beyond it
+          uint32_t cutoff_i = rule_cutoff_i;
+          double still_far = kept_far;
+          for (map<uint32_t, double>::const_iterator f = kept_far_distances.begin(); (f != kept_far_distances.end()) && (still_far > allowed_far); f++) {
+            still_far -= f->second;
+            cutoff_i = f->first;
+          }
+          cerr << "  Paired-end mapping distances have a heavy upper tail: " << formatted_double(100.0 * (kept_far - chimeric_far) / kept_pairs, 2).to_string()
+               << "% of pairs were beyond the cutoff of " << rule_cutoff_i << " (median " << median_i << ", upper MAD " << mad_i
+               << ") but not chimerically far, evenly over " << kept_regions << " of " << usable.size() << " regions of the reference. Cutoff moved to " << cutoff_i << "." << endl;
+          result.distance_cutoff = static_cast<double>(cutoff_i);
+        }
+      }
+    }
+  }
+
   // Preliminary (preprocessing) pair counts: all same-reference mapped pairs, and the concordant
   // subset (majority orientation with distance within the cutoff).
   result.mapped_pairs = static_cast<double>(total_all_orientations);
@@ -895,6 +987,7 @@ void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distribution
   // The pair_stats CSV is a transient intermediate: now that the plot is drawn and the stats are
   // extracted, mark it for deletion when this step completes (done_step honors keep-all-intermediates).
   settings.track_intermediate_file(settings.paired_mapping_distance_done_file_name, distribution_file_name);
+  settings.track_intermediate_file(settings.paired_mapping_distance_done_file_name, pair_distance_region_file_name(distribution_file_name));
 
   // Stage-03 fit is the PRELIMINARY record. The final paired_mapping_distance_distribution is filled
   // later from the BAM pair-flag assignment in resolve_alignments (which reads the cutoff from here).

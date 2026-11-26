@@ -241,16 +241,37 @@ namespace breseq {
       int32_t bound = max_span - trunc;
       if (bound < 1) return;
 
+      // total_supporting(delta) for every delta, without summing the distribution once per delta
+      // (which is quadratic in the span, and was ten hours of a run whose span was 3.9 Mb).
+      // A fragment of length L, gap = L - trunc, supports an insertion of I bases with weight
+      // g[L] * (gap - I) / gap when gap > I, so
+      //   total_supporting(-I) = A(I) - I * B(I),
+      //   A(I) = sum of g[L] over gap > I,   B(I) = sum of g[L] / gap over gap > I,
+      // and both are tail sums: tail_a[k], tail_b[k] below are the sums over gap >= k. A deletion
+      // (I = 0, any delta >= 0) selects against no fragment, so its total is A(0) whatever its size.
+      const int32_t max_gap = max_distance() - trunc;
+      if (max_gap < 1) return;
+      vector<double> tail_a(static_cast<size_t>(max_gap) + 2, 0.0), tail_b(static_cast<size_t>(max_gap) + 2, 0.0);
+      for (int32_t k = max_gap; k >= 1; k--) {
+        tail_a[k] = tail_a[k + 1] + g[static_cast<size_t>(trunc + k)];
+        tail_b[k] = tail_b[k + 1] + g[static_cast<size_t>(trunc + k)] / static_cast<double>(k);
+      }
+      vector<double> insertion_total(1, tail_a[1]);     // indexed by I
+      for (int32_t I = 1; (I <= bound) && (I < max_gap); I++)
+        insertion_total.push_back(max(0.0, tail_a[I + 1] - static_cast<double>(I) * tail_b[I + 1]));
+
       shift_hi = bound;
       shift_lo = -1;
       for (int32_t I = 1; I <= bound; I++) {
-        if (total_supporting(-I) < min_mass) break;
+        if ((I >= static_cast<int32_t>(insertion_total.size())) || (insertion_total[I] < min_mass)) break;
         shift_lo = -I;
       }
 
       h_total.resize(static_cast<size_t>(shift_hi - shift_lo + 1), 0.0);
-      for (int32_t delta = shift_lo; delta <= shift_hi; delta++)
-        h_total[static_cast<size_t>(delta - shift_lo)] = total_supporting(delta);
+      for (int32_t delta = shift_lo; delta <= shift_hi; delta++) {
+        const size_t I = (delta < 0) ? static_cast<size_t>(-delta) : 0;
+        h_total[static_cast<size_t>(delta - shift_lo)] = (I < insertion_total.size()) ? insertion_total[I] : 0.0;
+      }
     }
   };
 
@@ -744,7 +765,7 @@ namespace breseq {
     // the seeding step in identify_mutations.cpp does, and the two must agree.
     int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
     int32_t max_span = settings.pair_distance_maximum_span;
-    if (max_span <= 0) max_span = static_cast<int32_t>(2.0 * distance_cutoff + 0.5);
+    if (max_span <= 0) max_span = pd_derived_maximum_span(distance_cutoff);
     // Degenerate library geometry (a span no larger than the reads themselves) leaves nothing to
     // bound: fall back to the whole histogram, as before, rather than to an empty null.
     int32_t null_max_distance = (max_span > 2 * read_length) ? max_span : 0;
@@ -1537,7 +1558,7 @@ namespace breseq {
     // must be drawn against the null the call was made under, not a different one.
     int32_t read_length = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
     int32_t max_span = settings.pair_distance_maximum_span;
-    if (max_span <= 0) max_span = static_cast<int32_t>(2.0 * distance_cutoff + 0.5);
+    if (max_span <= 0) max_span = pd_derived_maximum_span(distance_cutoff);
     int32_t null_max_distance = (max_span > 2 * read_length) ? max_span : 0;
 
     pd_null null;

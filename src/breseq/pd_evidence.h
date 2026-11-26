@@ -73,6 +73,18 @@ namespace breseq {
   //
   //  `weighted` is indexed by distance; `total` is its sum. Returns false (leaving both empty/zero)
   //  when the histogram is missing or carries no usable weight.
+  // The longest pair distance PD considers when --pair-distance-maximum-span is not given: twice the
+  // paired-mapping distance cutoff, but never more than kPDMaximumDerivedSpan. The cap is a guard,
+  // not a model: every per-base structure PD keeps (the null, the pileup's ring buffer, the windows
+  // rescanned around each candidate) is as long as the span, and a distance cutoff that has gone
+  // wrong must cost a wrong answer for PD, not a run that never ends -- a cutoff of 1.9 Mb once
+  // left this step computing for ten hours. Ten times the longest library the tests cover (a
+  // 2.8 kb mate-pair, span 10.8 kb) is beyond any insert PD's few-hundred-base events are read
+  // from; past it, give the option. The three places that derive the span must all use this.
+  const int32_t kPDMaximumDerivedSpan = 100000;
+  inline int32_t pd_derived_maximum_span(const double distance_cutoff)
+  { return static_cast<int32_t>(min(2.0 * distance_cutoff, static_cast<double>(kPDMaximumDerivedSpan)) + 0.5); }
+
   bool pd_load_weighted_histogram(const string& file_name, int32_t trunc, int32_t max_distance,
                                   vector<double>& weighted, double& total);
 

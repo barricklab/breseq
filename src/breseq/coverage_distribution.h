@@ -116,6 +116,32 @@ namespace breseq {
 
 	}; // class CoverageDistribution
 
+  // HEAVY-TAILED LIBRARIES (see PairedMappingDistanceDistribution::fit).
+  //
+  // The distance cutoff takes the spread of the upper half of the distribution to describe its
+  // whole tail, which is true of most libraries and badly false of some. When more than
+  // kPairDistanceMaximumTailFraction of pairs lie beyond the cutoff, it is moved out to the
+  // distance that leaves that fraction beyond it -- but only on evidence that those pairs are the
+  // library's own long fragments and not pairs spanning a rearrangement, which the histogram of
+  // distances cannot tell apart. Where they are tells them apart: a library's tail is spread
+  // evenly over the genome, and a rearrangement's pairs are at its breakpoints. So the pairs are
+  // also tallied by REGION of the reference (by the leftmost coordinate of the pair), regions
+  // with an excess of far pairs are set aside, and the tail is measured in the rest. A reference
+  // too small or too thinly covered to give kPairDistanceMinimumRegions usable regions keeps the
+  // rule's cutoff: there, one deletion in much of the sample can be most of the far pairs.
+  const double   kPairDistanceMaximumTailFraction = 0.001;
+  const uint32_t kPairDistanceRegionsPerReference = 100;   // regions the reference is divided into...
+  const uint32_t kPairDistanceMinimumRegionSize = 1000;    // ...but none smaller than this
+  const uint32_t kPairDistanceMinimumRegionPairs = 200;    // pairs a region needs to be used
+  const uint32_t kPairDistanceMinimumRegions = 20;         // usable regions needed to move the cutoff
+  const double   kPairDistanceChimericMultiple = 10;       // pairs beyond this many times the rule's cutoff are chimeric, not tail
+  //! Size of the regions pairs are tallied by, for a reference of this total length.
+  inline uint32_t pair_distance_region_size(const uint64_t total_reference_length)
+  { return static_cast<uint32_t>(max<uint64_t>(kPairDistanceMinimumRegionSize, total_reference_length / kPairDistanceRegionsPerReference)); }
+  //! Name of the by-region tally written next to a pair distance distribution file.
+  inline string pair_distance_region_file_name(const string& distribution_file_name)
+  { return distribution_file_name + ".regions.csv"; }
+
   // Result of computing a robust outlier cutoff for a paired-mapping distance histogram (see
   // PairedMappingDistanceDistribution::fit) via the median absolute deviation (MAD) and the
   // Iglewicz & Hoaglin modified z-score rule.

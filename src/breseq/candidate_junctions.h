@@ -486,7 +486,12 @@ namespace breseq {
                                     bam_file& PSAM2,
                                     uint32_t& i,
                                     ofstream* pair_pos_csv_r1 = NULL,
-                                    ofstream* pair_pos_csv_r2 = NULL
+                                    ofstream* pair_pos_csv_r2 = NULL,
+                                    // The same pairs tallied by region of the reference as
+                                    // well (see HEAVY-TAILED LIBRARIES in coverage_distribution.h):
+                                    // "orientation,<tid>:<region>" -> distance -> count
+                                    map<string, map<int64_t, uint32_t> >* region_distance_counts = NULL,
+                                    uint32_t region_size = 0
                                     );
 
     //! Paired analogue of merge_two_sam_files: synchronously traverses R1's and R2's

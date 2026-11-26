@@ -3029,6 +3029,7 @@ string html_discordant_pair_gates_string(const Settings& settings, Summary& summ
   string tally = to_string(d.items_accepted) + " accepted";
   if (d.items_rejected_frequency) tally += ", " + to_string(d.items_rejected_frequency) + " rejected (frequency)";
   if (d.items_rejected_skew)      tally += ", " + to_string(d.items_rejected_skew) + " rejected (skew)";
+  if (d.items_rejected_support)   tally += ", " + to_string(d.items_rejected_support) + " rejected (too few bridging pairs)";
   if (d.items_ignored_circular)   tally += ", " + to_string(d.items_ignored_circular) + " circular-origin artifact";
   if (d.items_dropped_unsupported)
     tally += ", " + to_string(d.items_dropped_unsupported)
@@ -4391,6 +4392,10 @@ string decode_reject_reason(const string& reject)
   else if (reject == "FREQUENCY_CUTOFF")
   {
     return "Frequency below/above cutoff threshold.";
+  }
+  else if (reject == "DISCORDANT_PAIR_SUPPORT")
+  {
+    return "Fewer read pairs bridge the breakpoint than are expected by chance between unrelated regions.";
   }
   else if (reject == "DISCORDANT_PAIR_FREQUENCY")
   {

@@ -450,6 +450,7 @@ namespace breseq{
     uint64_t items_accepted;
     uint64_t items_rejected_frequency;
     uint64_t items_rejected_skew;
+    uint64_t items_rejected_support = 0;        // fewer pairs bridge the placed breakpoint than the background floor
     // Items whose CONCORDANT_PAIR_SKEW rejection was lifted by pooling with the other breakpoint of
     // the same insertion (see --discordant-pair-sibling-window). Counted separately so the effect of
     // that pooling is visible rather than folded silently into items_accepted.
