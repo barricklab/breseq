@@ -1,4 +1,5 @@
 #=GENOME_DIFF 1.0
+#=TOPOLOGY	REL606-5	CIRCULAR
 DEL	1	.	REL606-5	950	100
 INV	2	.	REL606-5	1000	1000	before=1
 MOB	3	.	REL606-5	1200	IS1	-1	3	del_start=4	del_end=3	ins_start=ATG	ins_end=G

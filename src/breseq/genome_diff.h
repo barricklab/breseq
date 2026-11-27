@@ -76,6 +76,9 @@ public:
     string program;
     string command;
     vector<string> ref_seqs;
+    // #=TOPOLOGY <seq_id> CIRCULAR|LINEAR lines, in file order: (seq_id, is_circular).
+    // Applied to the reference by apply_topology(), which apply_to_sequences() calls.
+    vector<pair<string,bool> > topologies;
     vector<string> read_seqs;
     vector<string> adapter_seqs;
     map<string,string> adapters_for_reads; // Keeps track of what adaptors belong to what read files
@@ -266,6 +269,10 @@ public:
                               cFeatureLocation* picked_sequence_feature = NULL
                               );
   
+  //! Set the topology of each reference sequence named by a #=TOPOLOGY header line.
+  //! A seq_id that is not in ref_seq_info is a fatal error.
+  void apply_topology(cReferenceSequences& ref_seq_info);
+
   //! Call to apply Genome Diff to sequences
   void apply_to_sequences(cReferenceSequences &ref_seq_info,
                           cReferenceSequences& new_ref_seq_info,

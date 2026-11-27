@@ -72,6 +72,19 @@ Name/designation for a clonal isolate, Ex: A, B, REL10863
 Location of the reference sequence file. Ex:
 /here/is/an/absolute/path/to/the/file.gb
 
+`TOPOLOGY`  
+Sets the topology of one reference sequence: its sequence ID, then
+`CIRCULAR` or `LINEAR`, separated by tabs or spaces. Ex: MK994515 CIRCULAR
+
+`gdtools APPLY` (and `breseq --apply-check`) set that sequence's
+topology in the reference they write, before applying any mutations
+in the file, so a mutation that crosses the origin of a sequence
+declared circular this way is valid. Use it for a plasmid or phage
+genome that a database records as linear but whose ends are joined in
+the reads. May appear multiple times, once per sequence. A sequence ID
+that is not in the reference is an error. FASTA output cannot record
+topology; write GenBank or GFF3.
+
 `ADAPTSEQ`  
 Location of the adaptor sequence file. Ex:
 relative/path/to/the/adaptors.fa

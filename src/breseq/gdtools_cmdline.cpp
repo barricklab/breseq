@@ -192,6 +192,8 @@ int do_apply(int argc, char *argv[])
 	options.addUsage("");
 	options.addUsage("The input GenomeDiff file is expected to only have consensus mutations. Polymorphic mutations are ignored unless the --polymorphism-mode flag is supplied.");
 	options.addUsage("");
+	options.addUsage("A header line of the form '#=TOPOLOGY<tab>seq_id<tab>CIRCULAR' (or LINEAR) in the GenomeDiff file sets the topology of that reference sequence in the output, before any mutations are applied. FASTA output cannot record topology; use GENBANK or GFF3.");
+	options.addUsage("");
 	options.addUsage("The --apply-gd option causes a GenomeDiff file to be output that is the input GenomeDiff file with positions of mutations shifted to where they occur in the output sequence.");
 	
 	if (options.count("help")) {
@@ -251,9 +253,17 @@ int do_apply(int argc, char *argv[])
   uout("Reading input GD file", options.getArgv(0));
   cGenomeDiff gd(options.getArgv(0));
 	
+  // #=TOPOLOGY header lines set a sequence's topology in the output. Applied here as well as inside
+  // apply_to_sequences so that the validity check below already sees the declared topology.
+  gd.apply_topology(ref_seq_info);
+  gd.apply_topology(new_ref_seq_info);
+  if (!gd.metadata.topologies.empty() && (format == "FASTA")) {
+    WARN("The GenomeDiff file has #=TOPOLOGY lines, but FASTA output cannot record a sequence's topology. Use -f GENBANK or -f GFF3 to keep it.");
+  }
+
   //Check to see if every item in the loaded .gd is applicable to the reference file.
   gd.valid_with_reference_sequences(ref_seq_info);
-	
+
 	// Set all frequencies to one
 	if (options.count("polymorphism-mode")) {
 		diff_entry_list_t mutation_list = gd.mutation_list();

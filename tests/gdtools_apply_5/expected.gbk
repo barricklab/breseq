@@ -60,7 +60,7 @@ ORIGIN
       601 ctgtcgacac aatctgtcct ttcgaaagat cccaacgaaa agcgtgacca catggtcctt
       661 cttgagtttg taactgctgc tgggattaca catggcatgg atgagctcta caaataa
 //
-LOCUS       REL606-5               47830 bp    DNA     linear   BSQ XX-XX-XXXX
+LOCUS       REL606-5               47830 bp    DNA     circular BSQ XX-XX-XXXX
 DEFINITION  Escherichia coli strain REL606.
 ACCESSION   REL606-5
 KEYWORDS    .

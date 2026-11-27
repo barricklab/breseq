@@ -112,6 +112,29 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     else if (split_line[0] == "#=REFSEQ" && split_line.size() > 1) {
       metadata.ref_seqs.push_back(second_half);
     }
+    else if (split_line[0] == "#=TOPOLOGY") {
+      // #=TOPOLOGY <seq_id> CIRCULAR|LINEAR
+      // Sets a reference sequence's topology when the GD is applied (see apply_topology). Kept in
+      // its own list rather than breseq_data, which holds one value per key and would silently
+      // drop every line after the first.
+      string topology = (split_line.size() == 3) ? to_upper(split_line[2]) : "";
+      if ((topology != "CIRCULAR") && (topology != "LINEAR")) {
+        parse_errors.add_line_error(line_number, whole_line, "Expected '#=TOPOLOGY <seq_id> CIRCULAR' or '#=TOPOLOGY <seq_id> LINEAR'.", true);
+      } else {
+        const bool is_circular = (topology == "CIRCULAR");
+        bool seen = false, conflict = false;
+        for (vector<pair<string,bool> >::iterator it = metadata.topologies.begin(); it != metadata.topologies.end(); it++) {
+          if (it->first != split_line[1]) continue;
+          seen = true;
+          if (it->second != is_circular) conflict = true;
+        }
+        if (conflict) {
+          parse_errors.add_line_error(line_number, whole_line, "#=TOPOLOGY gives sequence [" + split_line[1] + "] as both CIRCULAR and LINEAR.", true);
+        } else if (!seen) {
+          metadata.topologies.push_back(make_pair(split_line[1], is_circular));
+        }
+      }
+    }
     else if (split_line[0] == "#=READSEQ" && split_line.size() > 1) {
       
       string read_name = second_half;
@@ -728,6 +751,9 @@ void cGenomeDiff::write(const string& filename, bool include_unprintable_fields)
   }
   for (vector<string>::iterator it=metadata.ref_seqs.begin(); it !=metadata.ref_seqs.end(); it++) {
     os << "#=REFSEQ\t" << *it << endl;
+  }
+  for (vector<pair<string,bool> >::iterator it=metadata.topologies.begin(); it !=metadata.topologies.end(); it++) {
+    os << "#=TOPOLOGY\t" << it->first << "\t" << (it->second ? "CIRCULAR" : "LINEAR") << endl;
   }
   for (vector<string>::iterator it=metadata.adapter_seqs.begin(); it !=metadata.adapter_seqs.end(); it++) {
     os << "#=ADAPTSEQ\t" << *it << endl;
@@ -2792,8 +2818,23 @@ static void replace_sequence_across_origin_1(cReferenceSequences& ref_seq_info, 
   ref_seq_info.replace_sequence_1(seq_id, 1, overhang, after_origin, mut_type);
 }
 
+void cGenomeDiff::apply_topology(cReferenceSequences& ref_seq_info)
+{
+  for (vector<pair<string,bool> >::const_iterator it = metadata.topologies.begin(); it != metadata.topologies.end(); it++) {
+    if (!ref_seq_info.seq_id_exists(it->first)) {
+      ERROR("#=TOPOLOGY names sequence [" + it->first + "], which was not found in the reference sequence files provided.");
+    }
+    ref_seq_info[it->first].m_is_circular = it->second;
+  }
+}
+
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
 {
+  // #=TOPOLOGY lines first, on both copies: the topology has to be in force before any mutation is
+  // placed, because a mutation that runs across the origin is only valid on a circular sequence.
+  apply_topology(ref_seq_info);
+  apply_topology(new_ref_seq_info);
+
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_INT = 0, count_MASK = 0;
   uint32_t bases_inserted(0), bases_deleted(0), bases_changed(0);
   
@@ -5297,6 +5338,8 @@ void cGenomeDiff::write_json(const string &jsonfile)
     j["metadata"]["command"] = this->metadata.command;
   if (this->metadata.ref_seqs.size())
     j["metadata"]["ref_seqs"] = this->metadata.ref_seqs;
+  for (vector<pair<string,bool> >::const_iterator it=this->metadata.topologies.begin(); it!=this->metadata.topologies.end(); it++)
+    j["metadata"]["topologies"][it->first] = it->second ? "CIRCULAR" : "LINEAR";
   if (this->metadata.read_seqs.size())
     j["metadata"]["read_seqs"] = this->metadata.read_seqs;
   if (this->metadata.adapter_seqs.size())

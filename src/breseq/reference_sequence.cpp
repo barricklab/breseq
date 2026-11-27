@@ -1741,6 +1741,16 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool no_sequence) {
     for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
       cSequenceFeature& feat = **it;
 
+      // The 'region' feature's Is_circular attribute is filled in when the sequence is read, but
+      // m_is_circular is what the rest of the code uses and it can change afterwards (a
+      // #=TOPOLOGY line applied by gdtools APPLY). Write what is true now, or the GFF3 says linear
+      // for a sequence the GenBank output of the same object calls circular.
+      if (feat["type"] == "region") {
+        if (feat.m_gff_attributes.count("Is_circular") || it_as->m_is_circular) {
+          feat.m_gff_attributes["Is_circular"] = make_vector<string>(it_as->m_is_circular ? "true" : "false");
+        }
+      }
+
       enum {SEQID = 0, SOURCE, TYPE, START_1, END_1, SCORE, STRAND, PHASE, ATTRIBUTES};
       vector<string> columns(9, ".");
 
