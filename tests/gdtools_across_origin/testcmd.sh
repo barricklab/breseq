@@ -61,6 +61,16 @@ done
 #   origin-flush    MC 1-340, 40 bases NOT in its redundant range. That is real missing coverage
 #                   next to the repeat and must be left alone.
 #
+# and two DP items, for the discordant pairs of the same origin. Pairs that span it have one mate
+# just inside each end; where an end is a repeat those mates are placed on whichever copy the
+# aligner returned, so the DP joins the other end to a point inside the FAR copy:
+#
+#   origin-inplace  DP 1006 (+1, redundant) / 2000 (-1). The reference from 1006 on does not match
+#                   the start, but 5 bases back it does (a DP coordinate is placed from read
+#                   pairs, not to the base). Re-placed at 1 / 2000: ignore=CIRCULAR_CHROMOSOME.
+#   origin-flush    DP 600 (+1, redundant) / 2000 (-1). Nothing near 600 is a copy of the start,
+#                   so this is not the origin and must be left alone.
+#
 # The last MUTATIONS step predicts again FROM THE OUTPUT of the first, where both sides are already
 # at the origin. The breseq pipeline does exactly that -- junctions are prepared once before the
 # evidence is saved and again when mutations are predicted -- and the deletion was lost on the
@@ -80,13 +90,15 @@ TESTCMD="${TESTCMD} \
        -r ${DATADIR}/circular_origin_repeat/circular_origin_repeat.fna ${SELF}/origin_repeat.topology.gd \
   && ${GDTOOLS} MUTATIONS -o ${SELF}/output.origin_repeat.gd \
        -r ${SELF}/output.origin_repeat.gff3 ${SELF}/origin_repeat.evidence.gd \
-  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.gd) -eq 3 \
+  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.gd) -eq 4 \
   && test \$(cut -f1,4,5,6 ${SELF}/output.origin_repeat.gd | grep -c '^DEL.origin-shifted.1.1\$') -eq 1 \
   && test \$(grep -v '^#' ${SELF}/output.origin_repeat.gd | cut -f1 | grep -cE '^(SNP|SUB|DEL|INS|MOB|AMP|INV|CON|INT)\$') -eq 1 \
   && ${GDTOOLS} MUTATIONS -o ${SELF}/output.origin_repeat.second_pass.gd \
        -r ${SELF}/output.origin_repeat.gff3 ${SELF}/output.origin_repeat.gd \
-  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.second_pass.gd) -eq 3 \
+  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.second_pass.gd) -eq 4 \
   && test \$(grep '^MC' ${SELF}/output.origin_repeat.gd | grep -c 'origin-flush.*ignore=') -eq 0 \
+  && test \$(grep '^DP' ${SELF}/output.origin_repeat.gd | grep -c 'origin-flush.*ignore=') -eq 0 \
+  && test \$(grep '^DP' ${SELF}/output.origin_repeat.gd | grep -c 'origin-inplace.1.1.origin-inplace.2000.*ignore=CIRCULAR_CHROMOSOME') -eq 1 \
   && test \$(cut -f1,4,5,6 ${SELF}/output.origin_repeat.second_pass.gd | grep -c '^DEL.origin-shifted.1.1\$') -eq 1 \
   "
 

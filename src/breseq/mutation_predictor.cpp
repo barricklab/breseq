@@ -2783,6 +2783,82 @@ namespace breseq {
     }
   }
 
+  // A discordant pair (DP) item that is only the origin of a circular sequence lying inside a
+  // repeat -- the DP counterpart of the junction re-placement in prepare_junctions().
+  //
+  // Pairs that span the origin have one mate just inside one end of the sequence and the other
+  // just inside the other end. When the far end is a repeat (a tandem array running up to the last
+  // base, say), those mates match every copy equally well and are placed on whichever copy the
+  // aligner returned, so the DP comes out joining position 1 to a point inside an EARLIER copy,
+  // at frequency 1, with that side flagged redundant. dp_evidence.cpp recognises the origin only
+  // when both sides are within its snap window of the two ends, and this one is a whole number of
+  // repeat units away.
+  //
+  // When a DP has one side at an end of a circular sequence (facing inward), its other side is
+  // redundant, and the reference where that side sits is identical to the reference at the OTHER
+  // end of the sequence, that end is the placement that needs no rearrangement: the side is moved
+  // there (side_N_placed_at_origin_from records where it was reported) and the DP is tagged
+  // CIRCULAR_CHROMOSOME like any other origin DP. A DP coordinate is placed from read pairs, not to
+  // the base, so the identity is looked for in a window around the reported position.
+  void MutationPredictor::ignore_discordant_pairs_at_repeat_origin(cGenomeDiff& gd)
+  {
+    const int32_t max_end_window = 1000; // how close to an end the unique side must be (less on a short sequence)
+    const int32_t search_window = 300;   // how far from the reported position to look for the match
+    const int32_t match_length = 100;    // bases of reference that must be identical
+
+    diff_entry_list_t dp = gd.get_list(make_vector<gd_entry_type>(DP));
+    for (diff_entry_list_t::iterator it = dp.begin(); it != dp.end(); it++) {
+      cDiffEntry& d = **it;
+      if (d.entry_exists(REJECT) || d.entry_exists(IGNORE)) continue;
+      if (d[SIDE_1_SEQ_ID] != d[SIDE_2_SEQ_ID]) continue;
+      if (!ref_seq_info.seq_id_exists(d[SIDE_1_SEQ_ID])) continue;
+      cAnnotatedSequence& seq = ref_seq_info[d[SIDE_1_SEQ_ID]];
+      if (!seq.is_circular()) continue;
+      const int32_t seq_length = static_cast<int32_t>(seq.get_sequence_length());
+      if (seq_length < 4 * match_length) continue;
+      const int32_t end_window = min(max_end_window, seq_length / 4);
+
+      const bool redundant_1 = d.entry_exists("side_1_redundant") && (n(d["side_1_redundant"]) == 1);
+      const bool redundant_2 = d.entry_exists("side_2_redundant") && (n(d["side_2_redundant"]) == 1);
+      if (redundant_1 == redundant_2) continue;
+      const string r_key = redundant_1 ? "side_1" : "side_2";
+      const string u_key = redundant_1 ? "side_2" : "side_1";
+      const int32_t u_position = n(d[u_key + "_position"]), u_strand = n(d[u_key + "_strand"]);
+      const int32_t r_position = n(d[r_key + "_position"]), r_strand = n(d[r_key + "_strand"]);
+      if (r_strand != -u_strand) continue;
+
+      // The unique side at the start facing in (+1) means the pairs leave by the END, and vice versa.
+      const bool u_at_start = (u_strand == +1) && (u_position <= end_window);
+      const bool u_at_end = (u_strand == -1) && (u_position > seq_length - end_window);
+      if (!u_at_start && !u_at_end) continue;
+
+      // What the reference reads at the end the redundant side belongs at ...
+      const string target = u_at_start ? seq.get_sequence_1(seq_length - match_length + 1, seq_length)
+                                       : seq.get_sequence_1(1, match_length);
+      const int32_t origin_position = u_at_start ? seq_length : 1;
+      if (abs(r_position - origin_position) <= search_window) continue;   // already there: not this case
+
+      // ... and whether it reads the same somewhere around where the side was reported
+      bool found = false;
+      for (int32_t offset = 0; (offset <= search_window) && !found; offset++) {
+        for (int32_t sign = -1; (sign <= 1) && !found; sign += 2) {
+          if ((offset == 0) && (sign == 1)) continue;
+          const int32_t candidate = r_position + sign * offset;
+          // a side with strand -1 uses the bases up to and including its position; +1, from it on
+          const int32_t start = u_at_start ? (candidate - match_length + 1) : candidate;
+          const int32_t end = u_at_start ? candidate : (candidate + match_length - 1);
+          if ((start < 1) || (end > seq_length)) continue;
+          if (seq.get_sequence_1(start, end) == target) found = true;
+        }
+      }
+      if (!found) continue;
+
+      d[r_key + "_placed_at_origin_from"] = d[r_key + "_seq_id"] + ":" + s(r_position);
+      d[r_key + "_position"] = s(origin_position);
+      d[IGNORE] = "CIRCULAR_CHROMOSOME";
+    }
+  }
+
   void MutationPredictor::ignore_evidence_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
     (void) summary;
@@ -4875,6 +4951,7 @@ namespace breseq {
     cerr << "  Preparing junctions..." << endl;
     prepare_junctions(settings, summary, gd);
     ignore_missing_coverage_at_repeat_origin(gd);
+    ignore_discordant_pairs_at_repeat_origin(gd);
 
     ///
     // Create master lists of evidence that will be culled as they are used

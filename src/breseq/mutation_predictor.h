@@ -91,6 +91,7 @@ namespace breseq {
 
 
     void ignore_missing_coverage_at_repeat_origin(cGenomeDiff& gd);
+    void ignore_discordant_pairs_at_repeat_origin(cGenomeDiff& gd);
 
 
     void prepare_junctions(Settings& settings, Summary& summary, cGenomeDiff& gd);
