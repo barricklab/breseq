@@ -493,6 +493,8 @@ namespace breseq
     double minimum_pr_no_read_start_per_position;         // Default = 0.1
     int32_t junction_minimum_side_match;                  // Default = 1 or 6;
     double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 2.0, 0 = means don't calculate (to implement)
+    uint32_t junction_side_quality_cutoff;                // Default = 15; see junction_low_quality_side_p_value_cutoff
+    double junction_low_quality_side_p_value_cutoff;      // Default = 0.001, 0 = OFF
     bool junction_allow_suboptimal_matches;                       // Default = false
     // Whether to split each junction-spanning read between the junction and the reference by how
     // well its alignment scores discriminate them, fitting the split and the junction frequency

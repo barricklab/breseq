@@ -278,6 +278,14 @@ namespace breseq
       int32_t m_sc_direction;             // -1 = leading clip, +1 = trailing clip
       uint32_t m_sc_minimum_clipped_bases;
 
+      // Junction (JC) evidence: highlight the names of reads with a "low-quality side" (good on
+      // one side of the breakpoint, miscalled on the other; junction_read_has_low_quality_side
+      // in alignment.h). Set only for a JC view whose run had the test on; false otherwise.
+      bool m_mark_low_quality_side;
+      uint32_t m_lq_left_end;             // last junction-sequence position of the left side (1-based)
+      uint32_t m_lq_right_start;          // first junction-sequence position of the right side
+      uint32_t m_lq_quality_cutoff;
+
       Aligned_Reads aligned_reads;
       Aligned_References aligned_references;
       Aligned_Annotation aligned_annotation;
@@ -306,6 +314,7 @@ namespace breseq
     uint32_t m_minimum_mapping_quality; // Show reads as redundantly matched if their mapping quality is below this
     bool m_is_junction, m_is_junction_junction; // Former for JC, latter for JC+junction part of it
     bool m_is_soft_clipping; // SC evidence: highlight reads counted as soft-clipped (drives legend)
+    bool m_mark_low_quality_side; // JC evidence: highlight reads with a low-quality side (drives legend)
     
     // Characters substituted for gaps and reference matches
     static char s_internal_gap_character;             // Default = "-"

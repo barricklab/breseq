@@ -428,6 +428,8 @@ namespace breseq
     ("junction-candidate-length-factor", "Accept top-scoring junction candidates to test until their cumulative length is this factor times the total reference sequence length (0 = DO NOT LIMIT)", 0.1, NORMAL_OPTION)
     ("junction-minimum-candidate-pos-hash-score", "Minimum number of distinct spanning read start positions required to create a junction candidate for further testing", 2, NORMAL_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, NORMAL_OPTION)
+    ("junction-side-quality-cutoff", "A read supporting a junction has a low-quality side when the mean base quality of its bases on one side of the breakpoint (at least a quarter of the read, up to 20) is below this value and at least 10 below the mean on the other side. This is the signature of a read that skipped a hairpin or other secondary structure during sequencing: good up to the breakpoint, miscalled after it.", 15, EXPERT_OPTION)
+    ("junction-low-quality-side-p-value-cutoff", "Reject a junction (LOW_QUALITY_SIDE) when the number of reads supporting it that have a low-quality side is improbably high for the library: a one-sided binomial test against the rate at which ordinary reads of the same read file would be flagged if cut at the same positions. Such reads also do not seed candidate junctions. (0 = OFF for both)", "0.001", EXPERT_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", NORMAL_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = 1)", "", NORMAL_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, NORMAL_OPTION)
@@ -1090,6 +1092,8 @@ namespace breseq
     this->concordant_pairs_to_make_unique = from_string<uint32_t>(options["concordant-pairs-to-make-unique"]);
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
+    this->junction_side_quality_cutoff = from_string<uint32_t>(options["junction-side-quality-cutoff"]);
+    this->junction_low_quality_side_p_value_cutoff = from_string<double>(options["junction-low-quality-side-p-value-cutoff"]);
     this->junction_allow_suboptimal_matches = options.count("junction-allow-suboptimal-matches");
     this->junction_weight_reads = !options.count("junction-no-read-weighting");
     
@@ -1700,6 +1704,8 @@ namespace breseq
     //! Settings: Alignment Resolution
     this->add_split_junction_sides = true;
     this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
+    this->junction_side_quality_cutoff = 15;
+    this->junction_low_quality_side_p_value_cutoff = 0.001;
     this->minimum_alignment_resolution_pos_hash_score = 3;
     this->minimum_pr_no_read_start_per_position = 0.1;
     this->junction_allow_suboptimal_matches = false;

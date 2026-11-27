@@ -305,6 +305,18 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   aligned_read.is_redundant = a.is_redundant();
   aligned_read.read_name_style =  ambiguously_mapped ? "AM" : "NC";
 
+  // For a JC evidence view, highlight the read name if this read has a "low-quality side": the
+  // same call score_junction() makes when it counts them (resolve_alignments.cpp), on the same
+  // alignment to the junction sequence. A read that is then found not to be counted for the
+  // junction at all is re-marked for that further down, which takes precedence.
+  if (m_mark_low_quality_side && !ambiguously_mapped) {
+    double left_mean = 0.0, right_mean = 0.0;
+    uint32_t left_bases = 0, right_bases = 0, five_prime_bases = 0;
+    a.side_mean_base_qualities_1(m_lq_left_end, m_lq_right_start, left_mean, left_bases, right_mean, right_bases, five_prime_bases);
+    if (junction_read_has_low_quality_side(left_mean, left_bases, right_mean, right_bases, a.read_length(), m_lq_quality_cutoff))
+      aligned_read.read_name_style = "LQ";
+  }
+
   // For an SC (soft-clipping) evidence view, highlight the read name if this read is one of
   // the reads counted as clipped at the SC position/direction. This recomputes exactly the
   // eligibility and criterion used by tabulate_soft_clipping_counts() (soft_clipping.cpp):
@@ -412,11 +424,28 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
   m_is_junction_junction = false;
   m_is_soft_clipping = false;
   m_alignment_output_pileup.m_is_soft_clipping = false;
+  m_mark_low_quality_side = false;
+  m_alignment_output_pileup.m_mark_low_quality_side = false;
 
   if (output_evidence_item_ptr != NULL) {
     if ((*output_evidence_item_ptr)[PREFIX] == "JC") {
       m_is_junction = true;
       m_is_junction_junction = true;
+
+      // Mark reads with a low-quality side, where the run tested for them (see output.cpp)
+      cDiffEntry& lq_jc_item = *(output_evidence_item_ptr->item);
+      uint32_t lq_cutoff = 0;
+      if (output_evidence_item_ptr->entry_exists("junction_side_quality_cutoff"))
+        lq_cutoff = from_string<uint32_t>((*output_evidence_item_ptr)["junction_side_quality_cutoff"]);
+      if ((lq_cutoff > 0) && lq_jc_item.entry_exists("flanking_left") && lq_jc_item.entry_exists("alignment_overlap")) {
+        const uint32_t lq_flanking_left = from_string<uint32_t>(lq_jc_item["flanking_left"]);
+        const int32_t lq_alignment_overlap = from_string<int32_t>(lq_jc_item["alignment_overlap"]);
+        m_mark_low_quality_side = true;
+        m_alignment_output_pileup.m_mark_low_quality_side = true;
+        m_alignment_output_pileup.m_lq_left_end = lq_flanking_left;
+        m_alignment_output_pileup.m_lq_right_start = lq_flanking_left + abs(lq_alignment_overlap) + 1;
+        m_alignment_output_pileup.m_lq_quality_cutoff = lq_cutoff;
+      }
     } else if ( ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_1")
              || ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_2") ) {
        m_is_junction = true;
@@ -1300,6 +1329,7 @@ string alignment_output::html_header_string()
   header_style_string += ".PC {color: rgb(0,0,0); background-color: rgb(224,255,255)}\n";         // paired, concordant (light cyan)
   header_style_string += ".PD {color: rgb(0,0,0); background-color: rgb(255,224,178)}\n";         // paired, discordant (light orange)
   header_style_string += ".PM {color: rgb(0,0,0); background-color: rgb(230,204,255)}\n";         // paired, mate unmapped (light purple)
+  header_style_string += ".LQ {color: rgb(0,0,0); background-color: rgb(255,153,255)}\n";         // junction read with a low-quality side (magenta)
   header_style_string += ".SC {color: rgb(0,0,0); background-color: rgb(255,255,204)}\n";         // read counted as soft-clipped (light yellow)
 
   
@@ -1595,6 +1625,11 @@ string alignment_output::html_legend()
     output += tr(th(ALIGN_LEFT, "Reads not counted as support for junction"));
     output += tr(td("<font class=\"AO\">read_name</font></code> Not counted due to insufficient overlap past the breakpoint."));
     output += tr(td("<font class=\"AP\">read_name</font></code> Not counted due to not crossing MOB target site duplication."));
+  }
+
+  if (m_mark_low_quality_side) {
+    output += tr(th(ALIGN_LEFT, "Reads counted as support for junction, but suspect"));
+    output += tr(td("<font class=\"LQ\">read_name</font></code> Low-quality side: base qualities are good on one side of the breakpoint and collapse on the other. A junction is rejected (LOW_QUALITY_SIDE) when it has improbably many of these for its read file."));
   }
 
   if (m_is_soft_clipping) {

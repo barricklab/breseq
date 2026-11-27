@@ -161,6 +161,39 @@ inline string read_pair_molecule_id(const string& read_name)
   return read_name.substr(start);
 }
   
+// A junction read with a LOW-QUALITY SIDE: good on one side of the breakpoint, miscalled on the
+// other. That is what a read looks like when the polymerase skipped a hairpin or other secondary
+// structure during sequencing. It picks up again on the far side, so the bases still match the
+// reference there and the read splits into a clean junction, but the base caller has lost phase
+// and reports them at low quality.
+//
+// The poor side's mean base quality must be below `cutoff` (--junction-side-quality-cutoff) AND
+// at least kJunctionLowQualitySideMinimumDrop below the other side's: a read that is poor on both
+// sides (nanopore, an old Illumina run, one constant quality) says nothing about the junction, so
+// it is the drop across the breakpoint that counts. The poor side must also be a minimum length,
+// because every Illumina read decays toward its 3' end and a read reaching only a few bases past
+// a breakpoint has a poor "side" for that reason alone. That minimum is a quarter of the read, up
+// to kJunctionLowQualitySideMinimumBases: 20 bases for reads of 80 and up, 9 for a 36-base read,
+// where 20 would leave the test able to fire only when the breakpoint is in the first 16 bases.
+//
+// Used twice: such a read does not seed a candidate junction (candidate_junctions.cpp), and a
+// junction most of whose reads look like this is rejected (resolve_alignments.cpp).
+const uint32_t kJunctionLowQualitySideMinimumBases = 20;
+const double   kJunctionLowQualitySideMinimumDrop = 10.0;
+
+inline bool junction_read_has_low_quality_side(double mean_1, uint32_t bases_1, double mean_2, uint32_t bases_2,
+                                               uint32_t read_length, uint32_t cutoff)
+{
+  if (!bases_1 || !bases_2) return false;
+  const bool side_1_is_lower = (mean_1 < mean_2);
+  const double lower = side_1_is_lower ? mean_1 : mean_2, higher = side_1_is_lower ? mean_2 : mean_1;
+  const uint32_t lower_bases = side_1_is_lower ? bases_1 : bases_2;
+  const uint32_t minimum_bases = std::max<uint32_t>(1, std::min<uint32_t>(kJunctionLowQualitySideMinimumBases, read_length / 4));
+  return (lower_bases >= minimum_bases)
+    && (lower < static_cast<double>(cutoff))
+    && (lower <= higher - kJunctionLowQualitySideMinimumDrop);
+}
+
 /*! class alignment
     Represents a single alignment within a pileup.
     This is purely a WRAPPER class. It does not allocate memory.
@@ -332,6 +365,24 @@ class alignment_wrapper {
     //  False if no aligned base does. Tracks read and reference positions together, which the
     //  bounds accessors below rely on -- see the note on the implementation.
     bool confident_reference_bounds_0(uint32_t min_qual, uint32_t& first, uint32_t& last) const;
+
+    //! Mean base quality over positions start_1..end_1 of the read AS SEQUENCED (so position 1 is
+    //! the first base off the sequencer whichever strand it aligned to). 0 if the range is empty.
+    double stranded_mean_base_quality_1(uint32_t start_1, uint32_t end_1) const;
+
+    //! The first and last positions of the read AS SEQUENCED whose base quality is above min_qual.
+    //! Returns false when no base is.
+    bool stranded_confident_bounds_1(uint32_t min_qual, uint32_t& first_1, uint32_t& last_1) const;
+
+    //! Mean base quality of the read bases aligned at or before reference position left_end_1,
+    //! and of those aligned at or after right_start_1 (anything between belongs to neither).
+    //! A side with no aligned bases comes back with a count of 0.
+    //! five_prime_bases is how many bases of the read AS SEQUENCED come before the gap between
+    //! the two sides (the cut a junction makes in this read); 0 if either side is empty.
+    void side_mean_base_qualities_1(uint32_t left_end_1, uint32_t right_start_1,
+                                    double& left_mean, uint32_t& left_bases,
+                                    double& right_mean, uint32_t& right_bases,
+                                    uint32_t& five_prime_bases) const;
 
     uint32_t reference_start_1(uint32_t min_qual = 0) const;
 

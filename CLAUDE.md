@@ -427,6 +427,33 @@ strand test has no power. The SC gates table in `summary.html` reports what frac
 clip events were one-strand — a value near 100% means the run's clipping is artifact, and it is the
 first thing to check when a library predicts implausibly many SC items.
 
+`JC` has a base-quality test, reject reason `LOW_QUALITY_SIDE`. A read that skipped a hairpin during
+sequencing picks up again on the far side, so it splits into a clean-looking junction, but the bases
+after the jump are called at low quality. Such a read has a **low-quality side**
+(`junction_read_has_low_quality_side`, `alignment.h`): the mean base quality on one side of the
+breakpoint is under `--junction-side-quality-cutoff` (15) and at least 10 below the other side, over
+at least a quarter of the read (up to 20 bases). **Read by read this cannot be told from an ordinary
+read whose quality collapsed part-way through**, which old Illumina libraries produce in a few
+percent of reads — a cycle-matched expectation, the position of the drop relative to the
+breakpoint and a local step at the breakpoint were all measured and none separates them. What
+differs is the rate. So `resolve_alignments` applies the same predicate to the first 500,000 reads
+of each converted read file at every cut position (`build_low_quality_side_background`), sums that
+rate over a junction's own reads to get an expected count, and rejects the junction when the
+observed count is improbably high (one-sided binomial,
+`--junction-low-quality-side-p-value-cutoff`, 0.001; 0 turns the whole thing off). The rate is
+floored at 1% so one flagged read can never reject a junction. A JC line carries
+`low_quality_side_read_count` and `low_quality_side_expected_read_count` only when the first is
+non-zero. Flagged reads still count toward the junction's frequency; the test is all-or-nothing per
+junction. Two kinds of read also **do not seed candidate junctions** (`candidate_junctions.cpp`): one
+with a low-quality side, and one whose far piece has no base above `--base-quality-cutoff` at all
+(the yellow tail in the alignment view — such a read was never counted for a junction, but could
+propose one). The seeding exclusion is per read with no background, so it is stricter than the
+junction test: in `tests/long_ltee_ara_m3_38k_se36` it removes eight one-stranded unassigned
+junctions of which the junction test alone would reject four. It also un-hides real calls: a
+spurious competing candidate had been making one side of a good junction look redundant in
+`tests/long_ltee_ara_m1_40k_pe36`, and without it `DEL 547700 8224` is predicted. In the read
+alignment view of a junction, flagged reads have a magenta name (`.LQ`).
+
 Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PFGE`, `NOTE`, `MASK`
 
 ### Key modules

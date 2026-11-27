@@ -439,6 +439,112 @@ static uint32_t emit_one_jc_per_identity(
   return num_merged;
 }
 
+// ---------------------------------------------------------------------------------------------
+// Background rate of reads with a "low-quality side" (junction_read_has_low_quality_side).
+//
+// Read by read, a read that skipped a hairpin and an ordinary read whose quality collapsed
+// part-way through look the same: good up to some point, miscalled after it. Old Illumina
+// libraries have the second kind in a few percent of all reads (4% of the split reads of real
+// junctions in the 36-base lambda test data, 13% at one junction), and no per-read gap, cycle-
+// matched expectation or position-of-the-drop test separates the two. What differs is how OFTEN:
+// two thirds or more of the reads at a hairpin junction, against the library's own few percent.
+//
+// So the junction is judged against its library. For each read file, the same predicate is
+// applied to ordinary reads at every possible cut: rate[b] is the fraction of reads that would be
+// flagged if a breakpoint fell after their b-th base. A junction's expected number of flagged
+// reads is the sum of rate[b] over its own reads, each at its own cut, and the junction is
+// rejected when the number observed is improbably high (binomial, see test_junction_guards).
+//
+// The table is built from the first kLowQualitySideBackgroundReads reads of each converted read
+// file -- the reads exactly as they are aligned. (--aligned-sam input has no converted read file,
+// but it has no junction prediction either, so nothing there is ever judged against this. A read
+// file whose table is missing for any other reason gets the floor below alone.)
+//
+// kLowQualitySideMinimumBackground floors the rate. A modern library's measured rate can be
+// 0.001 or less, at which a SINGLE flagged read among three is already a one-in-a-thousand
+// event; one read is never grounds to reject a junction.
+static const uint32_t kLowQualitySideBackgroundReads = 500000;
+static const double kLowQualitySideMinimumBackground = 0.01;
+
+// key: (read file set index, is second mate) -- the same pair a read_group_ref carries
+static map<pair<uint32_t, bool>, vector<double> > s_low_quality_side_rate;
+
+static void build_low_quality_side_background(const Settings& settings, cReadFileSets& read_files)
+{
+  s_low_quality_side_rate.clear();
+  if (settings.junction_low_quality_side_p_value_cutoff <= 0) return;
+
+  uint32_t set_index = 0;
+  for (cReadFileSets::iterator rfs_it = read_files.begin(); rfs_it != read_files.end(); rfs_it++, set_index++) {
+    for (size_t m = 0; m < rfs_it->m_files.size(); m++) {
+      const string file_name = settings.file_name(settings.converted_fastq_file_name, "#", rfs_it->m_files[m].base_name());
+      if (!file_exists(file_name.c_str())) continue;
+      // gzipped (#.converted.fastq.gz): a plain ifstream would read compressed bytes as "qualities"
+      flexgzfstream in(file_name.c_str(), ios_base::in);
+      if (in.fail()) continue;
+
+      vector<uint64_t> tested, flagged;
+      vector<uint32_t> prefix;
+      string name, seq, plus, qual;
+      uint32_t num_reads = 0;
+      while ((num_reads < kLowQualitySideBackgroundReads)
+             && getline(in, name) && getline(in, seq) && getline(in, plus) && getline(in, qual)) {
+        const uint32_t L = static_cast<uint32_t>(qual.size());
+        if (L < 2) continue;
+        num_reads++;
+        if (tested.size() < L) { tested.resize(L, 0); flagged.resize(L, 0); }
+        prefix.assign(L + 1, 0);
+        // converted read files are Sanger (Phred+33), in the order the bases were sequenced
+        for (uint32_t i = 0; i < L; i++) prefix[i + 1] = prefix[i] + static_cast<uint32_t>(qual[i] - 33);
+        for (uint32_t b = 1; b < L; b++) {
+          tested[b]++;
+          const double mean_5 = static_cast<double>(prefix[b]) / b;
+          const double mean_3 = static_cast<double>(prefix[L] - prefix[b]) / (L - b);
+          if (junction_read_has_low_quality_side(mean_5, b, mean_3, L - b, L, settings.junction_side_quality_cutoff))
+            flagged[b]++;
+        }
+      }
+
+      vector<double>& rate = s_low_quality_side_rate[make_pair(set_index, (m == 1))];
+      rate.assign(tested.size(), 0.0);
+      for (size_t b = 0; b < tested.size(); b++)
+        if (tested[b]) rate[b] = static_cast<double>(flagged[b]) / static_cast<double>(tested[b]);
+    }
+  }
+}
+
+// The chance that an ordinary read of this read file has a low-quality side when cut after its
+// first five_prime_bases bases.
+static double low_quality_side_background_rate(const read_group_ref& rg, uint32_t five_prime_bases)
+{
+  double rate = 0.0;
+  map<pair<uint32_t, bool>, vector<double> >::const_iterator it = s_low_quality_side_rate.find(make_pair(rg.index, rg.is_read2));
+  if ((it != s_low_quality_side_rate.end()) && !it->second.empty()) {
+    const size_t b = min<size_t>(five_prime_bases, it->second.size() - 1);
+    rate = it->second[b];
+  }
+  return max(rate, kLowQualitySideMinimumBackground);
+}
+
+// P(X >= observed) for X ~ Binomial(n, p), summed in log space from the observed count up. The
+// terms fall off fast, so the sum is short however large n is.
+static double binomial_upper_tail(uint32_t observed, uint32_t n, double p)
+{
+  if (observed == 0) return 1.0;
+  if (observed > n) return 0.0;
+  if (p <= 0.0) return 0.0;
+  if (p >= 1.0) return 1.0;
+  const double log_p = log(p), log_q = log(1.0 - p);
+  double sum = 0.0;
+  for (uint32_t k = observed; k <= n; k++) {
+    const double term = exp(lgamma(n + 1.0) - lgamma(k + 1.0) - lgamma(n - k + 1.0) + k * log_p + (n - k) * log_q);
+    sum += term;
+    if ((k > observed) && (term < sum * 1e-15)) break;
+  }
+  return min(1.0, sum);
+}
+
+
 // Compares matches to candidate junctions with matches to original genome
 void resolve_alignments(
                         Settings& settings,
@@ -455,6 +561,9 @@ void resolve_alignments(
   
   // Initialize out summary so we can add to it
   summary.alignment_resolution.reference.resize(ref_seq_info.size(), AlignmentResolutionReferenceSummary());
+
+  // How often ordinary reads of each read file have a "low-quality side", for judging junctions
+  build_low_quality_side_background(settings, read_files);
   
   // Load the reference sequence trims, for writing resolved alignments
   SequenceTrimsList trims_list;
@@ -719,6 +828,20 @@ void resolve_alignments(
     // This is purposeful after re-accepting user_defined junctions
     if ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) ) {
       junction_test_info.reject_reasons.push_back("BETWEEN_TWO_JUNCTION_ONLY_SEQUENCES");
+    }
+
+    // Too many of the supporting reads are good on one side of the breakpoint and miscalled on
+    // the other for that to be the library's ordinary reads: the junction was made by the
+    // sequencer, not the sample. "Too many" is against the junction's own expectation (see
+    // low_quality_side_background_rate), by a one-sided binomial test, so the same count that
+    // condemns a junction in a clean library is unremarkable in a noisy one, and a junction with
+    // a handful of reads is held to what a handful of reads can show rather than to a fraction.
+    if ( (settings.junction_low_quality_side_p_value_cutoff > 0) && (junction_test_info.total_non_overlap_reads > 0)
+        && (junction_test_info.low_quality_side_reads > 0) ) {
+      const uint32_t n = junction_test_info.total_non_overlap_reads;
+      const double p = min(1.0, junction_test_info.low_quality_side_expected / static_cast<double>(n));
+      if (binomial_upper_tail(junction_test_info.low_quality_side_reads, n, p) < settings.junction_low_quality_side_p_value_cutoff)
+        junction_test_info.reject_reasons.push_back("LOW_QUALITY_SIDE");
     }
 
     // If no two reads have different start and end values from each other, regardless of strand, then fail (Chuck it!)
@@ -2609,6 +2732,8 @@ void score_junction(
 	map<bool,int32_t> max_min_right_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	map<bool,uint32_t> count_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
 	uint32_t total_non_overlap_reads = 0;
+	uint32_t low_quality_side_reads = 0;   // of those, reads good on one side of the breakpoint and miscalled on the other
+	double low_quality_side_expected = 0.0; // ... and how many of them would be expected to be, from their libraries
 	map<int32_t,bool> pos_hash;
   vector<pair<uint32_t,uint32_t> > start_end_check_list;
   bool has_reads_with_both_different_start_and_end(false);
@@ -2766,7 +2891,23 @@ void score_junction(
     ////
     
     total_non_overlap_reads++;
-    
+
+    // Is this a read that is good on one side of the breakpoint and miscalled on the other?
+    // (junction_read_has_low_quality_side in alignment.h says what that means and why.) The
+    // cutoff-based trimming above does not catch it: it only walks in past bases at or below
+    // --base-quality-cutoff from the read's end, and a few bases just past the breakpoint are
+    // usually still above that.
+    {
+      double left_mean = 0.0, right_mean = 0.0;
+      uint32_t left_bases = 0, right_bases = 0, five_prime_bases = 0;
+      a->side_mean_base_qualities_1(flanking_left, flanking_left + abs(alignment_overlap) + 1,
+                                    left_mean, left_bases, right_mean, right_bases, five_prime_bases);
+      if (junction_read_has_low_quality_side(left_mean, left_bases, right_mean, right_bases, a->read_length(), settings.junction_side_quality_cutoff))
+        low_quality_side_reads++;
+      // What an ordinary read of the same library does when cut where this one is cut
+      low_quality_side_expected += low_quality_side_background_rate(item->rg, five_prime_bases);
+    }
+
 		bool rev_key = a->reversed();
 		count_per_strand[rev_key]++;
     
@@ -2933,6 +3074,8 @@ void score_junction(
 	};
   
   junction_test_info = this_junction_test_info;
+  junction_test_info.low_quality_side_reads = low_quality_side_reads;
+  junction_test_info.low_quality_side_expected = low_quality_side_expected;
 }
   
 /*! deals with the reads corresponding to a successful or failed junction
@@ -3324,6 +3467,14 @@ cDiffEntry junction_to_diff_entry(
   ("side_1_continuation", to_string<uint32_t>(test_info.side_1_continuation))
   ("side_2_continuation", to_string<uint32_t>(test_info.side_2_continuation))
   ;
+
+  // Only when there are any: it is zero for nearly every junction, and a field that is always
+  // zero would be noise on every JC line ever written.
+  // (The expected count goes with it: the number means nothing without it.)
+  if (test_info.low_quality_side_reads > 0) {
+    item["low_quality_side_read_count"] = to_string<uint32_t>(test_info.low_quality_side_reads);
+    item["low_quality_side_expected_read_count"] = to_string(test_info.low_quality_side_expected, 1);
+  }
 
 	/// Note: Other adjustments to overlap can happen at the later annotation stage
 	/// and they will not affect coverage for calling deletions or mutations

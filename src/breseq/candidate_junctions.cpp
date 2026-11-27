@@ -2412,6 +2412,43 @@ namespace breseq {
         
         AlignmentPair ap(*a1, *a2, settings);
 
+        // Two kinds of read do not seed a candidate junction, both judged over the parts of the
+        // read that only one of its two pieces covers (a1 is the piece that starts at the read's
+        // first base):
+        //
+        //  (1) One whose piece has no confident base at all -- every base of it at or below
+        //      --base-quality-cutoff, the tail the alignment viewer draws in yellow. Such a read is
+        //      never COUNTED for a junction (score_junction measures its reach over confident bases
+        //      only), so letting it propose one meant a junction could be seeded entirely by
+        //      reads that could not support it.
+        //  (2) One that is good on one side of the breakpoint and miscalled on the other without
+        //      being that bad: a sequencer skipping a hairpin (junction_read_has_low_quality_side
+        //      in alignment.h). Off with --junction-low-quality-side-p-value-cutoff 0.
+        if (ap.pass)
+        {
+          uint32_t s1, e1, s2, e2;
+          a1->query_stranded_bounds_1(s1, e1);
+          a2->query_stranded_bounds_1(s2, e2);
+          const uint32_t first_end = (s2 > 1) ? min(e1, s2 - 1) : 0;
+          const uint32_t second_start = max(e1 + 1, s2);
+          if ((first_end >= 1) && (second_start <= e2)) {
+
+            uint32_t confident_first = 0, confident_last = 0;
+            if (!a1->stranded_confident_bounds_1(settings.base_quality_cutoff, confident_first, confident_last)
+                || (confident_first > first_end) || (confident_last < second_start)) {
+              ap.pass = false;
+            }
+
+            if (ap.pass && (settings.junction_low_quality_side_p_value_cutoff > 0)) {
+              const uint32_t bases_1 = first_end, bases_2 = e2 - second_start + 1;
+              if (junction_read_has_low_quality_side(a1->stranded_mean_base_quality_1(1, first_end), bases_1,
+                                                     a1->stranded_mean_base_quality_1(second_start, e2), bases_2,
+                                                     a1->read_length(), settings.junction_side_quality_cutoff))
+                ap.pass = false;
+            }
+          }
+        }
+
 				if (ap.pass)
         {
           // Use the end_to_end_length as a kind of score

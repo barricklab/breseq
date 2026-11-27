@@ -164,6 +164,12 @@ namespace breseq {
     uint32_t side_1_continuation;
     uint32_t side_2_continuation;
     vector<string> reject_reasons;
+    // Of total_non_overlap_reads, how many have a low-quality side (see score_junction). LAST, so
+    // the positional initializer in score_junction leaves it zero until it is set.
+    uint32_t low_quality_side_reads;
+    // ... and how many would be expected to, if these were ordinary reads of their libraries cut at
+    // the same positions (low_quality_side_background_rate).
+    double low_quality_side_expected;
 
     bool operator <(const JunctionTestInfo& _in) const
     {

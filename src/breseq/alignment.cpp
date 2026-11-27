@@ -358,6 +358,85 @@ uint32_t alignment_wrapper::reference_start_0(uint32_t min_qual) const
   return first;
 }
   
+double alignment_wrapper::stranded_mean_base_quality_1(uint32_t start_1, uint32_t end_1) const
+{
+  const uint32_t len = read_length();
+  if ((start_1 < 1) || (end_1 > len) || (start_1 > end_1)) return 0.0;
+  uint64_t sum = 0;
+  for (uint32_t p = start_1; p <= end_1; p++) {
+    // stored orientation is reversed for a read aligned to the bottom strand
+    sum += read_base_quality_0(reversed() ? (len - p) : (p - 1));
+  }
+  return static_cast<double>(sum) / static_cast<double>(end_1 - start_1 + 1);
+}
+
+bool alignment_wrapper::stranded_confident_bounds_1(uint32_t min_qual, uint32_t& first_1, uint32_t& last_1) const
+{
+  const uint32_t len = read_length();
+  bool found = false;
+  for (uint32_t p = 1; p <= len; p++) {
+    if (read_base_quality_0(reversed() ? (len - p) : (p - 1)) > min_qual) {
+      if (!found) { first_1 = p; found = true; }
+      last_1 = p;
+    }
+  }
+  return found;
+}
+
+void alignment_wrapper::side_mean_base_qualities_1(uint32_t left_end_1, uint32_t right_start_1,
+                                                   double& left_mean, uint32_t& left_bases,
+                                                   double& right_mean, uint32_t& right_bases,
+                                                   uint32_t& five_prime_bases) const
+{
+  uint32_t left_last_read_pos = 0, right_first_read_pos = 0;   // 0-based into the stored read
+  uint32_t* cigar = bam_get_cigar(_a);
+  uint32_t ref_pos_1 = _a->core.pos + 1;
+  uint32_t read_pos = 0;             // 0-based into the stored read (soft clips included)
+  uint64_t left_sum = 0, right_sum = 0;
+  left_bases = 0; right_bases = 0;
+
+  for (uint32_t i = 0; i < _a->core.n_cigar; i++) {
+    uint32_t op = cigar[i] & BAM_CIGAR_MASK;
+    uint32_t len = cigar[i] >> BAM_CIGAR_SHIFT;
+
+    switch (op) {
+      case BAM_CMATCH:
+      case BAM_CEQUAL:
+      case BAM_CDIFF:
+        for (uint32_t j = 0; j < len; j++, read_pos++, ref_pos_1++) {
+          if (ref_pos_1 <= left_end_1) { left_sum += read_base_quality_0(read_pos); left_bases++; left_last_read_pos = read_pos; }
+          else if (ref_pos_1 >= right_start_1) {
+            if (!right_bases) right_first_read_pos = read_pos;
+            right_sum += read_base_quality_0(read_pos); right_bases++;
+          }
+        }
+        break;
+
+      case BAM_CINS:
+      case BAM_CSOFT_CLIP:
+        read_pos += len;
+        break;
+
+      case BAM_CDEL:
+      case BAM_CREF_SKIP:
+        ref_pos_1 += len;
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  left_mean = left_bases ? static_cast<double>(left_sum) / left_bases : 0.0;
+  right_mean = right_bases ? static_cast<double>(right_sum) / right_bases : 0.0;
+
+  // The stored read is reverse-complemented when it aligns to the bottom strand, so there the
+  // read's 5' part is the stored RIGHT part.
+  five_prime_bases = 0;
+  if (left_bases && right_bases)
+    five_prime_bases = reversed() ? (read_length() - right_first_read_pos) : (left_last_read_pos + 1);
+}
+
 uint32_t alignment_wrapper::reference_start_1(uint32_t min_qual) const
 {
   uint32_t start = reference_start_0(min_qual);

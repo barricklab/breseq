@@ -1,15 +1,15 @@
 #=GENOME_DIFF	1.0
-#=CREATED	14:45:50 27 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision 23039a3d6c0d
-#=COMMAND	./src/breseq/breseq -j 7 -o ./tests/long_ltee_ara_p6_40k_se36 -r ./tests/long_ltee_ara_p6_40k_se36/../data/downloads/ltee_REL606/REL606.gbk ./tests/long_ltee_ara_p6_40k_se36/../data/downloads/ena_SRR1536190/SRR1536190.fastq.gz
-#=REFSEQ	./tests/long_ltee_ara_p6_40k_se36/../data/downloads/ltee_REL606/REL606.gbk
-#=READSEQ	./tests/long_ltee_ara_p6_40k_se36/../data/downloads/ena_SRR1536190/SRR1536190.fastq.gz
+#=CREATED	14:34:50 27 Nov 2026
+#=PROGRAM	breseq 0.50.0 revision 129f0535a3dd
+#=COMMAND	./src/breseq/breseq -j 7 -o tests/long_ltee_ara_p6_40k_se36 -r tests/long_ltee_ara_p6_40k_se36/../data/downloads/ltee_REL606/REL606.gbk tests/long_ltee_ara_p6_40k_se36/../data/downloads/ena_SRR1536190/SRR1536190.fastq.gz
+#=REFSEQ	tests/long_ltee_ara_p6_40k_se36/../data/downloads/ltee_REL606/REL606.gbk
+#=READSEQ	tests/long_ltee_ara_p6_40k_se36/../data/downloads/ena_SRR1536190/SRR1536190.fastq.gz
 #=CONVERTED-BASES	199466280
 #=CONVERTED-READS	5540730
 #=INPUT-BASES	199488420
 #=INPUT-READS	5541345
-#=MAPPED-BASES	192085794
-#=MAPPED-READS	5338013
+#=MAPPED-BASES	192086294
+#=MAPPED-READS	5338027
 SNP	1	2190	REL606	1173	G	aa_new_seq=G	aa_position=280	aa_ref_seq=C	codon_new_seq=GGC	codon_number=280	codon_position=1	codon_ref_seq=TGC	gene_name=thrA	gene_position=838	gene_product=bifunctional aspartokinase I/homeserine dehydrogenase I	gene_strand=>	genes_overlapping=thrA	locus_tag=ECB_00002	locus_tags_overlapping=ECB_00002	mutation_category=snp_nonsynonymous	position_end=1173	position_start=1173	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	2	2191	REL606	1930	G	aa_new_seq=C	aa_position=532	aa_ref_seq=F	codon_new_seq=TGT	codon_number=532	codon_position=2	codon_ref_seq=TTT	gene_name=thrA	gene_position=1595	gene_product=bifunctional aspartokinase I/homeserine dehydrogenase I	gene_strand=>	genes_overlapping=thrA	locus_tag=ECB_00002	locus_tags_overlapping=ECB_00002	mutation_category=snp_nonsynonymous	position_end=1930	position_start=1930	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	3	2192	REL606	2538	C	aa_new_seq=Q	aa_position=735	aa_ref_seq=K	codon_new_seq=CAG	codon_number=735	codon_position=1	codon_ref_seq=AAG	gene_name=thrA	gene_position=2203	gene_product=bifunctional aspartokinase I/homeserine dehydrogenase I	gene_strand=>	genes_overlapping=thrA	locus_tag=ECB_00002	locus_tags_overlapping=ECB_00002	mutation_category=snp_nonsynonymous	position_end=2538	position_start=2538	ref_seq=A	snp_type=nonsynonymous	transl_table=11
@@ -275,7 +275,7 @@ SNP	262	2451	REL606	542786	C	aa_new_seq=Q	aa_position=2	aa_ref_seq=K	codon_new_s
 SNP	263	2452	REL606	543517	C	aa_new_seq=F	aa_position=58	aa_ref_seq=L	codon_new_seq=TTC	codon_number=58	codon_position=3	codon_ref_seq=TTA	gene_name=ybcM	gene_position=174	gene_product=predicted DNA-binding transcriptional regulator	gene_strand=>	genes_overlapping=ybcM	locus_tag=ECB_00496	locus_tags_overlapping=ECB_00496	mutation_category=snp_nonsynonymous	position_end=543517	position_start=543517	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	264	2453	REL606	544943	C	aa_new_seq=Q	aa_position=45	aa_ref_seq=K	codon_new_seq=CAA	codon_number=45	codon_position=1	codon_ref_seq=AAA	gene_name=ninE	gene_position=133	gene_product=conserved protein	gene_strand=>	genes_overlapping=ninE	locus_tag=ECB_00498	locus_tags_overlapping=ECB_00498	mutation_category=snp_nonsynonymous	position_end=544943	position_start=544943	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	265	2454	REL606	546894	C	gene_name=nmpC/insB-6	gene_position=intergenic (-5/+53)	gene_product=outer membrane porin, at locus of qsr prophage; b0553_1/IS1 protein InsB	gene_strand=</<	genes_promoter=nmpC	locus_tag=ECB_00503/ECB_00504	locus_tags_promoter=ECB_00503	mutation_category=snp_intergenic	position_end=546894	position_start=546894	ref_seq=A	snp_type=intergenic
-DEL	266	4376,4394,4408	REL606	547700	8619	gene_name=[nmpC]–[ECB_00513]	gene_product=[nmpC],ybcR,ybcS,ybcT,ybcU,ECB_00510,nohB,ECB_00512,[ECB_00513]	genes_inactivated=ybcR,ybcS,ybcT,ybcU,ECB_00510,nohB,ECB_00512,ECB_00513	genes_overlapping=nmpC	locus_tag=[ECB_00503]–[ECB_00513]	locus_tags_inactivated=ECB_00506,ECB_00507,ECB_00508,ECB_00509,ECB_00510,ECB_00511,ECB_00512,ECB_00513	locus_tags_overlapping=ECB_00503	mediated=IS1	mutation_category=large_deletion	position_end=556318	position_start=547700	ref_seq=8619-bp
+DEL	266	4376,4390,4399	REL606	547700	8619	gene_name=[nmpC]–[ECB_00513]	gene_product=[nmpC],ybcR,ybcS,ybcT,ybcU,ECB_00510,nohB,ECB_00512,[ECB_00513]	genes_inactivated=ybcR,ybcS,ybcT,ybcU,ECB_00510,nohB,ECB_00512,ECB_00513	genes_overlapping=nmpC	locus_tag=[ECB_00503]–[ECB_00513]	locus_tags_inactivated=ECB_00506,ECB_00507,ECB_00508,ECB_00509,ECB_00510,ECB_00511,ECB_00512,ECB_00513	locus_tags_overlapping=ECB_00503	mediated=IS1	mutation_category=large_deletion	position_end=556318	position_start=547700	ref_seq=8619-bp
 SNP	267	2455	REL606	563326	G	aa_new_seq=Q	aa_position=3	aa_ref_seq=K	codon_new_seq=CAG	codon_number=3	codon_position=1	codon_ref_seq=AAG	gene_name=ybcH	gene_position=7	gene_product=hypothetical protein	gene_strand=<	genes_overlapping=ybcH	locus_tag=ECB_00521	locus_tags_overlapping=ECB_00521	mutation_category=snp_nonsynonymous	position_end=563326	position_start=563326	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	268	2456	REL606	563812	G	aa_new_seq=L	aa_position=832	aa_ref_seq=I	codon_new_seq=CTC	codon_number=832	codon_position=1	codon_ref_seq=ATC	gene_name=nfrA	gene_position=2494	gene_product=bacteriophage N4 receptor, outer membrane subunit	gene_strand=<	genes_overlapping=nfrA	locus_tag=ECB_00522	locus_tags_overlapping=ECB_00522	mutation_category=snp_nonsynonymous	position_end=563812	position_start=563812	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	269	2457	REL606	564427	G	aa_new_seq=H	aa_position=627	aa_ref_seq=N	codon_new_seq=CAT	codon_number=627	codon_position=1	codon_ref_seq=AAT	gene_name=nfrA	gene_position=1879	gene_product=bacteriophage N4 receptor, outer membrane subunit	gene_strand=<	genes_overlapping=nfrA	locus_tag=ECB_00522	locus_tags_overlapping=ECB_00522	mutation_category=snp_nonsynonymous	position_end=564427	position_start=564427	ref_seq=T	snp_type=nonsynonymous	transl_table=11
@@ -707,7 +707,7 @@ SNP	694	2885	REL606	1427099	C	aa_new_seq=A	aa_position=43	aa_ref_seq=S	codon_new
 SNP	695	2886	REL606	1427752	G	aa_new_seq=H	aa_position=250	aa_ref_seq=N	codon_new_seq=CAC	codon_number=250	codon_position=1	codon_ref_seq=AAC	gene_name=ompN	gene_position=748	gene_product=outer membrane pore protein N, non-specific	gene_strand=<	genes_overlapping=ompN	locus_tag=ECB_01348	locus_tags_overlapping=ECB_01348	mutation_category=snp_nonsynonymous	position_end=1427752	position_start=1427752	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	696	2887	REL606	1428500	G	gene_name=ompN/ydbK	gene_position=intergenic (-1/+366)	gene_product=outer membrane pore protein N, non-specific/fused predicted pyruvate-flavodoxin oxidoreductase: conserved protein/conserved protein/FeS binding protein	gene_strand=</<	genes_promoter=ompN	locus_tag=ECB_01348/ECB_01349	locus_tags_promoter=ECB_01348	mutation_category=snp_intergenic	position_end=1428500	position_start=1428500	ref_seq=T	snp_type=intergenic
 SNP	697	2888	REL606	1428578	G	gene_name=ompN/ydbK	gene_position=intergenic (-79/+288)	gene_product=outer membrane pore protein N, non-specific/fused predicted pyruvate-flavodoxin oxidoreductase: conserved protein/conserved protein/FeS binding protein	gene_strand=</<	genes_promoter=ompN	locus_tag=ECB_01348/ECB_01349	locus_tags_promoter=ECB_01348	mutation_category=snp_intergenic	position_end=1428578	position_start=1428578	ref_seq=T	snp_type=intergenic
-DEL	698	4377,4397,4409	REL606	1433350	9287	gene_name=ldhA–tynA	gene_product=ldhA,ydbH,ynbE,ydbL,feaR,feaB,tynA	genes_inactivated=ldhA,ydbH,ynbE,ydbL,feaR,feaB,tynA	locus_tag=[ECB_01352]–[ECB_01358]	locus_tags_inactivated=ECB_01352,ECB_01353,ECB_01354,ECB_01355,ECB_01356,ECB_01357,ECB_01358	mediated=IS3	mutation_category=large_deletion	position_end=1442636	position_start=1433350	ref_seq=9287-bp
+DEL	698	4377,4392,4400	REL606	1433350	9287	gene_name=ldhA–tynA	gene_product=ldhA,ydbH,ynbE,ydbL,feaR,feaB,tynA	genes_inactivated=ldhA,ydbH,ynbE,ydbL,feaR,feaB,tynA	locus_tag=[ECB_01352]–[ECB_01358]	locus_tags_inactivated=ECB_01352,ECB_01353,ECB_01354,ECB_01355,ECB_01356,ECB_01357,ECB_01358	mediated=IS3	mutation_category=large_deletion	position_end=1442636	position_start=1433350	ref_seq=9287-bp
 SNP	699	2889	REL606	1443993	G	aa_new_seq=R	aa_position=38	aa_ref_seq=L	codon_new_seq=CGG	codon_number=38	codon_position=2	codon_ref_seq=CTG	gene_name=ydbC	gene_position=113	gene_product=predicted oxidoreductase, NAD(P)-binding	gene_strand=>	genes_overlapping=ydbC	locus_tag=ECB_01361	locus_tags_overlapping=ECB_01361	mutation_category=snp_nonsynonymous	position_end=1443993	position_start=1443993	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	700	2890	REL606	1444774	C	aa_new_seq=G	aa_position=99	aa_ref_seq=G	codon_new_seq=GGC	codon_number=99	codon_position=3	codon_ref_seq=GGA	gene_name=ydbD	gene_position=297	gene_product=hypothetical protein	gene_strand=>	genes_overlapping=ydbD	locus_tag=ECB_01362	locus_tags_overlapping=ECB_01362	mutation_category=snp_synonymous	position_end=1444774	position_start=1444774	ref_seq=A	snp_type=synonymous	transl_table=11
 SNP	701	2891	REL606	1444778	C	aa_new_seq=L	aa_position=101	aa_ref_seq=I	codon_new_seq=CTT	codon_number=101	codon_position=1	codon_ref_seq=ATT	gene_name=ydbD	gene_position=301	gene_product=hypothetical protein	gene_strand=>	genes_overlapping=ydbD	locus_tag=ECB_01362	locus_tags_overlapping=ECB_01362	mutation_category=snp_nonsynonymous	position_end=1444778	position_start=1444778	ref_seq=A	snp_type=nonsynonymous	transl_table=11
@@ -792,7 +792,7 @@ SNP	779	2969	REL606	1584942	G	aa_new_seq=R	aa_position=291	aa_ref_seq=L	codon_ne
 SNP	780	2970	REL606	1592264	C	gene_name=ydeI/ydeJ	gene_position=intergenic (-1/-275)	gene_product=hypothetical protein/competence damage-inducible protein A	gene_strand=</>	genes_promoter=ydeI	locus_tag=ECB_01495/ECB_01496	locus_tags_promoter=ECB_01495	mutation_category=snp_intergenic	position_end=1592264	position_start=1592264	ref_seq=A	snp_type=intergenic
 SNP	781	2971	REL606	1595232	C	gene_name=dcp/ydfG	gene_position=intergenic (-86/-51)	gene_product=dipeptidyl carboxypeptidase II/L-allo-threonine dehydrogenase, NAD(P)-binding	gene_strand=</>	genes_promoter=dcp,ydfG	locus_tag=ECB_01497/ECB_01498	locus_tags_promoter=ECB_01497,ECB_01498	mutation_category=snp_intergenic	position_end=1595232	position_start=1595232	ref_seq=A	snp_type=intergenic
 SNP	782	2972	REL606	1598441	G	aa_new_seq=D	aa_position=80	aa_ref_seq=E	codon_new_seq=GAC	codon_number=80	codon_position=3	codon_ref_seq=GAA	gene_name=ydfI	gene_position=240	gene_product=predicted mannonate dehydrogenase	gene_strand=<	genes_overlapping=ydfI	locus_tag=ECB_01501	locus_tags_overlapping=ECB_01501	mutation_category=snp_nonsynonymous	position_end=1598441	position_start=1598441	ref_seq=T	snp_type=nonsynonymous	transl_table=11
-DEL	783	4379,4410	REL606	1609175	7554	between=IS3	gene_name=ybcW–[ECB_01526]	gene_product=ybcW,gnsB,ynfN,ECB_01516,cspI,ydfP,ydfQ,ydfR,essQ,ECB_01522,ECB_01523,insE-4,insF-4,[ECB_01526]	genes_inactivated=ybcW,gnsB,ynfN,ECB_01516,cspI,ydfP,ydfQ,ydfR,essQ,ECB_01522,ECB_01523,insE-4,insF-4	genes_overlapping=ECB_01526	locus_tag=[ECB_01513]–[ECB_01526]	locus_tags_inactivated=ECB_01513,ECB_01514,ECB_01515,ECB_01516,ECB_01517,ECB_01518,ECB_01519,ECB_01520,ECB_01521,ECB_01522,ECB_01523,ECB_01524,ECB_01525	locus_tags_overlapping=ECB_01526	mutation_category=large_deletion	position_end=1616728	position_start=1609175	ref_seq=7554-bp
+DEL	783	4379,4401	REL606	1609175	7554	between=IS3	gene_name=ybcW–[ECB_01526]	gene_product=ybcW,gnsB,ynfN,ECB_01516,cspI,ydfP,ydfQ,ydfR,essQ,ECB_01522,ECB_01523,insE-4,insF-4,[ECB_01526]	genes_inactivated=ybcW,gnsB,ynfN,ECB_01516,cspI,ydfP,ydfQ,ydfR,essQ,ECB_01522,ECB_01523,insE-4,insF-4	genes_overlapping=ECB_01526	locus_tag=[ECB_01513]–[ECB_01526]	locus_tags_inactivated=ECB_01513,ECB_01514,ECB_01515,ECB_01516,ECB_01517,ECB_01518,ECB_01519,ECB_01520,ECB_01521,ECB_01522,ECB_01523,ECB_01524,ECB_01525	locus_tags_overlapping=ECB_01526	mutation_category=large_deletion	position_end=1616728	position_start=1609175	ref_seq=7554-bp
 SNP	784	2973	REL606	1616992	C	gene_name=ECB_01526/ECB_01527	gene_position=intergenic (-117/-76)	gene_product=putative pathogenicity island protein (fragment)/putative lipoprotein	gene_strand=</>	genes_promoter=ECB_01526,ECB_01527	locus_tag=ECB_01526/ECB_01527	locus_tags_promoter=ECB_01526,ECB_01527	mutation_category=snp_intergenic	position_end=1616992	position_start=1616992	ref_seq=A	snp_type=intergenic
 SNP	785	2974	REL606	1618285	G	aa_new_seq=A	aa_position=146	aa_ref_seq=D	codon_new_seq=GCT	codon_number=146	codon_position=2	codon_ref_seq=GAT	gene_name=ydfU	gene_position=437	gene_product=predicted protein	gene_strand=<	genes_overlapping=ydfU	locus_tag=ECB_01529	locus_tags_overlapping=ECB_01529	mutation_category=snp_nonsynonymous	position_end=1618285	position_start=1618285	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	786	2975	REL606	1619052	C	aa_new_seq=D	aa_position=8	aa_ref_seq=Y	codon_new_seq=GAC	codon_number=8	codon_position=1	codon_ref_seq=TAC	gene_name=ECB_01530	gene_position=22	gene_product=conserved hypothetical protein	gene_strand=<	genes_overlapping=ECB_01530	locus_tag=ECB_01530	locus_tags_overlapping=ECB_01530	mutation_category=snp_nonsynonymous	position_end=1619052	position_start=1619052	ref_seq=A	snp_type=nonsynonymous	transl_table=11
@@ -981,7 +981,7 @@ SNP	968	3157	REL606	1968439	C	aa_new_seq=F	aa_position=255	aa_ref_seq=L	codon_ne
 SNP	969	3158	REL606	1968777	C	aa_new_seq=S	aa_position=368	aa_ref_seq=Y	codon_new_seq=TCC	codon_number=368	codon_position=2	codon_ref_seq=TAC	gene_name=tyrP	gene_position=1103	gene_product=tyrosine transporter	gene_strand=>	genes_overlapping=tyrP	locus_tag=ECB_01875	locus_tags_overlapping=ECB_01875	mutation_category=snp_nonsynonymous	position_end=1968777	position_start=1968777	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	970	3159	REL606	1971774	G	aa_new_seq=P	aa_position=287	aa_ref_seq=Q	codon_new_seq=CCG	codon_number=287	codon_position=2	codon_ref_seq=CAG	gene_name=uvrC	gene_position=860	gene_product=excinuclease ABC subunit C	gene_strand=<	genes_overlapping=uvrC	locus_tag=ECB_01878	locus_tags_overlapping=ECB_01878	mutation_category=snp_nonsynonymous	position_end=1971774	position_start=1971774	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 INS	971	3160	REL606	1973264	A	gene_name=uvrY/insA-13	gene_position=intergenic (-59/-63)	gene_product=response regulator/IS1 protein InsA	gene_strand=</>	genes_promoter=uvrY,insA-13	locus_tag=ECB_01879/ECB_01880	locus_tags_promoter=ECB_01879,ECB_01880	mutation_category=small_indel	position_end=1973264	position_start=1973264	ref_seq=A
-DEL	972	4380,4399,4411	REL606	1974040	2233	gene_name=[yedU]–[yedW]	gene_product=[yedU],yedV,[yedW]	genes_inactivated=yedU,yedV	genes_overlapping=yedW	locus_tag=[ECB_01882]–[ECB_01884]	locus_tags_inactivated=ECB_01882,ECB_01883	locus_tags_overlapping=ECB_01884	mediated=IS1	mutation_category=large_deletion	position_end=1976272	position_start=1974040	ref_seq=2233-bp
+DEL	972	4380,4393,4402	REL606	1974040	2233	gene_name=[yedU]–[yedW]	gene_product=[yedU],yedV,[yedW]	genes_inactivated=yedU,yedV	genes_overlapping=yedW	locus_tag=[ECB_01882]–[ECB_01884]	locus_tags_inactivated=ECB_01882,ECB_01883	locus_tags_overlapping=ECB_01884	mediated=IS1	mutation_category=large_deletion	position_end=1976272	position_start=1974040	ref_seq=2233-bp
 SNP	973	3161	REL606	1976586	G	aa_new_seq=A	aa_position=79	aa_ref_seq=A	codon_new_seq=GCC	codon_number=79	codon_position=3	codon_ref_seq=GCA	gene_name=yedW	gene_position=237	gene_product=predicted DNA-binding response regulator in two-component system with YedV	gene_strand=<	genes_overlapping=yedW	locus_tag=ECB_01884	locus_tags_overlapping=ECB_01884	mutation_category=snp_synonymous	position_end=1976586	position_start=1976586	ref_seq=T	snp_type=synonymous	transl_table=11
 SNP	974	3162	REL606	1977699	C	aa_new_seq=H	aa_position=75	aa_ref_seq=N	codon_new_seq=CAC	codon_number=75	codon_position=1	codon_ref_seq=AAC	gene_name=yedY	gene_position=223	gene_product=hypothetical protein	gene_strand=>	genes_overlapping=yedY	locus_tag=ECB_01886	locus_tags_overlapping=ECB_01886	mutation_category=snp_nonsynonymous	position_end=1977699	position_start=1977699	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	975	3163	REL606	1978686	C	aa_new_seq=Q	aa_position=69	aa_ref_seq=K	codon_new_seq=CAA	codon_number=69	codon_position=1	codon_ref_seq=AAA	gene_name=yedZ	gene_position=205	gene_product=hypothetical protein	gene_strand=>	genes_overlapping=yedZ	locus_tag=ECB_01887	locus_tags_overlapping=ECB_01887	mutation_category=snp_nonsynonymous	position_end=1978686	position_start=1978686	ref_seq=A	snp_type=nonsynonymous	transl_table=11
@@ -1202,7 +1202,7 @@ SNP	1189	3377	REL606	2444664	G	aa_new_seq=M	aa_position=270	aa_ref_seq=I	codon_n
 SNP	1190	3378	REL606	2444956	G	aa_new_seq=G	aa_position=368	aa_ref_seq=W	codon_new_seq=GGG	codon_number=368	codon_position=1	codon_ref_seq=TGG	gene_name=yfeO	gene_position=1102	gene_product=hypothetical protein	gene_strand=>	genes_overlapping=yfeO	locus_tag=ECB_02299	locus_tags_overlapping=ECB_02299	mutation_category=snp_nonsynonymous	position_end=2444956	position_start=2444956	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	1191	3379	REL606	2448341	C	aa_new_seq=L	aa_position=359	aa_ref_seq=I	codon_new_seq=CTC	codon_number=359	codon_position=1	codon_ref_seq=ATC	gene_name=nupC	gene_position=1075	gene_product=nucleoside (except guanosine) transporter	gene_strand=>	genes_overlapping=nupC	locus_tag=ECB_02302	locus_tags_overlapping=ECB_02302	mutation_category=snp_nonsynonymous	position_end=2448341	position_start=2448341	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	1192	3380	REL606	2448404	C	aa_new_seq=Q	aa_position=380	aa_ref_seq=K	codon_new_seq=CAG	codon_number=380	codon_position=1	codon_ref_seq=AAG	gene_name=nupC	gene_position=1138	gene_product=nucleoside (except guanosine) transporter	gene_strand=>	genes_overlapping=nupC	locus_tag=ECB_02302	locus_tags_overlapping=ECB_02302	mutation_category=snp_nonsynonymous	position_end=2448404	position_start=2448404	ref_seq=A	snp_type=nonsynonymous	transl_table=11
-MOB	1193	4401,4402	REL606	2448493	IS186	-1	6	gene_name=nupC/yfeA	gene_position=intergenic (+24/+21)	gene_product=nucleoside (except guanosine) transporter/predicted diguanylate cyclase	gene_strand=>/<	locus_tag=ECB_02302/ECB_02303	mutation_category=mobile_element_insertion	position_end=2448498	position_start=2448493	ref_seq=ATAATT	repeat_size=1343
+MOB	1193	4394,4395	REL606	2448493	IS186	-1	6	gene_name=nupC/yfeA	gene_position=intergenic (+24/+21)	gene_product=nucleoside (except guanosine) transporter/predicted diguanylate cyclase	gene_strand=>/<	locus_tag=ECB_02302/ECB_02303	mutation_category=mobile_element_insertion	position_end=2448498	position_start=2448493	ref_seq=ATAATT	repeat_size=1343
 SNP	1194	3381	REL606	2449111	C	aa_new_seq=R	aa_position=533	aa_ref_seq=M	codon_new_seq=AGG	codon_number=533	codon_position=2	codon_ref_seq=ATG	gene_name=yfeA	gene_position=1598	gene_product=predicted diguanylate cyclase	gene_strand=<	genes_overlapping=yfeA	locus_tag=ECB_02303	locus_tags_overlapping=ECB_02303	mutation_category=snp_nonsynonymous	position_end=2449111	position_start=2449111	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	1195	3382	REL606	2449424	G	aa_new_seq=H	aa_position=429	aa_ref_seq=N	codon_new_seq=CAC	codon_number=429	codon_position=1	codon_ref_seq=AAC	gene_name=yfeA	gene_position=1285	gene_product=predicted diguanylate cyclase	gene_strand=<	genes_overlapping=yfeA	locus_tag=ECB_02303	locus_tags_overlapping=ECB_02303	mutation_category=snp_nonsynonymous	position_end=2449424	position_start=2449424	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	1196	3383	REL606	2452080	C	aa_new_seq=S	aa_position=131	aa_ref_seq=*	codon_new_seq=TCA	codon_number=131	codon_position=2	codon_ref_seq=TAA	gene_name=yfeD	gene_position=392	gene_product=predicted DNA-binding transcriptional regulator	gene_strand=>	genes_overlapping=yfeD	locus_tag=ECB_02305	locus_tags_overlapping=ECB_02305	mutation_category=snp_nonsynonymous	position_end=2452080	position_start=2452080	ref_seq=A	snp_type=nonsynonymous	transl_table=11
@@ -1454,7 +1454,7 @@ SNP	1441	3630	REL606	3018976	C	aa_new_seq=R	aa_position=658	aa_ref_seq=R	codon_n
 SNP	1442	3631	REL606	3020265	C	aa_new_seq=Q	aa_position=401	aa_ref_seq=K	codon_new_seq=CAA	codon_number=401	codon_position=1	codon_ref_seq=AAA	gene_name=ECB_02819	gene_position=1201	gene_product=KpsS protein	gene_strand=>	genes_overlapping=ECB_02819	locus_tag=ECB_02819	locus_tags_overlapping=ECB_02819	mutation_category=snp_nonsynonymous	position_end=3020265	position_start=3020265	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	1443	3632	REL606	3021523	G	gene_name=ECB_02820/ECB_02821	gene_position=intergenic (-40/+22)	gene_product=hypothetical protein/hypothetical protein	gene_strand=</<	genes_promoter=ECB_02820	locus_tag=ECB_02820/ECB_02821	locus_tags_promoter=ECB_02820	mutation_category=snp_intergenic	position_end=3021523	position_start=3021523	ref_seq=T	snp_type=intergenic
 SNP	1444	3633	REL606	3022403	C	aa_new_seq=K	aa_position=94	aa_ref_seq=N	codon_new_seq=AAG	codon_number=94	codon_position=3	codon_ref_seq=AAT	gene_name=ECB_02821	gene_position=282	gene_product=hypothetical protein	gene_strand=<	genes_overlapping=ECB_02821	locus_tag=ECB_02821	locus_tags_overlapping=ECB_02821	mutation_category=snp_nonsynonymous	position_end=3022403	position_start=3022403	ref_seq=A	snp_type=nonsynonymous	transl_table=11
-DEL	1445	4383,4395,4413	REL606	3024713	407	gene_name=ECB_02825	gene_position=coding (290-696/723 nt)	gene_product=Pyrophosphorylase	gene_strand=<	genes_inactivated=ECB_02825	locus_tag=ECB_02825	locus_tags_inactivated=ECB_02825	mediated=IS1	mutation_category=large_deletion	position_end=3025119	position_start=3024713	ref_seq=407-bp
+DEL	1445	4383,4391,4404	REL606	3024713	407	gene_name=ECB_02825	gene_position=coding (290-696/723 nt)	gene_product=Pyrophosphorylase	gene_strand=<	genes_inactivated=ECB_02825	locus_tag=ECB_02825	locus_tags_inactivated=ECB_02825	mediated=IS1	mutation_category=large_deletion	position_end=3025119	position_start=3024713	ref_seq=407-bp
 SNP	1446	3634	REL606	3027123	C	aa_new_seq=C	aa_position=183	aa_ref_seq=F	codon_new_seq=TGT	codon_number=183	codon_position=2	codon_ref_seq=TTT	gene_name=ECB_02827	gene_position=548	gene_product=Polysialic acid transport ATP-binding KpsT	gene_strand=<	genes_overlapping=ECB_02827	locus_tag=ECB_02827	locus_tags_overlapping=ECB_02827	mutation_category=snp_nonsynonymous	position_end=3027123	position_start=3027123	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	1447	3635	REL606	3028403	G	aa_new_seq=A	aa_position=20	aa_ref_seq=E	codon_new_seq=GCA	codon_number=20	codon_position=2	codon_ref_seq=GAA	gene_name=ECB_02828	gene_position=59	gene_product=Polysialic acid transport protein kpsM	gene_strand=<	genes_overlapping=ECB_02828	locus_tag=ECB_02828	locus_tags_overlapping=ECB_02828	mutation_category=snp_nonsynonymous	position_end=3028403	position_start=3028403	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	1448	3636	REL606	3028540	G	gene_name=ECB_02828/yghD	gene_position=intergenic (-79/+982)	gene_product=Polysialic acid transport protein kpsM/predicted secretion pathway M-type protein, membrane anchored	gene_strand=</<	genes_promoter=ECB_02828	locus_tag=ECB_02828/ECB_02829	locus_tags_promoter=ECB_02828	mutation_category=snp_intergenic	position_end=3028540	position_start=3028540	ref_seq=T	snp_type=intergenic
@@ -1473,7 +1473,7 @@ SNP	1460	3648	REL606	3052051	G	aa_new_seq=L	aa_position=101	aa_ref_seq=I	codon_n
 SNP	1461	3649	REL606	3053933	G	aa_new_seq=D	aa_position=327	aa_ref_seq=E	codon_new_seq=GAC	codon_number=327	codon_position=3	codon_ref_seq=GAA	gene_name=glcD	gene_position=981	gene_product=glycolate oxidase subunit, FAD-linked	gene_strand=<	genes_overlapping=glcD	locus_tag=ECB_02848	locus_tags_overlapping=ECB_02848	mutation_category=snp_nonsynonymous	position_end=3053933	position_start=3053933	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	1462	3650	REL606	3055856	G	aa_new_seq=K	aa_position=231	aa_ref_seq=N	codon_new_seq=AAG	codon_number=231	codon_position=3	codon_ref_seq=AAT	gene_name=glcC	gene_position=693	gene_product=DNA-binding transcriptional dual regulator, glycolate-binding	gene_strand=>	genes_overlapping=glcC	locus_tag=ECB_02849	locus_tags_overlapping=ECB_02849	mutation_category=snp_nonsynonymous	position_end=3055856	position_start=3055856	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	1463	3651	REL606	3057708	C	aa_new_seq=V	aa_position=88	aa_ref_seq=V	codon_new_seq=GTC	codon_number=88	codon_position=3	codon_ref_seq=GTA	gene_name=ECB_02851	gene_position=264	gene_product=putative saframycin Mx1 synthetase B	gene_strand=>	genes_overlapping=ECB_02851	locus_tag=ECB_02851	locus_tags_overlapping=ECB_02851	mutation_category=snp_synonymous	position_end=3057708	position_start=3057708	ref_seq=A	snp_type=synonymous	transl_table=11
-MOB	1464	4404,4405	REL606	3060599	IS1	1	9	gene_name=ECB_02854	gene_position=coding (234-242/1173 nt)	gene_product=conserved hypothetical protein	gene_strand=>	genes_inactivated=ECB_02854	locus_tag=ECB_02854	locus_tags_inactivated=ECB_02854	mutation_category=mobile_element_insertion	position_end=3060607	position_start=3060599	ref_seq=CGGTTCTCG	repeat_size=768
+MOB	1464	4396,4397	REL606	3060599	IS1	1	9	gene_name=ECB_02854	gene_position=coding (234-242/1173 nt)	gene_product=conserved hypothetical protein	gene_strand=>	genes_inactivated=ECB_02854	locus_tag=ECB_02854	locus_tags_inactivated=ECB_02854	mutation_category=mobile_element_insertion	position_end=3060607	position_start=3060599	ref_seq=CGGTTCTCG	repeat_size=768
 SNP	1465	3652	REL606	3062441	C	aa_new_seq=W	aa_position=98	aa_ref_seq=L	codon_new_seq=TGG	codon_number=98	codon_position=2	codon_ref_seq=TTG	gene_name=ECB_02855	gene_position=293	gene_product=conserved hypothetical protein	gene_strand=<	genes_overlapping=ECB_02855	locus_tag=ECB_02855	locus_tags_overlapping=ECB_02855	mutation_category=snp_nonsynonymous	position_end=3062441	position_start=3062441	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	1466	3653	REL606	3063709	C	aa_new_seq=G	aa_position=4	aa_ref_seq=V	codon_new_seq=GGT	codon_number=4	codon_position=2	codon_ref_seq=GTT	gene_name=ECB_02856	gene_position=11	gene_product=conserved hypothetical protein	gene_strand=<	genes_overlapping=ECB_02856	locus_tag=ECB_02856	locus_tags_overlapping=ECB_02856	mutation_category=snp_nonsynonymous	position_end=3063709	position_start=3063709	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	1467	3654	REL606	3069860	G	aa_new_seq=T	aa_position=200	aa_ref_seq=K	codon_new_seq=ACA	codon_number=200	codon_position=2	codon_ref_seq=AAA	gene_name=pitB	gene_position=599	gene_product=phosphate transporter	gene_strand=<	genes_overlapping=pitB	locus_tag=ECB_02863	locus_tags_overlapping=ECB_02863	mutation_category=snp_nonsynonymous	position_end=3069860	position_start=3069860	ref_seq=T	snp_type=nonsynonymous	transl_table=11
@@ -1874,7 +1874,7 @@ SNP	1861	4048	REL606	3886263	C	gene_name=gidA/mioC	gene_position=intergenic (-26
 SNP	1862	4049	REL606	3888865	C	aa_new_seq=S	aa_position=367	aa_ref_seq=I	codon_new_seq=AGC	codon_number=367	codon_position=2	codon_ref_seq=ATC	gene_name=yieM	gene_position=1100	gene_product=predicted von Willibrand factor containing protein	gene_strand=<	genes_overlapping=yieM	locus_tag=ECB_03629	locus_tags_overlapping=ECB_03629	mutation_category=snp_nonsynonymous	position_end=3888865	position_start=3888865	ref_seq=A	snp_type=nonsynonymous	transl_table=11
 SNP	1863	4050	REL606	3889052	G	aa_new_seq=L	aa_position=305	aa_ref_seq=I	codon_new_seq=CTC	codon_number=305	codon_position=1	codon_ref_seq=ATC	gene_name=yieM	gene_position=913	gene_product=predicted von Willibrand factor containing protein	gene_strand=<	genes_overlapping=yieM	locus_tag=ECB_03629	locus_tags_overlapping=ECB_03629	mutation_category=snp_nonsynonymous	position_end=3889052	position_start=3889052	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	1864	4051	REL606	3890332	G	aa_new_seq=L	aa_position=375	aa_ref_seq=M	codon_new_seq=CTG	codon_number=375	codon_position=1	codon_ref_seq=ATG	gene_name=yieN	gene_position=1123	gene_product=fused predicted transcriptional regulator: sigma54 activator protein/conserved protein	gene_strand=<	genes_overlapping=yieN	locus_tag=ECB_03630	locus_tags_overlapping=ECB_03630	mutation_category=snp_nonsynonymous	position_end=3890332	position_start=3890332	ref_seq=T	snp_type=nonsynonymous	transl_table=11
-DEL	1865	4385,4392,4415	REL606	3894997	5160	gene_name=rbsD–[rbsR]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,[rbsR]	genes_inactivated=rbsD,rbsA,rbsC,rbsB,rbsK,rbsR	locus_tag=[ECB_03634]–[ECB_03639]	locus_tags_inactivated=ECB_03634,ECB_03635,ECB_03636,ECB_03637,ECB_03638,ECB_03639	mediated=IS150	mutation_category=large_deletion	position_end=3900156	position_start=3894997	ref_seq=5160-bp
+DEL	1865	4385,4388,4406	REL606	3894997	5160	gene_name=rbsD–[rbsR]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,[rbsR]	genes_inactivated=rbsD,rbsA,rbsC,rbsB,rbsK,rbsR	locus_tag=[ECB_03634]–[ECB_03639]	locus_tags_inactivated=ECB_03634,ECB_03635,ECB_03636,ECB_03637,ECB_03638,ECB_03639	mediated=IS150	mutation_category=large_deletion	position_end=3900156	position_start=3894997	ref_seq=5160-bp
 SNP	1866	4052	REL606	3900762	G	aa_new_seq=L	aa_position=243	aa_ref_seq=F	codon_new_seq=TTG	codon_number=243	codon_position=3	codon_ref_seq=TTT	gene_name=rbsR	gene_position=729	gene_product=DNA-binding transcriptional repressor of ribose metabolism	gene_strand=>	genes_overlapping=rbsR	locus_tag=ECB_03639	locus_tags_overlapping=ECB_03639	mutation_category=snp_nonsynonymous	position_end=3900762	position_start=3900762	ref_seq=T	snp_type=nonsynonymous	transl_table=11
 SNP	1867	4053	REL606	3901163	G	aa_new_seq=G	aa_position=419	aa_ref_seq=G	codon_new_seq=GGC	codon_number=419	codon_position=3	codon_ref_seq=GGA	gene_name=yieO	gene_position=1257	gene_product=predicted multidrug or homocysteine efflux system	gene_strand=<	genes_overlapping=yieO	locus_tag=ECB_03640	locus_tags_overlapping=ECB_03640	mutation_category=snp_synonymous	position_end=3901163	position_start=3901163	ref_seq=T	snp_type=synonymous	transl_table=11
 SNP	1868	4054	REL606	3903046	G	aa_new_seq=A	aa_position=30	aa_ref_seq=E	codon_new_seq=GCA	codon_number=30	codon_position=2	codon_ref_seq=GAA	gene_name=yieP	gene_position=89	gene_product=predicted transcriptional regulator	gene_strand=<	genes_overlapping=yieP	locus_tag=ECB_03641	locus_tags_overlapping=ECB_03641	mutation_category=snp_nonsynonymous	position_end=3903046	position_start=3903046	ref_seq=T	snp_type=nonsynonymous	transl_table=11
@@ -2978,7 +2978,7 @@ RA	2965	.	REL606	1581238	0	T	G	aa_new_seq=P	aa_position=170	aa_ref_seq=Q	allele_
 RA	2966	.	REL606	1582811	0	T	G	aa_new_seq=V	aa_position=2	aa_ref_seq=V	allele_frequencies=A:3.201e-02,G:9.680e-01	codon_new_seq=GTG	codon_number=2	codon_position=3	codon_ref_seq=GTT	fisher_strand_p_value=1.00000e+00	frequency=9.680e-01	frequency_lower=8.875e-01	frequency_upper=9.968e-01	gene_name=yneK	gene_position=6	gene_product=hypothetical protein	gene_strand=>	ks_quality_p_value=6.12903e-01	locus_tag=ECB_01484	major_base=G	major_cov=11/19	major_frequency=9.680e-01	minor_base=A	minor_cov=0/1	new_cov=11/19	new_seq=G	prediction=consensus	ref_cov=0/0	ref_seq=T	score=79.2	snp_type=synonymous	total_cov=11/20	transl_table=11
 RA	2967	.	REL606	1584214	0	T	G	aa_new_seq=A	aa_position=48	aa_ref_seq=A	allele_frequencies=G:1.000e+00	codon_new_seq=GCG	codon_number=48	codon_position=3	codon_ref_seq=GCT	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.675e-01	frequency_upper=1.000e+00	gene_name=sotB	gene_position=144	gene_product=sugar efflux transporter	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_01485	major_base=G	major_cov=19/22	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=19/22	new_seq=G	prediction=consensus	ref_cov=0/0	ref_seq=T	score=112.7	snp_type=synonymous	total_cov=19/22	transl_table=11
 RA	2968	.	REL606	1584733	0	T	G	aa_new_seq=V	aa_position=221	aa_ref_seq=V	allele_frequencies=G:9.309e-01,T:6.908e-02	codon_new_seq=GTG	codon_number=221	codon_position=3	codon_ref_seq=GTT	fisher_strand_p_value=3.84615e-01	frequency=9.309e-01	frequency_lower=7.523e-01	frequency_upper=1.000e+00	gene_name=sotB	gene_position=663	gene_product=sugar efflux transporter	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_01485	major_base=G	major_cov=8/4	major_frequency=9.309e-01	minor_base=T	minor_cov=0/1	new_cov=8/4	new_seq=G	prediction=consensus	ref_cov=0/1	ref_seq=T	score=23.8	snp_type=synonymous	total_cov=8/5	transl_table=11
-RA	2969	.	REL606	1584942	0	T	G	aa_new_seq=R	aa_position=291	aa_ref_seq=L	allele_frequencies=G:9.753e-01,T:2.473e-02	codon_new_seq=CGG	codon_number=291	codon_position=2	codon_ref_seq=CTG	fisher_strand_p_value=4.28571e-01	frequency=9.753e-01	frequency_lower=8.856e-01	frequency_upper=1.000e+00	gene_name=sotB	gene_position=872	gene_product=sugar efflux transporter	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_01485	major_base=G	major_cov=16/11	major_frequency=9.753e-01	minor_base=T	minor_cov=0/1	new_cov=16/11	new_seq=G	prediction=consensus	ref_cov=0/1	ref_seq=T	score=69.2	snp_type=nonsynonymous	total_cov=16/12	transl_table=11
+RA	2969	.	REL606	1584942	0	T	G	aa_new_seq=R	aa_position=291	aa_ref_seq=L	allele_frequencies=G:9.753e-01,T:2.474e-02	codon_new_seq=CGG	codon_number=291	codon_position=2	codon_ref_seq=CTG	fisher_strand_p_value=4.28571e-01	frequency=9.753e-01	frequency_lower=8.856e-01	frequency_upper=1.000e+00	gene_name=sotB	gene_position=872	gene_product=sugar efflux transporter	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_01485	major_base=G	major_cov=16/11	major_frequency=9.753e-01	minor_base=T	minor_cov=0/1	new_cov=16/11	new_seq=G	prediction=consensus	ref_cov=0/1	ref_seq=T	score=69.2	snp_type=nonsynonymous	total_cov=16/12	transl_table=11
 RA	2970	.	REL606	1592264	0	A	C	allele_frequencies=C:1.000e+00	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.572e-01	frequency_upper=1.000e+00	gene_name=ydeI/ydeJ	gene_position=intergenic (-1/-275)	gene_product=hypothetical protein/competence damage-inducible protein A	gene_strand=</>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_01495/ECB_01496	major_base=C	major_cov=16/15	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=16/15	prediction=consensus	ref_cov=0/0	score=82.6	snp_type=intergenic	total_cov=16/15
 RA	2971	.	REL606	1595232	0	A	C	allele_frequencies=C:1.000e+00	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.620e-01	frequency_upper=1.000e+00	gene_name=dcp/ydfG	gene_position=intergenic (-86/-51)	gene_product=dipeptidyl carboxypeptidase II/L-allo-threonine dehydrogenase, NAD(P)-binding	gene_strand=</>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_01497/ECB_01498	major_base=C	major_cov=12/23	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=12/23	prediction=consensus	ref_cov=0/0	score=100.4	snp_type=intergenic	total_cov=12/23
 RA	2972	.	REL606	1598441	0	T	G	aa_new_seq=D	aa_position=80	aa_ref_seq=E	allele_frequencies=G:1.000e+00	codon_new_seq=GAC	codon_number=80	codon_position=3	codon_ref_seq=GAA	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.188e-01	frequency_upper=1.000e+00	gene_name=ydfI	gene_position=240	gene_product=predicted mannonate dehydrogenase	gene_strand=<	ks_quality_p_value=1.00000e+00	locus_tag=ECB_01501	major_base=G	major_cov=11/5	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=11/5	new_seq=G	prediction=consensus	ref_cov=0/0	ref_seq=T	score=40.4	snp_type=nonsynonymous	total_cov=11/5	transl_table=11
@@ -4280,7 +4280,7 @@ RA	4267	.	REL606	4398259	0	T	G	aa_new_seq=S	aa_position=42	aa_ref_seq=I	allele_f
 RA	4268	.	REL606	4401142	0	T	G	aa_new_seq=A	aa_position=48	aa_ref_seq=S	allele_frequencies=G:1.000e+00	codon_new_seq=GCG	codon_number=48	codon_position=1	codon_ref_seq=TCG	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.630e-01	frequency_upper=1.000e+00	gene_name=sgaU	gene_position=142	gene_product=L-xylulose 5-phosphate 3-epimerase	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04064	major_base=G	major_cov=25/11	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=25/11	new_seq=G	prediction=consensus	ref_cov=0/0	ref_seq=T	score=92.1	snp_type=nonsynonymous	total_cov=25/11	transl_table=11
 RA	4269	.	REL606	4401475	0	T	G	aa_new_seq=D	aa_position=159	aa_ref_seq=Y	allele_frequencies=G:1.000e+00	codon_new_seq=GAC	codon_number=159	codon_position=1	codon_ref_seq=TAC	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.572e-01	frequency_upper=1.000e+00	gene_name=sgaU	gene_position=475	gene_product=L-xylulose 5-phosphate 3-epimerase	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04064	major_base=G	major_cov=19/12	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=19/12	new_seq=G	prediction=consensus	ref_cov=0/0	ref_seq=T	score=81.0	snp_type=nonsynonymous	total_cov=19/12	transl_table=11
 RA	4270	.	REL606	4402453	0	A	C	aa_new_seq=T	aa_position=200	aa_ref_seq=N	allele_frequencies=C:1.000e+00	codon_new_seq=ACT	codon_number=200	codon_position=2	codon_ref_seq=AAT	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.558e-01	frequency_upper=1.000e+00	gene_name=sgaE	gene_position=599	gene_product=L-ribulose 5-phosphate 4-epimerase	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04065	major_base=C	major_cov=16/14	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=16/14	new_seq=C	prediction=consensus	ref_cov=0/0	ref_seq=A	score=77.2	snp_type=nonsynonymous	total_cov=16/14	transl_table=11
-RA	4271	.	REL606	4402527	0	T	G	aa_new_seq=D	aa_position=225	aa_ref_seq=Y	allele_frequencies=G:9.873e-01,T:1.267e-02	codon_new_seq=GAC	codon_number=225	codon_position=1	codon_ref_seq=TAC	fisher_strand_p_value=1.00000e+00	frequency=9.873e-01	frequency_lower=9.326e-01	frequency_upper=1.000e+00	gene_name=sgaE	gene_position=673	gene_product=L-ribulose 5-phosphate 4-epimerase	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04065	major_base=G	major_cov=17/29	major_frequency=9.873e-01	minor_base=T	minor_cov=0/1	new_cov=17/29	new_seq=G	prediction=consensus	ref_cov=0/1	ref_seq=T	score=125.1	snp_type=nonsynonymous	total_cov=17/30	transl_table=11
+RA	4271	.	REL606	4402527	0	T	G	aa_new_seq=D	aa_position=225	aa_ref_seq=Y	allele_frequencies=G:9.873e-01,T:1.268e-02	codon_new_seq=GAC	codon_number=225	codon_position=1	codon_ref_seq=TAC	fisher_strand_p_value=1.00000e+00	frequency=9.873e-01	frequency_lower=9.326e-01	frequency_upper=1.000e+00	gene_name=sgaE	gene_position=673	gene_product=L-ribulose 5-phosphate 4-epimerase	gene_strand=>	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04065	major_base=G	major_cov=17/29	major_frequency=9.873e-01	minor_base=T	minor_cov=0/1	new_cov=17/29	new_seq=G	prediction=consensus	ref_cov=0/1	ref_seq=T	score=125.1	snp_type=nonsynonymous	total_cov=17/30	transl_table=11
 RA	4272	.	REL606	4404729	0	A	C	allele_frequencies=C:1.000e+00	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=8.926e-01	frequency_upper=1.000e+00	gene_name=rplI/ECB_04071	gene_position=intergenic (+17/+85)	gene_product=50S ribosomal protein L9/Hexuronate transporter	gene_strand=>/<	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04070/ECB_04071	major_base=C	major_cov=9/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=9/3	prediction=consensus	ref_cov=0/0	score=26.8	snp_type=intergenic	total_cov=9/3
 RA	4273	.	REL606	4406445	0	A	C	aa_new_seq=E	aa_position=604	aa_ref_seq=D	allele_frequencies=C:1.000e+00	codon_new_seq=GAG	codon_number=604	codon_position=3	codon_ref_seq=GAT	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=8.916e-01	frequency_upper=1.000e+00	gene_name=ECB_04072	gene_position=1812	gene_product=putative oxidoreductase	gene_strand=<	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04072	major_base=C	major_cov=9/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=9/3	new_seq=C	prediction=consensus	ref_cov=0/0	ref_seq=A	score=25.5	snp_type=nonsynonymous	total_cov=9/3	transl_table=11
 RA	4274	.	REL606	4408549	0	T	G	aa_new_seq=L	aa_position=416	aa_ref_seq=I	allele_frequencies=G:1.000e+00	codon_new_seq=CTT	codon_number=416	codon_position=1	codon_ref_seq=ATT	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.224e-01	frequency_upper=1.000e+00	gene_name=ECB_04073	gene_position=1246	gene_product=putative acetyl-CoA:acetoacetyl-CoA transferase	gene_strand=<	ks_quality_p_value=1.00000e+00	locus_tag=ECB_04073	major_base=G	major_cov=15/9	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=15/9	new_seq=G	prediction=consensus	ref_cov=0/1	ref_seq=T	score=61.9	snp_type=nonsynonymous	total_cov=15/10	transl_table=11
@@ -4396,701 +4396,692 @@ MC	4383	.	REL606	3023973	3025119	741	0	gene_name=[insB-22]–[ECB_02825]	gene_pr
 MC	4384	.	REL606	3775352	3796230	0	0	gene_name=[selC]–ECB_03540	gene_product=[selC],ECB_03516,ECB_03517,ECB_03518,ECB_03519,ECB_03520,ECB_03521,ECB_03522,ECB_03523,ECB_03524,ECB_03525,ECB_03526,ECB_03527,ECB_03528,ECB_03529,ECB_03530,ECB_03531,ECB_03532,ECB_03533,ECB_03534,ykgN,insI,yeeV,ECB_03538,ECB_03539,ECB_03540	left_inside_cov=0	left_outside_cov=20	locus_tag=[ECB_t00063]–[ECB_03540]	right_inside_cov=7	right_outside_cov=10
 MC	4385	.	REL606	3893586	3900156	1410	0	gene_name=insJ-5–[rbsR]	gene_product=insJ-5,insK-5,rbsD,rbsA,rbsC,rbsB,rbsK,[rbsR]	left_inside_cov=7	left_outside_cov=11	locus_tag=[ECB_03632]–[ECB_03639]	right_inside_cov=0	right_outside_cov=44
 JC	4386	.	REL606	1	1	REL606	4629812	-1	0	alignment_overlap=0	coverage_minus=12	coverage_plus=18	flanking_left=36	flanking_right=36	frequency=NA	frequency_lower=NA	frequency_upper=NA	ignore=CIRCULAR_CHROMOSOME	junction_effective_depth=26.99	junction_possible_overlap_registers=33	junction_possible_overlap_registers_before_trimming=35	key=REL606__1__1__REL606__4629812__-1__0____36__36__0__0	max_left=35	max_left_minus=31	max_left_plus=35	max_min_left=17	max_min_left_minus=16	max_min_left_plus=17	max_min_right=18	max_min_right_minus=16	max_min_right_plus=18	max_pos_hash_score=70	max_right=35	max_right_minus=35	max_right_plus=35	neg_log10_pos_hash_p_value=0.4	new_junction_coverage=0.70	new_junction_read_count=27	new_junction_reference_weighted_read_count=0.15	new_junction_weighted_read_count=26.85	pos_hash_score=27	prediction=unknown	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=–/thrL	side_1_gene_position=intergenic (–/-189)	side_1_gene_product=–/thr operon leader peptide	side_1_gene_strand=–/>	side_1_locus_tag=–/ECB_00001	side_1_overlap=0	side_1_possible_overlap_registers=0	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=lasT/–	side_2_gene_position=intergenic (+24/–)	side_2_gene_product=predicted rRNA methyltransferase/–	side_2_gene_strand=>/–	side_2_locus_tag=ECB_04279/–	side_2_overlap=0	side_2_possible_overlap_registers=0	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=30
-JC	4387	.	REL606	310705	-1	REL606	580473	1	0	alignment_overlap=10	coverage_minus=6	coverage_plus=0	flanking_left=36	flanking_right=36	frequency=2.045e-01	frequency_lower=6.101e-02	frequency_upper=4.399e-01	junction_effective_depth=15.50	junction_mixture_iterations=4	junction_possible_overlap_registers=19	junction_possible_overlap_registers_before_trimming=25	key=REL606__310705__-1__REL606__580463__1__10____36__36__0__0	max_left=25	max_left_minus=25	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=11	max_min_right_minus=11	max_min_right_plus=0	max_pos_hash_score=50	max_right=11	max_right_minus=11	max_right_plus=0	neg_log10_pos_hash_p_value=2.8	new_junction_coverage=0.14	new_junction_read_count=3	new_junction_reference_weighted_read_count=0.06	new_junction_weighted_read_count=2.94	pos_hash_score=5	prediction=polymorphism	reject=FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.48	side_1_gene_name=yahF	side_1_gene_position=coding (1279/1548 nt)	side_1_gene_product=predicted acyl-CoA synthetase with NAD(P)-binding domain and succinyl-CoA synthetase domain	side_1_gene_strand=>	side_1_locus_tag=ECB_00276	side_1_overlap=10	side_1_possible_overlap_registers=32	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=18	side_1_redundant=0	side_1_weighted_read_count=18.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.55	side_2_gene_name=cusA	side_2_gene_position=coding (857/3144 nt)	side_2_gene_product=copper/silver efflux system, membrane component	side_2_gene_strand=>	side_2_locus_tag=ECB_00536	side_2_overlap=0	side_2_possible_overlap_registers=11	side_2_possible_overlap_registers_before_trimming=25	side_2_read_count=7	side_2_redundant=0	side_2_weighted_read_count=7.00	total_non_overlap_reads=6
-JC	4388	.	REL606	514550	-1	REL606	2450890	-1	0	alignment_overlap=4	coverage_minus=8	coverage_plus=0	flanking_left=36	flanking_right=36	frequency=2.017e-01	frequency_lower=8.139e-02	frequency_upper=3.819e-01	junction_effective_depth=23.97	junction_mixture_iterations=4	junction_possible_overlap_registers=26	junction_possible_overlap_registers_before_trimming=31	key=REL606__514550__-1__REL606__2450894__-1__4____36__36__0__0	max_left=31	max_left_minus=31	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=11	max_min_right_minus=11	max_min_right_plus=0	max_pos_hash_score=62	max_right=11	max_right_minus=11	max_right_plus=0	neg_log10_pos_hash_p_value=2.8	new_junction_coverage=0.17	new_junction_read_count=5	new_junction_reference_weighted_read_count=0.17	new_junction_weighted_read_count=4.83	pos_hash_score=7	prediction=polymorphism	reject=FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.46	side_1_gene_name=glxK	side_1_gene_position=coding (497/1146 nt)	side_1_gene_product=glycerate kinase II	side_1_gene_strand=>	side_1_locus_tag=ECB_00464	side_1_overlap=4	side_1_possible_overlap_registers=28	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=15	side_1_redundant=0	side_1_weighted_read_count=15.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.79	side_2_gene_name=yfeA/alaX	side_2_gene_position=intergenic (-182/+27)	side_2_gene_product=predicted diguanylate cyclase/tRNA-Ala	side_2_gene_strand=</<	side_2_locus_tag=ECB_02303/ECB_t00039	side_2_overlap=0	side_2_possible_overlap_registers=25	side_2_possible_overlap_registers_before_trimming=31	side_2_read_count=23	side_2_redundant=0	side_2_weighted_read_count=23.00	total_non_overlap_reads=8
-JC	4389	.	REL606	581288	1	REL606	3184114	-1	0	alignment_overlap=5	coverage_minus=0	coverage_plus=4	flanking_left=36	flanking_right=36	frequency=1.442e-01	frequency_lower=3.889e-02	frequency_upper=3.374e-01	junction_effective_depth=19.90	junction_mixture_iterations=5	junction_possible_overlap_registers=26	junction_possible_overlap_registers_before_trimming=30	key=REL606__581288__1__REL606__3184119__-1__5____36__36__0__0	max_left=10	max_left_minus=0	max_left_plus=10	max_min_left=10	max_min_left_minus=0	max_min_left_plus=10	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=60	max_right=30	max_right_minus=0	max_right_plus=30	neg_log10_pos_hash_p_value=3.6	new_junction_coverage=0.07	new_junction_read_count=2	new_junction_reference_weighted_read_count=0.03	new_junction_weighted_read_count=1.97	pos_hash_score=4	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.53	side_1_gene_name=cusA	side_1_gene_position=coding (1672/3144 nt)	side_1_gene_product=copper/silver efflux system, membrane component	side_1_gene_strand=>	side_1_locus_tag=ECB_00536	side_1_overlap=5	side_1_possible_overlap_registers=31	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=19	side_1_redundant=0	side_1_weighted_read_count=19.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.57	side_2_gene_name=yqjG	side_2_gene_position=coding (57/987 nt)	side_2_gene_product=predicted S-transferase	side_2_gene_strand=>	side_2_locus_tag=ECB_02971	side_2_overlap=0	side_2_possible_overlap_registers=27	side_2_possible_overlap_registers_before_trimming=30	side_2_read_count=18	side_2_redundant=0	side_2_weighted_read_count=16.52	total_non_overlap_reads=4
-JC	4390	.	REL606	640118	1	REL606	3995534	1	0	alignment_overlap=4	coverage_minus=0	coverage_plus=5	flanking_left=36	flanking_right=36	frequency=9.602e-02	frequency_lower=2.057e-02	frequency_upper=2.559e-01	junction_effective_depth=24.05	junction_mixture_iterations=6	junction_possible_overlap_registers=29	junction_possible_overlap_registers_before_trimming=31	key=REL606__640118__1__REL606__3995530__1__4____36__36__0__0	max_left=11	max_left_minus=0	max_left_plus=11	max_min_left=11	max_min_left_minus=0	max_min_left_plus=11	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=62	max_right=31	max_right_minus=0	max_right_plus=31	neg_log10_pos_hash_p_value=3.3	new_junction_coverage=0.09	new_junction_read_count=3	new_junction_reference_weighted_read_count=0.68	new_junction_weighted_read_count=2.32	pos_hash_score=5	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.37	side_1_gene_name=cspE/ccrB	side_1_gene_position=intergenic (+36/+19)	side_1_gene_product=cold shock protein E/camphor resistance protein CrcB	side_1_gene_strand=>/<	side_1_locus_tag=ECB_00593/ECB_00594	side_1_overlap=4	side_1_possible_overlap_registers=33	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=14	side_1_redundant=0	side_1_weighted_read_count=14.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.89	side_2_gene_name=ECB_03724	side_2_gene_position=coding (54/768 nt)	side_2_gene_product=putative transcriptional regulator	side_2_gene_strand=<	side_2_locus_tag=ECB_03724	side_2_overlap=0	side_2_possible_overlap_registers=28	side_2_possible_overlap_registers_before_trimming=31	side_2_read_count=29	side_2_redundant=0	side_2_weighted_read_count=29.00	total_non_overlap_reads=5
-JC	4391	.	REL606	666130	-1	REL606	1462253	-1	0	alignment_overlap=0	coverage_minus=14	coverage_plus=16	flanking_left=36	flanking_right=36	frequency=8.750e-01	frequency_lower=7.364e-01	frequency_upper=9.562e-01	junction_effective_depth=32.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__666130__-1__REL606__1462253__-1__0____36__36__1__0	max_left=32	max_left_minus=32	max_left_plus=23	max_min_left=16	max_min_left_minus=16	max_min_left_plus=16	max_min_right=17	max_min_right_minus=16	max_min_right_plus=17	max_pos_hash_score=70	max_right=35	max_right_minus=32	max_right_plus=35	neg_log10_pos_hash_p_value=0.5	new_junction_coverage=0.75	new_junction_read_count=28	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=28.00	pos_hash_score=24	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS150	side_1_gene_position=noncoding (1443/1443 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.11	side_2_gene_name=mokB/trg	side_2_gene_position=intergenic (-15/-326)	side_2_gene_product=regulatory peptide/methyl-accepting chemotaxis protein III, ribose and galactose sensor receptor	side_2_gene_strand=</>	side_2_locus_tag=ECB_01377/ECB_01378	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=4	side_2_redundant=0	side_2_weighted_read_count=4.00	total_non_overlap_reads=30
-JC	4392	.	REL606	666130	-1	REL606	3900157	1	0	alignment_overlap=1	coverage_minus=18	coverage_plus=24	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.242e-01	frequency_upper=1.000e+00	junction_effective_depth=38.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=34	key=REL606__3652533__-1__REL606__3900156__1__1____36__36__1__0	max_left=32	max_left_minus=30	max_left_plus=32	max_min_left=16	max_min_left_minus=16	max_min_left_plus=16	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_pos_hash_score=68	max_right=34	max_right_minus=34	max_right_plus=34	neg_log10_pos_hash_p_value=0.1	new_junction_coverage=1.02	new_junction_read_count=38	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=38.00	pos_hash_score=32	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS150	side_1_gene_position=noncoding (1443/1443 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=1	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=rbsR	side_2_gene_position=coding (124/993 nt)	side_2_gene_product=DNA-binding transcriptional repressor of ribose metabolism	side_2_gene_strand=>	side_2_locus_tag=ECB_03639	side_2_overlap=0	side_2_possible_overlap_registers=31	side_2_possible_overlap_registers_before_trimming=34	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=42
-JC	4393	.	REL606	777257	1	REL606	2803387	-1	-8	alignment_overlap=-8	coverage_minus=0	coverage_plus=1200	flanking_left=36	flanking_right=36	frequency=9.783e-01	frequency_lower=9.702e-01	frequency_upper=9.847e-01	junction_effective_depth=1234.00	junction_mixture_iterations=2	junction_possible_overlap_registers=25	junction_possible_overlap_registers_before_trimming=27	key=REL606__777257__1__REL606__2803387__-1__-8__TCAAAGAC__36__36__0__0	max_left=16	max_left_minus=0	max_left_plus=16	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=14	max_min_right_minus=0	max_min_right_plus=14	max_pos_hash_score=54	max_right=14	max_right_minus=0	max_right_plus=14	neg_log10_pos_hash_p_value=3.7	new_junction_coverage=41.35	new_junction_read_count=1200	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=1200.00	pos_hash_score=3	prediction=consensus	reject=COVERAGE_EVENNESS_SKEW	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.70	side_1_gene_name=modC	side_1_gene_position=coding (75/1059 nt)	side_1_gene_product=molybdate transporter subunit	side_1_gene_strand=>	side_1_locus_tag=ECB_00718	side_1_overlap=0	side_1_possible_overlap_registers=32	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=26	side_1_redundant=0	side_1_weighted_read_count=25.99	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=1.13	side_2_gene_name=rumA	side_2_gene_position=coding (542/1302 nt)	side_2_gene_product=23S rRNA (uracil-5-)-methyltransferase	side_2_gene_strand=<	side_2_locus_tag=ECB_02630	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=42	side_2_redundant=0	side_2_weighted_read_count=42.00	total_non_overlap_reads=1200	unique_read_sequence=TCAAAGAC
-JC	4394	.	REL606	1193615	1	REL606	556319	1	0	alignment_overlap=0	coverage_minus=29	coverage_plus=20	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.395e-01	frequency_upper=1.000e+00	junction_effective_depth=48.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__547699__-1__REL606__556319__1__0____36__36__1__0	max_left=31	max_left_minus=31	max_left_plus=31	max_min_left=16	max_min_left_minus=16	max_min_left_plus=16	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_pos_hash_score=70	max_right=35	max_right_minus=35	max_right_plus=33	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=1.29	new_junction_read_count=48	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=48.00	pos_hash_score=31	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS1	side_1_gene_position=noncoding (1/768 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ECB_00513	side_2_gene_position=coding (1604/2346 nt)	side_2_gene_product=conserved hypothetical protein	side_2_gene_strand=>	side_2_locus_tag=ECB_00513	side_2_overlap=0	side_2_possible_overlap_registers=27	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=49
-JC	4395	.	REL606	1193615	1	REL606	3025120	1	0	alignment_overlap=0	coverage_minus=14	coverage_plus=24	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.180e-01	frequency_upper=1.000e+00	junction_effective_depth=35.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__2682608__1__REL606__3025120__1__0____36__36__1__0	max_left=32	max_left_minus=30	max_left_plus=32	max_min_left=17	max_min_left_minus=17	max_min_left_plus=16	max_min_right=18	max_min_right_minus=15	max_min_right_plus=18	max_pos_hash_score=70	max_right=35	max_right_minus=35	max_right_plus=34	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=0.94	new_junction_read_count=35	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=35.00	pos_hash_score=30	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS1	side_1_gene_position=noncoding (1/768 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ECB_02825	side_2_gene_position=coding (289/723 nt)	side_2_gene_product=Pyrophosphorylase	side_2_gene_strand=<	side_2_locus_tag=ECB_02825	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=38
-JC	4396	.	REL606	1235842	1	REL606	4620002	-1	0	alignment_overlap=0	coverage_minus=0	coverage_plus=9	flanking_left=36	flanking_right=36	frequency=2.320e-01	frequency_lower=1.091e-01	frequency_upper=4.017e-01	junction_effective_depth=27.31	junction_mixture_iterations=4	junction_possible_overlap_registers=29	junction_possible_overlap_registers_before_trimming=35	key=REL606__1235842__1__REL606__4620002__-1__0____36__36__0__0	max_left=14	max_left_minus=0	max_left_plus=14	max_min_left=14	max_min_left_minus=0	max_min_left_plus=14	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=70	max_right=34	max_right_minus=0	max_right_plus=34	neg_log10_pos_hash_p_value=2.6	new_junction_coverage=0.18	new_junction_read_count=6	new_junction_reference_weighted_read_count=0.17	new_junction_weighted_read_count=5.83	pos_hash_score=9	prediction=polymorphism	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.78	side_1_gene_name=fadR/ycgB	side_1_gene_position=intergenic (+35/+17)	side_1_gene_product=fatty acid metabolism regulator/hypothetical protein	side_1_gene_strand=>/<	side_1_locus_tag=ECB_01162/ECB_01163	side_1_overlap=0	side_1_possible_overlap_registers=30	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=27	side_1_redundant=0	side_1_weighted_read_count=26.98	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.43	side_2_gene_name=slt	side_2_gene_position=coding (1057/1938 nt)	side_2_gene_product=lytic murein transglycosylase, soluble	side_2_gene_strand=>	side_2_locus_tag=ECB_04268	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=16	side_2_redundant=0	side_2_weighted_read_count=15.42	total_non_overlap_reads=9
-JC	4397	.	REL606	1433349	-1	REL606	1111786	-1	0	alignment_overlap=1	coverage_minus=13	coverage_plus=16	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=8.985e-01	frequency_upper=1.000e+00	junction_effective_depth=28.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=34	key=REL606__1433349__-1__REL606__1442636__1__1____36__36__0__1	max_left=34	max_left_minus=33	max_left_plus=34	max_min_left=17	max_min_left_minus=17	max_min_left_plus=17	max_min_right=17	max_min_right_minus=17	max_min_right_plus=14	max_pos_hash_score=68	max_right=29	max_right_minus=23	max_right_plus=29	neg_log10_pos_hash_p_value=0.4	new_junction_coverage=0.75	new_junction_read_count=28	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=28.00	pos_hash_score=26	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=hslJ	side_1_gene_position=coding (1/423 nt)	side_1_gene_product=heat-inducible protein	side_1_gene_strand=<	side_1_locus_tag=ECB_01351	side_1_overlap=1	side_1_possible_overlap_registers=30	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=insE-1/serX	side_2_gene_position=intergenic (-55/+347)	side_2_gene_product=putative transposase-related protein/tRNA-Ser	side_2_gene_strand=</<	side_2_locus_tag=ECB_01029/ECB_t00024	side_2_overlap=0	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=29
-JC	4398	.	REL606	1735500	-1	REL606	3855588	-1	0	alignment_overlap=8	coverage_minus=4	coverage_plus=0	flanking_left=36	flanking_right=36	frequency=7.933e-02	frequency_lower=1.412e-02	frequency_upper=2.302e-01	junction_effective_depth=24.99	junction_mixture_iterations=5	junction_possible_overlap_registers=25	junction_possible_overlap_registers_before_trimming=27	key=REL606__1735500__-1__REL606__3855596__-1__8____36__36__0__0	max_left=27	max_left_minus=27	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=11	max_min_right_minus=11	max_min_right_plus=0	max_pos_hash_score=54	max_right=11	max_right_minus=11	max_right_plus=0	neg_log10_pos_hash_p_value=3.3	new_junction_coverage=0.07	new_junction_read_count=2	new_junction_reference_weighted_read_count=0.14	new_junction_weighted_read_count=1.86	pos_hash_score=4	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.51	side_1_gene_name=ynhG	side_1_gene_position=coding (493/1005 nt)	side_1_gene_product=hypothetical protein	side_1_gene_strand=<	side_1_locus_tag=ECB_01647	side_1_overlap=8	side_1_possible_overlap_registers=32	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=19	side_1_redundant=0	side_1_weighted_read_count=19.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.97	side_2_gene_name=yieF/yieG	side_2_gene_position=intergenic (+9/+45)	side_2_gene_product=chromate reductase, Class I, flavoprotein/predicted inner membrane protein	side_2_gene_strand=>/<	side_2_locus_tag=ECB_03597/ECB_03598	side_2_overlap=0	side_2_possible_overlap_registers=24	side_2_possible_overlap_registers_before_trimming=27	side_2_read_count=27	side_2_redundant=0	side_2_weighted_read_count=27.00	total_non_overlap_reads=4
-JC	4399	.	REL606	1976273	1	REL606	1194382	-1	0	alignment_overlap=0	coverage_minus=23	coverage_plus=23	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.342e-01	frequency_upper=1.000e+00	junction_effective_depth=44.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__1976273__1__REL606__2034326__1__0____36__36__0__1	max_left=35	max_left_minus=33	max_left_plus=35	max_min_left=17	max_min_left_minus=13	max_min_left_plus=17	max_min_right=18	max_min_right_minus=18	max_min_right_plus=16	max_pos_hash_score=70	max_right=33	max_right_minus=31	max_right_plus=33	neg_log10_pos_hash_p_value=0.3	new_junction_coverage=1.18	new_junction_read_count=44	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=44.00	pos_hash_score=29	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=yedW	side_1_gene_position=coding (550/672 nt)	side_1_gene_product=predicted DNA-binding response regulator in two-component system with YedV	side_1_gene_strand=<	side_1_locus_tag=ECB_01884	side_1_overlap=0	side_1_possible_overlap_registers=33	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS1	side_2_gene_position=noncoding (768/768 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=0	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=46
-JC	4400	.	REL606	2209477	1	REL606	3751245	-1	0	alignment_overlap=6	coverage_minus=0	coverage_plus=4	flanking_left=36	flanking_right=36	frequency=8.615e-13	frequency_lower=0.000e+00	frequency_upper=1.273e-01	junction_effective_depth=22.00	junction_mixture_iterations=1	junction_possible_overlap_registers=17	junction_possible_overlap_registers_before_trimming=29	key=REL606__2209477__1__REL606__3751251__-1__6____36__36__0__0	max_left=10	max_left_minus=0	max_left_plus=10	max_min_left=10	max_min_left_minus=0	max_min_left_plus=10	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=58	max_right=28	max_right_minus=0	max_right_plus=28	neg_log10_pos_hash_p_value=3.9	new_junction_coverage=0.00	new_junction_read_count=0	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=0.00	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.57	side_1_gene_name=yeiN	side_1_gene_position=coding (78/939 nt)	side_1_gene_product=hypothetical protein	side_1_gene_strand=<	side_1_locus_tag=ECB_02094	side_1_overlap=6	side_1_possible_overlap_registers=33	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=22	side_1_redundant=0	side_1_weighted_read_count=22.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.73	side_2_gene_name=dfp	side_2_gene_position=coding (160/1221 nt)	side_2_gene_product=bifunctional phosphopantothenoylcysteine decarboxylase/phosphopantothenate synthase	side_2_gene_strand=>	side_2_locus_tag=ECB_03496	side_2_overlap=0	side_2_possible_overlap_registers=26	side_2_possible_overlap_registers_before_trimming=29	side_2_read_count=22	side_2_redundant=0	side_2_weighted_read_count=22.00	total_non_overlap_reads=4
-JC	4401	.	REL606	2448493	1	REL606	15386	1	0	alignment_overlap=3	coverage_minus=17	coverage_plus=9	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=8.779e-01	frequency_upper=1.000e+00	junction_effective_depth=23.00	junction_mixture_iterations=1	junction_possible_overlap_registers=30	junction_possible_overlap_registers_before_trimming=32	key=REL606__2448490__1__REL606__2772854__1__3____36__36__0__1	max_left=32	max_left_minus=32	max_left_plus=31	max_min_left=16	max_min_left_minus=16	max_min_left_plus=11	max_min_right=16	max_min_right_minus=16	max_min_right_plus=16	max_pos_hash_score=64	max_right=29	max_right_minus=26	max_right_plus=29	neg_log10_pos_hash_p_value=0.6	new_junction_coverage=0.66	new_junction_read_count=23	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=23.00	pos_hash_score=21	prediction=consensus	read_count_offset=6	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=nupC/yfeA	side_1_gene_position=intergenic (+24/+26)	side_1_gene_product=nucleoside (except guanosine) transporter/predicted diguanylate cyclase	side_1_gene_strand=>/<	side_1_locus_tag=ECB_02302/ECB_02303	side_1_overlap=0	side_1_possible_overlap_registers=21	side_1_possible_overlap_registers_before_trimming=26	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS186	side_2_gene_position=noncoding (1/1343 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=3	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=26
-JC	4402	.	REL606	2448498	-1	REL606	16728	-1	0	alignment_overlap=3	coverage_minus=20	coverage_plus=12	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.079e-01	frequency_upper=1.000e+00	junction_effective_depth=31.00	junction_mixture_iterations=1	junction_possible_overlap_registers=29	junction_possible_overlap_registers_before_trimming=32	key=REL606__2448501__-1__REL606__2774196__-1__3____36__36__0__1	max_left=32	max_left_minus=32	max_left_plus=29	max_min_left=16	max_min_left_minus=16	max_min_left_plus=12	max_min_right=15	max_min_right_minus=15	max_min_right_plus=14	max_pos_hash_score=64	max_right=30	max_right_minus=30	max_right_plus=30	neg_log10_pos_hash_p_value=0.4	new_junction_coverage=0.92	new_junction_read_count=31	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=31.00	pos_hash_score=24	prediction=consensus	read_count_offset=6	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=nupC/yfeA	side_1_gene_position=intergenic (+29/+21)	side_1_gene_product=nucleoside (except guanosine) transporter/predicted diguanylate cyclase	side_1_gene_strand=>/<	side_1_locus_tag=ECB_02302/ECB_02303	side_1_overlap=0	side_1_possible_overlap_registers=21	side_1_possible_overlap_registers_before_trimming=26	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS186	side_2_gene_position=noncoding (1343/1343 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=3	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=32
-JC	4403	.	REL606	2574512	-1	REL606	3662212	1	0	alignment_overlap=9	coverage_minus=0	coverage_plus=9	flanking_left=36	flanking_right=36	frequency=1.519e-01	frequency_lower=3.359e-02	frequency_upper=3.804e-01	junction_effective_depth=15.50	junction_mixture_iterations=1	junction_possible_overlap_registers=9	junction_possible_overlap_registers_before_trimming=26	key=REL606__2574512__-1__REL606__3662203__1__9____36__36__0__0	max_left=12	max_left_minus=0	max_left_plus=12	max_min_left=12	max_min_left_minus=0	max_min_left_plus=12	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=52	max_right=26	max_right_minus=0	max_right_plus=26	neg_log10_pos_hash_p_value=2.6	new_junction_coverage=0.10	new_junction_read_count=1	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=1.00	pos_hash_score=6	prediction=polymorphism	reject=FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.39	side_1_gene_name=sseA/sseB	side_1_gene_position=intergenic (+354/+464)	side_1_gene_product=3-mercaptopyruvate sulfurtransferase/rhodanase-like enzyme, sulfur transfer from thiosulfate	side_1_gene_strand=>/<	side_1_locus_tag=ECB_02413/ECB_02414	side_1_overlap=9	side_1_possible_overlap_registers=31	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=14	side_1_redundant=0	side_1_weighted_read_count=14.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.68	side_2_gene_name=xylF	side_2_gene_position=coding (624/993 nt)	side_2_gene_product=D-xylose transporter subunit	side_2_gene_strand=>	side_2_locus_tag=ECB_03418	side_2_overlap=0	side_2_possible_overlap_registers=19	side_2_possible_overlap_registers_before_trimming=26	side_2_read_count=15	side_2_redundant=0	side_2_weighted_read_count=15.00	total_non_overlap_reads=9
-JC	4404	.	REL606	3060599	1	REL606	1194382	-1	0	alignment_overlap=1	coverage_minus=25	coverage_plus=26	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.430e-01	frequency_upper=1.000e+00	junction_effective_depth=51.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=34	key=REL606__3060598__1__REL606__3433462__1__1____36__36__0__1	max_left=33	max_left_minus=33	max_left_plus=33	max_min_left=17	max_min_left_minus=14	max_min_left_plus=17	max_min_right=17	max_min_right_minus=17	max_min_right_plus=16	max_pos_hash_score=68	max_right=32	max_right_minus=28	max_right_plus=32	neg_log10_pos_hash_p_value=0.0	new_junction_coverage=1.37	new_junction_read_count=51	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=51.00	pos_hash_score=38	prediction=consensus	read_count_offset=9	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=ECB_02854	side_1_gene_position=coding (234/1173 nt)	side_1_gene_product=conserved hypothetical protein	side_1_gene_strand=>	side_1_locus_tag=ECB_02854	side_1_overlap=0	side_1_possible_overlap_registers=19	side_1_possible_overlap_registers_before_trimming=25	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS1	side_2_gene_position=noncoding (768/768 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=1	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=51
-JC	4405	.	REL606	3060607	-1	REL606	1193615	1	0	alignment_overlap=0	coverage_minus=23	coverage_plus=15	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.222e-01	frequency_upper=1.000e+00	junction_effective_depth=37.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__3060607__-1__REL606__3434229__-1__0____36__36__0__1	max_left=34	max_left_minus=34	max_left_plus=29	max_min_left=16	max_min_left_minus=16	max_min_left_plus=14	max_min_right=18	max_min_right_minus=16	max_min_right_plus=18	max_pos_hash_score=70	max_right=29	max_right_minus=29	max_right_plus=28	neg_log10_pos_hash_p_value=0.4	new_junction_coverage=1.00	new_junction_read_count=37	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=37.00	pos_hash_score=26	prediction=consensus	read_count_offset=9	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=ECB_02854	side_1_gene_position=coding (242/1173 nt)	side_1_gene_product=conserved hypothetical protein	side_1_gene_strand=>	side_1_locus_tag=ECB_02854	side_1_overlap=0	side_1_possible_overlap_registers=19	side_1_possible_overlap_registers_before_trimming=26	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS1	side_2_gene_position=noncoding (1/768 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=0	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=38
-JC	4406	.	REL606	3775351	-1	REL606	3796245	1	0	alignment_overlap=17	coverage_minus=8	coverage_plus=10	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=8.384e-01	frequency_upper=1.000e+00	junction_effective_depth=17.00	junction_mixture_iterations=1	junction_possible_overlap_registers=15	junction_possible_overlap_registers_before_trimming=18	key=REL606__3775351__-1__REL606__3796228__1__17____36__36__0__0	max_left=16	max_left_minus=16	max_left_plus=13	max_min_left=9	max_min_left_minus=9	max_min_left_plus=9	max_min_right=9	max_min_right_minus=9	max_min_right_plus=8	max_pos_hash_score=36	max_right=18	max_right_minus=15	max_right_plus=18	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=0.98	new_junction_read_count=17	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=17.00	pos_hash_score=16	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=selC	side_1_gene_position=noncoding (88/91 nt)	side_1_gene_product=tRNA-Sec	side_1_gene_strand=>	side_1_locus_tag=ECB_t00063	side_1_overlap=17	side_1_possible_overlap_registers=33	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ECB_03540/ECB_03541	side_2_gene_position=intergenic (+150/-109)	side_2_gene_product=conserved hypothetical protein/conserved hypothetical protein	side_2_gene_strand=>/>	side_2_locus_tag=ECB_03540/ECB_03541	side_2_overlap=0	side_2_possible_overlap_registers=13	side_2_possible_overlap_registers_before_trimming=18	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=18
-JC	4407	.	REL606	4220776	1	REL606	4243896	-1	0	alignment_overlap=5	coverage_minus=5	coverage_plus=0	flanking_left=36	flanking_right=36	frequency=1.145e-01	frequency_lower=3.431e-02	frequency_upper=2.617e-01	junction_effective_depth=28.47	junction_mixture_iterations=5	junction_possible_overlap_registers=23	junction_possible_overlap_registers_before_trimming=30	key=REL606__4220776__1__REL606__4243901__-1__5____36__36__0__0	max_left=30	max_left_minus=30	max_left_plus=0	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=10	max_min_right_minus=10	max_min_right_plus=0	max_pos_hash_score=60	max_right=10	max_right_minus=10	max_right_plus=0	neg_log10_pos_hash_p_value=3.2	new_junction_coverage=0.11	new_junction_read_count=3	new_junction_reference_weighted_read_count=0.19	new_junction_weighted_read_count=2.81	pos_hash_score=5	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.68	side_1_gene_name=xylE	side_1_gene_position=coding (411/1476 nt)	side_1_gene_product=D-xylose transporter	side_1_gene_strand=<	side_1_locus_tag=ECB_03903	side_1_overlap=5	side_1_possible_overlap_registers=33	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=26	side_1_redundant=0	side_1_weighted_read_count=26.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.94	side_2_gene_name=dnaB	side_2_gene_position=coding (651/1416 nt)	side_2_gene_product=replicative DNA helicase	side_2_gene_strand=>	side_2_locus_tag=ECB_03924	side_2_overlap=0	side_2_possible_overlap_registers=23	side_2_possible_overlap_registers_before_trimming=30	side_2_read_count=25	side_2_redundant=0	side_2_weighted_read_count=25.00	total_non_overlap_reads=5
-CN	4408	.	REL606	547701	556300	0	gene_name=[nmpC]–[ECB_00513]	gene_product=[nmpC],ybcR,ybcS,ybcT,ybcU,ECB_00510,nohB,ECB_00512,[ECB_00513]	locus_tag=[ECB_00503]–[ECB_00513]	relative_coverage=0	tile_size=100
-CN	4409	.	REL606	1433301	1442600	0	gene_name=[hslJ]–tynA	gene_product=[hslJ],ldhA,ydbH,ynbE,ydbL,feaR,feaB,tynA	locus_tag=[ECB_01351]–[ECB_01358]	relative_coverage=0	tile_size=100
-CN	4410	.	REL606	1609201	1615400	0	gene_name=ybcW–ECB_01523	gene_product=ybcW,gnsB,ynfN,ECB_01516,cspI,ydfP,ydfQ,ydfR,essQ,ECB_01522,ECB_01523	locus_tag=[ECB_01513]–[ECB_01523]	relative_coverage=0	tile_size=100
-CN	4411	.	REL606	1974101	1976300	0	gene_name=[yedU]–[yedW]	gene_product=[yedU],yedV,[yedW]	locus_tag=[ECB_01882]–[ECB_01884]	relative_coverage=0	tile_size=100
-CN	4412	.	REL606	2100301	2122400	0	gene_name=ogrK–ECB_02012	gene_product=ogrK,yegZ,ECB_01989,ECB_01990,ECB_01991,ECB_01992,ECB_01993,ECB_01994,ECB_01995,ECB_01996,ECB_01997,ECB_01998,ECB_01999,ECB_02000,ECB_02001,ECB_02002,ECB_02003,ECB_02004,ECB_02005,ECB_02006,ECB_02007,ECB_02008,ECB_02009,ECB_02010,ECB_02011,ECB_02012	locus_tag=[ECB_01987]–[ECB_02012]	relative_coverage=0	tile_size=100
-CN	4413	.	REL606	3024801	3025100	0	gene_name=ECB_02825	gene_position=coding (309-608/723 nt)	gene_product=Pyrophosphorylase	gene_strand=<	locus_tag=ECB_02825	relative_coverage=0	tile_size=100
-CN	4414	.	REL606	3775401	3796200	0	gene_name=ECB_03516–ECB_03540	gene_product=ECB_03516,ECB_03517,ECB_03518,ECB_03519,ECB_03520,ECB_03521,ECB_03522,ECB_03523,ECB_03524,ECB_03525,ECB_03526,ECB_03527,ECB_03528,ECB_03529,ECB_03530,ECB_03531,ECB_03532,ECB_03533,ECB_03534,ykgN,insI,yeeV,ECB_03538,ECB_03539,ECB_03540	locus_tag=[ECB_03516]–[ECB_03540]	relative_coverage=0	tile_size=100
-CN	4415	.	REL606	3895001	3900200	0	gene_name=rbsD–[rbsR]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,[rbsR]	locus_tag=[ECB_03634]–[ECB_03639]	relative_coverage=0	tile_size=100
-UN	4416	.	REL606	15414	16698
-UN	4417	.	REL606	23317	23317
-UN	4418	.	REL606	23319	23319
-UN	4419	.	REL606	23321	24031
-UN	4420	.	REL606	69398	69403
-UN	4421	.	REL606	69434	69458
-UN	4422	.	REL606	69522	69567
-UN	4423	.	REL606	175514	175525
-UN	4424	.	REL606	210316	210326
-UN	4425	.	REL606	210333	210333
-UN	4426	.	REL606	226332	226414
-UN	4427	.	REL606	226485	226497
-UN	4428	.	REL606	226557	226557
-UN	4429	.	REL606	226560	227027
-UN	4430	.	REL606	227086	228501
-UN	4431	.	REL606	228563	228563
-UN	4432	.	REL606	228566	231905
-UN	4433	.	REL606	239882	239906
-UN	4434	.	REL606	241283	241283
-UN	4435	.	REL606	241287	241997
-UN	4436	.	REL606	242196	242196
-UN	4437	.	REL606	242726	242850
-UN	4438	.	REL606	242905	242905
-UN	4439	.	REL606	242908	242908
-UN	4440	.	REL606	242953	242956
-UN	4441	.	REL606	243208	243208
-UN	4442	.	REL606	243210	243227
-UN	4443	.	REL606	243300	243456
-UN	4444	.	REL606	243595	243613
-UN	4445	.	REL606	243709	243711
-UN	4446	.	REL606	262818	263535
-UN	4447	.	REL606	272642	272642
-UN	4448	.	REL606	272645	272645
-UN	4449	.	REL606	303803	303805
-UN	4450	.	REL606	312431	312556
-UN	4451	.	REL606	312661	312697
-UN	4452	.	REL606	322399	322454
-UN	4453	.	REL606	322490	322490
-UN	4454	.	REL606	322492	322547
-UN	4455	.	REL606	330057	330098
-UN	4456	.	REL606	330259	330303
-UN	4457	.	REL606	330443	330443
-UN	4458	.	REL606	353288	354005
-UN	4459	.	REL606	376773	376773
-UN	4460	.	REL606	376775	377491
-UN	4461	.	REL606	429527	430812
-UN	4462	.	REL606	480767	480966
-UN	4463	.	REL606	495456	498295
-UN	4464	.	REL606	498297	498297
-UN	4465	.	REL606	498354	498860
-UN	4466	.	REL606	514819	514819
-UN	4467	.	REL606	514821	514821
-UN	4468	.	REL606	514823	514823
-UN	4469	.	REL606	514826	514828
-UN	4470	.	REL606	540724	540724
-UN	4471	.	REL606	545916	545938
-UN	4472	.	REL606	546956	556318
-UN	4473	.	REL606	557144	557174
-UN	4474	.	REL606	557300	557313
-UN	4475	.	REL606	557753	557753
-UN	4476	.	REL606	557756	557756
-UN	4477	.	REL606	557758	557829
-UN	4478	.	REL606	557880	557948
-UN	4479	.	REL606	558178	558181
-UN	4480	.	REL606	558307	558307
-UN	4481	.	REL606	558310	558364
-UN	4482	.	REL606	568937	569043
-UN	4483	.	REL606	569105	569134
-UN	4484	.	REL606	569198	569347
-UN	4485	.	REL606	569522	569546
-UN	4486	.	REL606	569682	569704
-UN	4487	.	REL606	569764	569775
-UN	4488	.	REL606	569826	569859
-UN	4489	.	REL606	569899	570045
-UN	4490	.	REL606	572302	572560
-UN	4491	.	REL606	572725	572754
-UN	4492	.	REL606	572811	572996
-UN	4493	.	REL606	573047	573144
-UN	4494	.	REL606	573179	573473
-UN	4495	.	REL606	577910	577982
-UN	4496	.	REL606	588526	589526
-UN	4497	.	REL606	589582	590296
-UN	4498	.	REL606	590349	590441
-UN	4499	.	REL606	590738	592032
-UN	4500	.	REL606	604419	604422
-UN	4501	.	REL606	619141	619141
-UN	4502	.	REL606	619143	619858
-UN	4503	.	REL606	634005	634715
-UN	4504	.	REL606	664716	666100
-UN	4505	.	REL606	678554	678572
-UN	4506	.	REL606	678666	678684
-UN	4507	.	REL606	678789	678803
-UN	4508	.	REL606	678882	678896
-UN	4509	.	REL606	678983	679007
-UN	4510	.	REL606	679009	679009
-UN	4511	.	REL606	679181	679198
-UN	4512	.	REL606	679200	679200
-UN	4513	.	REL606	679202	679202
-UN	4514	.	REL606	711465	711466
-UN	4515	.	REL606	711468	711468
-UN	4516	.	REL606	711471	711477
-UN	4517	.	REL606	711479	711481
-UN	4518	.	REL606	711790	711791
-UN	4519	.	REL606	711793	711959
-UN	4520	.	REL606	712011	712479
-UN	4521	.	REL606	712543	712677
-UN	4522	.	REL606	712684	712684
-UN	4523	.	REL606	712728	712765
-UN	4524	.	REL606	712852	712973
-UN	4525	.	REL606	712976	712976
-UN	4526	.	REL606	712979	712979
-UN	4527	.	REL606	713918	714003
-UN	4528	.	REL606	714118	714141
-UN	4529	.	REL606	714195	714291
-UN	4530	.	REL606	714427	714427
-UN	4531	.	REL606	714429	714430
-UN	4532	.	REL606	714432	714640
-UN	4533	.	REL606	714734	714816
-UN	4534	.	REL606	714869	714871
-UN	4535	.	REL606	714875	714880
-UN	4536	.	REL606	717605	717642
-UN	4537	.	REL606	717692	717709
-UN	4538	.	REL606	717868	717968
-UN	4539	.	REL606	718027	718151
-UN	4540	.	REL606	718345	718466
-UN	4541	.	REL606	718550	718569
-UN	4542	.	REL606	718768	718778
-UN	4543	.	REL606	718895	718993
-UN	4544	.	REL606	719177	719197
-UN	4545	.	REL606	719380	719380
-UN	4546	.	REL606	719382	719406
-UN	4547	.	REL606	719525	719537
-UN	4548	.	REL606	719589	719606
-UN	4549	.	REL606	724423	724435
-UN	4550	.	REL606	733679	733679
-UN	4551	.	REL606	733681	733681
-UN	4552	.	REL606	733683	733684
-UN	4553	.	REL606	733695	733696
-UN	4554	.	REL606	751736	751746
-UN	4555	.	REL606	761467	761488
-UN	4556	.	REL606	761676	761699
-UN	4557	.	REL606	761756	761774
-UN	4558	.	REL606	761881	761904
-UN	4559	.	REL606	761960	761978
-UN	4560	.	REL606	762177	762177
-UN	4561	.	REL606	762180	762202
-UN	4562	.	REL606	762391	762450
-UN	4563	.	REL606	783978	784052
-UN	4564	.	REL606	803231	803231
-UN	4565	.	REL606	843165	843165
-UN	4566	.	REL606	864595	864595
-UN	4567	.	REL606	866247	866247
-UN	4568	.	REL606	900549	900550
-UN	4569	.	REL606	900553	900554
-UN	4570	.	REL606	931777	931837
-UN	4571	.	REL606	931880	931929
-UN	4572	.	REL606	942574	942687
-UN	4573	.	REL606	942726	942857
-UN	4574	.	REL606	942859	942859
-UN	4575	.	REL606	942904	942905
-UN	4576	.	REL606	942907	942907
-UN	4577	.	REL606	942910	943010
-UN	4578	.	REL606	1009869	1009869
-UN	4579	.	REL606	1085891	1085891
-UN	4580	.	REL606	1085895	1085895
-UN	4581	.	REL606	1086569	1086575
-UN	4582	.	REL606	1106818	1106818
-UN	4583	.	REL606	1106820	1106821
-UN	4584	.	REL606	1109627	1109627
-UN	4585	.	REL606	1109632	1109632
-UN	4586	.	REL606	1109638	1109638
-UN	4587	.	REL606	1110553	1110553
-UN	4588	.	REL606	1110555	1111762
-UN	4589	.	REL606	1111764	1111764
-UN	4590	.	REL606	1111815	1111837
-UN	4591	.	REL606	1111948	1112037
-UN	4592	.	REL606	1112085	1112085
-UN	4593	.	REL606	1112092	1112103
-UN	4594	.	REL606	1112136	1112200
-UN	4595	.	REL606	1119094	1119095
-UN	4596	.	REL606	1119097	1119098
-UN	4597	.	REL606	1119103	1119103
-UN	4598	.	REL606	1129574	1129576
-UN	4599	.	REL606	1135110	1135110
-UN	4600	.	REL606	1166450	1166451
-UN	4601	.	REL606	1166453	1166454
-UN	4602	.	REL606	1193641	1193643
-UN	4603	.	REL606	1193645	1194356
-UN	4604	.	REL606	1194358	1194358
-UN	4605	.	REL606	1196189	1196190
-UN	4606	.	REL606	1199293	1199293
-UN	4607	.	REL606	1199295	1199295
-UN	4608	.	REL606	1244992	1244992
-UN	4609	.	REL606	1244996	1245000
-UN	4610	.	REL606	1269254	1269254
-UN	4611	.	REL606	1269256	1269350
-UN	4612	.	REL606	1269352	1269353
-UN	4613	.	REL606	1269427	1269439
-UN	4614	.	REL606	1269560	1269575
-UN	4615	.	REL606	1269783	1269889
-UN	4616	.	REL606	1269892	1269892
-UN	4617	.	REL606	1269944	1270001
-UN	4618	.	REL606	1270061	1270129
-UN	4619	.	REL606	1270188	1270205
-UN	4620	.	REL606	1270323	1270385
-UN	4621	.	REL606	1270476	1270546
-UN	4622	.	REL606	1270550	1270550
-UN	4623	.	REL606	1270596	1270664
-UN	4624	.	REL606	1270718	1270718
-UN	4625	.	REL606	1270722	1270739
-UN	4626	.	REL606	1271963	1271963
-UN	4627	.	REL606	1271965	1271966
-UN	4628	.	REL606	1271968	1271975
-UN	4629	.	REL606	1287064	1287095
-UN	4630	.	REL606	1287359	1287391
-UN	4631	.	REL606	1311633	1311633
-UN	4632	.	REL606	1322747	1323461
-UN	4633	.	REL606	1323464	1323464
-UN	4634	.	REL606	1324981	1324981
-UN	4635	.	REL606	1324983	1324984
-UN	4636	.	REL606	1324989	1324992
-UN	4637	.	REL606	1324994	1324995
-UN	4638	.	REL606	1324997	1325001
-UN	4639	.	REL606	1341741	1341741
-UN	4640	.	REL606	1364829	1364829
-UN	4641	.	REL606	1417011	1417028
-UN	4642	.	REL606	1418110	1418128
-UN	4643	.	REL606	1418195	1418195
-UN	4644	.	REL606	1418197	1418198
-UN	4645	.	REL606	1418307	1418424
-UN	4646	.	REL606	1421879	1421879
-UN	4647	.	REL606	1421881	1421881
-UN	4648	.	REL606	1421883	1421884
-UN	4649	.	REL606	1421886	1422240
-UN	4650	.	REL606	1424341	1424341
-UN	4651	.	REL606	1424347	1424348
-UN	4652	.	REL606	1424352	1424360
-UN	4653	.	REL606	1424409	1424444
-UN	4654	.	REL606	1424560	1424766
-UN	4655	.	REL606	1424816	1424837
-UN	4656	.	REL606	1424886	1425127
-UN	4657	.	REL606	1425130	1425130
-UN	4658	.	REL606	1425185	1425246
-UN	4659	.	REL606	1425302	1425316
-UN	4660	.	REL606	1425358	1425438
-UN	4661	.	REL606	1425501	1425538
-UN	4662	.	REL606	1425622	1425862
-UN	4663	.	REL606	1425910	1425998
-UN	4664	.	REL606	1426084	1426084
-UN	4665	.	REL606	1426086	1426256
-UN	4666	.	REL606	1426437	1426462
-UN	4667	.	REL606	1433350	1443871
-UN	4668	.	REL606	1460190	1460900
-UN	4669	.	REL606	1490183	1490190
-UN	4670	.	REL606	1490195	1490195
-UN	4671	.	REL606	1490199	1490199
-UN	4672	.	REL606	1498101	1498440
-UN	4673	.	REL606	1498443	1498541
-UN	4674	.	REL606	1498598	1498779
-UN	4675	.	REL606	1498834	1498869
-UN	4676	.	REL606	1499027	1499288
-UN	4677	.	REL606	1500303	1503144
-UN	4678	.	REL606	1503201	1503710
-UN	4679	.	REL606	1503712	1503712
-UN	4680	.	REL606	1504653	1504661
-UN	4681	.	REL606	1504663	1504679
-UN	4682	.	REL606	1506259	1506372
-UN	4683	.	REL606	1506374	1506374
-UN	4684	.	REL606	1506416	1506419
-UN	4685	.	REL606	1506528	1506797
-UN	4686	.	REL606	1506838	1507004
-UN	4687	.	REL606	1507110	1507110
-UN	4688	.	REL606	1507113	1507122
-UN	4689	.	REL606	1522164	1522181
-UN	4690	.	REL606	1527010	1527010
-UN	4691	.	REL606	1527012	1527012
-UN	4692	.	REL606	1527014	1527014
-UN	4693	.	REL606	1535848	1535848
-UN	4694	.	REL606	1544691	1544786
-UN	4695	.	REL606	1544846	1545061
-UN	4696	.	REL606	1545111	1545266
-UN	4697	.	REL606	1545379	1545670
-UN	4698	.	REL606	1600415	1600587
-UN	4699	.	REL606	1600668	1600752
-UN	4700	.	REL606	1600808	1601299
-UN	4701	.	REL606	1601301	1601301
-UN	4702	.	REL606	1601351	1601371
-UN	4703	.	REL606	1601422	1601484
-UN	4704	.	REL606	1601486	1601486
-UN	4705	.	REL606	1601537	1601783
-UN	4706	.	REL606	1601785	1601786
-UN	4707	.	REL606	1601831	1601851
-UN	4708	.	REL606	1601900	1602109
-UN	4709	.	REL606	1602198	1602206
-UN	4710	.	REL606	1602381	1602384
-UN	4711	.	REL606	1602615	1602685
-UN	4712	.	REL606	1602733	1602805
-UN	4713	.	REL606	1602906	1602912
-UN	4714	.	REL606	1602916	1602917
-UN	4715	.	REL606	1603249	1603262
-UN	4716	.	REL606	1603388	1603418
-UN	4717	.	REL606	1604600	1604610
-UN	4718	.	REL606	1604657	1604691
-UN	4719	.	REL606	1604746	1604761
-UN	4720	.	REL606	1605109	1605109
-UN	4721	.	REL606	1605111	1605137
-UN	4722	.	REL606	1605499	1605501
-UN	4723	.	REL606	1605503	1605863
-UN	4724	.	REL606	1605865	1605865
-UN	4725	.	REL606	1606632	1607898
-UN	4726	.	REL606	1607942	1616705
-UN	4727	.	REL606	1618033	1618055
-UN	4728	.	REL606	1625863	1625863
-UN	4729	.	REL606	1625866	1625871
-UN	4730	.	REL606	1634802	1634802
-UN	4731	.	REL606	1646689	1646689
-UN	4732	.	REL606	1646691	1646691
-UN	4733	.	REL606	1646694	1646694
-UN	4734	.	REL606	1685886	1686075
-UN	4735	.	REL606	1686077	1686077
-UN	4736	.	REL606	1700878	1700878
-UN	4737	.	REL606	1706635	1706635
-UN	4738	.	REL606	1706637	1706637
-UN	4739	.	REL606	1716935	1716935
-UN	4740	.	REL606	1716938	1716938
-UN	4741	.	REL606	1717505	1717505
-UN	4742	.	REL606	1790116	1790129
-UN	4743	.	REL606	1793457	1793462
-UN	4744	.	REL606	1793464	1793464
-UN	4745	.	REL606	1793466	1793470
-UN	4746	.	REL606	1798562	1798564
-UN	4747	.	REL606	1800348	1800350
-UN	4748	.	REL606	1801504	1801506
-UN	4749	.	REL606	1801508	1801514
-UN	4750	.	REL606	1808393	1808393
-UN	4751	.	REL606	1857087	1858379
-UN	4752	.	REL606	1883964	1883964
-UN	4753	.	REL606	1925877	1925877
-UN	4754	.	REL606	1925879	1925879
-UN	4755	.	REL606	1970060	1970081
-UN	4756	.	REL606	1973302	1976272
-UN	4757	.	REL606	1979258	1979258
-UN	4758	.	REL606	1979262	1979262
-UN	4759	.	REL606	1982557	1982604
-UN	4760	.	REL606	1995633	1995633
-UN	4761	.	REL606	1995637	1995646
-UN	4762	.	REL606	1995669	1995676
-UN	4763	.	REL606	1995684	1995684
-UN	4764	.	REL606	1995686	1995687
-UN	4765	.	REL606	1996054	1996078
-UN	4766	.	REL606	1997875	1997901
-UN	4767	.	REL606	2000268	2000312
-UN	4768	.	REL606	2031764	2031774
-UN	4769	.	REL606	2031835	2031866
-UN	4770	.	REL606	2032304	2032345
-UN	4771	.	REL606	2032508	2032520
-UN	4772	.	REL606	2032523	2032523
-UN	4773	.	REL606	2032617	2032680
-UN	4774	.	REL606	2034015	2034023
-UN	4775	.	REL606	2034027	2034027
-UN	4776	.	REL606	2034278	2034278
-UN	4777	.	REL606	2034350	2035067
-UN	4778	.	REL606	2035327	2035328
-UN	4779	.	REL606	2035330	2035330
-UN	4780	.	REL606	2035446	2035446
-UN	4781	.	REL606	2037840	2037852
-UN	4782	.	REL606	2037943	2037943
-UN	4783	.	REL606	2042144	2042144
-UN	4784	.	REL606	2042564	2042564
-UN	4785	.	REL606	2042568	2042568
-UN	4786	.	REL606	2042736	2042746
-UN	4787	.	REL606	2053420	2053420
-UN	4788	.	REL606	2055057	2055060
-UN	4789	.	REL606	2055062	2055064
-UN	4790	.	REL606	2055128	2055160
-UN	4791	.	REL606	2055603	2055631
-UN	4792	.	REL606	2055801	2055808
-UN	4793	.	REL606	2055907	2055974
-UN	4794	.	REL606	2055977	2055978
-UN	4795	.	REL606	2075150	2075151
-UN	4796	.	REL606	2075154	2075154
-UN	4797	.	REL606	2075158	2075158
-UN	4798	.	REL606	2075161	2075161
-UN	4799	.	REL606	2085981	2085981
-UN	4800	.	REL606	2085985	2085992
-UN	4801	.	REL606	2086104	2086112
-UN	4802	.	REL606	2086530	2086530
-UN	4803	.	REL606	2086535	2086588
-UN	4804	.	REL606	2086756	2086768
-UN	4805	.	REL606	2086866	2086904
-UN	4806	.	REL606	2090989	2090990
-UN	4807	.	REL606	2096595	2096597
-UN	4808	.	REL606	2096954	2096954
-UN	4809	.	REL606	2097247	2097248
-UN	4810	.	REL606	2100302	2122436
-UN	4811	.	REL606	2122440	2122440
-UN	4812	.	REL606	2123091	2123097
-UN	4813	.	REL606	2128630	2129343
-UN	4814	.	REL606	2143085	2143085
-UN	4815	.	REL606	2143087	2143801
-UN	4816	.	REL606	2162908	2162908
-UN	4817	.	REL606	2170829	2170836
-UN	4818	.	REL606	2180413	2180413
-UN	4819	.	REL606	2180417	2180462
-UN	4820	.	REL606	2180509	2180580
-UN	4821	.	REL606	2238452	2238452
-UN	4822	.	REL606	2252687	2252688
-UN	4823	.	REL606	2254481	2254644
-UN	4824	.	REL606	2254702	2255051
-UN	4825	.	REL606	2262760	2262761
-UN	4826	.	REL606	2262763	2263481
-UN	4827	.	REL606	2314493	2314493
-UN	4828	.	REL606	2320213	2320218
-UN	4829	.	REL606	2325531	2325531
-UN	4830	.	REL606	2330828	2330828
-UN	4831	.	REL606	2330847	2330848
-UN	4832	.	REL606	2390663	2390684
-UN	4833	.	REL606	2399578	2399578
-UN	4834	.	REL606	2399580	2399582
-UN	4835	.	REL606	2407466	2408183
-UN	4836	.	REL606	2450938	2450963
-UN	4837	.	REL606	2451057	2451078
-UN	4838	.	REL606	2453827	2453828
-UN	4839	.	REL606	2453831	2453859
-UN	4840	.	REL606	2453947	2453979
-UN	4841	.	REL606	2454075	2454101
-UN	4842	.	REL606	2454159	2454214
-UN	4843	.	REL606	2488893	2488918
-UN	4844	.	REL606	2488987	2489013
-UN	4845	.	REL606	2489087	2489089
-UN	4846	.	REL606	2489091	2489091
-UN	4847	.	REL606	2489093	2489096
-UN	4848	.	REL606	2490467	2490468
-UN	4849	.	REL606	2490477	2490486
-UN	4850	.	REL606	2490488	2490490
-UN	4851	.	REL606	2498972	2498975
-UN	4852	.	REL606	2498977	2498997
-UN	4853	.	REL606	2502484	2502484
-UN	4854	.	REL606	2550459	2550460
-UN	4855	.	REL606	2550462	2550473
-UN	4856	.	REL606	2550488	2550488
-UN	4857	.	REL606	2550493	2550493
-UN	4858	.	REL606	2574179	2574179
-UN	4859	.	REL606	2583074	2583252
-UN	4860	.	REL606	2618055	2618752
-UN	4861	.	REL606	2647578	2652685
-UN	4862	.	REL606	2652736	2652806
-UN	4863	.	REL606	2652855	2652864
-UN	4864	.	REL606	2652867	2652870
-UN	4865	.	REL606	2682634	2682634
-UN	4866	.	REL606	2682636	2682636
-UN	4867	.	REL606	2682638	2682700
-UN	4868	.	REL606	2682766	2683351
-UN	4869	.	REL606	2712663	2712698
-UN	4870	.	REL606	2712802	2712826
-UN	4871	.	REL606	2712829	2712829
-UN	4872	.	REL606	2712937	2712973
-UN	4873	.	REL606	2713087	2713112
-UN	4874	.	REL606	2713222	2713236
-UN	4875	.	REL606	2713358	2713381
-UN	4876	.	REL606	2772882	2774165
-UN	4877	.	REL606	2774463	2775846
-UN	4878	.	REL606	2810116	2810116
-UN	4879	.	REL606	2822211	2822924
-UN	4880	.	REL606	2842030	2842062
-UN	4881	.	REL606	2842126	2842169
-UN	4882	.	REL606	2842236	2842278
-UN	4883	.	REL606	2882734	2883939
-UN	4884	.	REL606	2957047	2957119
-UN	4885	.	REL606	2965091	2965102
-UN	4886	.	REL606	2996034	2996073
-UN	4887	.	REL606	3010093	3010156
-UN	4888	.	REL606	3010218	3010227
-UN	4889	.	REL606	3014751	3014755
-UN	4890	.	REL606	3020819	3020821
-UN	4891	.	REL606	3022659	3022663
-UN	4892	.	REL606	3022665	3022668
-UN	4893	.	REL606	3022700	3022700
-UN	4894	.	REL606	3022706	3022706
-UN	4895	.	REL606	3022710	3022710
-UN	4896	.	REL606	3023972	3025119
-UN	4897	.	REL606	3080185	3080209
-UN	4898	.	REL606	3080267	3080290
-UN	4899	.	REL606	3172658	3172663
-UN	4900	.	REL606	3219351	3219351
-UN	4901	.	REL606	3253471	3253499
-UN	4902	.	REL606	3320079	3320133
-UN	4903	.	REL606	3320179	3320226
-UN	4904	.	REL606	3351163	3351213
-UN	4905	.	REL606	3351345	3351391
-UN	4906	.	REL606	3351585	3351638
-UN	4907	.	REL606	3351699	3354264
-UN	4908	.	REL606	3354319	3356870
-UN	4909	.	REL606	3383351	3383351
-UN	4910	.	REL606	3383355	3383357
-UN	4911	.	REL606	3398098	3398098
-UN	4912	.	REL606	3398100	3398250
-UN	4913	.	REL606	3398314	3398718
-UN	4914	.	REL606	3398725	3398725
-UN	4915	.	REL606	3398781	3398921
-UN	4916	.	REL606	3398983	3398995
-UN	4917	.	REL606	3399058	3399072
-UN	4918	.	REL606	3425791	3425791
-UN	4919	.	REL606	3433493	3434203
-UN	4920	.	REL606	3549990	3551268
-UN	4921	.	REL606	3551430	3552236
-UN	4922	.	REL606	3552238	3552238
-UN	4923	.	REL606	3552314	3552352
-UN	4924	.	REL606	3552466	3552506
-UN	4925	.	REL606	3552566	3552673
-UN	4926	.	REL606	3552678	3552678
-UN	4927	.	REL606	3552735	3553222
-UN	4928	.	REL606	3553281	3553517
-UN	4929	.	REL606	3554582	3554601
-UN	4930	.	REL606	3554846	3554855
-UN	4931	.	REL606	3554984	3555017
-UN	4932	.	REL606	3555075	3555094
-UN	4933	.	REL606	3555148	3555173
-UN	4934	.	REL606	3555216	3555497
-UN	4935	.	REL606	3555499	3555501
-UN	4936	.	REL606	3555504	3555504
-UN	4937	.	REL606	3555506	3555507
-UN	4938	.	REL606	3555509	3555512
-UN	4939	.	REL606	3555514	3555519
-UN	4940	.	REL606	3555523	3555523
-UN	4941	.	REL606	3555525	3555631
-UN	4942	.	REL606	3555681	3555716
-UN	4943	.	REL606	3555770	3555806
-UN	4944	.	REL606	3555868	3555914
-UN	4945	.	REL606	3555997	3556071
-UN	4946	.	REL606	3556075	3556075
-UN	4947	.	REL606	3556127	3556141
-UN	4948	.	REL606	3558961	3558974
-UN	4949	.	REL606	3578811	3578811
-UN	4950	.	REL606	3579031	3579043
-UN	4951	.	REL606	3595773	3595863
-UN	4952	.	REL606	3595918	3596127
-UN	4953	.	REL606	3596188	3596341
-UN	4954	.	REL606	3596461	3596752
-UN	4955	.	REL606	3629437	3629453
-UN	4956	.	REL606	3629508	3629509
-UN	4957	.	REL606	3629517	3629535
-UN	4958	.	REL606	3629676	3629750
-UN	4959	.	REL606	3629752	3629752
-UN	4960	.	REL606	3629838	3629880
-UN	4961	.	REL606	3630030	3630045
-UN	4962	.	REL606	3630047	3630047
-UN	4963	.	REL606	3630159	3630181
-UN	4964	.	REL606	3630321	3630367
-UN	4965	.	REL606	3630370	3630371
-UN	4966	.	REL606	3630408	3630419
-UN	4967	.	REL606	3630479	3630528
-UN	4968	.	REL606	3630649	3630716
-UN	4969	.	REL606	3638846	3638894
-UN	4970	.	REL606	3639008	3639067
-UN	4971	.	REL606	3651123	3652505
-UN	4972	.	REL606	3686638	3686641
-UN	4973	.	REL606	3697096	3697096
-UN	4974	.	REL606	3697098	3697098
-UN	4975	.	REL606	3697100	3698264
-UN	4976	.	REL606	3698267	3698269
-UN	4977	.	REL606	3698359	3698359
-UN	4978	.	REL606	3698361	3698365
-UN	4979	.	REL606	3698424	3699237
-UN	4980	.	REL606	3699310	3699346
-UN	4981	.	REL606	3699465	3699516
-UN	4982	.	REL606	3699563	3699734
-UN	4983	.	REL606	3699802	3699802
-UN	4984	.	REL606	3699854	3699859
-UN	4985	.	REL606	3699861	3699863
-UN	4986	.	REL606	3699928	3700077
-UN	4987	.	REL606	3700105	3700106
-UN	4988	.	REL606	3700108	3700523
-UN	4989	.	REL606	3700529	3700532
-UN	4990	.	REL606	3700534	3700534
-UN	4991	.	REL606	3700536	3700542
-UN	4992	.	REL606	3700546	3700549
-UN	4993	.	REL606	3700551	3700563
-UN	4994	.	REL606	3701040	3701057
-UN	4995	.	REL606	3701302	3701314
-UN	4996	.	REL606	3701943	3701990
-UN	4997	.	REL606	3702047	3702132
-UN	4998	.	REL606	3702240	3702249
-UN	4999	.	REL606	3704346	3704347
-UN	5000	.	REL606	3714883	3714893
-UN	5001	.	REL606	3741225	3741939
-UN	5002	.	REL606	3775352	3796230
-UN	5003	.	REL606	3893586	3900156
-UN	5004	.	REL606	3903318	3903322
-UN	5005	.	REL606	3903324	3903434
-UN	5006	.	REL606	3903487	3908725
-UN	5007	.	REL606	3938994	3938994
-UN	5008	.	REL606	3944436	3944462
-UN	5009	.	REL606	3948060	3948067
-UN	5010	.	REL606	3949731	3949773
-UN	5011	.	REL606	3965059	3965059
-UN	5012	.	REL606	3965061	3965079
-UN	5013	.	REL606	3966765	3966782
-UN	5014	.	REL606	3966784	3966784
-UN	5015	.	REL606	4013566	4013607
-UN	5016	.	REL606	4013657	4013657
-UN	5017	.	REL606	4013659	4015570
-UN	5018	.	REL606	4015633	4017336
-UN	5019	.	REL606	4017393	4017582
-UN	5020	.	REL606	4017654	4017725
-UN	5021	.	REL606	4017790	4017990
-UN	5022	.	REL606	4018133	4019118
-UN	5023	.	REL606	4022397	4022397
-UN	5024	.	REL606	4022399	4022400
-UN	5025	.	REL606	4022407	4022407
-UN	5026	.	REL606	4063344	4063357
-UN	5027	.	REL606	4146189	4148076
-UN	5028	.	REL606	4148140	4148218
-UN	5029	.	REL606	4148281	4148316
-UN	5030	.	REL606	4148426	4148772
-UN	5031	.	REL606	4148774	4148774
-UN	5032	.	REL606	4148779	4148779
-UN	5033	.	REL606	4148781	4148782
-UN	5034	.	REL606	4148787	4148787
-UN	5035	.	REL606	4148790	4148792
-UN	5036	.	REL606	4148796	4148796
-UN	5037	.	REL606	4148800	4148800
-UN	5038	.	REL606	4148803	4150111
-UN	5039	.	REL606	4150171	4151551
-UN	5040	.	REL606	4155717	4155733
-UN	5041	.	REL606	4155794	4155802
-UN	5042	.	REL606	4155868	4156011
-UN	5043	.	REL606	4156063	4156476
-UN	5044	.	REL606	4156479	4156481
-UN	5045	.	REL606	4156537	4156697
-UN	5046	.	REL606	4187452	4192810
-UN	5047	.	REL606	4192934	4192975
-UN	5048	.	REL606	4192983	4192983
-UN	5049	.	REL606	4193052	4193062
-UN	5050	.	REL606	4197902	4197902
-UN	5051	.	REL606	4197905	4197905
-UN	5052	.	REL606	4197907	4197907
-UN	5053	.	REL606	4197909	4197941
-UN	5054	.	REL606	4198008	4198033
-UN	5055	.	REL606	4274796	4274966
-UN	5056	.	REL606	4275020	4275190
-UN	5057	.	REL606	4304684	4304729
-UN	5058	.	REL606	4304782	4304828
-UN	5059	.	REL606	4304888	4304935
-UN	5060	.	REL606	4304990	4305024
-UN	5061	.	REL606	4341291	4341336
-UN	5062	.	REL606	4352980	4352980
-UN	5063	.	REL606	4357514	4357518
-UN	5064	.	REL606	4357520	4357525
-UN	5065	.	REL606	4370546	4370573
-UN	5066	.	REL606	4370575	4370577
-UN	5067	.	REL606	4370644	4370689
-UN	5068	.	REL606	4370752	4370784
-UN	5069	.	REL606	4489490	4489850
-UN	5070	.	REL606	4494060	4494420
-UN	5071	.	REL606	4505369	4506083
-UN	5072	.	REL606	4521603	4522312
-UN	5073	.	REL606	4550705	4551414
-UN	5074	.	REL606	4580195	4580196
-UN	5075	.	REL606	4595342	4595370
-UN	5076	.	REL606	4595578	4595606
-UN	5077	.	REL606	4603515	4603515
-UN	5078	.	REL606	4603517	4603517
-UN	5079	.	REL606	4603519	4603524
-UN	5080	.	REL606	4603595	4603596
-UN	5081	.	REL606	4603600	4603600
-UN	5082	.	REL606	4603605	4603606
-UN	5083	.	REL606	4603608	4603608
-UN	5084	.	REL606	4603612	4603627
+JC	4387	.	REL606	666130	-1	REL606	1462253	-1	0	alignment_overlap=0	coverage_minus=14	coverage_plus=16	flanking_left=36	flanking_right=36	frequency=8.750e-01	frequency_lower=7.364e-01	frequency_upper=9.562e-01	junction_effective_depth=32.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__666130__-1__REL606__1462253__-1__0____36__36__1__0	low_quality_side_expected_read_count=1.3	low_quality_side_read_count=3	max_left=32	max_left_minus=32	max_left_plus=23	max_min_left=16	max_min_left_minus=16	max_min_left_plus=16	max_min_right=17	max_min_right_minus=16	max_min_right_plus=17	max_pos_hash_score=70	max_right=35	max_right_minus=32	max_right_plus=35	neg_log10_pos_hash_p_value=0.5	new_junction_coverage=0.75	new_junction_read_count=28	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=28.00	pos_hash_score=24	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS150	side_1_gene_position=noncoding (1443/1443 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.11	side_2_gene_name=mokB/trg	side_2_gene_position=intergenic (-15/-326)	side_2_gene_product=regulatory peptide/methyl-accepting chemotaxis protein III, ribose and galactose sensor receptor	side_2_gene_strand=</>	side_2_locus_tag=ECB_01377/ECB_01378	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=4	side_2_redundant=0	side_2_weighted_read_count=4.00	total_non_overlap_reads=30
+JC	4388	.	REL606	666130	-1	REL606	3900157	1	0	alignment_overlap=1	coverage_minus=18	coverage_plus=24	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.242e-01	frequency_upper=1.000e+00	junction_effective_depth=38.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=34	key=REL606__3652533__-1__REL606__3900156__1__1____36__36__1__0	low_quality_side_expected_read_count=1.4	low_quality_side_read_count=2	max_left=32	max_left_minus=30	max_left_plus=32	max_min_left=16	max_min_left_minus=16	max_min_left_plus=16	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_pos_hash_score=68	max_right=34	max_right_minus=34	max_right_plus=34	neg_log10_pos_hash_p_value=0.1	new_junction_coverage=1.02	new_junction_read_count=38	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=38.00	pos_hash_score=32	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS150	side_1_gene_position=noncoding (1443/1443 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=1	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=rbsR	side_2_gene_position=coding (124/993 nt)	side_2_gene_product=DNA-binding transcriptional repressor of ribose metabolism	side_2_gene_strand=>	side_2_locus_tag=ECB_03639	side_2_overlap=0	side_2_possible_overlap_registers=31	side_2_possible_overlap_registers_before_trimming=34	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=42
+JC	4389	.	REL606	777257	1	REL606	2803387	-1	-8	alignment_overlap=-8	coverage_minus=0	coverage_plus=1200	flanking_left=36	flanking_right=36	frequency=9.783e-01	frequency_lower=9.702e-01	frequency_upper=9.847e-01	junction_effective_depth=1234.00	junction_mixture_iterations=2	junction_possible_overlap_registers=25	junction_possible_overlap_registers_before_trimming=27	key=REL606__777257__1__REL606__2803387__-1__-8__TCAAAGAC__36__36__0__0	low_quality_side_expected_read_count=36.9	low_quality_side_read_count=47	max_left=16	max_left_minus=0	max_left_plus=16	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=14	max_min_right_minus=0	max_min_right_plus=14	max_pos_hash_score=54	max_right=14	max_right_minus=0	max_right_plus=14	neg_log10_pos_hash_p_value=3.7	new_junction_coverage=41.35	new_junction_read_count=1200	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=1200.00	pos_hash_score=3	prediction=consensus	reject=COVERAGE_EVENNESS_SKEW	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.70	side_1_gene_name=modC	side_1_gene_position=coding (75/1059 nt)	side_1_gene_product=molybdate transporter subunit	side_1_gene_strand=>	side_1_locus_tag=ECB_00718	side_1_overlap=0	side_1_possible_overlap_registers=32	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=26	side_1_redundant=0	side_1_weighted_read_count=25.99	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=1.13	side_2_gene_name=rumA	side_2_gene_position=coding (542/1302 nt)	side_2_gene_product=23S rRNA (uracil-5-)-methyltransferase	side_2_gene_strand=<	side_2_locus_tag=ECB_02630	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=42	side_2_redundant=0	side_2_weighted_read_count=42.00	total_non_overlap_reads=1200	unique_read_sequence=TCAAAGAC
+JC	4390	.	REL606	1193615	1	REL606	556319	1	0	alignment_overlap=0	coverage_minus=29	coverage_plus=20	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.395e-01	frequency_upper=1.000e+00	junction_effective_depth=48.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__547699__-1__REL606__556319__1__0____36__36__1__0	low_quality_side_expected_read_count=1.6	low_quality_side_read_count=1	max_left=31	max_left_minus=31	max_left_plus=31	max_min_left=16	max_min_left_minus=16	max_min_left_plus=16	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_pos_hash_score=70	max_right=35	max_right_minus=35	max_right_plus=33	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=1.29	new_junction_read_count=48	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=48.00	pos_hash_score=31	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS1	side_1_gene_position=noncoding (1/768 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ECB_00513	side_2_gene_position=coding (1604/2346 nt)	side_2_gene_product=conserved hypothetical protein	side_2_gene_strand=>	side_2_locus_tag=ECB_00513	side_2_overlap=0	side_2_possible_overlap_registers=27	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=49
+JC	4391	.	REL606	1193615	1	REL606	3025120	1	0	alignment_overlap=0	coverage_minus=14	coverage_plus=24	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.180e-01	frequency_upper=1.000e+00	junction_effective_depth=35.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__2682608__1__REL606__3025120__1__0____36__36__1__0	low_quality_side_expected_read_count=1.1	low_quality_side_read_count=1	max_left=32	max_left_minus=30	max_left_plus=32	max_min_left=17	max_min_left_minus=17	max_min_left_plus=16	max_min_right=18	max_min_right_minus=15	max_min_right_plus=18	max_pos_hash_score=70	max_right=35	max_right_minus=35	max_right_plus=34	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=0.94	new_junction_read_count=35	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=35.00	pos_hash_score=30	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS1	side_1_gene_position=noncoding (1/768 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_1_weighted_read_count=NA	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ECB_02825	side_2_gene_position=coding (289/723 nt)	side_2_gene_product=Pyrophosphorylase	side_2_gene_strand=<	side_2_locus_tag=ECB_02825	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=38
+JC	4392	.	REL606	1433349	-1	REL606	1111786	-1	0	alignment_overlap=1	coverage_minus=13	coverage_plus=16	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=8.985e-01	frequency_upper=1.000e+00	junction_effective_depth=28.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=34	key=REL606__1433349__-1__REL606__1442636__1__1____36__36__0__1	max_left=34	max_left_minus=33	max_left_plus=34	max_min_left=17	max_min_left_minus=17	max_min_left_plus=17	max_min_right=17	max_min_right_minus=17	max_min_right_plus=14	max_pos_hash_score=68	max_right=29	max_right_minus=23	max_right_plus=29	neg_log10_pos_hash_p_value=0.4	new_junction_coverage=0.75	new_junction_read_count=28	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=28.00	pos_hash_score=26	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=hslJ	side_1_gene_position=coding (1/423 nt)	side_1_gene_product=heat-inducible protein	side_1_gene_strand=<	side_1_locus_tag=ECB_01351	side_1_overlap=1	side_1_possible_overlap_registers=30	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=insE-1/serX	side_2_gene_position=intergenic (-55/+347)	side_2_gene_product=putative transposase-related protein/tRNA-Ser	side_2_gene_strand=</<	side_2_locus_tag=ECB_01029/ECB_t00024	side_2_overlap=0	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=29
+JC	4393	.	REL606	1976273	1	REL606	1194382	-1	0	alignment_overlap=0	coverage_minus=23	coverage_plus=23	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.342e-01	frequency_upper=1.000e+00	junction_effective_depth=44.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__1976273__1__REL606__2034326__1__0____36__36__0__1	low_quality_side_expected_read_count=1.4	low_quality_side_read_count=2	max_left=35	max_left_minus=33	max_left_plus=35	max_min_left=17	max_min_left_minus=13	max_min_left_plus=17	max_min_right=18	max_min_right_minus=18	max_min_right_plus=16	max_pos_hash_score=70	max_right=33	max_right_minus=31	max_right_plus=33	neg_log10_pos_hash_p_value=0.3	new_junction_coverage=1.18	new_junction_read_count=44	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=44.00	pos_hash_score=29	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=yedW	side_1_gene_position=coding (550/672 nt)	side_1_gene_product=predicted DNA-binding response regulator in two-component system with YedV	side_1_gene_strand=<	side_1_locus_tag=ECB_01884	side_1_overlap=0	side_1_possible_overlap_registers=33	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS1	side_2_gene_position=noncoding (768/768 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=0	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=46
+JC	4394	.	REL606	2448493	1	REL606	15386	1	0	alignment_overlap=3	coverage_minus=17	coverage_plus=9	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=8.779e-01	frequency_upper=1.000e+00	junction_effective_depth=23.00	junction_mixture_iterations=1	junction_possible_overlap_registers=30	junction_possible_overlap_registers_before_trimming=32	key=REL606__2448490__1__REL606__2772854__1__3____36__36__0__1	max_left=32	max_left_minus=32	max_left_plus=31	max_min_left=16	max_min_left_minus=16	max_min_left_plus=11	max_min_right=16	max_min_right_minus=16	max_min_right_plus=16	max_pos_hash_score=64	max_right=29	max_right_minus=26	max_right_plus=29	neg_log10_pos_hash_p_value=0.6	new_junction_coverage=0.66	new_junction_read_count=23	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=23.00	pos_hash_score=21	prediction=consensus	read_count_offset=6	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=nupC/yfeA	side_1_gene_position=intergenic (+24/+26)	side_1_gene_product=nucleoside (except guanosine) transporter/predicted diguanylate cyclase	side_1_gene_strand=>/<	side_1_locus_tag=ECB_02302/ECB_02303	side_1_overlap=0	side_1_possible_overlap_registers=21	side_1_possible_overlap_registers_before_trimming=26	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS186	side_2_gene_position=noncoding (1/1343 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=3	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=26
+JC	4395	.	REL606	2448498	-1	REL606	16728	-1	0	alignment_overlap=3	coverage_minus=20	coverage_plus=12	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.079e-01	frequency_upper=1.000e+00	junction_effective_depth=31.00	junction_mixture_iterations=1	junction_possible_overlap_registers=29	junction_possible_overlap_registers_before_trimming=32	key=REL606__2448501__-1__REL606__2774196__-1__3____36__36__0__1	low_quality_side_expected_read_count=1.0	low_quality_side_read_count=1	max_left=32	max_left_minus=32	max_left_plus=29	max_min_left=16	max_min_left_minus=16	max_min_left_plus=12	max_min_right=15	max_min_right_minus=15	max_min_right_plus=14	max_pos_hash_score=64	max_right=30	max_right_minus=30	max_right_plus=30	neg_log10_pos_hash_p_value=0.4	new_junction_coverage=0.92	new_junction_read_count=31	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=31.00	pos_hash_score=24	prediction=consensus	read_count_offset=6	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=nupC/yfeA	side_1_gene_position=intergenic (+29/+21)	side_1_gene_product=nucleoside (except guanosine) transporter/predicted diguanylate cyclase	side_1_gene_strand=>/<	side_1_locus_tag=ECB_02302/ECB_02303	side_1_overlap=0	side_1_possible_overlap_registers=21	side_1_possible_overlap_registers_before_trimming=26	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS186	side_2_gene_position=noncoding (1343/1343 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=3	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=32
+JC	4396	.	REL606	3060599	1	REL606	1194382	-1	0	alignment_overlap=1	coverage_minus=25	coverage_plus=26	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.430e-01	frequency_upper=1.000e+00	junction_effective_depth=51.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=34	key=REL606__3060598__1__REL606__3433462__1__1____36__36__0__1	max_left=33	max_left_minus=33	max_left_plus=33	max_min_left=17	max_min_left_minus=14	max_min_left_plus=17	max_min_right=17	max_min_right_minus=17	max_min_right_plus=16	max_pos_hash_score=68	max_right=32	max_right_minus=28	max_right_plus=32	neg_log10_pos_hash_p_value=0.0	new_junction_coverage=1.37	new_junction_read_count=51	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=51.00	pos_hash_score=38	prediction=consensus	read_count_offset=9	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=ECB_02854	side_1_gene_position=coding (234/1173 nt)	side_1_gene_product=conserved hypothetical protein	side_1_gene_strand=>	side_1_locus_tag=ECB_02854	side_1_overlap=0	side_1_possible_overlap_registers=19	side_1_possible_overlap_registers_before_trimming=25	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS1	side_2_gene_position=noncoding (768/768 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=1	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=51
+JC	4397	.	REL606	3060607	-1	REL606	1193615	1	0	alignment_overlap=0	coverage_minus=23	coverage_plus=15	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.222e-01	frequency_upper=1.000e+00	junction_effective_depth=37.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606__3060607__-1__REL606__3434229__-1__0____36__36__0__1	low_quality_side_expected_read_count=1.1	low_quality_side_read_count=1	max_left=34	max_left_minus=34	max_left_plus=29	max_min_left=16	max_min_left_minus=16	max_min_left_plus=14	max_min_right=18	max_min_right_minus=16	max_min_right_plus=18	max_pos_hash_score=70	max_right=29	max_right_minus=29	max_right_plus=28	neg_log10_pos_hash_p_value=0.4	new_junction_coverage=1.00	new_junction_read_count=37	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=37.00	pos_hash_score=26	prediction=consensus	read_count_offset=9	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=ECB_02854	side_1_gene_position=coding (242/1173 nt)	side_1_gene_product=conserved hypothetical protein	side_1_gene_strand=>	side_1_locus_tag=ECB_02854	side_1_overlap=0	side_1_possible_overlap_registers=19	side_1_possible_overlap_registers_before_trimming=26	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=repeat	side_2_continuation=0	side_2_coverage=NA	side_2_gene_name=IS1	side_2_gene_position=noncoding (1/768 nt)	side_2_gene_product=repeat region	side_2_gene_strand=>	side_2_overlap=0	side_2_possible_overlap_registers=NA	side_2_possible_overlap_registers_before_trimming=NA	side_2_read_count=NA	side_2_redundant=1	side_2_weighted_read_count=NA	total_non_overlap_reads=38
+JC	4398	.	REL606	3775351	-1	REL606	3796245	1	0	alignment_overlap=17	coverage_minus=8	coverage_plus=10	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=8.384e-01	frequency_upper=1.000e+00	junction_effective_depth=17.00	junction_mixture_iterations=1	junction_possible_overlap_registers=15	junction_possible_overlap_registers_before_trimming=18	key=REL606__3775351__-1__REL606__3796228__1__17____36__36__0__0	max_left=16	max_left_minus=16	max_left_plus=13	max_min_left=9	max_min_left_minus=9	max_min_left_plus=9	max_min_right=9	max_min_right_minus=9	max_min_right_plus=8	max_pos_hash_score=36	max_right=18	max_right_minus=15	max_right_plus=18	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=0.98	new_junction_read_count=17	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=17.00	pos_hash_score=16	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=selC	side_1_gene_position=noncoding (88/91 nt)	side_1_gene_product=tRNA-Sec	side_1_gene_strand=>	side_1_locus_tag=ECB_t00063	side_1_overlap=17	side_1_possible_overlap_registers=33	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ECB_03540/ECB_03541	side_2_gene_position=intergenic (+150/-109)	side_2_gene_product=conserved hypothetical protein/conserved hypothetical protein	side_2_gene_strand=>/>	side_2_locus_tag=ECB_03540/ECB_03541	side_2_overlap=0	side_2_possible_overlap_registers=13	side_2_possible_overlap_registers_before_trimming=18	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=18
+CN	4399	.	REL606	547701	556300	0	gene_name=[nmpC]–[ECB_00513]	gene_product=[nmpC],ybcR,ybcS,ybcT,ybcU,ECB_00510,nohB,ECB_00512,[ECB_00513]	locus_tag=[ECB_00503]–[ECB_00513]	relative_coverage=0	tile_size=100
+CN	4400	.	REL606	1433301	1442600	0	gene_name=[hslJ]–tynA	gene_product=[hslJ],ldhA,ydbH,ynbE,ydbL,feaR,feaB,tynA	locus_tag=[ECB_01351]–[ECB_01358]	relative_coverage=0	tile_size=100
+CN	4401	.	REL606	1609201	1615400	0	gene_name=ybcW–ECB_01523	gene_product=ybcW,gnsB,ynfN,ECB_01516,cspI,ydfP,ydfQ,ydfR,essQ,ECB_01522,ECB_01523	locus_tag=[ECB_01513]–[ECB_01523]	relative_coverage=0	tile_size=100
+CN	4402	.	REL606	1974101	1976300	0	gene_name=[yedU]–[yedW]	gene_product=[yedU],yedV,[yedW]	locus_tag=[ECB_01882]–[ECB_01884]	relative_coverage=0	tile_size=100
+CN	4403	.	REL606	2100301	2122400	0	gene_name=ogrK–ECB_02012	gene_product=ogrK,yegZ,ECB_01989,ECB_01990,ECB_01991,ECB_01992,ECB_01993,ECB_01994,ECB_01995,ECB_01996,ECB_01997,ECB_01998,ECB_01999,ECB_02000,ECB_02001,ECB_02002,ECB_02003,ECB_02004,ECB_02005,ECB_02006,ECB_02007,ECB_02008,ECB_02009,ECB_02010,ECB_02011,ECB_02012	locus_tag=[ECB_01987]–[ECB_02012]	relative_coverage=0	tile_size=100
+CN	4404	.	REL606	3024801	3025100	0	gene_name=ECB_02825	gene_position=coding (309-608/723 nt)	gene_product=Pyrophosphorylase	gene_strand=<	locus_tag=ECB_02825	relative_coverage=0	tile_size=100
+CN	4405	.	REL606	3775401	3796200	0	gene_name=ECB_03516–ECB_03540	gene_product=ECB_03516,ECB_03517,ECB_03518,ECB_03519,ECB_03520,ECB_03521,ECB_03522,ECB_03523,ECB_03524,ECB_03525,ECB_03526,ECB_03527,ECB_03528,ECB_03529,ECB_03530,ECB_03531,ECB_03532,ECB_03533,ECB_03534,ykgN,insI,yeeV,ECB_03538,ECB_03539,ECB_03540	locus_tag=[ECB_03516]–[ECB_03540]	relative_coverage=0	tile_size=100
+CN	4406	.	REL606	3895001	3900200	0	gene_name=rbsD–[rbsR]	gene_product=rbsD,rbsA,rbsC,rbsB,rbsK,[rbsR]	locus_tag=[ECB_03634]–[ECB_03639]	relative_coverage=0	tile_size=100
+UN	4407	.	REL606	15414	16698
+UN	4408	.	REL606	23317	23317
+UN	4409	.	REL606	23319	23319
+UN	4410	.	REL606	23321	24031
+UN	4411	.	REL606	69398	69403
+UN	4412	.	REL606	69434	69458
+UN	4413	.	REL606	69522	69567
+UN	4414	.	REL606	175514	175525
+UN	4415	.	REL606	210316	210326
+UN	4416	.	REL606	210333	210333
+UN	4417	.	REL606	226332	226414
+UN	4418	.	REL606	226485	226497
+UN	4419	.	REL606	226557	226557
+UN	4420	.	REL606	226560	227027
+UN	4421	.	REL606	227086	228501
+UN	4422	.	REL606	228563	228563
+UN	4423	.	REL606	228566	231905
+UN	4424	.	REL606	239882	239906
+UN	4425	.	REL606	241283	241283
+UN	4426	.	REL606	241287	241997
+UN	4427	.	REL606	242196	242196
+UN	4428	.	REL606	242726	242850
+UN	4429	.	REL606	242905	242905
+UN	4430	.	REL606	242908	242908
+UN	4431	.	REL606	242953	242956
+UN	4432	.	REL606	243208	243208
+UN	4433	.	REL606	243210	243227
+UN	4434	.	REL606	243300	243456
+UN	4435	.	REL606	243595	243613
+UN	4436	.	REL606	243709	243711
+UN	4437	.	REL606	262818	263535
+UN	4438	.	REL606	272642	272642
+UN	4439	.	REL606	272645	272645
+UN	4440	.	REL606	303803	303805
+UN	4441	.	REL606	312431	312556
+UN	4442	.	REL606	312661	312697
+UN	4443	.	REL606	322399	322454
+UN	4444	.	REL606	322490	322490
+UN	4445	.	REL606	322492	322547
+UN	4446	.	REL606	330057	330098
+UN	4447	.	REL606	330259	330303
+UN	4448	.	REL606	330443	330443
+UN	4449	.	REL606	353288	354005
+UN	4450	.	REL606	376773	376773
+UN	4451	.	REL606	376775	377491
+UN	4452	.	REL606	429527	430812
+UN	4453	.	REL606	480767	480966
+UN	4454	.	REL606	495456	498295
+UN	4455	.	REL606	498297	498297
+UN	4456	.	REL606	498354	498860
+UN	4457	.	REL606	514819	514819
+UN	4458	.	REL606	514821	514821
+UN	4459	.	REL606	514823	514823
+UN	4460	.	REL606	514826	514828
+UN	4461	.	REL606	540724	540724
+UN	4462	.	REL606	545916	545938
+UN	4463	.	REL606	546956	556318
+UN	4464	.	REL606	557144	557174
+UN	4465	.	REL606	557300	557313
+UN	4466	.	REL606	557753	557753
+UN	4467	.	REL606	557756	557756
+UN	4468	.	REL606	557758	557829
+UN	4469	.	REL606	557880	557948
+UN	4470	.	REL606	558178	558181
+UN	4471	.	REL606	558307	558307
+UN	4472	.	REL606	558310	558364
+UN	4473	.	REL606	568937	569043
+UN	4474	.	REL606	569105	569134
+UN	4475	.	REL606	569198	569347
+UN	4476	.	REL606	569522	569546
+UN	4477	.	REL606	569682	569704
+UN	4478	.	REL606	569764	569775
+UN	4479	.	REL606	569826	569859
+UN	4480	.	REL606	569899	570045
+UN	4481	.	REL606	572302	572560
+UN	4482	.	REL606	572725	572754
+UN	4483	.	REL606	572811	572996
+UN	4484	.	REL606	573047	573144
+UN	4485	.	REL606	573179	573473
+UN	4486	.	REL606	577910	577982
+UN	4487	.	REL606	588526	589526
+UN	4488	.	REL606	589582	590296
+UN	4489	.	REL606	590349	590441
+UN	4490	.	REL606	590738	592032
+UN	4491	.	REL606	604419	604422
+UN	4492	.	REL606	619141	619141
+UN	4493	.	REL606	619143	619858
+UN	4494	.	REL606	634005	634715
+UN	4495	.	REL606	664716	666100
+UN	4496	.	REL606	678554	678572
+UN	4497	.	REL606	678666	678684
+UN	4498	.	REL606	678789	678803
+UN	4499	.	REL606	678882	678896
+UN	4500	.	REL606	678983	679007
+UN	4501	.	REL606	679009	679009
+UN	4502	.	REL606	679181	679198
+UN	4503	.	REL606	679200	679200
+UN	4504	.	REL606	679202	679202
+UN	4505	.	REL606	711465	711466
+UN	4506	.	REL606	711468	711468
+UN	4507	.	REL606	711471	711477
+UN	4508	.	REL606	711479	711481
+UN	4509	.	REL606	711790	711791
+UN	4510	.	REL606	711793	711959
+UN	4511	.	REL606	712011	712479
+UN	4512	.	REL606	712543	712677
+UN	4513	.	REL606	712684	712684
+UN	4514	.	REL606	712728	712765
+UN	4515	.	REL606	712852	712973
+UN	4516	.	REL606	712976	712976
+UN	4517	.	REL606	712979	712979
+UN	4518	.	REL606	713918	714003
+UN	4519	.	REL606	714118	714141
+UN	4520	.	REL606	714195	714291
+UN	4521	.	REL606	714427	714427
+UN	4522	.	REL606	714429	714430
+UN	4523	.	REL606	714432	714640
+UN	4524	.	REL606	714734	714816
+UN	4525	.	REL606	714869	714871
+UN	4526	.	REL606	714875	714880
+UN	4527	.	REL606	717605	717642
+UN	4528	.	REL606	717692	717709
+UN	4529	.	REL606	717868	717968
+UN	4530	.	REL606	718027	718151
+UN	4531	.	REL606	718345	718466
+UN	4532	.	REL606	718550	718569
+UN	4533	.	REL606	718768	718778
+UN	4534	.	REL606	718895	718993
+UN	4535	.	REL606	719177	719197
+UN	4536	.	REL606	719380	719380
+UN	4537	.	REL606	719382	719406
+UN	4538	.	REL606	719525	719537
+UN	4539	.	REL606	719589	719606
+UN	4540	.	REL606	724423	724435
+UN	4541	.	REL606	733679	733679
+UN	4542	.	REL606	733681	733681
+UN	4543	.	REL606	733683	733684
+UN	4544	.	REL606	733695	733696
+UN	4545	.	REL606	751736	751746
+UN	4546	.	REL606	761467	761488
+UN	4547	.	REL606	761676	761699
+UN	4548	.	REL606	761756	761774
+UN	4549	.	REL606	761881	761904
+UN	4550	.	REL606	761960	761978
+UN	4551	.	REL606	762177	762177
+UN	4552	.	REL606	762180	762202
+UN	4553	.	REL606	762391	762450
+UN	4554	.	REL606	783978	784052
+UN	4555	.	REL606	803231	803231
+UN	4556	.	REL606	843165	843165
+UN	4557	.	REL606	864595	864595
+UN	4558	.	REL606	866247	866247
+UN	4559	.	REL606	900549	900550
+UN	4560	.	REL606	900553	900554
+UN	4561	.	REL606	931777	931837
+UN	4562	.	REL606	931880	931929
+UN	4563	.	REL606	942574	942687
+UN	4564	.	REL606	942726	942857
+UN	4565	.	REL606	942859	942859
+UN	4566	.	REL606	942904	942905
+UN	4567	.	REL606	942907	942907
+UN	4568	.	REL606	942910	943010
+UN	4569	.	REL606	1009869	1009869
+UN	4570	.	REL606	1085891	1085891
+UN	4571	.	REL606	1085895	1085895
+UN	4572	.	REL606	1086569	1086575
+UN	4573	.	REL606	1106818	1106818
+UN	4574	.	REL606	1106820	1106821
+UN	4575	.	REL606	1109627	1109627
+UN	4576	.	REL606	1109632	1109632
+UN	4577	.	REL606	1109638	1109638
+UN	4578	.	REL606	1110553	1110553
+UN	4579	.	REL606	1110555	1111762
+UN	4580	.	REL606	1111764	1111764
+UN	4581	.	REL606	1111815	1111837
+UN	4582	.	REL606	1111948	1112037
+UN	4583	.	REL606	1112085	1112085
+UN	4584	.	REL606	1112092	1112103
+UN	4585	.	REL606	1112136	1112200
+UN	4586	.	REL606	1119094	1119095
+UN	4587	.	REL606	1119097	1119098
+UN	4588	.	REL606	1119103	1119103
+UN	4589	.	REL606	1129574	1129576
+UN	4590	.	REL606	1135110	1135110
+UN	4591	.	REL606	1166450	1166451
+UN	4592	.	REL606	1166453	1166454
+UN	4593	.	REL606	1193641	1193643
+UN	4594	.	REL606	1193645	1194356
+UN	4595	.	REL606	1194358	1194358
+UN	4596	.	REL606	1196189	1196190
+UN	4597	.	REL606	1199293	1199293
+UN	4598	.	REL606	1199295	1199295
+UN	4599	.	REL606	1244992	1244992
+UN	4600	.	REL606	1244996	1245000
+UN	4601	.	REL606	1269254	1269254
+UN	4602	.	REL606	1269256	1269350
+UN	4603	.	REL606	1269352	1269353
+UN	4604	.	REL606	1269427	1269439
+UN	4605	.	REL606	1269560	1269575
+UN	4606	.	REL606	1269783	1269889
+UN	4607	.	REL606	1269892	1269892
+UN	4608	.	REL606	1269944	1270001
+UN	4609	.	REL606	1270061	1270129
+UN	4610	.	REL606	1270188	1270205
+UN	4611	.	REL606	1270323	1270385
+UN	4612	.	REL606	1270476	1270546
+UN	4613	.	REL606	1270550	1270550
+UN	4614	.	REL606	1270596	1270664
+UN	4615	.	REL606	1270718	1270718
+UN	4616	.	REL606	1270722	1270739
+UN	4617	.	REL606	1271963	1271963
+UN	4618	.	REL606	1271965	1271966
+UN	4619	.	REL606	1271968	1271975
+UN	4620	.	REL606	1287064	1287095
+UN	4621	.	REL606	1287359	1287391
+UN	4622	.	REL606	1311633	1311633
+UN	4623	.	REL606	1322747	1323461
+UN	4624	.	REL606	1323464	1323464
+UN	4625	.	REL606	1324981	1324981
+UN	4626	.	REL606	1324983	1324984
+UN	4627	.	REL606	1324989	1324992
+UN	4628	.	REL606	1324994	1324995
+UN	4629	.	REL606	1324997	1325001
+UN	4630	.	REL606	1341741	1341741
+UN	4631	.	REL606	1364829	1364829
+UN	4632	.	REL606	1417011	1417028
+UN	4633	.	REL606	1418110	1418128
+UN	4634	.	REL606	1418195	1418195
+UN	4635	.	REL606	1418197	1418198
+UN	4636	.	REL606	1418307	1418424
+UN	4637	.	REL606	1421879	1421879
+UN	4638	.	REL606	1421881	1421881
+UN	4639	.	REL606	1421883	1421884
+UN	4640	.	REL606	1421886	1422240
+UN	4641	.	REL606	1424341	1424341
+UN	4642	.	REL606	1424347	1424348
+UN	4643	.	REL606	1424352	1424360
+UN	4644	.	REL606	1424409	1424444
+UN	4645	.	REL606	1424560	1424766
+UN	4646	.	REL606	1424816	1424837
+UN	4647	.	REL606	1424886	1425127
+UN	4648	.	REL606	1425130	1425130
+UN	4649	.	REL606	1425185	1425246
+UN	4650	.	REL606	1425302	1425316
+UN	4651	.	REL606	1425358	1425438
+UN	4652	.	REL606	1425501	1425538
+UN	4653	.	REL606	1425622	1425862
+UN	4654	.	REL606	1425910	1425998
+UN	4655	.	REL606	1426084	1426084
+UN	4656	.	REL606	1426086	1426256
+UN	4657	.	REL606	1426437	1426462
+UN	4658	.	REL606	1433350	1443871
+UN	4659	.	REL606	1460190	1460900
+UN	4660	.	REL606	1490183	1490190
+UN	4661	.	REL606	1490195	1490195
+UN	4662	.	REL606	1490199	1490199
+UN	4663	.	REL606	1498101	1498440
+UN	4664	.	REL606	1498443	1498541
+UN	4665	.	REL606	1498598	1498779
+UN	4666	.	REL606	1498834	1498869
+UN	4667	.	REL606	1499027	1499288
+UN	4668	.	REL606	1500303	1503144
+UN	4669	.	REL606	1503201	1503710
+UN	4670	.	REL606	1503712	1503712
+UN	4671	.	REL606	1504653	1504661
+UN	4672	.	REL606	1504663	1504679
+UN	4673	.	REL606	1506259	1506372
+UN	4674	.	REL606	1506374	1506374
+UN	4675	.	REL606	1506416	1506419
+UN	4676	.	REL606	1506528	1506797
+UN	4677	.	REL606	1506838	1507004
+UN	4678	.	REL606	1507110	1507110
+UN	4679	.	REL606	1507113	1507122
+UN	4680	.	REL606	1522164	1522181
+UN	4681	.	REL606	1527010	1527010
+UN	4682	.	REL606	1527012	1527012
+UN	4683	.	REL606	1527014	1527014
+UN	4684	.	REL606	1535848	1535848
+UN	4685	.	REL606	1544691	1544786
+UN	4686	.	REL606	1544846	1545061
+UN	4687	.	REL606	1545111	1545266
+UN	4688	.	REL606	1545379	1545670
+UN	4689	.	REL606	1600415	1600587
+UN	4690	.	REL606	1600668	1600752
+UN	4691	.	REL606	1600808	1601299
+UN	4692	.	REL606	1601301	1601301
+UN	4693	.	REL606	1601351	1601371
+UN	4694	.	REL606	1601422	1601484
+UN	4695	.	REL606	1601486	1601486
+UN	4696	.	REL606	1601537	1601783
+UN	4697	.	REL606	1601785	1601786
+UN	4698	.	REL606	1601831	1601851
+UN	4699	.	REL606	1601900	1602109
+UN	4700	.	REL606	1602198	1602206
+UN	4701	.	REL606	1602381	1602384
+UN	4702	.	REL606	1602615	1602685
+UN	4703	.	REL606	1602733	1602805
+UN	4704	.	REL606	1602906	1602912
+UN	4705	.	REL606	1602916	1602917
+UN	4706	.	REL606	1603249	1603262
+UN	4707	.	REL606	1603388	1603418
+UN	4708	.	REL606	1604600	1604610
+UN	4709	.	REL606	1604657	1604691
+UN	4710	.	REL606	1604746	1604761
+UN	4711	.	REL606	1605109	1605109
+UN	4712	.	REL606	1605111	1605137
+UN	4713	.	REL606	1605499	1605501
+UN	4714	.	REL606	1605503	1605863
+UN	4715	.	REL606	1605865	1605865
+UN	4716	.	REL606	1606632	1607898
+UN	4717	.	REL606	1607942	1616705
+UN	4718	.	REL606	1618033	1618055
+UN	4719	.	REL606	1625863	1625863
+UN	4720	.	REL606	1625866	1625871
+UN	4721	.	REL606	1634802	1634802
+UN	4722	.	REL606	1646689	1646689
+UN	4723	.	REL606	1646691	1646691
+UN	4724	.	REL606	1646694	1646694
+UN	4725	.	REL606	1685886	1686075
+UN	4726	.	REL606	1686077	1686077
+UN	4727	.	REL606	1700878	1700878
+UN	4728	.	REL606	1706635	1706635
+UN	4729	.	REL606	1706637	1706637
+UN	4730	.	REL606	1716935	1716935
+UN	4731	.	REL606	1716938	1716938
+UN	4732	.	REL606	1717505	1717505
+UN	4733	.	REL606	1790116	1790129
+UN	4734	.	REL606	1793457	1793462
+UN	4735	.	REL606	1793464	1793464
+UN	4736	.	REL606	1793466	1793470
+UN	4737	.	REL606	1798562	1798564
+UN	4738	.	REL606	1800348	1800350
+UN	4739	.	REL606	1801504	1801506
+UN	4740	.	REL606	1801508	1801514
+UN	4741	.	REL606	1808393	1808393
+UN	4742	.	REL606	1857087	1858379
+UN	4743	.	REL606	1883964	1883964
+UN	4744	.	REL606	1925877	1925877
+UN	4745	.	REL606	1925879	1925879
+UN	4746	.	REL606	1970060	1970081
+UN	4747	.	REL606	1973302	1976272
+UN	4748	.	REL606	1979258	1979258
+UN	4749	.	REL606	1979262	1979262
+UN	4750	.	REL606	1982557	1982604
+UN	4751	.	REL606	1995633	1995633
+UN	4752	.	REL606	1995637	1995646
+UN	4753	.	REL606	1995669	1995676
+UN	4754	.	REL606	1995684	1995684
+UN	4755	.	REL606	1995686	1995687
+UN	4756	.	REL606	1996054	1996078
+UN	4757	.	REL606	1997875	1997901
+UN	4758	.	REL606	2000268	2000312
+UN	4759	.	REL606	2031764	2031774
+UN	4760	.	REL606	2031835	2031866
+UN	4761	.	REL606	2032304	2032345
+UN	4762	.	REL606	2032508	2032520
+UN	4763	.	REL606	2032523	2032523
+UN	4764	.	REL606	2032617	2032680
+UN	4765	.	REL606	2034015	2034023
+UN	4766	.	REL606	2034027	2034027
+UN	4767	.	REL606	2034278	2034278
+UN	4768	.	REL606	2034350	2035067
+UN	4769	.	REL606	2035327	2035328
+UN	4770	.	REL606	2035330	2035330
+UN	4771	.	REL606	2035446	2035446
+UN	4772	.	REL606	2037840	2037852
+UN	4773	.	REL606	2037943	2037943
+UN	4774	.	REL606	2042144	2042144
+UN	4775	.	REL606	2042564	2042564
+UN	4776	.	REL606	2042568	2042568
+UN	4777	.	REL606	2042736	2042746
+UN	4778	.	REL606	2053420	2053420
+UN	4779	.	REL606	2055057	2055060
+UN	4780	.	REL606	2055062	2055064
+UN	4781	.	REL606	2055128	2055160
+UN	4782	.	REL606	2055603	2055631
+UN	4783	.	REL606	2055801	2055808
+UN	4784	.	REL606	2055907	2055974
+UN	4785	.	REL606	2055977	2055978
+UN	4786	.	REL606	2075150	2075151
+UN	4787	.	REL606	2075154	2075154
+UN	4788	.	REL606	2075158	2075158
+UN	4789	.	REL606	2075161	2075161
+UN	4790	.	REL606	2085981	2085981
+UN	4791	.	REL606	2085985	2085992
+UN	4792	.	REL606	2086104	2086112
+UN	4793	.	REL606	2086530	2086530
+UN	4794	.	REL606	2086535	2086588
+UN	4795	.	REL606	2086756	2086768
+UN	4796	.	REL606	2086866	2086904
+UN	4797	.	REL606	2090989	2090990
+UN	4798	.	REL606	2096595	2096597
+UN	4799	.	REL606	2096954	2096954
+UN	4800	.	REL606	2097247	2097248
+UN	4801	.	REL606	2100302	2122436
+UN	4802	.	REL606	2122440	2122440
+UN	4803	.	REL606	2123091	2123097
+UN	4804	.	REL606	2128630	2129343
+UN	4805	.	REL606	2143085	2143085
+UN	4806	.	REL606	2143087	2143801
+UN	4807	.	REL606	2162908	2162908
+UN	4808	.	REL606	2170829	2170836
+UN	4809	.	REL606	2180413	2180413
+UN	4810	.	REL606	2180417	2180462
+UN	4811	.	REL606	2180509	2180580
+UN	4812	.	REL606	2238452	2238452
+UN	4813	.	REL606	2252687	2252688
+UN	4814	.	REL606	2254481	2254644
+UN	4815	.	REL606	2254702	2255051
+UN	4816	.	REL606	2262760	2262761
+UN	4817	.	REL606	2262763	2263481
+UN	4818	.	REL606	2314493	2314493
+UN	4819	.	REL606	2320213	2320218
+UN	4820	.	REL606	2325531	2325531
+UN	4821	.	REL606	2330828	2330828
+UN	4822	.	REL606	2330847	2330848
+UN	4823	.	REL606	2390663	2390684
+UN	4824	.	REL606	2399578	2399578
+UN	4825	.	REL606	2399580	2399582
+UN	4826	.	REL606	2407466	2408183
+UN	4827	.	REL606	2450938	2450963
+UN	4828	.	REL606	2451057	2451078
+UN	4829	.	REL606	2453827	2453828
+UN	4830	.	REL606	2453831	2453859
+UN	4831	.	REL606	2453947	2453979
+UN	4832	.	REL606	2454075	2454101
+UN	4833	.	REL606	2454159	2454214
+UN	4834	.	REL606	2488893	2488918
+UN	4835	.	REL606	2488987	2489013
+UN	4836	.	REL606	2489087	2489089
+UN	4837	.	REL606	2489091	2489091
+UN	4838	.	REL606	2489093	2489096
+UN	4839	.	REL606	2490467	2490468
+UN	4840	.	REL606	2490477	2490486
+UN	4841	.	REL606	2490488	2490490
+UN	4842	.	REL606	2498972	2498975
+UN	4843	.	REL606	2498977	2498997
+UN	4844	.	REL606	2502484	2502484
+UN	4845	.	REL606	2550459	2550460
+UN	4846	.	REL606	2550462	2550473
+UN	4847	.	REL606	2550488	2550488
+UN	4848	.	REL606	2550493	2550493
+UN	4849	.	REL606	2574179	2574179
+UN	4850	.	REL606	2583074	2583252
+UN	4851	.	REL606	2618055	2618752
+UN	4852	.	REL606	2647578	2652685
+UN	4853	.	REL606	2652736	2652806
+UN	4854	.	REL606	2652855	2652864
+UN	4855	.	REL606	2652867	2652870
+UN	4856	.	REL606	2682634	2682634
+UN	4857	.	REL606	2682636	2682636
+UN	4858	.	REL606	2682638	2682700
+UN	4859	.	REL606	2682766	2683351
+UN	4860	.	REL606	2712663	2712698
+UN	4861	.	REL606	2712802	2712826
+UN	4862	.	REL606	2712829	2712829
+UN	4863	.	REL606	2712937	2712973
+UN	4864	.	REL606	2713087	2713112
+UN	4865	.	REL606	2713222	2713236
+UN	4866	.	REL606	2713358	2713381
+UN	4867	.	REL606	2772882	2774165
+UN	4868	.	REL606	2774463	2775846
+UN	4869	.	REL606	2810116	2810116
+UN	4870	.	REL606	2822211	2822924
+UN	4871	.	REL606	2842030	2842062
+UN	4872	.	REL606	2842126	2842169
+UN	4873	.	REL606	2842236	2842278
+UN	4874	.	REL606	2882734	2883939
+UN	4875	.	REL606	2957047	2957119
+UN	4876	.	REL606	2965091	2965102
+UN	4877	.	REL606	2996034	2996073
+UN	4878	.	REL606	3010093	3010156
+UN	4879	.	REL606	3010218	3010227
+UN	4880	.	REL606	3014751	3014755
+UN	4881	.	REL606	3020819	3020821
+UN	4882	.	REL606	3022659	3022663
+UN	4883	.	REL606	3022665	3022668
+UN	4884	.	REL606	3022700	3022700
+UN	4885	.	REL606	3022706	3022706
+UN	4886	.	REL606	3022710	3022710
+UN	4887	.	REL606	3023972	3025119
+UN	4888	.	REL606	3080185	3080209
+UN	4889	.	REL606	3080267	3080290
+UN	4890	.	REL606	3172658	3172663
+UN	4891	.	REL606	3219351	3219351
+UN	4892	.	REL606	3253471	3253499
+UN	4893	.	REL606	3320079	3320133
+UN	4894	.	REL606	3320179	3320226
+UN	4895	.	REL606	3351163	3351213
+UN	4896	.	REL606	3351345	3351391
+UN	4897	.	REL606	3351585	3351638
+UN	4898	.	REL606	3351699	3354264
+UN	4899	.	REL606	3354319	3356870
+UN	4900	.	REL606	3383351	3383351
+UN	4901	.	REL606	3383355	3383357
+UN	4902	.	REL606	3398098	3398098
+UN	4903	.	REL606	3398100	3398250
+UN	4904	.	REL606	3398314	3398718
+UN	4905	.	REL606	3398725	3398725
+UN	4906	.	REL606	3398781	3398921
+UN	4907	.	REL606	3398983	3398995
+UN	4908	.	REL606	3399058	3399072
+UN	4909	.	REL606	3425791	3425791
+UN	4910	.	REL606	3433493	3434203
+UN	4911	.	REL606	3549990	3551268
+UN	4912	.	REL606	3551430	3552236
+UN	4913	.	REL606	3552238	3552238
+UN	4914	.	REL606	3552314	3552352
+UN	4915	.	REL606	3552466	3552506
+UN	4916	.	REL606	3552566	3552673
+UN	4917	.	REL606	3552678	3552678
+UN	4918	.	REL606	3552735	3553222
+UN	4919	.	REL606	3553281	3553517
+UN	4920	.	REL606	3554582	3554601
+UN	4921	.	REL606	3554846	3554855
+UN	4922	.	REL606	3554984	3555017
+UN	4923	.	REL606	3555075	3555094
+UN	4924	.	REL606	3555148	3555173
+UN	4925	.	REL606	3555216	3555497
+UN	4926	.	REL606	3555499	3555501
+UN	4927	.	REL606	3555504	3555504
+UN	4928	.	REL606	3555506	3555507
+UN	4929	.	REL606	3555509	3555512
+UN	4930	.	REL606	3555514	3555519
+UN	4931	.	REL606	3555523	3555523
+UN	4932	.	REL606	3555525	3555631
+UN	4933	.	REL606	3555681	3555716
+UN	4934	.	REL606	3555770	3555806
+UN	4935	.	REL606	3555868	3555914
+UN	4936	.	REL606	3555997	3556071
+UN	4937	.	REL606	3556075	3556075
+UN	4938	.	REL606	3556127	3556141
+UN	4939	.	REL606	3558961	3558974
+UN	4940	.	REL606	3578811	3578811
+UN	4941	.	REL606	3579031	3579043
+UN	4942	.	REL606	3595773	3595863
+UN	4943	.	REL606	3595918	3596127
+UN	4944	.	REL606	3596188	3596341
+UN	4945	.	REL606	3596461	3596752
+UN	4946	.	REL606	3629437	3629453
+UN	4947	.	REL606	3629508	3629509
+UN	4948	.	REL606	3629517	3629535
+UN	4949	.	REL606	3629676	3629750
+UN	4950	.	REL606	3629752	3629752
+UN	4951	.	REL606	3629838	3629880
+UN	4952	.	REL606	3630030	3630045
+UN	4953	.	REL606	3630047	3630047
+UN	4954	.	REL606	3630159	3630181
+UN	4955	.	REL606	3630321	3630367
+UN	4956	.	REL606	3630370	3630371
+UN	4957	.	REL606	3630408	3630419
+UN	4958	.	REL606	3630479	3630528
+UN	4959	.	REL606	3630649	3630716
+UN	4960	.	REL606	3638846	3638894
+UN	4961	.	REL606	3639008	3639067
+UN	4962	.	REL606	3651123	3652505
+UN	4963	.	REL606	3686638	3686641
+UN	4964	.	REL606	3697096	3697096
+UN	4965	.	REL606	3697098	3697098
+UN	4966	.	REL606	3697100	3698264
+UN	4967	.	REL606	3698267	3698269
+UN	4968	.	REL606	3698359	3698359
+UN	4969	.	REL606	3698361	3698365
+UN	4970	.	REL606	3698424	3699237
+UN	4971	.	REL606	3699310	3699346
+UN	4972	.	REL606	3699465	3699516
+UN	4973	.	REL606	3699563	3699734
+UN	4974	.	REL606	3699802	3699802
+UN	4975	.	REL606	3699854	3699859
+UN	4976	.	REL606	3699861	3699863
+UN	4977	.	REL606	3699928	3700077
+UN	4978	.	REL606	3700105	3700106
+UN	4979	.	REL606	3700108	3700523
+UN	4980	.	REL606	3700529	3700532
+UN	4981	.	REL606	3700534	3700534
+UN	4982	.	REL606	3700536	3700542
+UN	4983	.	REL606	3700546	3700549
+UN	4984	.	REL606	3700551	3700563
+UN	4985	.	REL606	3701040	3701057
+UN	4986	.	REL606	3701302	3701314
+UN	4987	.	REL606	3701943	3701990
+UN	4988	.	REL606	3702047	3702132
+UN	4989	.	REL606	3702240	3702249
+UN	4990	.	REL606	3704346	3704347
+UN	4991	.	REL606	3714883	3714893
+UN	4992	.	REL606	3741225	3741939
+UN	4993	.	REL606	3775352	3796230
+UN	4994	.	REL606	3893586	3900156
+UN	4995	.	REL606	3903318	3903322
+UN	4996	.	REL606	3903324	3903434
+UN	4997	.	REL606	3903487	3908725
+UN	4998	.	REL606	3938994	3938994
+UN	4999	.	REL606	3944436	3944462
+UN	5000	.	REL606	3948060	3948067
+UN	5001	.	REL606	3949731	3949773
+UN	5002	.	REL606	3965059	3965059
+UN	5003	.	REL606	3965061	3965079
+UN	5004	.	REL606	3966765	3966782
+UN	5005	.	REL606	3966784	3966784
+UN	5006	.	REL606	4013566	4013607
+UN	5007	.	REL606	4013657	4013657
+UN	5008	.	REL606	4013659	4015570
+UN	5009	.	REL606	4015633	4017336
+UN	5010	.	REL606	4017393	4017582
+UN	5011	.	REL606	4017654	4017725
+UN	5012	.	REL606	4017790	4017990
+UN	5013	.	REL606	4018133	4019118
+UN	5014	.	REL606	4022397	4022397
+UN	5015	.	REL606	4022399	4022400
+UN	5016	.	REL606	4022407	4022407
+UN	5017	.	REL606	4063344	4063357
+UN	5018	.	REL606	4146189	4148076
+UN	5019	.	REL606	4148140	4148218
+UN	5020	.	REL606	4148281	4148316
+UN	5021	.	REL606	4148426	4148772
+UN	5022	.	REL606	4148774	4148774
+UN	5023	.	REL606	4148779	4148779
+UN	5024	.	REL606	4148781	4148782
+UN	5025	.	REL606	4148787	4148787
+UN	5026	.	REL606	4148790	4148792
+UN	5027	.	REL606	4148796	4148796
+UN	5028	.	REL606	4148800	4148800
+UN	5029	.	REL606	4148803	4150111
+UN	5030	.	REL606	4150171	4151551
+UN	5031	.	REL606	4155717	4155733
+UN	5032	.	REL606	4155794	4155802
+UN	5033	.	REL606	4155868	4156011
+UN	5034	.	REL606	4156063	4156476
+UN	5035	.	REL606	4156479	4156481
+UN	5036	.	REL606	4156537	4156697
+UN	5037	.	REL606	4187452	4192810
+UN	5038	.	REL606	4192934	4192975
+UN	5039	.	REL606	4192983	4192983
+UN	5040	.	REL606	4193052	4193062
+UN	5041	.	REL606	4197902	4197902
+UN	5042	.	REL606	4197905	4197905
+UN	5043	.	REL606	4197907	4197907
+UN	5044	.	REL606	4197909	4197941
+UN	5045	.	REL606	4198008	4198033
+UN	5046	.	REL606	4274796	4274966
+UN	5047	.	REL606	4275020	4275190
+UN	5048	.	REL606	4304684	4304729
+UN	5049	.	REL606	4304782	4304828
+UN	5050	.	REL606	4304888	4304935
+UN	5051	.	REL606	4304990	4305024
+UN	5052	.	REL606	4341291	4341336
+UN	5053	.	REL606	4352980	4352980
+UN	5054	.	REL606	4357514	4357518
+UN	5055	.	REL606	4357520	4357525
+UN	5056	.	REL606	4370546	4370573
+UN	5057	.	REL606	4370575	4370577
+UN	5058	.	REL606	4370644	4370689
+UN	5059	.	REL606	4370752	4370784
+UN	5060	.	REL606	4489490	4489850
+UN	5061	.	REL606	4494060	4494420
+UN	5062	.	REL606	4505369	4506083
+UN	5063	.	REL606	4521603	4522312
+UN	5064	.	REL606	4550705	4551414
+UN	5065	.	REL606	4580195	4580196
+UN	5066	.	REL606	4595342	4595370
+UN	5067	.	REL606	4595578	4595606
+UN	5068	.	REL606	4603515	4603515
+UN	5069	.	REL606	4603517	4603517
+UN	5070	.	REL606	4603519	4603524
+UN	5071	.	REL606	4603595	4603596
+UN	5072	.	REL606	4603600	4603600
+UN	5073	.	REL606	4603605	4603606
+UN	5074	.	REL606	4603608	4603608
+UN	5075	.	REL606	4603612	4603627

@@ -912,6 +912,8 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   junction_allow_suboptimal_matches = t.junction_allow_suboptimal_matches;
   junction_minimum_side_match = t.junction_minimum_side_match;
   junction_pos_hash_neg_log10_p_value_cutoff = t.junction_pos_hash_neg_log10_p_value_cutoff;
+  junction_side_quality_cutoff = t.junction_side_quality_cutoff;
+  junction_low_quality_side_p_value_cutoff = t.junction_low_quality_side_p_value_cutoff;
   
   //! Settings: Mutation Identification
   user_evidence_genome_diff_file_name = t.user_evidence_genome_diff_file_name;
@@ -1255,6 +1257,8 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"junction_allow_suboptimal_matches", s.junction_allow_suboptimal_matches},
       {"junction_minimum_side_match", s.junction_minimum_side_match},
       {"junction_pos_hash_neg_log10_p_value_cutoff", s.junction_pos_hash_neg_log10_p_value_cutoff},
+      {"junction_side_quality_cutoff", s.junction_side_quality_cutoff},
+      {"junction_low_quality_side_p_value_cutoff", s.junction_low_quality_side_p_value_cutoff},
       }
     },
     

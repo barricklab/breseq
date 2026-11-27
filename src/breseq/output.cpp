@@ -1754,6 +1754,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Number of bases that at least one read must overlap each uniquely aligned side of a predicted junction")
                + td(ALIGN_CENTER, "&ge;&nbsp;" + to_string<uint32_t>(settings.junction_minimum_side_match))
                );
+    HTML << tr(td("Probability of the number of reads supporting a predicted junction that have a low-quality side (mean base quality on one side of the breakpoint below "
+                  + to_string<uint32_t>(settings.junction_side_quality_cutoff) + " and at least 10 below the other side), given how often reads of the same library do when cut at the same positions, must be")
+               + td(ALIGN_CENTER, (settings.junction_low_quality_side_p_value_cutoff == 0) ? "NO&nbsp;LIMIT" : "&ge;&nbsp;" + to_string<double>(settings.junction_low_quality_side_p_value_cutoff))
+               );
     HTML << end_table() << endl;
 
   }
@@ -6152,6 +6156,8 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                  (END, to_string(end))
                  (PREFIX, "JC")
                  (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
+                 // 0 = the low-quality-side test is off, so its reads are not marked
+                 ("junction_side_quality_cutoff", to_string((settings.junction_low_quality_side_p_value_cutoff > 0) ? settings.junction_side_quality_cutoff : 0))
                  );
     // set as the flagship file that we show first when clicking on evidence from a mutation...
     (*item)[_EVIDENCE_FILE_NAME] = (*item)[_NEW_JUNCTION_EVIDENCE_FILE_NAME];

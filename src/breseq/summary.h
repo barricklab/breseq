@@ -1010,6 +1010,8 @@ namespace breseq{
     bool junction_allow_suboptimal_matches;
     int32_t junction_minimum_side_match;
     double junction_pos_hash_neg_log10_p_value_cutoff;
+    uint32_t junction_side_quality_cutoff;
+    double junction_low_quality_side_p_value_cutoff;
     
     //! Settings: Mutation Identification
     string user_evidence_genome_diff_file_name;
