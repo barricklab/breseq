@@ -1566,6 +1566,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		position_coverage this_position_coverage;
 		bool this_position_unique_only_coverage=true;
 
+    //## does every read base that counts toward a call here match the reference? (see the
+    //## reference-only fast path after the read loop)
+    bool all_counted_bases_match_reference = true;
+
     //## the same, split by read group, for the coverage table CNery reads. Kept separate from the
     //## aggregate above rather than summed out of it, so the numbers every other consumer sees are
     //## unchanged. Empty (and never touched) unless there is more than one read group.
@@ -1922,6 +1926,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           read_id = rid->second;
         }
         pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(), i->mapping_quality(), cv, read_id));
+        if (pdata.back()._base_char != ref_base_char) all_counted_bases_match_reference = false;
 
         //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
@@ -2056,12 +2061,39 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
 		bool passed_as_polymorphism_prediction(false);
 
-    cDiffEntry mut(RA);
-
     //## evaluate whether to call an actual mutation!
     // -- note that we accept > 0 and only reject later
     // so that these can potentially make it into the marginal data
     bool passed_as_consensus_prediction = (best_base_char != ref_base_char) && (!std::isnan(consensus_bonferroni_score) && (consensus_bonferroni_score > 0));
+
+    //## REFERENCE-ONLY FAST PATH
+    //##
+    //## Nearly every column of a resequenced genome looks like this: every read base that counts
+    //## matches the reference. Nothing below can come of such a column. The five-allele fit puts
+    //## the reference at 1 and every other allele under the half-read level that
+    //## allele_model::next_index() requires, so there is no variant allele to score; and were one
+    //## scored anyway, its presence score is (a likelihood ratio of ~0) minus log10 of the
+    //## reference length, which is negative and cannot reach a positive cutoff. So the fit -- an EM
+    //## of up to 50 passes over the reads -- the RA entry and the tests behind them are skipped,
+    //## and only what every column owes the rest of the pileup is done: the UN interval update.
+    //## (Coverage, deletion tracking and the DP/MP/PD windows were all handled above.)
+    //##
+    //## Not taken when the genotype call itself disagrees with the reference (it cannot with
+    //## all-reference reads and a sane error table, but that is the consensus test and it is
+    //## already computed), at an insert column, at a user-evidence position (which reports the
+    //## fit whatever it says), or under a non-positive polymorphism score cutoff.
+    {
+      const bool user_evidence_here = _user_evidence_ra_list.size()
+        && (((*(_user_evidence_ra_list.front()))[SEQ_ID]) == p.target_name())
+        && (from_string<uint32_t>((*(_user_evidence_ra_list.front()))[POSITION]) == position);
+      if ( (insert_count == 0) && all_counted_bases_match_reference && !passed_as_consensus_prediction
+          && !user_evidence_here && (_polymorphism_score_cutoff > 0) ) {
+        update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
+        continue;
+      }
+    }
+
+    cDiffEntry mut(RA);
 
     //## Fit all five alleles at once, so every frequency below is a fraction of TOTAL depth and
     //## the reference allele is in the model whether or not it is well supported. The two-base
