@@ -2077,6 +2077,7 @@ namespace breseq
     
     //! Multithreading
     Settings::pool.resize(this->num_processors);
+    set_bam_io_threads(this->num_processors);
 
     //! Display name for the HTML output. Last, so that it can use the paths
     //! and read file sets resolved above.

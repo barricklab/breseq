@@ -57,6 +57,19 @@ using namespace std;
 /*! bam2aln
  Draw HTML alignment from BAM
  */
+
+// Options for the 'samtools view' that turns bowtie2's SAM stream into a BAM file. The file is an
+// intermediate that breseq reads back once, so it is written at the fastest compression level, and
+// with -j above 1 the compression gets threads of its own instead of holding up the pipe bowtie2
+// writes into. The records are the same either way.
+static string samtools_view_pipe_options(const Settings& settings)
+{
+  string options = "-bS -1";
+  if (settings.num_processors > 1)
+    options += " -@ " + to_string(min<int32_t>(settings.num_processors, 4));
+  return options;
+}
+
 int do_bam2aln(int argc, char* argv[]) {
   
   // setup and parse configuration options:
@@ -2110,9 +2123,9 @@ int breseq_default_action(int argc, char* argv[])
           string bowtie2_base = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file);
           string command;
           if (do_2_stage_alignment) {
-            command = bowtie2_base + " --un " + double_quote(stage1_unmapped_reads_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
+            command = bowtie2_base + " --un " + double_quote(stage1_unmapped_reads_fastq_file_name) + " -S - | samtools view " + samtools_view_pipe_options(settings) + " -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
           } else {
-            command = bowtie2_base + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(reference_sam_file_name);
+            command = bowtie2_base + " -S - | samtools view " + samtools_view_pipe_options(settings) + " -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(reference_sam_file_name);
           }
           SYSTEM(command, false, false, false);
 
@@ -2137,7 +2150,7 @@ int breseq_default_action(int argc, char* argv[])
             bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
             bowtie2_seed_substring_size_relaxed = min<uint32_t>(32, bowtie2_seed_substring_size_relaxed);
 
-            string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage2_reference_sam_file_name);
+            string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view " + samtools_view_pipe_options(settings) + " -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage2_reference_sam_file_name);
             SYSTEM(command, false, false, false);
 
             settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage2_reference_sam_file_name);
@@ -2322,7 +2335,7 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_junction = min<uint32_t>(32, bowtie2_seed_substring_size_junction);
           
           string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
-          + settings.bowtie2_junction + " --reorder -x " + double_quote(candidate_junction_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.candidate_junction_faidx_file_name) + " -o " + double_quote(candidate_junction_sam_file_name);
+          + settings.bowtie2_junction + " --reorder -x " + double_quote(candidate_junction_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view " + samtools_view_pipe_options(settings) + " -t " + double_quote(settings.candidate_junction_faidx_file_name) + " -o " + double_quote(candidate_junction_sam_file_name);
 
           SYSTEM(command, false, false, false);
           

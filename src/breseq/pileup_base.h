@@ -59,6 +59,11 @@ class pileup_base {
     //! Constructor.
     pileup_base(const string& bam, const string& fasta);
 
+    //! Decompress this BAM on the shared htslib threads (see set_bam_io_threads, alignment.h).
+    //! For the pileups that walk a whole genome; not the default, because most pileup objects
+    //! are made to fetch a few reads at one place.
+    void use_io_threads() { use_bam_io_threads(m_bam); }
+
     //! Destructor.
     virtual ~pileup_base();
 

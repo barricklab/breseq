@@ -295,8 +295,9 @@ namespace breseq {
     bam_file in1(input_sam_file_name_1, reference_fasta_file_name, ios_base::in);
     bam_file in2(input_sam_file_name_2, reference_fasta_file_name, ios_base::in);
 
-    samFile* out = hts_open(output_sam_file_name.c_str(), "wb");
+    samFile* out = hts_open(output_sam_file_name.c_str(), kIntermediateBAMWriteMode);
     ASSERT(out, "Could not open output BAM file: " + output_sam_file_name);
+    use_bam_io_threads(out);
     ASSERT(sam_hdr_write(out, in1.bam_header) == 0, "Failed to write BAM header to: " + output_sam_file_name);
 
     alignment_list group1, group2;
@@ -670,12 +671,14 @@ namespace breseq {
     MergedReadStream r1_stream(input_sam_file_name_1_r1, input_sam_file_name_2_r1, settings.reference_fasta_file_name);
     MergedReadStream r2_stream(input_sam_file_name_1_r2, input_sam_file_name_2_r2, settings.reference_fasta_file_name);
 
-    samFile* out1 = hts_open(output_sam_file_name_r1.c_str(), "wb");
+    samFile* out1 = hts_open(output_sam_file_name_r1.c_str(), kIntermediateBAMWriteMode);
     ASSERT(out1, "Could not open output BAM file: " + output_sam_file_name_r1);
+    use_bam_io_threads(out1);
     ASSERT(sam_hdr_write(out1, r1_stream.header()) == 0, "Failed to write BAM header to: " + output_sam_file_name_r1);
 
-    samFile* out2 = hts_open(output_sam_file_name_r2.c_str(), "wb");
+    samFile* out2 = hts_open(output_sam_file_name_r2.c_str(), kIntermediateBAMWriteMode);
     ASSERT(out2, "Could not open output BAM file: " + output_sam_file_name_r2);
+    use_bam_io_threads(out2);
     ASSERT(sam_hdr_write(out2, r2_stream.header()) == 0, "Failed to write BAM header to: " + output_sam_file_name_r2);
 
     ofstream pair_pos_csv_r1, pair_pos_csv_r2;

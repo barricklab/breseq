@@ -20,6 +20,8 @@
 
 #include "alignment.h"
 
+#include <htslib/thread_pool.h>
+
 #include "fastq.h"
 #include "reference_sequence.h"
 
@@ -817,6 +819,26 @@ void sam_file_detect_read_type(const string& file_name, string& read_type, strin
   detector.detect(33, read_type, read_type_source);
 }
 
+const char* const kIntermediateBAMWriteMode = "wb1";
+
+// Capped: BGZF blocks are small, and past a few threads the caller, not the codec, is the limit.
+static const int32_t kMaximumBAMIOThreads = 4;
+// Process lifetime on purpose. Files attached to it are closed at many different points, and
+// htslib requires the pool to outlive every one of them.
+static htsThreadPool s_bam_io_thread_pool = {NULL, 0};
+
+void set_bam_io_threads(int32_t num_processors)
+{
+  if (s_bam_io_thread_pool.pool || (num_processors <= 1)) return;
+  s_bam_io_thread_pool.pool = hts_tpool_init(min(num_processors, kMaximumBAMIOThreads));
+}
+
+void use_bam_io_threads(htsFile* file)
+{
+  if (!file || !s_bam_io_thread_pool.pool) return;
+  hts_set_opt(file, HTS_OPT_THREAD_POOL, &s_bam_io_thread_pool);
+}
+
 bam_file::~bam_file()
 {
   if (m_bam_file) { hts_close(m_bam_file); m_bam_file=NULL; }
@@ -834,6 +856,7 @@ void bam_file::open_read(const string& bam_file_name, const string& fasta_file_n
 
   m_bam_file = hts_open(bam_file_name.c_str(), "rb");
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
+  use_bam_io_threads(m_bam_file);
 
   bam_header = sam_hdr_read(m_bam_file);
   m_read_groups.build(bam_header);
@@ -842,8 +865,9 @@ void bam_file::open_read(const string& bam_file_name, const string& fasta_file_n
 void bam_file::open_write(const string& bam_file_name, const string& fasta_file_name,
                           const cReadGroupList& read_groups, const string& pg_line)
 {
-  m_bam_file = hts_open(bam_file_name.c_str(), "wb");
+  m_bam_file = hts_open(bam_file_name.c_str(), kIntermediateBAMWriteMode);
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
+  use_bam_io_threads(m_bam_file);
   bam_header = make_bam_header_from_faidx(fasta_file_name, read_groups, pg_line);
   (void) sam_hdr_write(m_bam_file, bam_header);
   // Built from the parsed header rather than from read_groups, so a written RG:Z: value is always

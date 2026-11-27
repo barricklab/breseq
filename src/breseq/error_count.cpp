@@ -92,6 +92,7 @@ error_count_pileup::error_count_pileup(
 , m_min_qual_score(min_qual_score)
 , m_error_table(covariates)
 {
+  use_io_threads();
 	// reserve enough space for the sequence info:
   vector< vector<string> > seq_ids_by_coverage_group = m_settings.seq_ids_by_coverage_group();
 	m_coverage_group_info.resize(seq_ids_by_coverage_group.size());

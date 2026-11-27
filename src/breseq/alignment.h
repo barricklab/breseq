@@ -881,6 +881,21 @@ bool sam_file_constant_base_quality(const string& file_name, uint8_t& quality);
 //  as tags, and only if the aligner was told to copy it.
 void sam_file_detect_read_type(const string& file_name, string& read_type, string& read_type_source);
 
+// BAM input/output threads
+//
+// breseq used to compress every BAM it wrote, and decompress every one it read, on the thread
+// doing the work, at the default compression level. Everything it writes itself is an intermediate
+// that is read back once and then sorted or deleted, so those files are now written at the fastest
+// level ("wb1"), and (de)compression of the large sequentially processed files is handed to a small
+// pool of htslib threads shared by all open files. Neither changes a byte of what is read back.
+//
+// set_bam_io_threads() is called once, from Settings, with the -j value; one thread means no pool
+// and exactly the old single-threaded behaviour. use_bam_io_threads() attaches the pool to a file
+// (a no-op without one).
+extern const char* const kIntermediateBAMWriteMode;
+void set_bam_io_threads(int32_t num_processors);
+void use_bam_io_threads(htsFile* file);
+
 class bam_file {
   
 public:

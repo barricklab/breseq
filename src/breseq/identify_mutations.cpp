@@ -820,6 +820,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _fetch_cover_start_1(0)
 , _fetch_cover_end_1(0)
 {
+  use_io_threads();
 
   // remove once used
   (void)settings;
