@@ -145,11 +145,91 @@ namespace breseq {
 		diff_entry_list_t jc = gd.get_list(jc_types);
     
     const int32_t max_distance_to_repeat = 50;
-    
+
+    // A junction across the origin of a circular sequence whose origin lies INSIDE a repeat.
+    //
+    // The side that enters the repeat matches every copy equally well, so it is flagged redundant
+    // and reported at whichever copy the aligner happened to return -- e.g. 3991634 (-1), the last
+    // base of a circular chromosome, joined to 2769575 (+1), the second base of an rRNA operon copy
+    // identical to the one that starts at position 1. Left there it is neither recognised as the
+    // origin (CIRCULAR_CHROMOSOME) nor as a small mutation sitting on it, and is reported as an
+    // unexplained junction to the far copy. When one of a redundant side's equally good placements
+    // is the other end of the same circular sequence as the unique side, that placement is the
+    // one that needs no rearrangement at all, so it is the one to take.
+    //
+    // The unique side must sit at an end of a circular sequence (within the size up to which a
+    // junction on the origin is read as a small mutation there), and the reference must be
+    // identical over the junction's flanking length at the two placements. The first match
+    // scanning inward from the end is taken, which prefers the flush placement.
+    for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
+    {
+      cDiffEntry& j = **jc_it;
+      if (!j.entry_exists("side_1_redundant") || !j.entry_exists("side_2_redundant")) continue;
+      const bool redundant_1 = (n(j["side_1_redundant"]) == 1);
+      const bool redundant_2 = (n(j["side_2_redundant"]) == 1);
+      if (redundant_1 == redundant_2) continue;
+
+      const string r_key = redundant_1 ? "side_1" : "side_2";
+      const string u_key = redundant_1 ? "side_2" : "side_1";
+      const string u_seq_id = j[u_key + "_seq_id"];
+      const string r_seq_id = j[r_key + "_seq_id"];
+      if (!ref_seq_info.seq_id_exists(u_seq_id) || !ref_seq_info.seq_id_exists(r_seq_id)) continue;
+      cAnnotatedSequence& u_seq = ref_seq_info[u_seq_id];
+      cAnnotatedSequence& r_seq = ref_seq_info[r_seq_id];
+      if (!u_seq.is_circular()) continue;
+
+      const int32_t u_length = static_cast<int32_t>(u_seq.get_sequence_length());
+      const int32_t r_length = static_cast<int32_t>(r_seq.get_sequence_length());
+      const int32_t u_position = n(j[u_key + "_position"]);
+      const int32_t u_strand = n(j[u_key + "_strand"]);
+      const int32_t r_position = n(j[r_key + "_position"]);
+      const int32_t r_strand = n(j[r_key + "_strand"]);
+      if (r_strand != -u_strand) continue;
+
+      const int32_t window = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
+      const bool u_at_end = (u_strand == -1) && (u_position > u_length - window);
+      const bool u_at_start = (u_strand == +1) && (u_position <= window);
+      if (!u_at_end && !u_at_start) continue;
+
+      // How much sequence must agree: what the junction's reads were matched against.
+      int32_t match_length = 100;
+      if (j.entry_exists("flanking_left") && j.entry_exists("flanking_right"))
+        match_length = min(n(j["flanking_left"]), n(j["flanking_right"]));
+      match_length = max(20, min(match_length, 2000));
+      if (match_length > u_length - window) continue;
+
+      // The stretch of reference the redundant side's reads cover, at its current placement.
+      const int32_t r_start = (r_strand == +1) ? r_position : r_position - match_length + 1;
+      const int32_t r_end = (r_strand == +1) ? r_position + match_length - 1 : r_position;
+      if ((r_start < 1) || (r_end > r_length)) continue;
+      const string r_stretch = r_seq.get_sequence_1(r_start, r_end);
+
+      int32_t origin_position = 0;
+      for (int32_t offset = 0; (offset < window) && (origin_position == 0); offset++) {
+        // The redundant side enters at the OTHER end from the one the unique side leaves by.
+        const int32_t candidate = u_at_end ? (1 + offset) : (u_length - offset);
+        const int32_t c_start = (r_strand == +1) ? candidate : candidate - match_length + 1;
+        const int32_t c_end = (r_strand == +1) ? candidate + match_length - 1 : candidate;
+        if ((c_start < 1) || (c_end > u_length)) break;
+        if (u_seq.get_sequence_1(c_start, c_end) == r_stretch) origin_position = candidate;
+      }
+      if (origin_position == 0) continue;
+      if ((r_seq_id == u_seq_id) && (origin_position == r_position)) continue;   // already there
+
+      // side_1 is the lower coordinate on one sequence; only re-place where that order survives.
+      const bool order_kept = redundant_1 ? (origin_position <= u_position) : (origin_position >= u_position);
+      if (!order_kept) continue;
+
+      j[r_key + "_placed_at_origin_from"] = r_seq_id + ":" + s(r_position);
+      j[r_key + "_seq_id"] = u_seq_id;
+      j[r_key + "_position"] = s(origin_position);
+      j["_origin_placement"] = "1";
+    }
+
 		for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
 		{
 			cDiffEntry& j = **jc_it;
-      
+
 			j["_side_1_read_side"] = "-1";
 			j["_side_2_read_side"] = "1";
       
@@ -1814,7 +1894,9 @@ namespace breseq {
       
       // to be safe about making predictions, neither can be ambiguous, unless we're in the pass
       // when we check for ignoring indels
-      if (!use_redundant_sides) {
+      // (A junction whose redundant side prepare_junctions() placed at the origin is not ambiguous
+      // in the way that matters here: of its equal placements, that one was chosen for a reason.)
+      if (!use_redundant_sides && !j.entry_exists("_origin_placement")) {
         if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
           continue;
       }

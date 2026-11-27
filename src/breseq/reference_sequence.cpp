@@ -1737,7 +1737,20 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool no_sequence) {
   
   //! Step 2: Features
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-    
+
+    // A sequence read from FASTA has no 'region' feature, and that feature is the only place GFF3
+    // records topology. A circular one (it can only have become circular after it was read, by a
+    // #=TOPOLOGY line) needs the landmark region written for it, or the file reads back linear.
+    if (it_as->m_is_circular && it_as->m_length) {
+      bool has_region = false;
+      for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
+        if ((**it)["type"] == "region") { has_region = true; break; }
+      }
+      if (!has_region) {
+        out << it_as->m_seq_id << "\t.\tregion\t1\t" << it_as->m_length << "\t.\t+\t.\tIs_circular=true" << endl;
+      }
+    }
+
     for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
       cSequenceFeature& feat = **it;
 
