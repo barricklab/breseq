@@ -44,6 +44,22 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 # or altered line. The single-sequence DP tests (tmv_plasmid_circular_deletion, lambda_pair_distances
 # and the long LTEE ones) are the "no same-sequence behavior changed" control and must not move.
 #
+# expected.gd also holds one JC, NC_001416-3 9700 / NC_001416-4 1, ignore=CONTIG_END: the split
+# reads across that boundary. A junction with a side at position 1 or L of a sequence used to be
+# dropped before any read was re-aligned to it (see tests/lambda_pair_distances).
+#   - Only one of the four boundaries gets a JC, which this test does not assert either way.
+#     Candidate junctions are seeded from the few reads whose two pieces were both reported by the
+#     paired alignment (one or two per boundary here), and only that boundary reaches
+#     --minimum-candidate-junction-pos-hash-score.
+#   - That boundary's DP has 124 pairs rather than 148, because the reads now assigned to the
+#     junction leave the DP's pool, and its pair-based edge lands at 9696. It must still be REPORTED
+#     at 9700: the DP is snapped onto the passing JC for the same breakpoint. That is asserted here
+#     (expected.gd), and it is the only test of the snap across two sequences. It also pins a
+#     second thing: every discordant pair in this run joins two sequences, so the count of
+#     background discordant pairs the insert model is built from is zero, and that used to switch
+#     the model -- and with it every snap -- off for the whole run (dp_load_insert_model).
+#     background_e_value on each DP line is the sign the model was available.
+#
 # The read files are generated here rather than committed. SIMULATE-READS is exactly reproducible
 # given --seed -- integer-only arithmetic, no libc rand(), no libm -- so the same bytes are produced
 # on Linux and macOS. expected.gd asserts that directly: DIFF_IGNORE does not strip the

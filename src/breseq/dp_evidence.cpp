@@ -826,7 +826,14 @@ namespace breseq {
     m.u = (dcut > 0.0) ? 1.0 / (2.0 * dcut) : 0.0;
     double w = median + 2.42 * mad;
     double G = static_cast<double>(ref_seq_info.get_total_length());
-    double Nd = mapped - concord;
+    // At least one. mapped/concord count only pairs with both mates on ONE reference sequence, so a
+    // library whose only discordant pairs join two sequences (a draft assembly's contig ends, a
+    // plasmid integration) or a clean simulated one has mapped == concord, and Nd = 0 made p_out
+    // exactly 0. The return below then reported "no insert model", which silently switched off the
+    // outlier-robust placement and every snap (onto a junction, the origin, a repeat end) for the
+    // whole run -- so a DP sitting 4 bp from a passing JC on the same breakpoint was left there.
+    // The pairs being placed are themselves discordant, so zero was never the right count.
+    double Nd = max(1.0, mapped - concord);
     double per = (G > 0.0) ? (w / G) * (w / G) : 0.0;
     m.p_out = (Nd > 0.0) ? (1.0 - pow(1.0 - per, Nd)) : 0.0;
     return m.ok() && m.u > 0.0 && m.p_out > 0.0;

@@ -8,10 +8,11 @@ CURRENT_OUTPUTS[0]="${SELF}/data/annotated.gd"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
 
-# POSITIVE control for pair distance (PD) AND missing pair (MP) evidence, in one run. They were two
-# tests (this one and lambda_missing_pairs) with two simulated libraries; the events are 12 kb apart
-# and each evidence type looks at a different set of pairs, so one library serves both. check.sh
-# states what the golden must mean for each.
+# POSITIVE control for pair distance (PD) AND missing pair (MP) evidence, and for the junction
+# joining the two ends of a linear reference, in one run. PD and MP were two tests (this one and
+# lambda_missing_pairs) with two simulated libraries; the events are 12 kb apart and each evidence
+# type looks at a different set of pairs, so one library serves all of it. check.sh states what the
+# golden must mean for each.
 #
 # PD: a 200 bp deletion and a 200 bp insertion are applied to lambda, paired reads are simulated
 # from the MUTATED genome, and breseq is then run against the UNMUTATED lambda. Read pairs whose
@@ -29,6 +30,17 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
 # either side of it; check.sh asserts nothing about them. That event is PD's to call.
 # tests/tmv_plasmid_circular_deletion is the negative control on real data, where the unmappable
 # mates are just a flat background.
+#
+# JOINED ENDS of a linear reference: the reads are simulated from a CIRCULAR copy of the mutated
+# genome (APPLY writes GenBank, sed flips the LOCUS topology, and SIMULATE-READS then wraps reads
+# and pairs across the origin), while breseq is run against lambda.gbk, which says linear. This is a
+# phage or plasmid deposited as linear that is really circular or circularly permuted. Expected: a
+# JC joining position 1 to position 48502 AND a DP on the same breakpoint, both visible, neither
+# ignored as CIRCULAR_CHROMOSOME (that is for sequences declared circular), and no mutation made
+# from them. The JC used to be missing entirely: a candidate junction side at position 1 or L always
+# has zero confident overlap registers, and the pre-filter in candidate_junctions.cpp rejected it
+# for that before any read was re-aligned to it, exempting only circular sequences. Simulating from
+# a circle also removes the coverage ramp at the two ends, so the end MCs are gone.
 #
 # The library parameters are not arbitrary. A pair can only place a 200 bp event in its gap if the
 # fragment is longer than 2*read_length + 200 = 400, so --mean 600 leaves the great majority of pairs
@@ -49,15 +61,17 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
 # the simulator or its defaults requires rebuilding this expected.gd.
 TESTCMD=" \
     ${GDTOOLS} APPLY \
-        -f FASTA \
+        -f GENBANK \
         -s NC_001416 \
         -r ${DATADIR}/lambda/lambda.gbk \
         -r ${DATADIR}/tmv_plasmid/tmv-plasmid-truncate-start.gbk \
-        -o ${SELF}/output.mutated.fna \
+        -o ${SELF}/output.mutated.linear.gbk \
         ${SELF}/input.gd \
+    && sed '1s/ linear / circular /' ${SELF}/output.mutated.linear.gbk > ${SELF}/output.mutated.gbk \
+    && grep -q '^LOCUS.* circular ' ${SELF}/output.mutated.gbk \
     && ${BRESEQ} SIMULATE-READS \
         -m paired-end \
-        -r ${SELF}/output.mutated.fna \
+        -r ${SELF}/output.mutated.gbk \
         -o ${SELF}/output.simulated.fastq \
         -l 100 \
         -c 60 \

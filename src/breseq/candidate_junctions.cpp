@@ -1638,6 +1638,20 @@ namespace breseq {
               || (static_cast<uint32_t>(side.position) > seq_length - read_length_avg));
         if (near_circular_boundary) continue;
 
+        // On any topology, a side that lies inside the terminal trim of its sequence can never be
+        // confidently covered: a hypothetical read cannot hang off the end, and every read gives up
+        // at least one base to trimming at each end. So position 1 and position L always count
+        // zero here, which says nothing about the junction -- and rejecting on it silently threw
+        // away the junction that joins the two ends of a sequence marked linear (a phage or
+        // plasmid deposited as linear that is really circular or circularly permuted), leaving
+        // only a discordant-pair item to say so. Downstream, assign_one_junction_read_counts()
+        // already treats a zero-register side as carrying no information.
+        const SequenceTrims& side_trims = reference_trims_by_seq_id[side.seq_id];
+        bool inside_terminal_trim = (seq_length > 0)
+          && ((static_cast<uint32_t>(side.position) <= side_trims.left_trim_0(0))
+              || (static_cast<uint32_t>(side.position) > seq_length - side_trims.right_trim_0(seq_length - 1)));
+        if (inside_terminal_trim) continue;
+
         if (count_confident_overlap_registers(reference_trims_by_seq_id[side.seq_id], seq_length, side.position, side.position, read_length_avg) == 0) {
           reject_zero_registers = true;
         }

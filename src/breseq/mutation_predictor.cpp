@@ -1835,7 +1835,11 @@ namespace breseq {
 			// Special case of circular chromosome
 			const cAnnotatedSequence& this_ref_seq = ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])];
 			const int32_t seq_length = static_cast<int32_t>(this_ref_seq.m_length);
-			if ( (side_1_position == 1) && (side_2_position == seq_length) && !j.entry_exists("unique_read_sequence") )
+			// Only where the sequence is declared circular. On a sequence marked linear, a junction
+			// joining its two ends is not an artifact of the coordinate system: it is evidence that
+			// the molecule is circular (or circularly permuted) after all, and it stays visible as
+			// unassigned junction evidence, like the discordant-pair item for the same breakpoint.
+			if ( this_ref_seq.is_circular() && (side_1_position == 1) && (side_2_position == seq_length) && !j.entry_exists("unique_read_sequence") )
 			{
 				j[IGNORE] = "CIRCULAR_CHROMOSOME";
 				continue;
