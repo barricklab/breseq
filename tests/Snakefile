@@ -186,5 +186,11 @@ rule run_test:
     log:
         "tests/{test}/test.log"
     threads: lambda wildcards: TEST_CORES.get(wildcards.test, 1)
+    # Long tests first. 'make test-long' runs the short tests too, and without this the scheduler
+    # fills the core budget with whatever it finds, so the seven long tests -- each many times the
+    # length of the whole short suite -- trickled in one by one as short tests finished, and the
+    # last of them started minutes late. With it they all start at once (the budget is sized for
+    # that: see TEST_LONG_OVERSUBSCRIBE in Makefile.am) and the short tests fill what is left.
+    priority: lambda wildcards: 10 if "long" in wildcards.test else 0
     shell:
         "tests/run_logged_test.sh tests/{wildcards.test} {log} tests/{wildcards.test}/test.result"
