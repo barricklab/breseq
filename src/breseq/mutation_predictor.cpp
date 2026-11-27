@@ -220,10 +220,13 @@ namespace breseq {
       const bool order_kept = redundant_1 ? (origin_position <= u_position) : (origin_position >= u_position);
       if (!order_kept) continue;
 
+      // side_N_placed_at_origin_from is also how the rest of the predictor knows this was done. It
+      // has to be a field that is written to the GD file, not a '_' one: in the pipeline this
+      // function runs once on the junction evidence before it is saved and again on what is read
+      // back, and the second time the side is already at the origin, so nothing here would mark it.
       j[r_key + "_placed_at_origin_from"] = r_seq_id + ":" + s(r_position);
       j[r_key + "_seq_id"] = u_seq_id;
       j[r_key + "_position"] = s(origin_position);
-      j["_origin_placement"] = "1";
     }
 
 		for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
@@ -1896,7 +1899,8 @@ namespace breseq {
       // when we check for ignoring indels
       // (A junction whose redundant side prepare_junctions() placed at the origin is not ambiguous
       // in the way that matters here: of its equal placements, that one was chosen for a reason.)
-      if (!use_redundant_sides && !j.entry_exists("_origin_placement")) {
+      const bool placed_at_origin = j.entry_exists("side_1_placed_at_origin_from") || j.entry_exists("side_2_placed_at_origin_from");
+      if (!use_redundant_sides && !placed_at_origin) {
         if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
           continue;
       }

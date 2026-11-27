@@ -47,6 +47,11 @@ done
 #                   four that run across the origin. Becomes 2000 / 2, which is a 1-bp deletion
 #                   sitting on the origin: DEL at position 1, size 1.
 #
+# The last MUTATIONS step predicts again FROM THE OUTPUT of the first, where both sides are already
+# at the origin. The breseq pipeline does exactly that -- junctions are prepared once before the
+# evidence is saved and again when mutations are predicted -- and the deletion was lost on the
+# second pass, because what marked the junction as re-placed was not saved with it.
+#
 # Both were left as unexplained junctions to the far copy (seen on a PacBio HiFi run of a
 # chromosome whose position 1 starts an rRNA operon). side_1_placed_at_origin_from records where
 # the side was reported.
@@ -64,6 +69,10 @@ TESTCMD="${TESTCMD} \
   && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.gd) -eq 1 \
   && test \$(cut -f1,4,5,6 ${SELF}/output.origin_repeat.gd | grep -c '^DEL.origin-shifted.1.1\$') -eq 1 \
   && test \$(grep -v '^#' ${SELF}/output.origin_repeat.gd | cut -f1 | grep -cE '^(SNP|SUB|DEL|INS|MOB|AMP|INV|CON|INT)\$') -eq 1 \
+  && ${GDTOOLS} MUTATIONS -o ${SELF}/output.origin_repeat.second_pass.gd \
+       -r ${SELF}/output.origin_repeat.gff3 ${SELF}/output.origin_repeat.gd \
+  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.second_pass.gd) -eq 1 \
+  && test \$(cut -f1,4,5,6 ${SELF}/output.origin_repeat.second_pass.gd | grep -c '^DEL.origin-shifted.1.1\$') -eq 1 \
   "
 
 do_test $1 ${SELF}
