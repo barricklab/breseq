@@ -87,6 +87,12 @@ namespace breseq {
 		MutationPredictor(cReferenceSequences& ref_seq_info);
 
 
+    bool junction_joins_origin(cDiffEntry& j, int32_t window);
+
+
+    void ignore_missing_coverage_at_repeat_origin(cGenomeDiff& gd);
+
+
     void prepare_junctions(Settings& settings, Summary& summary, cGenomeDiff& gd);
 
     // Functions that handle specific predictions

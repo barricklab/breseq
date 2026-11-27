@@ -30,7 +30,7 @@ done
 
 # A junction across the origin of a circular sequence whose origin lies INSIDE a repeat.
 #
-# circular_origin_repeat.fna has two 2000-bp sequences that each begin with a 300-bp repeat whose
+# circular_origin_repeat.fna has three 2000-bp sequences that each begin with a 300-bp repeat whose
 # second, identical copy is at 1001-1300. FASTA cannot say circular, so the first step makes them
 # circular with '#=TOPOLOGY' header lines (origin_repeat.topology.gd) and writes GFF3 -- which is
 # also the test that a sequence read from FASTA, with no 'region' feature of its own, gets one
@@ -46,6 +46,20 @@ done
 #   origin-shifted  JC 2000 (-1) / 1002 (+1), 1-bp overlap: the reads have one T fewer than the
 #                   four that run across the origin. Becomes 2000 / 2, which is a 1-bp deletion
 #                   sitting on the origin: DEL at position 1, size 1.
+#
+#   origin-inplace  JC 2000 (-1) / 1 (+1), no overlap, and the redundant side is ALREADY at the
+#                   origin because that is the copy the aligner returned. Nothing to re-place,
+#                   but it is still just the origin: ignore=CIRCULAR_CHROMOSOME.
+#
+# and two MC items, for the missing coverage such an origin produces. The piece of an
+# origin-crossing read on a junction's redundant side is not written to the reference alignment, so
+# position 1 has no coverage of any kind, which seeds an MC that then runs through the whole repeat
+# (unique coverage is zero across it):
+#
+#   origin-inplace  MC 1-300, all but 2 bases in its redundant range. An artifact of the origin:
+#                   ignore=CIRCULAR_CHROMOSOME.
+#   origin-flush    MC 1-340, 40 bases NOT in its redundant range. That is real missing coverage
+#                   next to the repeat and must be left alone.
 #
 # The last MUTATIONS step predicts again FROM THE OUTPUT of the first, where both sides are already
 # at the origin. The breseq pipeline does exactly that -- junctions are prepared once before the
@@ -66,12 +80,13 @@ TESTCMD="${TESTCMD} \
        -r ${DATADIR}/circular_origin_repeat/circular_origin_repeat.fna ${SELF}/origin_repeat.topology.gd \
   && ${GDTOOLS} MUTATIONS -o ${SELF}/output.origin_repeat.gd \
        -r ${SELF}/output.origin_repeat.gff3 ${SELF}/origin_repeat.evidence.gd \
-  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.gd) -eq 1 \
+  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.gd) -eq 3 \
   && test \$(cut -f1,4,5,6 ${SELF}/output.origin_repeat.gd | grep -c '^DEL.origin-shifted.1.1\$') -eq 1 \
   && test \$(grep -v '^#' ${SELF}/output.origin_repeat.gd | cut -f1 | grep -cE '^(SNP|SUB|DEL|INS|MOB|AMP|INV|CON|INT)\$') -eq 1 \
   && ${GDTOOLS} MUTATIONS -o ${SELF}/output.origin_repeat.second_pass.gd \
        -r ${SELF}/output.origin_repeat.gff3 ${SELF}/output.origin_repeat.gd \
-  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.second_pass.gd) -eq 1 \
+  && test \$(grep -c 'ignore=CIRCULAR_CHROMOSOME' ${SELF}/output.origin_repeat.second_pass.gd) -eq 3 \
+  && test \$(grep '^MC' ${SELF}/output.origin_repeat.gd | grep -c 'origin-flush.*ignore=') -eq 0 \
   && test \$(cut -f1,4,5,6 ${SELF}/output.origin_repeat.second_pass.gd | grep -c '^DEL.origin-shifted.1.1\$') -eq 1 \
   "
 

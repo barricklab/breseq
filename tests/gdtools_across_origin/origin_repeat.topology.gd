@@ -1,3 +1,4 @@
 #=GENOME_DIFF	1.0
 #=TOPOLOGY	origin-flush	CIRCULAR
 #=TOPOLOGY	origin-shifted	CIRCULAR
+#=TOPOLOGY	origin-inplace	CIRCULAR

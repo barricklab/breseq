@@ -130,6 +130,25 @@ namespace breseq {
 		);
 	}
 
+  // Does this junction join the two ends of one circular sequence -- the low coordinate entering
+  // rightward within `window` of position 1, the high coordinate leaving leftward within `window`
+  // of the last base? That is the origin itself when flush, or a small mutation sitting on it.
+  bool MutationPredictor::junction_joins_origin(cDiffEntry& j, int32_t window)
+  {
+    if (j["side_1_seq_id"] != j["side_2_seq_id"]) return false;
+    if (!ref_seq_info.seq_id_exists(j["side_1_seq_id"])) return false;
+    cAnnotatedSequence& seq = ref_seq_info[j["side_1_seq_id"]];
+    if (!seq.is_circular()) return false;
+    const int32_t seq_length = static_cast<int32_t>(seq.get_sequence_length());
+    const int32_t p1 = n(j["side_1_position"]), p2 = n(j["side_2_position"]);
+    const int32_t s1 = n(j["side_1_strand"]), s2 = n(j["side_2_strand"]);
+    const bool side_1_is_low = (p1 <= p2);
+    const int32_t low_position = side_1_is_low ? p1 : p2, high_position = side_1_is_low ? p2 : p1;
+    const int32_t low_strand = side_1_is_low ? s1 : s2, high_strand = side_1_is_low ? s2 : s1;
+    return (low_strand == +1) && (high_strand == -1)
+      && (low_position <= window) && (high_position > seq_length - window);
+  }
+
   /*
 	 Title   : prepare_junctions
 	 Function: Adds fields to junction items in preparation for mutation prediction
@@ -1897,10 +1916,14 @@ namespace breseq {
       
       // to be safe about making predictions, neither can be ambiguous, unless we're in the pass
       // when we check for ignoring indels
-      // (A junction whose redundant side prepare_junctions() placed at the origin is not ambiguous
-      // in the way that matters here: of its equal placements, that one was chosen for a reason.)
-      const bool placed_at_origin = j.entry_exists("side_1_placed_at_origin_from") || j.entry_exists("side_2_placed_at_origin_from");
-      if (!use_redundant_sides && !placed_at_origin) {
+      // (A junction that joins the two ends of a circular sequence is not ambiguous in the way that
+      // matters here even if a side is redundant, because the origin lies inside a repeat. Of that
+      // side's equal placements this is the one that needs no rearrangement: prepare_junctions()
+      // moves the side there when the aligner reported another copy, and when it reported this
+      // one there was nothing to move -- so this asks where the junction IS, not whether it was
+      // moved.)
+      const bool at_origin = junction_joins_origin(j, kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation);
+      if (!use_redundant_sides && !at_origin) {
         if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
           continue;
       }
@@ -2716,6 +2739,50 @@ namespace breseq {
   // A DP has no such artifact, and a DP whose two sides are on different reference sequences sits at
   // two contig ends BY CONSTRUCTION: that is what a chromosome-to-plasmid junction or a translocation
   // between two contigs looks like. Extending this rule to DP would silently ignore every one of them.
+  // Missing coverage that is only the origin of a circular sequence lying inside a repeat.
+  //
+  // A read that crosses the origin is split at the junction between the last base and the first.
+  // The piece on a junction's REDUNDANT side is not written to the reference alignment, since
+  // which copy it belongs to is not known. When the origin is inside a repeat that is the side at
+  // position 1 (or at the last base), so the first bases of the sequence get no coverage of any
+  // kind -- every read that covers them crosses the origin -- and that zero seeds an MC, which
+  // then runs through the whole repeat because unique coverage is zero all the way across it. The
+  // result is an MC several kb long of which only a base or two is actually uncovered.
+  //
+  // Such an MC is an artifact of the coordinate system, like the origin junction, when: it touches
+  // an end of a circular sequence; all but a few of its bases are in its redundant range; and the
+  // reads do join the two ends there, through a junction with a redundant side.
+  void MutationPredictor::ignore_missing_coverage_at_repeat_origin(cGenomeDiff& gd)
+  {
+    const int32_t window = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
+    const int32_t max_definite_size = 10;
+
+    // Sequences whose two ends the reads join, through a junction with a redundant side
+    set<string> origin_joined;
+    diff_entry_list_t jc = gd.get_list(make_vector<gd_entry_type>(JC));
+    for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) {
+      cDiffEntry& j = **it;
+      if (j.entry_exists(REJECT)) continue;
+      if (!j.entry_exists("side_1_redundant") || !j.entry_exists("side_2_redundant")) continue;
+      if ((n(j["side_1_redundant"]) != 1) && (n(j["side_2_redundant"]) != 1)) continue;
+      if (junction_joins_origin(j, window)) origin_joined.insert(j["side_1_seq_id"]);
+    }
+    if (origin_joined.empty()) return;
+
+    diff_entry_list_t mc = gd.get_list(make_vector<gd_entry_type>(MC));
+    for (diff_entry_list_t::iterator it = mc.begin(); it != mc.end(); it++) {
+      cDiffEntry& m = **it;
+      if (m.entry_exists(IGNORE)) continue;
+      if (!origin_joined.count(m[SEQ_ID])) continue;
+      const int32_t seq_length = static_cast<int32_t>(ref_seq_info[m[SEQ_ID]].get_sequence_length());
+      const int32_t start = n(m[START]), end = n(m[END]);
+      if ((start != 1) && (end != seq_length)) continue;
+      const int32_t definite_size = (end - start + 1) - n(m[START_RANGE]) - n(m[END_RANGE]);
+      if (definite_size > max_definite_size) continue;
+      m[IGNORE] = "CIRCULAR_CHROMOSOME";
+    }
+  }
+
   void MutationPredictor::ignore_evidence_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
     (void) summary;
@@ -4807,6 +4874,7 @@ namespace breseq {
     
     cerr << "  Preparing junctions..." << endl;
     prepare_junctions(settings, summary, gd);
+    ignore_missing_coverage_at_repeat_origin(gd);
 
     ///
     // Create master lists of evidence that will be culled as they are used
