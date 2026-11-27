@@ -3425,7 +3425,10 @@ namespace breseq {
         uint64_t key;
         if (!pack(seed, 0, key_length, key)) return;
         vector<uint64_t>::const_iterator lo = lower_bound(entries.begin(), entries.end(), key << 32);
-        vector<uint64_t>::const_iterator hi = lower_bound(entries.begin(), entries.end(), (key + 1) << 32);
+        // The range ends after the last entry carrying this key. Not lower_bound of (key + 1) << 32:
+        // a 16-base key fills all 32 bits, so for sixteen T's that wraps to 0, hi lands on
+        // begin(), and the loop below walks off the end of the index.
+        vector<uint64_t>::const_iterator hi = upper_bound(lo, entries.end(), (key << 32) | 0xFFFFFFFFull);
         for (; lo != hi; lo++) positions.push_back(static_cast<uint32_t>(*lo & 0xFFFFFFFFull));
       }
 
