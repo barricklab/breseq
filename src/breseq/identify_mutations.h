@@ -76,18 +76,28 @@ namespace breseq {
 	 */
   
   
-  struct position_base_info : map<base_char, vector<uint32_t> > {
-    
-    position_base_info() {
-      vector<uint32_t> t;
-      t.resize(3,0);
-      for(size_t j=0; j<base_list_size; ++j) {
-        insert(make_pair(base_char_list[j],t));
-      }
-      // extra consideration of 'N' necessary
-      insert(make_pair('N',t));
+  //
+  // Two of these are made for every column of the pileup, so they are plain arrays: the
+  // map<base_char, vector<uint32_t> > this used to be cost seven heap allocations apiece.
+  struct position_base_info {
+
+    struct strand_triple {
+      uint32_t v[3];
+      strand_triple() { v[0] = v[1] = v[2] = 0; }
+      uint32_t& operator[](size_t i) { return v[i]; }
+      const uint32_t& operator[](size_t i) const { return v[i]; }
+    };
+
+    // one slot per entry of base_char_list, then 'N' (which also takes any other character)
+    strand_triple m[base_list_size + 1];
+
+    static size_t slot(base_char c) {
+      for (size_t j=0; j<base_list_size; ++j) if (base_char_list[j] == c) return j;
+      return base_list_size;
     }
-    
+
+    strand_triple& operator[](base_char c) { return m[slot(c)]; }
+    const strand_triple& operator[](base_char c) const { return m[slot(c)]; }
   };
 	
 	
@@ -579,6 +589,9 @@ namespace breseq {
 
     //! Fill a read base's per-hypothesis likelihood cache from the calibrated error table.
     void fill_read_base_likelihoods(polymorphism_data& pd);
+    // Memo for fill_read_base_likelihoods(); see there.
+    struct read_base_likelihoods { double log10_pr[base_list_size]; double r[base_list_size]; double log10_pr_max; };
+    unordered_map<uint64_t, read_base_likelihoods> _read_base_likelihood_cache;
 
     //! Call the single most probable pure genotype from summed per-base log-likelihoods.
     cSNPCall pure_genotype_call(const double log10_pr_sum[base_list_size], uint32_t observations) const;

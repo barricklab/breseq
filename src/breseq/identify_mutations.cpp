@@ -2193,16 +2193,16 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       //## More fields common to consensus mutations and polymorphisms
       //## ...now that ref_base and new_base are defined
       
-      vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
+      position_base_info::strand_triple& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
       mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
       
-      vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
+      position_base_info::strand_triple& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
       mut[NEW_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
       
-      vector<uint32_t>& major_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
+      position_base_info::strand_triple& major_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
       mut[MAJOR_COV] = to_string(make_pair(static_cast<int32_t>(major_cov[2]), static_cast<int32_t>(major_cov[0])));
       
-      vector<uint32_t>& minor_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
+      position_base_info::strand_triple& minor_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
       mut[MINOR_COV] = to_string(make_pair(static_cast<int32_t>(minor_cov[2]), static_cast<int32_t>(minor_cov[0])));
       
       mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
@@ -2310,16 +2310,16 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
         mut[SCORE] = formatted_double(user_polymorphism_score, kMutationScorePrecision).to_string();
 
-        vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
+        position_base_info::strand_triple& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
         mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
         
-        vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
+        position_base_info::strand_triple& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
         mut[NEW_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
         
-        vector<uint32_t>& major_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
+        position_base_info::strand_triple& major_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
         mut[MAJOR_COV] = to_string(make_pair(static_cast<int>(major_cov[2]), static_cast<int>(major_cov[0])));
         
-        vector<uint32_t>& minor_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
+        position_base_info::strand_triple& minor_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
         mut[MINOR_COV] = to_string(make_pair(static_cast<int>(minor_cov[2]), static_cast<int>(minor_cov[0])));
         
         mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
@@ -2537,7 +2537,8 @@ void identify_mutations_pileup::write_coverage_row(uint32_t position, char ref_b
   write_coverage_columns(pc);
   for (size_t g = 0; g < pc_by_rg.size(); g++)
     write_coverage_columns(pc_by_rg[g]);
-  _coverage_data << endl;
+  // '\n', not endl: endl flushes, and this is written once per reference position.
+  _coverage_data << '\n';
 }
 
 
@@ -3911,15 +3912,35 @@ double identify_mutations_pileup::variant_presence_score(const vector<polymorphi
 */
 void identify_mutations_pileup::fill_read_base_likelihoods(polymorphism_data& pd)
 {
-  const double incorrect_mapping_prob = pow(10, -static_cast<double>(pd._mapping_quality) / 10);
-  const double correct_mapping_prob = 1 - incorrect_mapping_prob;
-  const double uniform_prob = 1.0 / static_cast<double>(base_list_size);
-
   covariate_values_t this_cv = pd._cv;
   const bool obs_top_strand = (pd._strand == 1);
   if (!obs_top_strand) {
     this_cv.obs_base() = complement_base_index(this_cv.obs_base());
   }
+
+  // Everything computed below is a function of the read base's error-table covariates (other
+  // than the hypothesized true base, which the loop supplies), its strand and its mapping
+  // quality -- a few thousand distinct combinations, met hundreds of millions of times. Each
+  // costs five error-table lookups, five log10 and six pow, which was the largest single cost
+  // of this whole stage, so the result is remembered. The cached numbers are the ones the code
+  // below would compute, so nothing downstream can tell.
+  this_cv.ref_base() = 0;
+  const uint64_t cache_key = (static_cast<uint64_t>(_error_table.covariates_to_index(this_cv)) << 33)
+                           | (static_cast<uint64_t>(obs_top_strand ? 1 : 0) << 32)
+                           | static_cast<uint64_t>(static_cast<uint32_t>(pd._mapping_quality));
+  unordered_map<uint64_t, read_base_likelihoods>::const_iterator cached = _read_base_likelihood_cache.find(cache_key);
+  if (cached != _read_base_likelihood_cache.end()) {
+    pd._log10_pr_max = cached->second.log10_pr_max;
+    for (uint8_t b=0; b<base_list_size; b++) {
+      pd._log10_pr[b] = cached->second.log10_pr[b];
+      pd._r[b] = cached->second.r[b];
+    }
+    return;
+  }
+
+  const double incorrect_mapping_prob = pow(10, -static_cast<double>(pd._mapping_quality) / 10);
+  const double correct_mapping_prob = 1 - incorrect_mapping_prob;
+  const double uniform_prob = 1.0 / static_cast<double>(base_list_size);
 
   pd._log10_pr_max = -numeric_limits<double>::max();
   for (uint8_t b=0; b<base_list_size; b++) {
@@ -3933,6 +3954,13 @@ void identify_mutations_pileup::fill_read_base_likelihoods(polymorphism_data& pd
   }
   for (uint8_t b=0; b<base_list_size; b++) {
     pd._r[b] = pow(10, pd._log10_pr[b] - pd._log10_pr_max);
+  }
+
+  read_base_likelihoods& entry = _read_base_likelihood_cache[cache_key];
+  entry.log10_pr_max = pd._log10_pr_max;
+  for (uint8_t b=0; b<base_list_size; b++) {
+    entry.log10_pr[b] = pd._log10_pr[b];
+    entry.r[b] = pd._r[b];
   }
 }
 
