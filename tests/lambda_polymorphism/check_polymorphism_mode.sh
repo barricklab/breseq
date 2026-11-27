@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Post-run checks for lambda_polymorphism_cn_evidence. See testcmd.sh for why these live here rather
+# Post-run checks for lambda_polymorphism (CN evidence in polymorphism mode). See testcmd.sh for why
+# these live here rather
 # than in the expected .gd: on this read set polymorphism mode reaches the same segmentation the
 # integer grid does, so the .gd cannot distinguish "breseq passed --polymorphism-mode" from "breseq
 # did not". The dtype CNery wrote can.

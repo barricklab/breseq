@@ -36,7 +36,7 @@ dependencies:
 #  => Need to lock the version for consistency, and more sharply than the others: CN evidence feeds
 #     deletion and amplification prediction, so a change in how CNery places a copy-number boundary
 #     moves the coordinates breseq reports. Installing from git HEAD instead is what once left the
-#     CN test (tests/lambda_mixed_pop_cn_evidence) unreproducible and disabled.
+#     CN test (now part of tests/lambda_mixed_pop) unreproducible and disabled.
 #
 #     The version string ends in the CNery git commit, so the pin needs no separate build string,
 #     and '==' rather than '=' because conda's '=' is a PREFIX match -- the wrong operator for a
@@ -55,8 +55,8 @@ dependencies:
 #     The step from dev127 is that argparse flag and nothing else: the packaged source differs only
 #     in get_CNV.py's parser. Checked rather than taken on trust, as for the last two bumps: both
 #     builds were run exactly as breseq runs them (--group-table) on the coverage tables of
-#     tests/lambda_mixed_pop_cn_evidence and, with --polymorphism-mode --copy-number-resolution 0.1,
-#     tests/lambda_polymorphism_cn_evidence, and CNV.csv, break_pts.csv, otr_results.json and
+#     tests/lambda_mixed_pop and, with --polymorphism-mode --copy-number-resolution 0.1,
+#     tests/lambda_polymorphism (which carry the CN tests), and CNV.csv, break_pts.csv, otr_results.json and
 #     gc_skew_results.json come back byte-identical in both. That byte-identity is the property to
 #     re-establish on the next bump, because every consensus expected.gd in the tree rests on it.
   - cnery-prerelease==0.1.0.dev128+gecf0ee35

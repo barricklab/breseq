@@ -55,6 +55,29 @@ EXTRA_DIST = \
 ## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
 TEST_CORES ?= $(or $(shell ps -p $$PPID -o args= 2>/dev/null | grep -oE -- '-j *[0-9]+|--jobs=[0-9]+' | grep -oE '[0-9]+' | head -1),all)
 
+## The budgets 'make test' and 'make test-long' actually hand to Snakemake.
+## A short test declares TEST_CORES=4 and passes '-j 4' to breseq, but a breseq
+## run on a phage-sized genome averages about 1.5 busy cores: most stages are
+## serial, and bowtie2 on 200,000 reads is over in a second. Scheduling by the
+## declared count therefore leaves most of the machine idle. When no budget
+## was given (TEST_CORES is 'all'), oversubscribe by TEST_OVERSUBSCRIBE; on a
+## 14-core machine this took the short suite from three tests at a time to
+## ten, and its wall time to about two minutes.
+##
+## The long tests are oversubscribed more, by TEST_LONG_OVERSUBSCRIBE: only a
+## few pipeline stages saturate every thread on a real genome either, and at
+## 4x a 14-core machine runs all seven long tests (TEST_CORES=7 each) at once
+## instead of two. Each holds a few GB of memory while it runs; lower the
+## factor, or give an explicit budget, on a machine short of RAM.
+##
+## An explicit 'make -jN test' or 'make test TEST_CORES=N' is used as given by
+## both targets.
+TEST_OVERSUBSCRIBE ?= 3
+TEST_LONG_OVERSUBSCRIBE ?= 4
+TEST_DETECTED_CORES = $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+TEST_SHORT_CORES = $(if $(filter all,$(TEST_CORES)),$(shell echo $$(($(TEST_DETECTED_CORES) * $(TEST_OVERSUBSCRIBE)))),$(TEST_CORES))
+TEST_LONG_CORES = $(if $(filter all,$(TEST_CORES)),$(shell echo $$(($(TEST_DETECTED_CORES) * $(TEST_LONG_OVERSUBSCRIBE)))),$(TEST_CORES))
+
 ## How many test-data downloads 'make test-long' may run at once. Kept small on
 ## purpose: ENA throttles aggressive parallel clients, and the network link -- not
 ## the number of jobs -- is the bottleneck. This must be passed to snakemake via
@@ -142,7 +165,8 @@ endif
 ## 'make test'/'make test-long' run the consistency tests in parallel via
 ## Snakemake (see tests/Snakefile), bounded by a total core budget
 ## (TEST_CORES, auto-detected from make -j or 'all' if unset;
-## override with e.g. 'make test TEST_CORES=16').
+## override with e.g. 'make test TEST_CORES=16'). With no budget given,
+## both targets oversubscribe the machine -- see TEST_OVERSUBSCRIBE above.
 ## Each test writes its output to tests/<name>/test.log (removed by
 ## 'make clean-tests') and a one-line tests/<name>/test.result that
 ## tests/print_test_summary.sh aggregates into the final pass/fail + timing
@@ -158,7 +182,7 @@ test:
 	## (it does not change the working directory), so the paths still resolve.
 	$(call write_test_config,$(top_srcdir)/tests/test.config)
 	START=$$(date '+%s'); \
-	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going; \
+	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_SHORT_CORES) --keep-going; \
 	SNAKEMAKE_STATUS=$$?; \
 	END=$$(date '+%s'); \
 	$(top_srcdir)/tests/print_test_summary.sh $(top_srcdir)/tests $$((END - START)); \
@@ -171,7 +195,7 @@ test-long:
 	## NOTE: see comment in the 'test' target above about why these paths are relative.
 	$(call write_test_config,$(top_srcdir)/tests/test.config)
 	START=$$(date '+%s'); \
-	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going \
+	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_LONG_CORES) --keep-going \
 	    --resources download_slots=$(TEST_DOWNLOAD_JOBS) --config long=1; \
 	SNAKEMAKE_STATUS=$$?; \
 	END=$$(date '+%s'); \

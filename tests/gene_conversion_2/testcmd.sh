@@ -7,13 +7,15 @@ TEST_CORES=4
 CURRENT_OUTPUTS[0]="${SELF}/data/annotated.gd"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 
-# The same gene conversion as gene_conversion_1 seen through PAIRED 100 bp reads.
+# The same gene conversion as gene_conversion_1's case (A) seen through PAIRED 100 bp reads.
+# reference.gd here holds only that test's pair A: lambda with the 1200 bp block at 4001-5200 copied
+# to 12001-13200 and 4% of its bases changed.
 #
 # A read inside the converted tract whose mate lies in the recipient's unique flank is pulled to
 # the recipient by pair rescue, so it is placed uniquely there and the columns nearest the tract
 # edges get called: the SNP-driven step sees a cluster of donor-base SNPs at each edge and makes a
 # CON out of them, but only as far as the calls reach. The reads then extend that tract across the
-# interior, where every read went to the donor, and the CON must come out the same as in
+# interior, where every read went to the donor, and the CON must come out the same as case (A) of
 # gene_conversion_1, now resting on the edge RA evidence, the MC and any discordant pair that joins
 # the flank to the donor.
 TESTCMD=" \
