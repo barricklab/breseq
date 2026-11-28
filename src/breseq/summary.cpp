@@ -112,6 +112,7 @@ void to_json(json& j, const AlignmentResolutionSummary& s)
     {"accepted_pos_hash_score_distribution", s.accepted_pos_hash_score_distribution},
     {"total_reads_mapped_to_references", s.total_reads_mapped_to_references},
     {"total_bases_mapped_to_references", s.total_bases_mapped_to_references},
+    {"artifact_unaligned_mates", s.artifact_unaligned_mates},
     {"reference", s.reference},
   };
 }
@@ -128,6 +129,7 @@ void from_json(const json& j, AlignmentResolutionSummary& s)
   s.accepted_pos_hash_score_distribution = j.at("accepted_pos_hash_score_distribution").get<PosHashScoreDistribution>();
   s.total_reads_mapped_to_references = j.at("total_reads_mapped_to_references").get<uint64_t>();
   s.total_bases_mapped_to_references = j.at("total_bases_mapped_to_references").get<uint64_t>();
+  s.artifact_unaligned_mates = get_uint64_or_default(j, "artifact_unaligned_mates");
   s.reference = j.at("reference").get<vector<AlignmentResolutionReferenceSummary> >();
 }
   

@@ -34,7 +34,8 @@ const char alignment_wrapper::op_to_char[10] = "MIDNSHP=X";
 bool mate_never_aligned(const alignment_wrapper& a)
 {
   uint32_t v;
-  return a.aux_get_i(kBreseqMateNeverAlignedBAMTag, v) && (v != 0);
+  // 2 marks a mate that never aligned because it is a sequencing artifact, not missing DNA.
+  return a.aux_get_i(kBreseqMateNeverAlignedBAMTag, v) && (v == 1);
 }
 
 bool ambiguous_pair_placement(const alignment_wrapper& a)
@@ -1175,7 +1176,7 @@ void bam_file::write_alignments(
     // re-emitted here never reaches reference.bam -- which is where MP reads it.
     uint32_t mate_no_alignment;
     if (a.aux_get_i(kBreseqMateNeverAlignedBAMTag, mate_no_alignment) && mate_no_alignment) {
-      aux_tags_ss << "\t" << kBreseqMateNeverAlignedBAMTag << ":i:1";
+      aux_tags_ss << "\t" << kBreseqMateNeverAlignedBAMTag << ":i:" << mate_no_alignment;   // 1, or 2 for an artifact mate
     }
 
     // "This pair's placement required a choice", stamped by mark_pair_info. Same rebuild caveat as

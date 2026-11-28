@@ -463,6 +463,22 @@ not against a fixed cutoff; each reports that null in a gates table in `summary.
 frequency cutoff cannot substitute: it implicitly assumes a zero background, which holds in a
 simulation and in nothing else.
 
+A never-aligned mate whose sequence is a **sequencing artifact** is not counted for MP either
+(`unaligned_mate_is_sequencing_artifact`, `resolve_alignments.cpp`; such reads are stamped `X9:i:2`
+instead of `X9:i:1`, and `mate_never_aligned()` accepts only 1). On two-colour Illumina a read that
+runs into a long homopolymer or a strong hairpin fails for the rest of its length -- into poly-G from
+dark cycles, often called at HIGH quality, or into a low-quality tail of G/T/A/C runs -- aligns
+nowhere, and its mapped mates made MPs with no insertion present (Trueperella CP097247 at a 12-bp C
+run: failed mates 55-100% G; Varibaculum AP041144 at a 20-bp-stem hairpin: 21-49% of their bases in
+runs of 5 or more). A mate is an artifact when one base is at least
+`--missing-pair-maximum-mate-base-fraction` (0.55) of it or bases in homopolymer runs of 5 or more
+are at least `--missing-pair-maximum-mate-run-fraction` (0.20). There is no quality term, because
+poly-G is called confidently. Calibrated on 200,000 aligned reads each of a 24%-, ~55%- and 70%-GC
+genome: only the AT-rich one has real reads past either cut (about 3% and 1.4%). Since only mates
+that aligned nowhere are tested, a false flag costs a genuine novel insertion's MP that share of its
+supporting reads, while a missed artifact keeps a false MP -- hence the sensitive cuts. The count set
+aside is a row of the MP gates table.
+
 For `SC` the score is not what does most of the work on real data — the **strand** test is
 (`--soft-clipping-fisher-strand-p-value-cutoff`, reject `FISHER_STRAND`). The dominant SC false
 positive is a dark-cycle poly-G read tail, which is always the read's 3' end and therefore appears

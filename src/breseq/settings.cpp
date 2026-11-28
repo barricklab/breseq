@@ -74,6 +74,12 @@ namespace breseq
   // BAM_FMUNMAP itself is deliberately left alone: DP, PD and pair marking read it, and clearing it
   // while the mate really is absent from the BAM would have them believe in a mate record that does
   // not exist.
+  //
+  // Value 1 is a mate that never aligned; value 2 one that never aligned but whose sequence is a
+  // sequencing artifact rather than DNA (unaligned_mate_is_sequencing_artifact, resolve_alignments.cpp):
+  // on two-colour Illumina a read that runs into a long homopolymer or a strong hairpin fails into
+  // poly-G or a low-complexity tail, and the mates it leaves behind made spurious MPs. Only 1 counts
+  // for MP (mate_never_aligned()).
   const char* kBreseqMateNeverAlignedBAMTag = "X9";
 
   // Set to 1 on BOTH mates of a pair whose placement required a CHOICE: at least one mate had more
@@ -494,6 +500,8 @@ namespace breseq
     // above. Here the default is mode-dependent, so it is registered empty and only read back
     // when the user actually supplied it.
     ("missing-pair-frequency-cutoff", "Only accept MP evidence when the lower 95% confidence bound on its local variant frequency -- reads with unmapped mates divided by those plus the read pairs spanning the same position -- is at or above this value. This is a secondary check on how much of the sample carries the insertion, not a test of whether it is there: that is --missing-pair-score-cutoff. 0 = OFF. Defaults to --polymorphism-frequency-cutoff and follows it if you change it. (DEFAULT = consensus mode, 0.10; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("missing-pair-maximum-mate-base-fraction", "Do not count a read for MP evidence when its mate, which aligned nowhere, has a single base making up at least this fraction of it: poly-G and similar read-through on two-colour Illumina chemistry, which leaves mates unaligned at long homopolymers with no insertion present. 0 = OFF.", "0.55", EXPERT_OPTION)
+    ("missing-pair-maximum-mate-run-fraction", "Do not count a read for MP evidence when at least this fraction of its never-aligned mate is in homopolymer runs of 5 or more bases: the low-complexity tail a read fails into after a strong hairpin. 0 = OFF.", "0.20", EXPERT_OPTION)
     ;
 
     options.addUsage("", NORMAL_OPTION);
@@ -1369,6 +1377,12 @@ namespace breseq
       this->missing_pair_frequency_cutoff = from_string<double>(options["missing-pair-frequency-cutoff"]);
     ASSERT((this->missing_pair_frequency_cutoff >= 0) && (this->missing_pair_frequency_cutoff <= 1),
            "Argument --missing-pair-frequency-cutoff must be in the range [0,1]")
+    this->missing_pair_maximum_mate_base_fraction = from_string<double>(options["missing-pair-maximum-mate-base-fraction"]);
+    ASSERT((this->missing_pair_maximum_mate_base_fraction >= 0) && (this->missing_pair_maximum_mate_base_fraction <= 1),
+           "Argument --missing-pair-maximum-mate-base-fraction must be in the range [0,1]")
+    this->missing_pair_maximum_mate_run_fraction = from_string<double>(options["missing-pair-maximum-mate-run-fraction"]);
+    ASSERT((this->missing_pair_maximum_mate_run_fraction >= 0) && (this->missing_pair_maximum_mate_run_fraction <= 1),
+           "Argument --missing-pair-maximum-mate-run-fraction must be in the range [0,1]")
 
     // Same ordering requirement again: after the prediction-mode defaults.
     if (options.count("pair-distance-frequency-cutoff"))
@@ -1763,6 +1777,8 @@ namespace breseq
     this->missing_pair_maximum_dispersion = 0.05;
     // Overwritten per prediction mode in the cmdline constructor to track polymorphism_frequency_cutoff.
     this->missing_pair_frequency_cutoff = 0.1;
+    this->missing_pair_maximum_mate_base_fraction = 0.55;
+    this->missing_pair_maximum_mate_run_fraction = 0.20;
 
     this->pair_distance_seed = 3;
     this->pair_distance_tail_quantile = 0.05;

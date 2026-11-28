@@ -3320,6 +3320,20 @@ string html_missing_pair_gates_string(const Settings& settings, Summary& summary
                   " source long reads, and the frequency range is taken at that effective sample size")) << endl;
   }
 
+  // Mates that never aligned because they are sequencing artifacts, not missing DNA: set aside before
+  // anything below is counted (resolve_alignments.cpp, unaligned_mate_is_sequencing_artifact).
+  if ((settings.missing_pair_maximum_mate_base_fraction > 0) || (settings.missing_pair_maximum_mate_run_fraction > 0)) {
+    ss << tr(td("artifact mates set aside")
+             + td(to_string(summary.alignment_resolution.artifact_unaligned_mates))
+             + td("never-aligned mates whose most common base is at least "
+                  + to_string(settings.missing_pair_maximum_mate_base_fraction, 2, false)
+                  + " of the read, or with at least "
+                  + to_string(settings.missing_pair_maximum_mate_run_fraction, 2, false)
+                  + " of it in homopolymer runs of 5 or more: poly-G or low-complexity read-through, as two-colour"
+                    " chemistry produces at long homopolymers and strong hairpins. Their reads are not counted as"
+                    " unpaired, here or in the background")) << endl;
+  }
+
   // The load-bearing number, and the one that did not exist before: what fraction of reads lose
   // their mate ANYWHERE in this sample. Every MP decision is relative to it.
   {

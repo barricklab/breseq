@@ -553,6 +553,8 @@ namespace breseq
     double missing_pair_dispersion_trim_frequency;        // Default = 0.25;      COMMAND-LINE OPTION
     double missing_pair_maximum_dispersion;               // Default = 0.05;      COMMAND-LINE OPTION
     double missing_pair_frequency_cutoff;                 // Default = tracks polymorphism_frequency_cutoff (0.10/0.05); COMMAND-LINE OPTION
+    double missing_pair_maximum_mate_base_fraction;       // Default = 0.55; 0 = OFF; COMMAND-LINE OPTION
+    double missing_pair_maximum_mate_run_fraction;        // Default = 0.20; 0 = OFF; COMMAND-LINE OPTION
 
     //! Settings: Pair Distance (PD) Evidence
     int32_t pair_distance_seed;                           // Default = 3;         COMMAND-LINE OPTION

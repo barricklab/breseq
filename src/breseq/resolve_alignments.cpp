@@ -1574,7 +1574,8 @@ static void mark_pair_info(bam_alignment* a1, bam_alignment* a2, bool same_tid,
 // absent from the reference AND from every candidate junction, i.e. genuinely novel; the flag on its
 // own made MP's numerator track alignment stringency. (A mate that maps only ACROSS a candidate
 // junction is not a singleton at all -- it has mapped_anywhere == true and is never marked here.)
-static void mark_mate_unmapped(alignment_list& alignments, bool mate_produced_no_alignment)
+static void mark_mate_unmapped(alignment_list& alignments, bool mate_produced_no_alignment,
+                               bool mate_is_sequencing_artifact = false)
 {
   for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
   {
@@ -1585,12 +1586,56 @@ static void mark_mate_unmapped(alignment_list& alignments, bool mate_produced_no
     a->core.isize = 0;
     // Only when the aligner placed the mate NOWHERE, as opposed to breseq rejecting what it did
     // place. MP keys on this narrower tag; see kBreseqMateNeverAlignedBAMTag for why the two cases
-    // must not be conflated, and alignment.cpp's write_alignments for where it is re-emitted.
+    // must not be conflated, and alignment.cpp's write_alignments for where it is re-emitted. A mate
+    // whose sequence is an artifact gets the value 2, which MP does not count.
     if (mate_produced_no_alignment) {
-      uint32_t one = 1;
-      a->aux_set(kBreseqMateNeverAlignedBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&one);
+      uint32_t value = mate_is_sequencing_artifact ? 2 : 1;
+      a->aux_set(kBreseqMateNeverAlignedBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&value);
     }
   }
+}
+
+// Is this never-aligned read a sequencing artifact rather than DNA absent from the reference?
+//
+// On two-colour Illumina chemistry (NextSeq, NovaSeq) a read that runs into a long homopolymer or a
+// strong hairpin can fail for the rest of its length: poly-G from dark cycles, often called at HIGH
+// quality, or a tail of G/T/A/C runs at low quality. Such a read aligns nowhere, and the mates it
+// leaves behind made MP evidence at the homopolymer or hairpin with no insertion there (Trueperella
+// CP097247 at a 12-bp C run: failed mates 55-100% G; Varibaculum AP041144 at a 20-bp-stem hairpin:
+// failed mates with 21-49% of their bases in runs of 5 or more). Base quality is no help, because
+// poly-G is called confidently.
+//
+// Flagged when the most common base makes up at least maximum_base_fraction of the read, or bases in
+// homopolymer runs of 5 or more make up at least maximum_run_fraction (0 turns a test off). Calibrated
+// on 200,000 aligned reads from each of a 24%-, a ~55%- and a 70%-GC genome: at the 0.55 / 0.20
+// defaults the AT-rich genome is the only one where real reads reach either cut, about 3% and 1.4% of
+// them. Only never-aligned mates are tested, so the cost of a false flag is a genuine novel
+// insertion's MP losing that share of its supporting reads, while a missed artifact keeps a false MP.
+static bool unaligned_mate_is_sequencing_artifact(const string& sequence,
+                                                  double maximum_base_fraction,
+                                                  double maximum_run_fraction)
+{
+  const uint32_t kRunLength = 5;
+  uint32_t counts[4] = {0, 0, 0, 0};
+  uint32_t informative = 0, in_runs = 0, run = 0;
+  char run_base = '\0';
+  for (size_t i = 0; i <= sequence.size(); i++) {
+    const char b = (i < sequence.size()) ? static_cast<char>(toupper(static_cast<unsigned char>(sequence[i]))) : '\0';
+    const int idx = (b == 'A') ? 0 : (b == 'C') ? 1 : (b == 'G') ? 2 : (b == 'T') ? 3 : -1;
+    if ((idx >= 0) && (b == run_base)) { run++; }
+    else {
+      if (run >= kRunLength) in_runs += run;
+      run = (idx >= 0) ? 1 : 0;
+      run_base = (idx >= 0) ? b : '\0';
+    }
+    if (idx >= 0) { counts[idx]++; informative++; }
+  }
+  if (informative == 0) return false;
+  const double n = static_cast<double>(informative);
+  const uint32_t most_common = max(max(counts[0], counts[1]), max(counts[2], counts[3]));
+  if ((maximum_base_fraction > 0.0) && (most_common >= maximum_base_fraction * n - 1e-9)) return true;
+  if ((maximum_run_fraction > 0.0) && (in_runs >= maximum_run_fraction * n - 1e-9)) return true;
+  return false;
 }
 
 static ConcordancePairing classify_pair(
@@ -2220,6 +2265,7 @@ void load_junction_alignments(
     uint64_t concordant_pairs = 0;
     uint64_t rescued_pairs = 0;   // concordant only through rescue_concordant_pair()
     uint64_t ambiguous_discordant_pairs = 0;   // left discordant, but not counted by DP/PD (concordant_alternative_exists)
+    uint64_t artifact_unaligned_mates = 0;   // never-aligned mates MP ignores (unaligned_mate_is_sequencing_artifact)
 
 #ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
     string discordant_pairs_file_name = Settings::file_name(settings.discordant_pairs_file_name, "#", rfs.m_base_name);
@@ -2474,8 +2520,21 @@ void load_junction_alignments(
         // (fix_flags strips only 0x100; 0x80 is then set from the read group). A junction-best
         // mate is never marked here, so the
         // flags can never reach write_moved_alignment's RNEXT/PNEXT handling.
-        if (m1_singleton_reference) mark_mate_unmapped(m1.this_reference_alignments, !m2.aligned_before_filtering);
-        if (m2_singleton_reference) mark_mate_unmapped(m2.this_reference_alignments, !m1.aligned_before_filtering);
+        // The mate that never aligned is seq2 for m1's singleton and seq1 for m2's: test ITS sequence.
+        if (m1_singleton_reference) {
+          const bool never_aligned = !m2.aligned_before_filtering;
+          const bool artifact = never_aligned && unaligned_mate_is_sequencing_artifact(seq2.m_sequence,
+                                  settings.missing_pair_maximum_mate_base_fraction, settings.missing_pair_maximum_mate_run_fraction);
+          if (artifact) ++artifact_unaligned_mates;
+          mark_mate_unmapped(m1.this_reference_alignments, never_aligned, artifact);
+        }
+        if (m2_singleton_reference) {
+          const bool never_aligned = !m1.aligned_before_filtering;
+          const bool artifact = never_aligned && unaligned_mate_is_sequencing_artifact(seq1.m_sequence,
+                                  settings.missing_pair_maximum_mate_base_fraction, settings.missing_pair_maximum_mate_run_fraction);
+          if (artifact) ++artifact_unaligned_mates;
+          mark_mate_unmapped(m2.this_reference_alignments, never_aligned, artifact);
+        }
 
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_1, rg_1, seq1.m_name, m1, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, rg_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
@@ -2496,6 +2555,10 @@ void load_junction_alignments(
     if (settings.pair_ambiguity_max_log10_likelihood_loss > 0)
       cerr << "    Discordant read pairs not counted for DP/PD (a concordant near-best placement exists): "
            << ambiguous_discordant_pairs << endl;
+    if (artifact_unaligned_mates > 0)
+      cerr << "    Never-aligned mates set aside as sequencing artifacts (not counted for MP): "
+           << artifact_unaligned_mates << endl;
+    summary.alignment_resolution.artifact_unaligned_mates += artifact_unaligned_mates;
 
     // Final paired-mapping-distance record: carry the fit fields from the preliminary (stage-03)
     // record and attach the actual concordant/mapped pair counts from this flag-assignment pass.

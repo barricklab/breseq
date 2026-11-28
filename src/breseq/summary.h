@@ -96,7 +96,10 @@ namespace breseq{
     
     uint64_t total_reads_mapped_to_references;
     uint64_t total_bases_mapped_to_references;
-    
+    // Never-aligned mates whose sequence is a sequencing artifact (poly-G or low-complexity read-
+    // through), which Missing Pair evidence does not count; see kBreseqMateNeverAlignedBAMTag.
+    uint64_t artifact_unaligned_mates;
+
     // This is stored as a vector rather than as a map for speed in adding them up
     vector<AlignmentResolutionReferenceSummary> reference;
     
@@ -108,6 +111,7 @@ namespace breseq{
     , max_sam_base_quality_score(0)
     , total_reads_mapped_to_references(0)
     , total_bases_mapped_to_references(0)
+    , artifact_unaligned_mates(0)
     {}
     
   };
