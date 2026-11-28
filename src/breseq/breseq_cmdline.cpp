@@ -18,6 +18,7 @@
 
 *****************************************************************************/
 
+#include <future>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -2762,6 +2763,20 @@ int breseq_default_action(int argc, char* argv[])
 		}
 	}
 
+  // Copy number prediction (stage 09 below) hands the coverage tables the evidence pileup just
+  // wrote to CNery, an external program that takes as long as any stage here, and nothing between
+  // here and the Output stage uses its result. So it is started now and collected at its own
+  // step, which lets it run while the pair evidence stages do. It reads only those tables and
+  // writes only summary.copy_number, which no stage before its own step touches. The time its
+  // step then reports is the wait that was left, not CNery's whole run.
+  future<void> copy_number_prediction;
+  if (settings.predict_copy_number && !file_exists(settings.copy_number_variation_done_file_name.c_str())) {
+    create_path( settings.copy_number_variation_path );
+    copy_number_prediction = async(launch::async, [&settings, &summary, &ref_seq_info]() {
+      CNEvidence::predict(settings, summary, ref_seq_info);
+    });
+  }
+
     //
     // Discordant Pair (DP) evidence
     // Pair up discordant-pair candidate regions (from the identify_mutations CSV) into DP evidence.
@@ -2846,7 +2861,9 @@ int breseq_default_action(int argc, char* argv[])
 
     if (settings.do_step(settings.copy_number_variation_done_file_name, "Predicting copy number variation evidence")) {
 
-      CNEvidence::predict(settings, summary, ref_seq_info);
+      // get() also rethrows anything the prediction threw.
+      if (copy_number_prediction.valid()) copy_number_prediction.get();
+      else CNEvidence::predict(settings, summary, ref_seq_info);
       summary.copy_number.store(settings.copy_number_summary_file_name);
 
       settings.done_step(settings.copy_number_variation_done_file_name);
