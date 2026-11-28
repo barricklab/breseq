@@ -1256,113 +1256,10 @@ struct MateResolution
 };
 
 
-// WRITING RESOLVED REFERENCE ALIGNMENTS ON A THREAD OF THEIR OWN
-//
-// Rebuilding and writing each read's reference alignments (gap shifting, end clipping, trims, the
-// SAM record, its BAM encoding) is the largest single cost of the per-read loop below -- more than
-// deciding where the read goes. It needs nothing from that loop but the alignments themselves, so
-// with -j above 1 the loop hands each read's list to one writer thread and carries on. One
-// consumer taking lists in the order they were queued writes exactly the file the loop would have.
-//
-// The records are counted_ptr's, whose counts are not atomic, so a list must be the ONLY holder
-// of its records when it changes threads. push() therefore takes the caller's list (leaving it
-// empty) instead of copying it, and bam_file::read_alignments() no longer keeps a reference to
-// the last record of a file. Only the streaming loop uses this; what is written after it (reads
-// returned from rejected junctions, held discordant pairs) is written directly, once finish()
-// has emptied the queue.
-class AsyncAlignmentWriter {
-public:
-  AsyncAlignmentWriter(bam_file& tam, const SequenceTrimsList& trims_list, cReferenceSequences& ref_seq_info)
-  : m_tam(tam), m_trims_list(trims_list), m_ref_seq_info(ref_seq_info), m_done(false), m_busy(false)
-  , m_thread(&AsyncAlignmentWriter::run, this) {}
-
-  ~AsyncAlignmentWriter() { finish(); }
-
-  bool writes_to(const bam_file& tam) const { return &tam == &m_tam; }
-
-  void push(const read_group_ref& rg, alignment_list& alignments)
-  {
-    unique_ptr<item> it(new item(rg));
-    it->alignments.swap(alignments);
-    it->alignments.read_base_quality_char_string.swap(alignments.read_base_quality_char_string);
-    it->alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
-
-    unique_lock<mutex> lock(m_mutex);
-    while (m_queue.size() >= kMaximumQueued) m_not_full.wait(lock);
-    m_queue.push_back(std::move(it));
-    m_not_empty.notify_one();
-  }
-
-  //! Write everything queued and stop the thread. Safe to call more than once.
-  void finish()
-  {
-    {
-      unique_lock<mutex> lock(m_mutex);
-      if (m_done) return;
-      while (!m_queue.empty() || m_busy) m_not_full.wait(lock);
-      m_done = true;
-      m_not_empty.notify_all();
-    }
-    m_thread.join();
-  }
-
-private:
-  struct item {
-    item(const read_group_ref& _rg) : rg(_rg) {}
-    read_group_ref rg;
-    alignment_list alignments;
-  };
-  static const size_t kMaximumQueued = 20000;
-
-  void run()
-  {
-    while (true) {
-      unique_ptr<item> it;
-      {
-        unique_lock<mutex> lock(m_mutex);
-        while (m_queue.empty() && !m_done) m_not_empty.wait(lock);
-        if (m_queue.empty()) return;
-        it = std::move(m_queue.front());
-        m_queue.pop_front();
-        m_busy = true;
-      }
-      m_tam.write_alignments(it->rg, it->alignments, &m_trims_list, &m_ref_seq_info, true, true);
-      it.reset();   // the records are released here, on this thread, before anyone is told
-      {
-        unique_lock<mutex> lock(m_mutex);
-        m_busy = false;
-        m_not_full.notify_all();
-      }
-    }
-  }
-
-  bam_file& m_tam;
-  const SequenceTrimsList& m_trims_list;
-  cReferenceSequences& m_ref_seq_info;
-  mutex m_mutex;
-  condition_variable m_not_empty, m_not_full;
-  deque<unique_ptr<item> > m_queue;
-  bool m_done, m_busy;
-  thread m_thread;
-};
-
+// The streaming loop below hands each read's reference alignments to a writer thread; see
+// AsyncAlignmentWriter in alignment.h. What is written after the loop (reads returned from
+// rejected junctions, held discordant pairs) is written directly, once the queue is empty.
 static AsyncAlignmentWriter* s_async_reference_writer = NULL;
-
-// Sets up the writer for the length of the streaming loop and takes it down on every way out.
-struct AsyncAlignmentWriterScope {
-  unique_ptr<AsyncAlignmentWriter> writer;
-  AsyncAlignmentWriterScope(bam_file& tam, const SequenceTrimsList& trims_list, cReferenceSequences& ref_seq_info) {
-    if (Settings::pool.size() > 1) {
-      writer.reset(new AsyncAlignmentWriter(tam, trims_list, ref_seq_info));
-      s_async_reference_writer = writer.get();
-    }
-  }
-  void finish() {
-    if (writer) writer->finish();
-    s_async_reference_writer = NULL;
-  }
-  ~AsyncAlignmentWriterScope() { finish(); }
-};
 
 static MateResolution resolve_one_mate(
                                        const Settings& settings,
@@ -1813,7 +1710,7 @@ void load_junction_alignments(
                               vector<HeldDiscordantPair>& held_discordant_pairs
                               )
 {
-  AsyncAlignmentWriterScope async_writer_scope(resolved_reference_tam, trims_list, ref_seq_info);
+  AsyncAlignmentWriterScope async_writer_scope(s_async_reference_writer, resolved_reference_tam, &trims_list, &ref_seq_info, true, true);
   bool verbose = false;
   uint32_t reads_processed = 0;
 

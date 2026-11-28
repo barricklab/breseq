@@ -21,6 +21,11 @@
 #ifndef _BRESEQ_ALIGNMENT_H_
 #define _BRESEQ_ALIGNMENT_H_
 
+#include <memory>
+#include <deque>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include "common.h"
 
 #include "calculate_trims.h"
@@ -994,6 +999,110 @@ protected:
   read_group_index_map m_read_groups; // @RG lines of bam_header, for reading and for writing IDs
   read_group_ref m_default_read_group;
 };
+
+// WRITING ALIGNMENTS ON A THREAD OF THEIR OWN
+//
+// bam_file::write_alignments() rebuilds each record (gap shifting, end clipping, trims, the SAM
+// line, its BAM encoding), and in the stages that write every read it costs more than the work
+// that decides what to write. It needs nothing from those loops but the alignments themselves, so
+// with -j above 1 a loop can hand each read's list to one writer thread and carry on. One consumer
+// taking lists in the order they were queued writes exactly the file the loop would have.
+//
+// The records are counted_ptr's, whose counts are not atomic, so a list must be the ONLY holder
+// of its records when it changes threads. push() therefore TAKES the caller's list, leaving it
+// empty, and a caller must not have copies of its records elsewhere.
+class AsyncAlignmentWriter {
+public:
+  AsyncAlignmentWriter(bam_file& tam, const SequenceTrimsList* trims_list, const cReferenceSequences* ref_seq_info,
+                       bool shift_gaps, bool soft_clip_ends)
+  : m_tam(tam), m_trims_list(trims_list), m_ref_seq_info(ref_seq_info), m_shift_gaps(shift_gaps), m_soft_clip_ends(soft_clip_ends)
+  , m_done(false), m_busy(false), m_thread(&AsyncAlignmentWriter::run, this) {}
+
+  ~AsyncAlignmentWriter() { finish(); }
+
+  bool writes_to(const bam_file& tam) const { return &tam == &m_tam; }
+
+  void push(const read_group_ref& rg, alignment_list& alignments)
+  {
+    std::unique_ptr<item> it(new item(rg));
+    it->alignments.swap(alignments);
+    it->alignments.read_base_quality_char_string.swap(alignments.read_base_quality_char_string);
+    it->alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
+
+    std::unique_lock<std::mutex> lock(m_mutex);
+    while (m_queue.size() >= kMaximumQueued) m_not_full.wait(lock);
+    m_queue.push_back(std::move(it));
+    m_not_empty.notify_one();
+  }
+
+  //! Write everything queued and stop the thread. Safe to call more than once.
+  void finish()
+  {
+    {
+      std::unique_lock<std::mutex> lock(m_mutex);
+      if (m_done) return;
+      while (!m_queue.empty() || m_busy) m_not_full.wait(lock);
+      m_done = true;
+      m_not_empty.notify_all();
+    }
+    m_thread.join();
+  }
+
+private:
+  struct item {
+    item(const read_group_ref& _rg) : rg(_rg) {}
+    read_group_ref rg;
+    alignment_list alignments;
+  };
+  static const size_t kMaximumQueued = 20000;
+
+  void run()
+  {
+    while (true) {
+      std::unique_ptr<item> it;
+      {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        while (m_queue.empty() && !m_done) m_not_empty.wait(lock);
+        if (m_queue.empty()) return;
+        it = std::move(m_queue.front());
+        m_queue.pop_front();
+        m_busy = true;
+      }
+      m_tam.write_alignments(it->rg, it->alignments, m_trims_list, m_ref_seq_info, m_shift_gaps, m_soft_clip_ends);
+      it.reset();   // the records are released here, on this thread, before anyone is told
+      {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_busy = false;
+        m_not_full.notify_all();
+      }
+    }
+  }
+
+  bam_file& m_tam;
+  const SequenceTrimsList* m_trims_list;
+  const cReferenceSequences* m_ref_seq_info;
+  bool m_shift_gaps, m_soft_clip_ends;
+  std::mutex m_mutex;
+  std::condition_variable m_not_empty, m_not_full;
+  std::deque<std::unique_ptr<item> > m_queue;
+  bool m_done, m_busy;
+  std::thread m_thread;
+};
+
+// Sets a writer up for the length of a loop, under the pointer the loop's write site tests, and
+// takes it down on every way out. With one thread there is no writer and the pointer stays NULL.
+struct AsyncAlignmentWriterScope {
+  std::unique_ptr<AsyncAlignmentWriter> writer;
+  AsyncAlignmentWriter*& slot;
+  AsyncAlignmentWriterScope(AsyncAlignmentWriter*& _slot, bam_file& tam, const SequenceTrimsList* trims_list,
+                            const cReferenceSequences* ref_seq_info, bool shift_gaps, bool soft_clip_ends, bool enabled = true);
+  void finish() {
+    if (writer) writer->finish();
+    slot = NULL;
+  }
+  ~AsyncAlignmentWriterScope() { finish(); }
+};
+
 	
 }
 

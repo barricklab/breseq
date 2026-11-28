@@ -229,6 +229,10 @@ namespace breseq {
   //! Processes one read's worth of alignments (as grouped by bam_file::read_alignments)
   //! for candidate junction preprocessing: writes split-supporting alignments to PSAM, and
   //! writes the best-scoring alignments to BSAM, updating summary statistics.
+  // Every aligned read's best alignments are written to the pooled "best" BAM that the coverage
+  // stage reads, and writing them was most of this stage. See AsyncAlignmentWriter (alignment.h).
+  static AsyncAlignmentWriter* s_async_best_writer = NULL;
+
   //! Returns false if candidate_junction_read_limit was hit (caller should stop).
   bool PreprocessAlignments::preprocess_alignment_list(
                                                         const Settings& settings,
@@ -266,7 +270,12 @@ namespace breseq {
     // BSAM pools every read file, so it has no read group of its own. PSAM is the split BAM for
     // the ONE read file these alignments came from, so its read group is theirs. (Before read
     // groups this passed a hardcoded index of 0, mislabelling every read file but the first.)
-    BSAM.write_alignments(PSAM.default_read_group(), alignments, NULL);
+    // Handed to a writer thread when there is one, which TAKES the list: it is empty afterwards.
+    // No caller uses it again (each goes on to read the next read's alignments into it).
+    if (s_async_best_writer && s_async_best_writer->writes_to(BSAM))
+      s_async_best_writer->push(PSAM.default_read_group(), alignments);
+    else
+      BSAM.write_alignments(PSAM.default_read_group(), alignments, NULL);
 
     return true;
   }
@@ -820,6 +829,8 @@ namespace breseq {
     if (do_preprocess) {
       BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name, read_groups, settings.bam_pg_header_line());
     }
+    // Declared after BSAM so that it is finished, and its queue written, before BSAM closes.
+    AsyncAlignmentWriterScope async_best_writer_scope(s_async_best_writer, BSAM, NULL, NULL, false, false, do_preprocess);
 
     uint32_t i = 0;
     uint32_t set_index = 0;

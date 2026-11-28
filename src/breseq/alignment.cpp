@@ -839,6 +839,16 @@ void use_bam_io_threads(htsFile* file)
   hts_set_opt(file, HTS_OPT_THREAD_POOL, &s_bam_io_thread_pool);
 }
 
+AsyncAlignmentWriterScope::AsyncAlignmentWriterScope(AsyncAlignmentWriter*& _slot, bam_file& tam, const SequenceTrimsList* trims_list,
+                                                     const cReferenceSequences* ref_seq_info, bool shift_gaps, bool soft_clip_ends, bool enabled)
+: slot(_slot)
+{
+  if (enabled && s_bam_io_thread_pool.pool) {   // i.e. -j above 1: see set_bam_io_threads()
+    writer.reset(new AsyncAlignmentWriter(tam, trims_list, ref_seq_info, shift_gaps, soft_clip_ends));
+    slot = writer.get();
+  }
+}
+
 bam_file::~bam_file()
 {
   if (m_bam_file) { hts_close(m_bam_file); m_bam_file=NULL; }
