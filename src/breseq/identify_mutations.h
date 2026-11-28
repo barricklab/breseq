@@ -626,6 +626,22 @@ namespace breseq {
     
     //! Settings calculated during initialization
 		double _log10_ref_length; //!< log10 of the total reference sequence.
+
+    //! How the reference columns were disposed of (see the fast paths in the pileup callback).
+    uint64_t _columns_examined = 0;
+    uint64_t _columns_skipped_all_reference = 0;
+    uint64_t _columns_skipped_by_score_bound = 0;
+    uint64_t _columns_written_as_evidence = 0;
+  public:
+    void print_column_counts() const {
+      const uint64_t fitted = _columns_examined - _columns_skipped_all_reference - _columns_skipped_by_score_bound;
+      cerr << "  Reference columns: " << _columns_examined
+           << "  all reads match reference: " << _columns_skipped_all_reference
+           << "  no variant can reach the score cutoff: " << _columns_skipped_by_score_bound
+           << "  fitted in full: " << fitted
+           << "  of which written as RA evidence: " << _columns_written_as_evidence << endl;
+    }
+  protected:
     uint64_t _total_reference_length; //!< total reference sequence length (for bias e-value).
     
     //! Initialized once per pileup

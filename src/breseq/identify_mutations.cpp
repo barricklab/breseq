@@ -79,6 +79,7 @@ void identify_mutations(
 								print_per_position_file
 							);
 	imp.do_pileup(settings.call_mutations_seq_id_set());
+  imp.print_column_counts();
   // Re-score the reads over every linked run and polymorphic indel (every RA column under
   // --realign all) against the candidate haplotype sequences. Done here rather than in the Output
   // stage because it needs the error table, whose stage directory is removed once the run
@@ -1570,6 +1571,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     //## does every read base that counts toward a call here match the reference? (see the
     //## reference-only fast path after the read loop)
     bool all_counted_bases_match_reference = true;
+    //## ... and if not, how many differ, and the most the reads could gain from a better model
+    uint32_t counted_bases_not_matching_reference = 0;
+    double log10_pr_max_sum = 0.0;
 
     //## the same, split by read group, for the coverage table CNery reads. Kept separate from the
     //## aggregate above rather than summed out of it, so the numbers every other consumer sees are
@@ -1927,7 +1931,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           read_id = rid->second;
         }
         pdata.push_back(polymorphism_data(baseindex2char(cv.obs_base()),cv.quality(),i->strand(), i->mapping_quality(), cv, read_id));
-        if (pdata.back()._base_char != ref_base_char) all_counted_bases_match_reference = false;
+        if (pdata.back()._base_char != ref_base_char) {
+          all_counted_bases_match_reference = false;
+          counted_bases_not_matching_reference++;
+        }
 
         //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
@@ -1935,6 +1942,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         // downstream reads the cache.
         fill_read_base_likelihoods(pdata.back());
         for (uint8_t j=0; j<base_list_size; j++) log10_pr_sum[j] += pdata.back()._log10_pr[j];
+        log10_pr_max_sum += pdata.back()._log10_pr_max;
       }
 		} // end for-each read
 		
@@ -2083,14 +2091,54 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     //## all-reference reads and a sane error table, but that is the consensus test and it is
     //## already computed), at an insert column, at a user-evidence position (which reports the
     //## fit whatever it says), or under a non-positive polymorphism score cutoff.
+    //##
+    //## SCORE BOUND
+    //##
+    //## The same exit for a column with a stray mismatch or two, which is most of the rest. The
+    //## only thing that can make such a column an RA is variant_presence_score() reaching the
+    //## cutoff, and that score is
+    //##
+    //##     (log-likelihood of the full fit) - (log-likelihood of the fit without the variant)
+    //##         - log10(reference length)
+    //##
+    //## Neither fit needs running to bound it:
+    //##
+    //##   * No mixture can explain a read better than that read's own best allele, so the full fit
+    //##     is at most the sum of the reads' _log10_pr_max.
+    //##   * The fit without the variant still has the reference allele (the variant is never the
+    //##     reference), and EM never decreases the likelihood from its starting point. It starts
+    //##     with the reference at (matching reads + 1/2) / (reads + 2) or more, so it ends at
+    //##     least at the pure-reference likelihood plus reads * log10 of that fraction.
+    //##
+    //## If the difference of those two, less log10(reference length), is under the cutoff, no
+    //## allele at this column can pass, whichever one the fit would have picked.
+    bool variant_cannot_reach_score_cutoff = false;
+    if ((insert_count == 0) && !pdata.empty()) {
+      const base_index bound_ref_index = (ref_base_char == 'N') ? base_list_N_index : basechar2index(ref_base_char);
+      if (bound_ref_index < base_list_size) {
+        const double n = static_cast<double>(pdata.size());
+        const double starting_reference_fraction = (n - counted_bases_not_matching_reference + 0.5) / (n + 2.0);
+        const double null_fit_at_least = log10_pr_sum[bound_ref_index] + n * log10(starting_reference_fraction);
+        const double score_at_most = (log10_pr_max_sum - null_fit_at_least) - _log10_ref_length;
+        // The small allowance is for floating-point summation order, not for the argument.
+        variant_cannot_reach_score_cutoff = (score_at_most + 1e-6 < _polymorphism_score_cutoff);
+      }
+    }
+
     {
       const bool user_evidence_here = _user_evidence_ra_list.size()
         && (((*(_user_evidence_ra_list.front()))[SEQ_ID]) == p.target_name())
         && (from_string<uint32_t>((*(_user_evidence_ra_list.front()))[POSITION]) == position);
-      if ( (insert_count == 0) && all_counted_bases_match_reference && !passed_as_consensus_prediction
-          && !user_evidence_here && (_polymorphism_score_cutoff > 0) ) {
-        update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
-        continue;
+      const bool nothing_to_find = (all_counted_bases_match_reference && (_polymorphism_score_cutoff > 0))
+                                || variant_cannot_reach_score_cutoff;
+      if (insert_count == 0) {
+        _columns_examined++;
+        if (nothing_to_find && !passed_as_consensus_prediction && !user_evidence_here) {
+          if (all_counted_bases_match_reference) _columns_skipped_all_reference++;
+          else                                   _columns_skipped_by_score_bound++;
+          update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
+          continue;
+        }
       }
     }
 
@@ -2215,6 +2263,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // what's going on here? we may need to change a value latter,
       // and add added a copy not the current one
       added_mut_p = _gd.get_list().back();
+      if (insert_count == 0) _columns_written_as_evidence++;
 
       //## Read linkage (LN): keep this candidate column's per-read observations so it can be
       //## fit jointly with its neighbors once the pileup has moved past them.
