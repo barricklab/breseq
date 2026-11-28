@@ -1629,6 +1629,17 @@ int breseq_default_action(int argc, char* argv[])
 
   cReferenceSequences ref_seq_info;
 
+  // Two things need only the converted reference, which is written before the reads are read, and
+  // so are started then and run while the reads are converted: the bowtie2 index (collected at the
+  // start of the alignment stage, which may be some time after this one ends for a large genome),
+  // and the faidx index and trims (collected at the end of this stage).
+  //
+  // The index build is started only by the run that converts the reference. A restarted run finds
+  // the future empty and builds the index in the alignment stage as before, over whatever an
+  // interrupted build left behind.
+  future<void> reference_index_build;
+  const string reference_index_build_command = "bowtie2-build -q " + double_quote(settings.reference_fasta_file_name) + " " + double_quote(settings.reference_hash_file_name);
+
 	if (settings.do_step(settings.sequence_conversion_done_file_name, "Read and reference sequence file input"))
 	{
 		SequenceConversionSummary s;
@@ -1686,6 +1697,17 @@ int breseq_default_action(int argc, char* argv[])
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
     s.total_reference_sequence_length = conv_ref_seq_info.get_total_length();
+
+    if (!settings.aligned_sam_mode && !file_exists(settings.reference_alignment_done_file_name.c_str())) {
+      create_path(settings.reference_alignment_path);
+      reference_index_build = async(launch::async, [&reference_index_build_command]() {
+        SYSTEM(reference_index_build_command);
+      });
+    }
+    future<void> reference_faidx_and_trims = async(launch::async, [&settings]() {
+      samtools_faidx(settings.reference_fasta_file_name);
+      calculate_trims(settings.reference_fasta_file_name, settings.reference_trim_file_name);
+    });
     
     // Do a quick load of the user evidence file to detect formatting errors.
     if (settings.user_evidence_genome_diff_file_name != "") {
@@ -1960,11 +1982,8 @@ int breseq_default_action(int argc, char* argv[])
       }
     }
       
-		// create SAM faidx
-    samtools_faidx(settings.reference_fasta_file_name);
-    
-		// calculate trim files
-		calculate_trims(settings.reference_fasta_file_name, settings.reference_trim_file_name);
+		// the SAM faidx and the trim files, started above
+    reference_faidx_and_trims.get();
     settings.track_intermediate_file(settings.output_done_file_name, settings.sequence_conversion_path + "/*.trims");
 
 		// store summary information
@@ -2088,8 +2107,11 @@ int breseq_default_action(int argc, char* argv[])
     
     string reference_hash_file_name = settings.reference_hash_file_name;
     string reference_fasta_file_name = settings.reference_fasta_file_name;
-    string command = "bowtie2-build -q " + double_quote(settings.reference_fasta_file_name) + " " + double_quote(reference_hash_file_name);
-    SYSTEM(command);
+    string command;
+    if (reference_index_build.valid())
+      reference_index_build.get();    // started while the reads were being converted
+    else
+      SYSTEM(reference_index_build_command);
     track_bowtie2_index_files(settings, settings.reference_alignment_done_file_name, settings.reference_hash_file_name);
 
     ////// For each read file set (paired or unpaired)
