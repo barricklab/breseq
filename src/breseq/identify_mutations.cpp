@@ -78,7 +78,71 @@ void identify_mutations(
                 polymorphism_precision_places,
 								print_per_position_file
 							);
-	imp.do_pileup(settings.call_mutations_seq_id_set());
+
+  const size_t n_threads = static_cast<size_t>(max(1, Settings::pool.size()));
+  if ((n_threads > 1) && imp.can_be_chunked()) {
+
+    // Chunks in reference order, as for error_count(), except that a chunk is never shorter than
+    // a few times the distance each one reads before its own start.
+    set<string> seq_id_set = settings.call_mutations_seq_id_set();
+    vector<string> seq_ids(seq_id_set.begin(), seq_id_set.end());   // the order do_pileup(set) uses
+    uint64_t total_length = 0;
+    vector<uint32_t> tids;
+    for (size_t t = 0; t < seq_ids.size(); t++) {
+      uint32_t tid = 0;
+      while ((tid < imp.num_targets()) && (seq_ids[t] != imp.target_name(tid))) tid++;
+      ASSERT(tid < imp.num_targets(), "Could not find seq_id: " + seq_ids[t]);
+      tids.push_back(tid);
+      total_length += imp.target_length(tid);
+    }
+    const uint32_t warm_up = imp.chunk_warm_up();
+    const uint32_t chunk_length = static_cast<uint32_t>(max<uint64_t>(max<uint64_t>(kMinimumPileupChunkLength, 4 * static_cast<uint64_t>(warm_up)),
+                                                                     total_length / (n_threads * 8) + 1));
+    struct chunk { uint32_t tid, own_start, own_end; size_t seq; };
+    vector<chunk> chunks;
+    for (size_t t = 0; t < seq_ids.size(); t++) {
+      const uint32_t length = imp.target_length(tids[t]);
+      for (uint32_t start_1 = 1; start_1 <= length; start_1 += chunk_length) {
+        chunk c;
+        c.tid = tids[t];
+        c.seq = t;
+        c.own_start = start_1;
+        const uint64_t end_1 = static_cast<uint64_t>(start_1) + chunk_length - 1;
+        c.own_end = (end_1 >= length) ? (length + 1) : static_cast<uint32_t>(end_1);
+        chunks.push_back(c);
+      }
+    }
+
+    vector<unique_ptr<identify_mutations_pileup> > workers(n_threads);
+    vector<identify_mutations_pileup::chunk_result> results(chunks.size());
+    vector<future<void> > jobs;
+    jobs.reserve(chunks.size());
+    for (size_t c = 0; c < chunks.size(); c++) {
+      jobs.push_back(Settings::pool.push([&, c](int id) {
+        unique_ptr<identify_mutations_pileup>& worker = workers[id];
+        if (!worker)
+          worker.reset(new identify_mutations_pileup(settings, summary, bam, fasta, deletion_propagation_cutoff,
+                                                     deletion_seed_cutoffs, mutation_cutoff, polymorphism_cutoff,
+                                                     polymorphism_precision_decimal, polymorphism_precision_places,
+                                                     false, true));
+        worker->pileup_chunk(chunks[c].tid, chunks[c].own_start, chunks[c].own_end, static_cast<uint32_t>(c), results[c]);
+      }));
+    }
+    // get() also rethrows anything a job threw.
+    for (size_t c = 0; c < jobs.size(); c++) jobs[c].get();
+
+    vector<vector<string> > coverage_files_by_seq(seq_ids.size());
+    for (size_t c = 0; c < chunks.size(); c++) {
+      if (!results[c].coverage_file_name.empty()) coverage_files_by_seq[chunks[c].seq].push_back(results[c].coverage_file_name);
+      imp.absorb_chunk_result(results[c]);
+    }
+    imp.finish_chunked_pileup(seq_ids, coverage_files_by_seq);
+    cerr << "  Piled up " << chunks.size() << " chunk" << ((chunks.size() == 1) ? "" : "s") << " of the reference on "
+         << n_threads << " threads" << endl;
+
+  } else {
+    imp.do_pileup(settings.call_mutations_seq_id_set());
+  }
   imp.print_column_counts();
   // Re-score the reads over every linked run and polymorphic indel (every RA column under
   // --realign all) against the candidate haplotype sequences. Done here rather than in the Output
@@ -767,7 +831,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 															double polymorphism_score_cutoff,
                               double polymorphism_precision_decimal,
                               uint32_t polymorphism_precision_places,
-															bool print_per_position_file
+															bool print_per_position_file,
+                              bool chunk_worker
                                                             )
 : pileup_base(bam, fasta)
 , _settings(settings)
@@ -789,7 +854,6 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _mp_seed(settings.missing_pair_seed)
 , _mp_seed_fraction(settings.missing_pair_seed_fraction)
 , _mp_S_k(0.0)
-, _mp_S_k2_over_n(0.0)
 , _mp_S_n(0.0)
 , _mp_S_n_trimmed(0.0)
 , _mp_total_k(0)
@@ -821,7 +885,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _fetch_cover_start_1(0)
 , _fetch_cover_end_1(0)
 {
-  use_io_threads();
+  _chunk_worker = chunk_worker;
+  if (!chunk_worker) use_io_threads();
 
   // remove once used
   (void)settings;
@@ -1501,7 +1566,267 @@ static string mp_descriptor(const identify_mutations_pileup::mp_read& r)
 
 /*! Called for each reference genome position.
  */
-void identify_mutations_pileup::pileup_callback(const pileup& p) {
+
+/*! How far before its own first column a chunk worker starts: the longest window anything in this
+    pileup looks back over, so that at the chunk's first column the windows hold what they would
+    have held in a pileup from position 1. See the class declaration.
+ */
+uint32_t identify_mutations_pileup::chunk_warm_up() const
+{
+  double longest = 1.0;
+  for (vector<dp_group>::const_iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
+    longest = max(longest, g->window_width);
+    longest = max(longest, g->mp_window_width);
+  }
+  if (_pd_enabled) longest = max(longest, static_cast<double>(_pd_ring_w));
+  // The margin covers the one column of history the deletion tracker keeps (the coverage just
+  // outside a deletion's left edge) and the column before the chunk on which "not yet open" is decided.
+  return static_cast<uint32_t>(ceil(longest)) + 10;
+}
+
+/*! True when nothing that began in this worker's chunk is still open. Called for columns past the
+    chunk's end.
+ */
+bool identify_mutations_pileup::chunk_is_idle(uint32_t position) const
+{
+  if ((_last_deletion_start_position != UNDEFINED_UINT32) && (_last_deletion_start_position <= _own_end)) return false;
+  if ((_last_start_unknown_interval != UNDEFINED_UINT32) && (_last_start_unknown_interval <= _own_end)) return false;
+
+  if (!_dp_groups.empty()) {
+    for (int bin = 0; bin < kDPnBins; bin++)
+      if ((_dp_region_start[bin] != UNDEFINED_UINT32) && (_dp_region_start[bin] <= _own_end)) return false;
+  }
+  if (_mp_enabled) {
+    for (int bin = 0; bin < kMPnBins; bin++)
+      if ((_mp_region_start[bin] != UNDEFINED_UINT32) && (_mp_region_start[bin] <= _own_end)) return false;
+  }
+  if (_pd_enabled) {
+    for (int bin = 0; bin < kPDnBins; bin++) {
+      if ((_pd_region_start[bin] != UNDEFINED_UINT32) && (_pd_region_start[bin] <= _own_end)) return false;
+      for (int step = 0; step < kPDLadderSteps; step++)
+        if (_pd_ladder_open[bin][step] && (_pd_ladder_start[bin][step] <= _own_end)) return false;
+    }
+  }
+
+  // A run of linked columns that began in the chunk is compared with every later run starting
+  // within the linkage window of its last column, so the worker must see those runs complete. The
+  // open run is closed by at_target_end(); it is complete once a column has passed without
+  // extending it.
+  if (_linkage_enabled && (_owned_runs_last_position > 0)) {
+    const uint32_t reach = _owned_runs_last_position + _linkage_window;
+    if (position <= reach) return false;
+    if (!_open_run.columns.empty()
+        && (_open_run.columns.front().position <= reach)
+        && (_open_run.columns.back().position >= position)) return false;
+  }
+  return true;
+}
+
+void identify_mutations_pileup::pileup_chunk(uint32_t tid, uint32_t own_start, uint32_t own_end, uint32_t chunk_index, chunk_result& out)
+{
+  _chunk_worker = true;
+  _own_start = own_start;
+  _own_end = own_end;
+  _chunk_index = chunk_index;
+  const uint32_t warm_up = chunk_warm_up();
+  _chunk_first_column = (own_start > warm_up) ? (own_start - warm_up) : 1;
+  set_print_progress(false);
+
+  // The user evidence list is consumed from the front as the pileup reaches each entry, so a
+  // worker needs the part of it that lies ahead of where it starts.
+  if (!_user_evidence_saved) {
+    _all_user_evidence_ra_list = _user_evidence_ra_list;
+    _user_evidence_saved = true;
+  }
+  _user_evidence_ra_list.clear();
+  const string seq_id = target_name(tid);
+  for (diff_entry_list_t::iterator it = _all_user_evidence_ra_list.begin(); it != _all_user_evidence_ra_list.end(); it++) {
+    if (((**it)[SEQ_ID] == seq_id) && (from_string<uint32_t>((**it)[POSITION]) >= _chunk_first_column))
+      _user_evidence_ra_list.push_back(*it);
+  }
+
+  do_pileup(seq_id + ":" + to_string(_chunk_first_column) + "-" + to_string(target_length(tid)), true);
+
+  // Hand over what belongs to this chunk, and leave the worker empty for its next one.
+  diff_entry_list_t* entries = _gd.get_mutable_list_ptr();
+  for (diff_entry_list_t::iterator it = entries->begin(); it != entries->end(); it++) {
+    const cDiffEntry& e = **it;
+    const uint32_t key = from_string<uint32_t>(((e._type == MC) || (e._type == UN)) ? e.get(START) : e.get(POSITION));
+    if (owns(key)) out.entries.push_back(*it);
+  }
+  entries->clear();
+
+  for (size_t i = 0; i < _dp_candidate_regions.size(); i++)
+    if (owns(_dp_candidate_regions[i].start)) out.dp_regions.push_back(_dp_candidate_regions[i]);
+  for (size_t i = 0; i < _mp_candidate_regions.size(); i++)
+    if (owns(_mp_candidate_regions[i].start)) out.mp_regions.push_back(_mp_candidate_regions[i]);
+  for (size_t i = 0; i < _pd_candidate_regions.size(); i++)
+    if (owns(_pd_candidate_regions[i].start)) out.pd_regions.push_back(_pd_candidate_regions[i]);
+  _dp_candidate_regions.clear();
+  _mp_candidate_regions.clear();
+  _pd_candidate_regions.clear();
+
+  for (size_t i = 0; i < _realignment_candidates.size(); i++)
+    if (owns(_realignment_candidates[i].columns.front().first)) out.realignment_candidates.push_back(_realignment_candidates[i]);
+  _realignment_candidates.clear();
+
+  out.columns_examined = _columns_examined;                             _columns_examined = 0;
+  out.columns_skipped_all_reference = _columns_skipped_all_reference;   _columns_skipped_all_reference = 0;
+  out.columns_skipped_by_score_bound = _columns_skipped_by_score_bound; _columns_skipped_by_score_bound = 0;
+  out.columns_written_as_evidence = _columns_written_as_evidence;       _columns_written_as_evidence = 0;
+
+  out.mp_columns = _mp_columns;                 _mp_columns = 0;
+  out.mp_columns_trimmed = _mp_columns_trimmed; _mp_columns_trimmed = 0;
+  out.mp_total_k = _mp_total_k;                 _mp_total_k = 0;
+  out.mp_S_n = _mp_S_n;                         _mp_S_n = 0.0;
+  out.mp_S_n_trimmed = _mp_S_n_trimmed;         _mp_S_n_trimmed = 0.0;
+  out.mp_S_k = _mp_S_k;                         _mp_S_k = 0.0;
+  out.mp_k_n_columns.swap(_mp_k_n_columns);
+  _mp_k_n_columns.clear();
+
+  out.pd_pairs_considered = _pd_pairs_considered;                   _pd_pairs_considered = 0;
+  out.pd_pairs_ambiguous_placement = _pd_pairs_ambiguous_placement; _pd_pairs_ambiguous_placement = 0;
+  out.pd_z_hist = _pd_z_hist;
+  for (size_t i = 0; i < _pd_z_hist.size(); i++) _pd_z_hist[i] = 0;
+  for (int bin = 0; bin < kPDnBins; bin++)
+    for (int step = 0; step < kPDLadderSteps; step++) {
+      out.pd_ladder_count[bin][step] = _pd_ladder_count[bin][step];
+      _pd_ladder_count[bin][step] = 0;
+    }
+
+  out.coverage_file_name = _chunk_coverage_file_name;
+  _chunk_coverage_file_name.clear();
+}
+
+void identify_mutations_pileup::absorb_chunk_result(chunk_result& r)
+{
+  for (diff_entry_list_t::iterator it = r.entries.begin(); it != r.entries.end(); it++) _gd.add_existing(*it);
+
+  _dp_candidate_regions.insert(_dp_candidate_regions.end(), r.dp_regions.begin(), r.dp_regions.end());
+  _mp_candidate_regions.insert(_mp_candidate_regions.end(), r.mp_regions.begin(), r.mp_regions.end());
+  _pd_candidate_regions.insert(_pd_candidate_regions.end(), r.pd_regions.begin(), r.pd_regions.end());
+  _realignment_candidates.insert(_realignment_candidates.end(), r.realignment_candidates.begin(), r.realignment_candidates.end());
+
+  _columns_examined += r.columns_examined;
+  _columns_skipped_all_reference += r.columns_skipped_all_reference;
+  _columns_skipped_by_score_bound += r.columns_skipped_by_score_bound;
+  _columns_written_as_evidence += r.columns_written_as_evidence;
+
+  _mp_columns += r.mp_columns;
+  _mp_columns_trimmed += r.mp_columns_trimmed;
+  _mp_total_k += r.mp_total_k;
+  _mp_S_n += r.mp_S_n;                   // sums of whole numbers: exact in any order
+  _mp_S_n_trimmed += r.mp_S_n_trimmed;
+  _mp_S_k += r.mp_S_k;
+  for (unordered_map<uint64_t, uint64_t>::const_iterator it = r.mp_k_n_columns.begin(); it != r.mp_k_n_columns.end(); ++it)
+    _mp_k_n_columns[it->first] += it->second;
+
+  _pd_pairs_considered += r.pd_pairs_considered;
+  _pd_pairs_ambiguous_placement += r.pd_pairs_ambiguous_placement;
+  for (size_t i = 0; (i < r.pd_z_hist.size()) && (i < _pd_z_hist.size()); i++) _pd_z_hist[i] += r.pd_z_hist[i];
+  for (int bin = 0; bin < kPDnBins; bin++)
+    for (int step = 0; step < kPDLadderSteps; step++)
+      _pd_ladder_count[bin][step] += r.pd_ladder_count[bin][step];
+}
+
+// Candidate regions are written, and later read, in the order the serial pileup closes them: by
+// reference sequence, then by the column they close at, then by detector bin. A region that a
+// worker closed while reading on past its chunk comes out ahead of the next worker's, so the
+// merged lists are put back in that order.
+template <class REGION> static void sort_regions_as_closed(vector<REGION>& regions, const map<string, size_t>& seq_order)
+{
+  stable_sort(regions.begin(), regions.end(), [&seq_order](const REGION& a, const REGION& b) {
+    const size_t sa = seq_order.find(a.seq_id)->second, sb = seq_order.find(b.seq_id)->second;
+    if (sa != sb) return sa < sb;
+    if (a.end != b.end) return a.end < b.end;
+    return a.bin < b.bin;
+  });
+}
+
+void identify_mutations_pileup::finish_chunked_pileup(const vector<string>& seq_ids_in_order, const vector<vector<string> >& coverage_files_by_seq)
+{
+  map<string, size_t> seq_order;
+  for (size_t i = 0; i < seq_ids_in_order.size(); i++) seq_order[seq_ids_in_order[i]] = i;
+  sort_regions_as_closed(_dp_candidate_regions, seq_order);
+  sort_regions_as_closed(_mp_candidate_regions, seq_order);
+  sort_regions_as_closed(_pd_candidate_regions, seq_order);
+
+  // The per-position coverage table of each reference sequence: the header, then its chunks' rows.
+  if (_print_coverage_data) {
+    for (size_t i = 0; i < seq_ids_in_order.size(); i++) {
+      string filename = _settings.file_name(_settings.complete_coverage_text_file_name, "@", seq_ids_in_order[i]);
+      _coverage_data.open(filename.c_str());
+      ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
+      write_coverage_header();
+      for (size_t c = 0; c < coverage_files_by_seq[i].size(); c++) {
+        ifstream in(coverage_files_by_seq[i][c].c_str(), ios::binary);
+        ASSERT(!in.fail(), "Could not open coverage chunk file:" + coverage_files_by_seq[i][c]);
+        if (in.peek() != ifstream::traits_type::eof()) _coverage_data << in.rdbuf();
+        in.close();
+        remove(coverage_files_by_seq[i][c].c_str());
+      }
+      _coverage_data.close();
+    }
+  }
+}
+
+/*! The sum of k*k/n over the untrimmed columns, from their counts. See _mp_k_n_columns.
+ */
+double identify_mutations_pileup::mp_S_k2_over_n() const
+{
+  vector<pair<uint64_t, uint64_t> > columns(_mp_k_n_columns.begin(), _mp_k_n_columns.end());
+  sort(columns.begin(), columns.end());
+  double sum = 0.0;
+  for (size_t i = 0; i < columns.size(); i++) {
+    const double k = static_cast<double>(columns[i].first >> 32);
+    const double n = static_cast<double>(columns[i].first & 0xFFFFFFFFull);
+    sum += static_cast<double>(columns[i].second) * (k * k / n);
+  }
+  return sum;
+}
+
+void identify_mutations_pileup::write_coverage_header()
+{
+  // The same schema 'bam2cov --total-only' writes, so CNery reads this table with exactly the
+  // code path it uses for one it generated itself. Strand-split counts would only be summed
+  // again on the way in, so they are not written; nothing else reads this file.
+  _coverage_data << "position" << "\t";
+  _coverage_data << "ref_base";
+  for (size_t c = 0; c < coverage_column_names().size(); c++)
+    _coverage_data << "\t" << coverage_column_names()[c];
+
+  // Group-major, after the aggregate columns, as in coverage_output::table().
+  if (_print_read_group_coverage) {
+    for (size_t g = 0; g < read_groups().size(); g++)
+      for (size_t c = 0; c < coverage_column_names().size(); c++)
+        _coverage_data << "\t" << coverage_output::read_group_column_prefix(g) << coverage_column_names()[c];
+  }
+  _coverage_data << endl;
+}
+
+/*! Called for each reference position: decides whose column this is, then does the work.
+ */
+void identify_mutations_pileup::pileup_callback(const pileup& p)
+{
+  const uint32_t position = p.position_1();
+  _column_owned = owns(position);
+
+  // Read ordinals order the reads of a linked run. The serial pileup numbers a read at its
+  // leftmost column, so reads are numbered in BAM order; a worker's first column is not the
+  // leftmost column of the reads already over it, so number those here, in the same order.
+  if (_chunk_worker && _linkage_enabled && (position == _chunk_first_column)) {
+    for (pileup::const_iterator i = p.begin(); i != p.end(); ++i) {
+      if (_read_ordinal_by_record.find(i->bam_record()) == _read_ordinal_by_record.end())
+        _read_ordinal_by_record.insert(make_pair(i->bam_record(), _next_read_ordinal++));
+    }
+  }
+
+  pileup_callback_body(p);
+
+  if (_chunk_worker && (position > _own_end)) _stop = chunk_is_idle(position);
+}
+
+void identify_mutations_pileup::pileup_callback_body(const pileup& p) {
   
   bool verbose = false;
   ASSERT(p.target() < _seq_info.size(), "Unknown target id: " + to_string<uint32_t>(p.target()));
@@ -1788,9 +2113,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           //
           // Tested here rather than in the chain above so the two outcomes can be tallied: the claim
           // that refusing these pairs is free has to be checkable on every run.
-          _pd_pairs_considered++;
+          if (_column_owned) _pd_pairs_considered++;
           bool chosen_placement = ambiguous_pair_placement(*i);
-          if (chosen_placement) _pd_pairs_ambiguous_placement++;
+          if (chosen_placement && _column_owned) _pd_pairs_ambiguous_placement++;
 
           int gi = chosen_placement ? -1 : dp_group_for(p, *i);
           if (gi >= 0 && pd_orientation_matches(_dp_groups[gi].pd_orientation, *i)) {
@@ -2132,10 +2457,12 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       const bool nothing_to_find = (all_counted_bases_match_reference && (_polymorphism_score_cutoff > 0))
                                 || variant_cannot_reach_score_cutoff;
       if (insert_count == 0) {
-        _columns_examined++;
+        if (_column_owned) _columns_examined++;
         if (nothing_to_find && !passed_as_consensus_prediction && !user_evidence_here) {
-          if (all_counted_bases_match_reference) _columns_skipped_all_reference++;
-          else                                   _columns_skipped_by_score_bound++;
+          if (_column_owned) {
+            if (all_counted_bases_match_reference) _columns_skipped_all_reference++;
+            else                                   _columns_skipped_by_score_bound++;
+          }
           update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
           continue;
         }
@@ -2263,7 +2590,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // what's going on here? we may need to change a value latter,
       // and add added a copy not the current one
       added_mut_p = _gd.get_list().back();
-      if (insert_count == 0) _columns_written_as_evidence++;
+      if ((insert_count == 0) && _column_owned) _columns_written_as_evidence++;
 
       //## Read linkage (LN): keep this candidate column's per-read observations so it can be
       //## fit jointly with its neighbors once the pileup has moved past them.
@@ -2395,25 +2722,25 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
   // Open per-reference coverage file:
 	if(_print_coverage_data) {
 		string filename = _settings.file_name(_settings.complete_coverage_text_file_name, "@", target_name(tid));
+    // A chunk worker writes its rows to a piece of its own, which finish_chunked_pileup() joins
+    // under one header.
+    if (_chunk_worker) {
+      filename += ".chunk" + to_string(_chunk_index);
+      _chunk_coverage_file_name = filename;
+    }
 		_coverage_data.open(filename.c_str());
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
-
-    // The same schema 'bam2cov --total-only' writes, so CNery reads this table with exactly the
-    // code path it uses for one it generated itself. Strand-split counts would only be summed
-    // again on the way in, so they are not written; nothing else reads this file.
-    _coverage_data << "position" << "\t";
-    _coverage_data << "ref_base";
-    for (size_t c = 0; c < coverage_column_names().size(); c++)
-      _coverage_data << "\t" << coverage_column_names()[c];
-
-    // Group-major, after the aggregate columns, as in coverage_output::table().
-    if (_print_read_group_coverage) {
-      for (size_t g = 0; g < read_groups().size(); g++)
-        for (size_t c = 0; c < coverage_column_names().size(); c++)
-          _coverage_data << "\t" << coverage_output::read_group_column_prefix(g) << coverage_column_names()[c];
-    }
-    _coverage_data << endl;
+    if (!_chunk_worker) write_coverage_header();
 	}
+
+  // Start of a pileup, whole sequence or chunk
+  _stop = false;
+  _owned_runs_last_position = 0;
+  _this_deletion_reaches_seed_value = false;
+  _this_deletion_redundant_reached_zero = false;
+  _last_position_coverage = position_coverage(numeric_limits<double>::quiet_NaN());
+  for (int bin = 0; bin < kPDnBins; bin++)
+    for (int step = 0; step < kPDLadderSteps; step++) _pd_ladder_start[bin][step] = 0;
   
   // Reset the read linkage (LN) state: reads and runs never span reference boundaries.
   _read_ordinal_by_record.clear();
@@ -2476,6 +2803,8 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     _pd_short = 0;
     _pd_u = 0;
     _pd_last_b = 0;
+    // A chunk worker starts mid-sequence: nothing before its first column is drained.
+    if (_chunk_worker && (_chunk_first_column > 0)) _pd_last_b = _chunk_first_column - 1;
     for (int bin = 0; bin < kPDnBins; bin++) {
       _pd_region_start[bin] = UNDEFINED_UINT32;
       _pd_region_peak_position[bin] = 0;
@@ -2491,10 +2820,52 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 
 }
 
+/*! If this target failed to have its coverage fit, mark the entire thing as a deletion.
+ */
+void identify_mutations_pileup::add_missing_coverage_for_unfit_target(const uint32_t tid)
+{
+  double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
+  // if the propagation cutoff is -1 then the coverage distribution failed
+  if (_settings.predict_missing_coverage && (_this_deletion_propagation_cutoff < 0.0))
+  {
+    cDiffEntry del(MC);
+    del[SEQ_ID] = target_name(tid);
+    
+    del[START] = to_string<uint32_t>(1);
+    del[END] = to_string<uint32_t>(target_length(tid));
+    del[START_RANGE] = to_string<uint32_t>(0);
+    del[END_RANGE] = to_string<uint32_t>(0);
+    
+    del[LEFT_OUTSIDE_COV] = "NA";
+    del[LEFT_INSIDE_COV] = formatted_double(0.0, 0).to_string();
+    del[RIGHT_INSIDE_COV] = formatted_double(0.0, 0).to_string();
+    del[RIGHT_OUTSIDE_COV] = "NA";
+
+    _gd.add(del);
+  }
+}
+
 /*! Called at the end of a reference sequence fragment
     Close per-reference files
  */
 void identify_mutations_pileup::at_target_end(const uint32_t tid) {
+
+  // The flush below acts at target_length + 1, which only the last chunk of a sequence owns.
+  _column_owned = owns(target_length(tid)+1);
+
+  // A chunk worker that stopped early has, by chunk_is_idle(), nothing of its own left open --
+  // except a later run of linked columns that one of its own runs must still be compared with.
+  if (_stop) {
+    if (_linkage_enabled) {
+      linkage_close_run();
+      _recent_runs.clear();
+      _read_ordinal_by_record.clear();
+    }
+    // Belongs to the chunk that owns position 1, which is this one or is dropped as not owned.
+    add_missing_coverage_for_unfit_target(tid);
+    if (_print_coverage_data) _coverage_data.close();
+    return;
+  }
 
   // end "open" Missing Coverahge and Unknown intervals
   if (_settings.predict_missing_coverage) {
@@ -2524,27 +2895,8 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
     _read_ordinal_by_record.clear();
   }
 
-  // if this target failed to have its coverage fit, mark the entire thing as a deletion
-  double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
-  // if the propagation cutoff is -1 then the coverage distribution failed
-  if (_settings.predict_missing_coverage && (_this_deletion_propagation_cutoff < 0.0))
-  {
-    cDiffEntry del(MC);
-    del[SEQ_ID] = target_name(tid);
-    
-    del[START] = to_string<uint32_t>(1);
-    del[END] = to_string<uint32_t>(target_length(tid));
-    del[START_RANGE] = to_string<uint32_t>(0);
-    del[END_RANGE] = to_string<uint32_t>(0);
-    
-    del[LEFT_OUTSIDE_COV] = "NA";
-    del[LEFT_INSIDE_COV] = formatted_double(0.0, 0).to_string();
-    del[RIGHT_INSIDE_COV] = formatted_double(0.0, 0).to_string();
-    del[RIGHT_OUTSIDE_COV] = "NA";
+  add_missing_coverage_for_unfit_target(tid);
 
-    _gd.add(del);
-  }
-  
   // Close per-reference coverage file:
 	if(_print_coverage_data)
 		_coverage_data.close();
@@ -2580,7 +2932,7 @@ void identify_mutations_pileup::write_coverage_columns(const position_coverage& 
  */
 void identify_mutations_pileup::write_coverage_row(uint32_t position, char ref_base_char, const position_coverage& pc, const vector<position_coverage>& pc_by_rg)
 {
-  if (std::isnan(pc.unique[1]) || !_coverage_data.is_open()) return;
+  if (std::isnan(pc.unique[1]) || !_coverage_data.is_open() || !_column_owned) return;
 
   _coverage_data << position << "\t";
   _coverage_data << ref_base_char;
@@ -2802,6 +3154,7 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
         joined += _dp_region_descriptors[bin][k];
       }
       region.discordant_pairs = joined;
+      region.bin = bin;
       _dp_candidate_regions.push_back(region);
 
       _dp_region_start[bin] = UNDEFINED_UINT32;
@@ -2857,7 +3210,7 @@ void identify_mutations_pileup::check_missing_pair_completion(uint32_t seq_id, u
     // Each read is counted once per column it is in-window for, about W times over. That
     // multiplicity is uniform, so it cancels in p0 = S_k / S_n. It does NOT cancel in the column
     // count, so _mp_columns is a redundant sample size, not an independent one -- see fill_mp_summary.
-    if (position <= target_length(seq_id)) {
+    if ((position <= target_length(seq_id)) && _column_owned) {
       int32_t k = _mp_metric[bin];
       int32_t n = _mp_total_metric[bin];
       if (n > 0) {
@@ -2873,7 +3226,7 @@ void identify_mutations_pileup::check_missing_pair_completion(uint32_t seq_id, u
           _mp_S_n_trimmed += static_cast<double>(n);
         } else {
           _mp_S_k += static_cast<double>(k);
-          _mp_S_k2_over_n += static_cast<double>(k) * static_cast<double>(k) / static_cast<double>(n);
+          _mp_k_n_columns[(static_cast<uint64_t>(k) << 32) | static_cast<uint32_t>(n)]++;
         }
       }
     }
@@ -2938,6 +3291,7 @@ void identify_mutations_pileup::check_missing_pair_completion(uint32_t seq_id, u
         joined += _mp_region_descriptors[bin][k];
       }
       region.unpaired_reads = joined;
+      region.bin = bin;
       _mp_candidate_regions.push_back(region);
 
       _mp_region_start[bin] = UNDEFINED_UINT32;
@@ -2984,7 +3338,7 @@ void identify_mutations_pileup::fill_mp_summary(MissingPairSummary& s) const
   double phi = 0.0;
   double rho = 0.0;
   if ((N_prime > 1) && (mean_n_prime > 1.0) && (p0 > 0.0) && (p0 < 1.0)) {
-    double chi2 = (_mp_S_k2_over_n - 2.0 * p0 * _mp_S_k + p0 * p0 * S_n_prime) / (p0 * (1.0 - p0));
+    double chi2 = (mp_S_k2_over_n() - 2.0 * p0 * _mp_S_k + p0 * p0 * S_n_prime) / (p0 * (1.0 - p0));
     phi = chi2 / static_cast<double>(N_prime - 1);
     rho = (phi - 1.0) / (mean_n_prime - 1.0);
   }
@@ -3262,7 +3616,7 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
     // including the ones that go on to seed a region: real events are far too rare to move an
     // interquartile range, and excluding them would be the circular step of using the threshold to
     // decide what may inform the threshold.
-    if (_pd_n >= kPDzHistMinCovering) {
+    if ((_pd_n >= kPDzHistMinCovering) && _column_owned) {
       int bin = static_cast<int>(floor(z * kPDzHistPerUnit)) + kPDzHistLimit * kPDzHistPerUnit;
       if (bin < 0) bin = 0;
       if (bin >= kPDzHistBins) bin = kPDzHistBins - 1;
@@ -3301,9 +3655,11 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
       for (int step = 0; step < kPDLadderSteps; step++) {
         bool rung_above = tail_ok && (directed_z >= pd_ladder_z(step));
         if (rung_above) {
+          if (!_pd_ladder_open[bin][step]) _pd_ladder_start[bin][step] = position;
           _pd_ladder_open[bin][step] = true;
         } else if (_pd_ladder_open[bin][step]) {
-          _pd_ladder_count[bin][step]++;
+          // an excursion belongs to the chunk it began in, like a region
+          if (owns(_pd_ladder_start[bin][step])) _pd_ladder_count[bin][step]++;
           _pd_ladder_open[bin][step] = false;
         }
       }
@@ -3336,6 +3692,7 @@ void identify_mutations_pileup::check_pair_distance_completion(uint32_t seq_id, 
       region.peak_covering = _pd_region_peak_covering[bin];
       region.peak_tail = _pd_region_peak_tail[bin];
       region.peak_z = _pd_region_peak_z[bin];
+      region.bin = bin;
       _pd_candidate_regions.push_back(region);
 
       _pd_region_start[bin] = UNDEFINED_UINT32;
@@ -4046,6 +4403,8 @@ void identify_mutations_pileup::linkage_add_column(uint32_t tid, uint32_t positi
   c.pdata = pdata;
   _open_run.tid = tid;
   _open_run.columns.push_back(c);
+  if (_chunk_worker && owns(_open_run.columns.front().position))
+    _owned_runs_last_position = max(_owned_runs_last_position, position);
 }
 
 /*! Close the open run of candidate columns.

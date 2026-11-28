@@ -62,6 +62,10 @@ class pileup_base {
     //! Constructor.
     pileup_base(const string& bam, const string& fasta);
 
+    //! Asked after every column of a region pileup; true ends the pileup there. For a pileup by
+    //! chunks whose chunks decide for themselves how far past their end they must read.
+    virtual bool stop_pileup() const { return false; }
+
     //! Decompress this BAM on the shared htslib threads (see set_bam_io_threads, alignment.h).
     //! For the pileups that walk a whole genome; not the default, because most pileup objects
     //! are made to fetch a few reads at one place.

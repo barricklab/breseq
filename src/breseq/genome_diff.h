@@ -174,6 +174,13 @@ public:
   diff_entry_list_t* get_mutable_list_ptr() {return &_entry_list; };
   
   void set_list(diff_entry_list_t& in_list) {  _entry_list = in_list; }
+
+  //! Add an entry object that already exists -- no copy, so pointers held to it stay good --
+  //! giving it the next unique id of this genome diff, as add() would.
+  void add_existing(const diff_entry_ptr_t& item) {
+    _entry_list.push_back(item);
+    assign_unique_id_to_entry(*item);
+  }
   
   //! retrieve cDiffEntrys that match given type(s) and do not have 'no_show' set
   diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>()) const;

@@ -374,6 +374,7 @@ namespace breseq {
     //! A completed candidate region: discordant read pairs of a single focal strand and orientation.
     struct dp_candidate_region {
       string   seq_id;
+      int      bin = 0;   // detector bin it closed in (orders regions closing at one column)
       uint32_t start;
       uint32_t end;
       char     strand;            //!< focal-read strand for this region: 'F' or 'R'
@@ -427,6 +428,7 @@ namespace breseq {
     //! A completed PD candidate region: one run of columns seeding in a single shift direction.
     struct pd_candidate_region {
       string   seq_id;
+      int      bin = 0;   // detector bin it closed in (orders regions closing at one column)
       uint32_t start;
       uint32_t end;
       char     direction;       //!< 'L' = LONG (deletion-like), 'S' = SHORT (insertion-like)
@@ -439,6 +441,7 @@ namespace breseq {
     //! A completed MP candidate region: mate-unmapped reads of a single focal strand.
     struct mp_candidate_region {
       string   seq_id;
+      int      bin = 0;   // detector bin it closed in (orders regions closing at one column)
       uint32_t start;
       uint32_t end;
       char     strand;          //!< focal-read strand for this region: 'F' or 'R'
@@ -461,7 +464,8 @@ namespace breseq {
                               double polymorphism_cutoff,
                               double polymorphism_precision_decimal,
                               uint32_t polymorphism_precision_places,                              
-                              bool print_per_position_file
+                              bool print_per_position_file,
+                              bool chunk_worker = false
                             );
 				
 		//! Destructor.
@@ -712,7 +716,6 @@ namespace breseq {
 		// chi-square expansion soft_clipping.cpp uses, so p0 can be substituted at the end rather than
 		// being needed up front. NOT reset per reference sequence: the null is a property of the run.
 		double   _mp_S_k;                //!< sum of k_i over untrimmed columns
-		double   _mp_S_k2_over_n;        //!< sum of k_i^2 / n_i over untrimmed columns
 		double   _mp_S_n;                //!< sum of n_i over ALL columns with n_i > 0
 		double   _mp_S_n_trimmed;        //!< sum of n_i over trimmed columns
 		uint64_t _mp_total_k;            //!< sum of k_i over ALL columns with n_i > 0 (the p0 numerator)
@@ -945,6 +948,78 @@ namespace breseq {
     void prepare_candidate_cluster(realignment_cluster& c, size_t begin, size_t end, uint32_t flank);
     //! Thread-safe: score a prepared cluster's reads, refit, and write its members' entries.
     void score_candidate_cluster(const realignment_cluster& c) const;
+
+  public:
+    //! PILEUP BY CHUNKS (the driver is identify_mutations())
+    //!
+    //! With -j above 1 the reference is cut into chunks and each is piled up by a worker object
+    //! with a BAM handle of its own. Most of what this pileup does is decided one column at a
+    //! time and needs nothing more. What carries from column to column falls under one rule:
+    //!
+    //!   A worker starts chunk_warm_up() columns BEFORE its chunk, so that the sliding windows
+    //!   (DP, MP) and the pair-distance ring hold exactly what they would have held. It reads on
+    //!   PAST the end of its chunk until everything that began inside it has closed. And an item
+    //!   -- an RA column, an MC or UN interval, a DP/MP/PD region, a run of linked columns, a
+    //!   ladder excursion -- belongs to the chunk it STARTS in; a worker drops whatever started
+    //!   outside its own, because the neighbouring worker produces it whole.
+    //!
+    //! This works because every one of these is opened and closed by a test on the current column
+    //! alone (coverage under a cutoff, a window count over a seed, ...), so whether an item is
+    //! open at a column does not depend on where the pileup began, only its recorded start does,
+    //! and an item with a wrong start necessarily started before the chunk and is dropped.
+    //! Per-column tallies are taken only on a worker's own columns, and are whole numbers, so the
+    //! merged result is the same at any -j as the serial pileup's.
+    struct chunk_result {
+      diff_entry_list_t entries;
+      vector<dp_candidate_region> dp_regions;
+      vector<mp_candidate_region> mp_regions;
+      vector<pd_candidate_region> pd_regions;
+      vector<realignment_candidate> realignment_candidates;
+      uint64_t columns_examined, columns_skipped_all_reference, columns_skipped_by_score_bound, columns_written_as_evidence;
+      uint64_t mp_columns, mp_columns_trimmed, mp_total_k;
+      double mp_S_n, mp_S_n_trimmed, mp_S_k;
+      unordered_map<uint64_t, uint64_t> mp_k_n_columns;
+      uint64_t pd_pairs_considered, pd_pairs_ambiguous_placement;
+      vector<uint64_t> pd_z_hist;
+      uint64_t pd_ladder_count[kPDnBins][kPDLadderSteps];
+      string coverage_file_name;
+    };
+    bool can_be_chunked() const { return !_print_per_position_file; }
+    uint32_t chunk_warm_up() const;
+    //! Worker: pile up one chunk. own_end is target_length + 1 for the last chunk of a sequence,
+    //! so that the flush past its end belongs to that chunk.
+    void pileup_chunk(uint32_t tid, uint32_t own_start, uint32_t own_end, uint32_t chunk_index, chunk_result& out);
+    //! Collector: take a worker's chunk, in reference order.
+    void absorb_chunk_result(chunk_result& r);
+    //! Collector: once every chunk is absorbed.
+    void finish_chunked_pileup(const vector<string>& seq_ids_in_order, const vector<vector<string> >& coverage_files_by_seq);
+    virtual bool stop_pileup() const { return _stop; }
+  protected:
+    bool owns(uint32_t position) const { return (_own_end == 0) || ((position >= _own_start) && (position <= _own_end)); }
+    bool chunk_is_idle(uint32_t position) const;
+    void pileup_callback_body(const pileup& p);
+    void add_missing_coverage_for_unfit_target(const uint32_t tid);
+    void write_coverage_header();
+    double mp_S_k2_over_n() const;
+
+    bool _chunk_worker = false;
+    uint32_t _own_start = 0;              //!< first column of this worker's chunk
+    uint32_t _own_end = 0;                //!< last one; 0 = not chunked, everything is owned
+    uint32_t _chunk_first_column = 0;     //!< where the warm-up begins
+    uint32_t _chunk_index = 0;
+    bool _column_owned = true;            //!< the column being processed is in the chunk
+    bool _stop = false;
+    uint32_t _owned_runs_last_position = 0;   //!< last column of any linked run that began in the chunk
+    uint32_t _pd_ladder_start[kPDnBins][kPDLadderSteps];
+    string _chunk_coverage_file_name;
+    bool _user_evidence_saved = false;
+    diff_entry_list_t _all_user_evidence_ra_list;
+    //! Untrimmed columns by (mate-unmapped reads k, reads n). The MP null needs the sum of k*k/n
+    //! over them, which is not a whole number: summed as the columns came it would depend on how
+    //! the reference was cut into chunks, so the columns are counted and the sum taken once, in
+    //! key order, when it is needed.
+    unordered_map<uint64_t, uint64_t> _mp_k_n_columns;
+
     static void score_cluster_thread_helper(int id, const identify_mutations_pileup* imp, const realignment_cluster* c) {
       (void)id;
       imp->score_candidate_cluster(*c);

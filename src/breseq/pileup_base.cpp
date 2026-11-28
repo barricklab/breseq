@@ -343,19 +343,22 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
 
   int tid2, pos2, n;
   const bam_pileup1_t *pile;
+  bool stopped = false;
   while ((pile = bam_plp_auto(plp, &tid2, &pos2, &n)) != NULL) {
     first_level_pileup_callback((uint32_t)tid2, (uint32_t)pos2, n, pile, this);
+    if (stop_pileup()) { stopped = true; break; }
   }
   bam_plp_destroy(plp);
   hts_itr_destroy(iter);
 
   // handle positions after the last one handled by the pileup
   // unlike the case above, we only need to finish this target
-  for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_end_position_1; on_pos_1++) {
+  for (uint32_t on_pos_1 = m_last_position_1+1; !stopped && (on_pos_1 <= m_end_position_1); on_pos_1++) {
     if ( handle_position(on_pos_1) ) {
       pileup p(m_last_tid, on_pos_1, 0, NULL, *this);
       pileup_callback(p);
       m_last_position_1 = on_pos_1;
+      if (stop_pileup()) stopped = true;
     }
   }
   at_target_end_first_level_callback(target_id);
