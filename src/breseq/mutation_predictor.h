@@ -91,6 +91,7 @@ namespace breseq {
 
 
     void ignore_missing_coverage_at_repeat_origin(cGenomeDiff& gd);
+    void ignore_missing_coverage_at_linear_end_repeat(cGenomeDiff& gd);
     void ignore_discordant_pairs_at_repeat_origin(cGenomeDiff& gd);
 
 
@@ -123,17 +124,28 @@ namespace breseq {
     //! junction that reports it. The junction at the end lying inside the existing copy has a
     //! redundant side and is discarded upstream, which is why coverage has to close the gap.
     //!
-    //! This is recombination between two copies that both exist by the time it happens, so the tag is
-    //! always between=, never mediated= -- mediated= describes a different event, where a new element
-    //! is laid down with each new copy, and it would make APPLY insert one element too many.
-    //!
-    //! The duplicated block is written to END on a repeat copy, so repeating it reproduces the
-    //! element between every pair of copies, exactly as the real amplification does. When the copy at
-    //! the high-coordinate end is the NEW one, it is not in the reference to point at, so the AMP is
-    //! placed within= the MOB that reports it and begins inside that element. Coordinates are taken
-    //! at the highest positions that give the same result, the convention gdtools NORMALIZE enforces
-    //! so two runs of the same event compare equal.
+    //! When one end is an annotated copy, the duplicated block is written to END on that copy, so
+    //! repeating it reproduces the element between every pair of copies, exactly as the real
+    //! amplification does, and nothing more is needed: no mediated= (which would make APPLY insert one
+    //! element too many) and no between= either. When BOTH ends are new copies, the reference has no
+    //! element in the interval to repeat, so the AMP carries mediated= and is placed within= the MOB
+    //! that reports the first copy. Coordinates are taken at the highest positions that give the same
+    //! result, the convention gdtools NORMALIZE enforces so two runs of the same event compare equal.
     void predictCNplusRepeatToAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& cn);
+
+    //! Amplification between two copies of a repeat that are BOTH in the reference, with no junction
+    //! at all: a CN gain whose two ends sit at two direct copies of one repeat is the tandem
+    //! duplication of the segment between them (IS26-style), with a copy of the repeat between the
+    //! units. Recombination between the copies makes no new junction -- unit end to repeat and repeat
+    //! to unit start both read as reference -- so nothing anchors it for predictCNplusRepeatToAMP,
+    //! and a repeat longer than a read pair leaves no discordant pair either. Run after that function
+    //! and only on a CN gain no AMP has explained.
+    //!
+    //! The repeat is a pair of annotated repeat_region/mobile_element copies of one family (between=
+    //! that family), or failing that an unannotated direct repeat found in the reference itself
+    //! (between=repeat, repeat_length=<length of one copy>). The block runs from just past the first
+    //! copy through the end of the second, the same layout as predictCNplusRepeatToDEL's deletion.
+    void predictCNbetweenRepeatsToAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& cn);
 
     //! POLYMORPHISM MODE ONLY. A deletion present in part of the population leaves no missing
     //! coverage, so predictMCplusJCtoDEL never sees it, and predictJCtoINSorSUBorDEL caps a

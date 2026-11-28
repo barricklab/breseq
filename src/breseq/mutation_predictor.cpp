@@ -130,6 +130,22 @@ namespace breseq {
 		);
 	}
 
+  // The `length` bases of reference on the far side of a breakpoint from a junction or pair side at
+  // `position` facing `strand`, read in the direction leading AWAY from the breakpoint: from the
+  // position upward for +1, from the position downward and complemented for -1. Two placements
+  // whose strings are equal are equally good for whatever reads sit on that side, whether the two
+  // copies are in the same orientation or inverted relative to each other. Empty if the stretch
+  // runs off the sequence.
+  static string away_from_breakpoint_sequence(cAnnotatedSequence& seq, int32_t position, int32_t strand, int32_t length)
+  {
+    const int32_t seq_length = static_cast<int32_t>(seq.get_sequence_length());
+    const int32_t start = (strand == +1) ? position : position - length + 1;
+    const int32_t end = (strand == +1) ? position + length - 1 : position;
+    if ((start < 1) || (end > seq_length) || (length < 1)) return "";
+    const string stretch = seq.get_sequence_1(start, end);
+    return (strand == +1) ? stretch : reverse_complement(stretch);
+  }
+
   // Does this junction join the two ends of one circular sequence -- the low coordinate entering
   // rightward within `window` of position 1, the high coordinate leaving leftward within `window`
   // of the last base? That is the origin itself when flush, or a small mutation sitting on it.
@@ -180,6 +196,14 @@ namespace breseq {
     // junction on the origin is read as a small mutation there), and the reference must be
     // identical over the junction's flanking length at the two placements. The first match
     // scanning inward from the end is taken, which prefers the flush placement.
+    //
+    // The two placements are compared as the sequence read AWAY from the breakpoint (see
+    // away_from_breakpoint_sequence), so the copy the side was reported at may be inverted
+    // relative to the one at the origin. canonicalize_redundant_side_to_consensus_copy() moves a
+    // redundant side to the lowest copy of its family and flips its strand when that copy is on the
+    // other genomic strand, so an inverted copy is what this usually sees: e.g. the last base of a
+    // circular chromosome (-1) joined to 4663051 (-1), the end of an inverted copy of the
+    // chromosome's first kilobase.
     for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
     {
       cDiffEntry& j = **jc_it;
@@ -203,7 +227,8 @@ namespace breseq {
       const int32_t u_strand = n(j[u_key + "_strand"]);
       const int32_t r_position = n(j[r_key + "_position"]);
       const int32_t r_strand = n(j[r_key + "_strand"]);
-      if (r_strand != -u_strand) continue;
+      // The strand the redundant side must have at the origin, facing away from the unique side.
+      const int32_t origin_strand = -u_strand;
 
       const int32_t window = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
       const bool u_at_end = (u_strand == -1) && (u_position > u_length - window);
@@ -218,22 +243,19 @@ namespace breseq {
       if (match_length > u_length - window) continue;
 
       // The stretch of reference the redundant side's reads cover, at its current placement.
-      const int32_t r_start = (r_strand == +1) ? r_position : r_position - match_length + 1;
-      const int32_t r_end = (r_strand == +1) ? r_position + match_length - 1 : r_position;
-      if ((r_start < 1) || (r_end > r_length)) continue;
-      const string r_stretch = r_seq.get_sequence_1(r_start, r_end);
+      const string r_stretch = away_from_breakpoint_sequence(r_seq, r_position, r_strand, match_length);
+      if (r_stretch.empty()) continue;
 
       int32_t origin_position = 0;
       for (int32_t offset = 0; (offset < window) && (origin_position == 0); offset++) {
         // The redundant side enters at the OTHER end from the one the unique side leaves by.
         const int32_t candidate = u_at_end ? (1 + offset) : (u_length - offset);
-        const int32_t c_start = (r_strand == +1) ? candidate : candidate - match_length + 1;
-        const int32_t c_end = (r_strand == +1) ? candidate + match_length - 1 : candidate;
-        if ((c_start < 1) || (c_end > u_length)) break;
-        if (u_seq.get_sequence_1(c_start, c_end) == r_stretch) origin_position = candidate;
+        const string c_stretch = away_from_breakpoint_sequence(u_seq, candidate, origin_strand, match_length);
+        if (c_stretch.empty()) break;
+        if (c_stretch == r_stretch) origin_position = candidate;
       }
       if (origin_position == 0) continue;
-      if ((r_seq_id == u_seq_id) && (origin_position == r_position)) continue;   // already there
+      if ((r_seq_id == u_seq_id) && (origin_position == r_position) && (origin_strand == r_strand)) continue;   // already there
 
       // side_1 is the lower coordinate on one sequence; only re-place where that order survives.
       const bool order_kept = redundant_1 ? (origin_position <= u_position) : (origin_position >= u_position);
@@ -243,9 +265,10 @@ namespace breseq {
       // has to be a field that is written to the GD file, not a '_' one: in the pipeline this
       // function runs once on the junction evidence before it is saved and again on what is read
       // back, and the second time the side is already at the origin, so nothing here would mark it.
-      j[r_key + "_placed_at_origin_from"] = r_seq_id + ":" + s(r_position);
+      j[r_key + "_placed_at_origin_from"] = r_seq_id + ":" + s(r_position) + ":" + s(r_strand);
       j[r_key + "_seq_id"] = u_seq_id;
       j[r_key + "_position"] = s(origin_position);
+      j[r_key + "_strand"] = s(origin_strand);
     }
 
 		for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
@@ -2783,6 +2806,42 @@ namespace breseq {
     }
   }
 
+  // The linear-sequence counterpart: missing coverage that is only the end of a linear sequence
+  // lying inside a repeat, such as a phage's direct terminal repeat.
+  //
+  // Read depth tapers to nothing at the end of a linear molecule, since no read runs past it, so the
+  // last base or two often have no coverage at all and seed an MC. Where the end is one copy of a
+  // repeat (the first and last 4,470 bases of Bacillus phage PP579742 are identical), unique coverage
+  // is zero across the whole copy, so that MC runs on through it: MC 149482-152110, 2,626 of whose
+  // 2,629 bases are its redundant range, although total depth there is normal. The other end, the
+  // first copy, came out clean only because one read happened to reach position 1.
+  //
+  // Such an MC is tagged SEQUENCE_END when it touches an end of a non-circular sequence, all but a
+  // few of its bases (10) are definite, and its redundant range is what makes up the rest. A tapering
+  // MC with no redundant range (MC 1-2 at a phage end) is left as it was, and so is one with real
+  // uncovered bases next to the repeat.
+  void MutationPredictor::ignore_missing_coverage_at_linear_end_repeat(cGenomeDiff& gd)
+  {
+    const int32_t max_definite_size = 10;
+
+    diff_entry_list_t mc = gd.get_list(make_vector<gd_entry_type>(MC));
+    for (diff_entry_list_t::iterator it = mc.begin(); it != mc.end(); it++) {
+      cDiffEntry& m = **it;
+      if (m.entry_exists(IGNORE) || m.entry_exists(REJECT)) continue;
+      if (!ref_seq_info.seq_id_exists(m[SEQ_ID])) continue;
+      cAnnotatedSequence& seq = ref_seq_info[m[SEQ_ID]];
+      if (seq.is_circular()) continue;
+      const int32_t seq_length = static_cast<int32_t>(seq.get_sequence_length());
+      const int32_t start = n(m[START]), end = n(m[END]);
+      if ((start != 1) && (end != seq_length)) continue;
+      const int32_t redundant_size = n(m[START_RANGE]) + n(m[END_RANGE]);
+      const int32_t definite_size = (end - start + 1) - redundant_size;
+      if (definite_size > max_definite_size) continue;
+      if (redundant_size <= max_definite_size) continue;
+      m[IGNORE] = "SEQUENCE_END";
+    }
+  }
+
   // A discordant pair (DP) item that is only the origin of a circular sequence lying inside a
   // repeat -- the DP counterpart of the junction re-placement in prepare_junctions().
   //
@@ -2794,15 +2853,28 @@ namespace breseq {
   // when both sides are within its snap window of the two ends, and this one is a whole number of
   // repeat units away.
   //
-  // When a DP has one side at an end of a circular sequence (facing inward), its other side is
-  // redundant, and the reference where that side sits is identical to the reference at the OTHER
-  // end of the sequence, that end is the placement that needs no rearrangement: the side is moved
-  // there (side_N_placed_at_origin_from records where it was reported) and the DP is tagged
-  // CIRCULAR_CHROMOSOME like any other origin DP. A DP coordinate is placed from read pairs, not to
-  // the base, so the identity is looked for in a window around the reported position.
+  // When a DP has one side at an end of a circular sequence (facing inward) and its other side is
+  // redundant, the far end of the sequence may hold an equally good placement for that side: one
+  // where the reference reads the same, AWAY from the breakpoint, as where the side was reported
+  // (away_from_breakpoint_sequence). That placement needs no rearrangement, so the side is moved
+  // there (side_N_placed_at_origin_from records where it was reported, as seq:position:strand) and
+  // the DP is tagged CIRCULAR_CHROMOSOME like any other origin DP. A DP coordinate is placed from
+  // read pairs, not to the base, so the match is looked for in a window around the reported
+  // position. Three shapes reach this:
+  //
+  //   - a tandem array running up to the last base, the side reported a whole number of units in
+  //     (Aquabacterium AP046529, DP 1 / 3742982 on a 3,765,902 bp chromosome);
+  //   - an IS copy that ends a few bases SHORT of the end, the side reported on another copy that is
+  //     INVERTED relative to it, so both sides face the same way (Dyella CP192735, DP 1 (+1) /
+  //     1225066 (+1): the copy at 3977470-3978661 ends 30 bases before the last base and every other
+  //     copy is its reverse complement). The far-end placement is therefore searched for inward
+  //     from the end, as far as the window the unique side must be within;
+  //   - the side reported on ANOTHER SEQUENCE that carries a copy of the end (Klebsiella, DP
+  //     JBUBNP010000003 6300 (-1) / JBUBNP010000004 1 (+1): the plasmid's last 750 bases are an IS
+  //     fragment also present on plasmid 3). Only the unique side's sequence must be circular.
   void MutationPredictor::ignore_discordant_pairs_at_repeat_origin(cGenomeDiff& gd)
   {
-    const int32_t max_end_window = 1000; // how close to an end the unique side must be (less on a short sequence)
+    const int32_t max_end_window = 1000; // how close to an end the unique side, and the far copy, must be (less on a short sequence)
     const int32_t search_window = 300;   // how far from the reported position to look for the match
     const int32_t match_length = 100;    // bases of reference that must be identical
 
@@ -2810,52 +2882,80 @@ namespace breseq {
     for (diff_entry_list_t::iterator it = dp.begin(); it != dp.end(); it++) {
       cDiffEntry& d = **it;
       if (d.entry_exists(REJECT) || d.entry_exists(IGNORE)) continue;
-      if (d[SIDE_1_SEQ_ID] != d[SIDE_2_SEQ_ID]) continue;
-      if (!ref_seq_info.seq_id_exists(d[SIDE_1_SEQ_ID])) continue;
-      cAnnotatedSequence& seq = ref_seq_info[d[SIDE_1_SEQ_ID]];
-      if (!seq.is_circular()) continue;
-      const int32_t seq_length = static_cast<int32_t>(seq.get_sequence_length());
-      if (seq_length < 4 * match_length) continue;
-      const int32_t end_window = min(max_end_window, seq_length / 4);
 
       const bool redundant_1 = d.entry_exists("side_1_redundant") && (n(d["side_1_redundant"]) == 1);
       const bool redundant_2 = d.entry_exists("side_2_redundant") && (n(d["side_2_redundant"]) == 1);
       if (redundant_1 == redundant_2) continue;
       const string r_key = redundant_1 ? "side_1" : "side_2";
       const string u_key = redundant_1 ? "side_2" : "side_1";
+
+      const string u_seq_id = d[u_key + "_seq_id"], r_seq_id = d[r_key + "_seq_id"];
+      if (!ref_seq_info.seq_id_exists(u_seq_id) || !ref_seq_info.seq_id_exists(r_seq_id)) continue;
+      cAnnotatedSequence& u_seq = ref_seq_info[u_seq_id];
+      cAnnotatedSequence& r_seq = ref_seq_info[r_seq_id];
+      if (!u_seq.is_circular()) continue;
+      const int32_t u_length = static_cast<int32_t>(u_seq.get_sequence_length());
+      const int32_t r_length = static_cast<int32_t>(r_seq.get_sequence_length());
+      if (u_length < 4 * match_length) continue;
+      const int32_t end_window = min(max_end_window, u_length / 4);
+
       const int32_t u_position = n(d[u_key + "_position"]), u_strand = n(d[u_key + "_strand"]);
       const int32_t r_position = n(d[r_key + "_position"]), r_strand = n(d[r_key + "_strand"]);
-      if (r_strand != -u_strand) continue;
 
       // The unique side at the start facing in (+1) means the pairs leave by the END, and vice versa.
       const bool u_at_start = (u_strand == +1) && (u_position <= end_window);
-      const bool u_at_end = (u_strand == -1) && (u_position > seq_length - end_window);
+      const bool u_at_end = (u_strand == -1) && (u_position > u_length - end_window);
       if (!u_at_start && !u_at_end) continue;
+      // At the far end the redundant side must face back across the origin, toward the unique side.
+      const int32_t origin_strand = -u_strand;
 
-      // What the reference reads at the end the redundant side belongs at ...
-      const string target = u_at_start ? seq.get_sequence_1(seq_length - match_length + 1, seq_length)
-                                       : seq.get_sequence_1(1, match_length);
-      const int32_t origin_position = u_at_start ? seq_length : 1;
-      if (abs(r_position - origin_position) <= search_window) continue;   // already there: not this case
-
-      // ... and whether it reads the same somewhere around where the side was reported
-      bool found = false;
-      for (int32_t offset = 0; (offset <= search_window) && !found; offset++) {
-        for (int32_t sign = -1; (sign <= 1) && !found; sign += 2) {
-          if ((offset == 0) && (sign == 1)) continue;
-          const int32_t candidate = r_position + sign * offset;
-          // a side with strand -1 uses the bases up to and including its position; +1, from it on
-          const int32_t start = u_at_start ? (candidate - match_length + 1) : candidate;
-          const int32_t end = u_at_start ? candidate : (candidate + match_length - 1);
-          if ((start < 1) || (end > seq_length)) continue;
-          if (seq.get_sequence_1(start, end) == target) found = true;
-        }
+      // Already near the far end and facing the right way: there is nothing to re-place.
+      if ((r_seq_id == u_seq_id) && (r_strand == origin_strand)) {
+        const bool near_far_end = u_at_start ? (r_position > u_length - end_window - search_window)
+                                             : (r_position <= end_window + search_window);
+        if (near_far_end) continue;
       }
-      if (!found) continue;
 
-      d[r_key + "_placed_at_origin_from"] = d[r_key + "_seq_id"] + ":" + s(r_position);
+      // The bases the redundant side's reads could sit on, read away from the breakpoint, for every
+      // placement within search_window of where it was reported. Reversed for a -1 side, so that a
+      // placement's away-from-breakpoint string is a substring of `around` either way.
+      int32_t lo = (r_strand == +1) ? (r_position - search_window) : (r_position - search_window - match_length + 1);
+      int32_t hi = (r_strand == +1) ? (r_position + search_window + match_length - 1) : (r_position + search_window);
+      lo = max(1, lo);
+      hi = min(r_length, hi);
+      if (hi - lo + 1 < match_length) continue;
+      string around = r_seq.get_sequence_1(lo, hi);
+      if (r_strand == -1) around = reverse_complement(around);
+
+      // The far-end placement nearest the end whose reference reads the same.
+      int32_t origin_position = 0;
+      for (int32_t offset = 0; (offset < end_window) && (origin_position == 0); offset++) {
+        const int32_t candidate = u_at_start ? (u_length - offset) : (1 + offset);
+        const string target = away_from_breakpoint_sequence(u_seq, candidate, origin_strand, match_length);
+        if (target.empty()) break;
+        if (around.find(target) != string::npos) origin_position = candidate;
+      }
+      if (origin_position == 0) continue;
+
+      d[r_key + "_placed_at_origin_from"] = r_seq_id + ":" + s(r_position) + ":" + s(r_strand);
+      d[r_key + "_seq_id"] = u_seq_id;
       d[r_key + "_position"] = s(origin_position);
+      d[r_key + "_strand"] = s(origin_strand);
       d[IGNORE] = "CIRCULAR_CHROMOSOME";
+
+      // Both sides are now on one sequence, where side_1 is the lower coordinate (dp_evidence.cpp).
+      // Moving a side over from another sequence can break that, so swap every side field back.
+      if (n(d["side_1_position"]) > n(d["side_2_position"])) {
+        map<string, string> swapped;
+        for (diff_entry_map_t::iterator k = d.begin(); k != d.end(); ) {
+          const bool is_1 = (k->first.compare(0, 7, "side_1_") == 0);
+          const bool is_2 = (k->first.compare(0, 7, "side_2_") == 0);
+          if (!is_1 && !is_2) { k++; continue; }
+          swapped[string(is_1 ? "side_2_" : "side_1_") + k->first.substr(7)] = k->second;
+          d.erase(k++);
+        }
+        for (map<string, string>::iterator k = swapped.begin(); k != swapped.end(); k++) d[k->first] = k->second;
+      }
     }
   }
 
@@ -4951,6 +5051,7 @@ namespace breseq {
     cerr << "  Preparing junctions..." << endl;
     prepare_junctions(settings, summary, gd);
     ignore_missing_coverage_at_repeat_origin(gd);
+    ignore_missing_coverage_at_linear_end_repeat(gd);
     ignore_discordant_pairs_at_repeat_origin(gd);
 
     ///
@@ -5012,6 +5113,7 @@ namespace breseq {
       cerr << "  Predicting amplifications from junctions and copy number..." << endl;
       predictJCplusCNtoAMP(settings, summary, gd, jc, cn);
       predictCNplusRepeatToAMP(settings, summary, gd, jc, cn);
+      predictCNbetweenRepeatsToAMP(settings, summary, gd, cn);
     }
 
     ///
@@ -6352,6 +6454,209 @@ namespace breseq {
         gd.add(mut);
         break; // this CN region is accounted for
       }
+    }
+  }
+
+  // An unannotated DIRECT repeat with one copy within `slop` of each of two CN edges, found from the
+  // reference alone: 25-mers shared, in the same orientation, between a window around each edge vote
+  // for the offset between the copies, and the most-supported offset is grown into a block of at
+  // least 80% identity. Returns false unless that block is at least `min_length` long and the two
+  // copies are separate stretches. left_end is the last base of the first copy and offset what is
+  // added to a first-copy position to reach the second, measured at the copies' right ends (where the
+  // AMP unit ends) in case an indel between them makes it vary along the block.
+  static bool find_flanking_direct_repeat(const cAnnotatedSequence& seq, int32_t cn_start, int32_t cn_end,
+                                          int32_t slop, int32_t min_length,
+                                          int32_t& left_start, int32_t& left_end, int32_t& offset)
+  {
+    const int32_t k = 25;
+    const size_t max_kmer_copies = 4;   // a k-mer more common than this in one window is low complexity
+    const int32_t seq_length = static_cast<int32_t>(seq.m_length);
+
+    const int32_t l_lo = max(1, cn_start - slop), l_hi = min(seq_length, cn_start + slop);
+    const int32_t r_lo = max(1, cn_end - slop),   r_hi = min(seq_length, cn_end + slop);
+    if ((l_hi - l_lo + 1 < k) || (r_hi - r_lo + 1 < k)) return false;
+    const string left = seq.get_sequence_1(l_lo, l_hi);
+    const string right = seq.get_sequence_1(r_lo, r_hi);
+
+    map<string, vector<int32_t> > left_kmers;
+    for (int32_t i = 0; i + k <= static_cast<int32_t>(left.size()); i++)
+      left_kmers[left.substr(i, k)].push_back(l_lo + i);
+
+    // offset -> (k-mers supporting it, rightmost first-copy position supporting it)
+    map<int32_t, pair<int32_t, int32_t> > votes;
+    for (int32_t i = 0; i + k <= static_cast<int32_t>(right.size()); i++) {
+      map<string, vector<int32_t> >::const_iterator f = left_kmers.find(right.substr(i, k));
+      if (f == left_kmers.end() || (f->second.size() > max_kmer_copies)) continue;
+      const int32_t q = r_lo + i;
+      for (size_t j = 0; j < f->second.size(); j++) {
+        const int32_t d = q - f->second[j];
+        if (d < k) continue;   // the same bases, or an overlapping tandem copy
+        pair<int32_t, int32_t>& v = votes[d];
+        v.first++;
+        v.second = max(v.second, f->second[j]);
+      }
+    }
+    if (votes.empty()) return false;
+
+    int32_t best_d = 0, best_votes = 0;
+    for (map<int32_t, pair<int32_t, int32_t> >::const_iterator v = votes.begin(); v != votes.end(); v++)
+      if (v->second.first > best_votes) { best_d = v->first; best_votes = v->second.first; }
+    if (best_votes < min_length - k + 1) return false;
+
+    // An indel between the copies splits the votes over neighbouring offsets; the unit ends where the
+    // second copy ends, so take the offset of whichever nearby one reaches furthest right.
+    int32_t end_d = best_d, end_p = votes[best_d].second;
+    for (map<int32_t, pair<int32_t, int32_t> >::const_iterator v = votes.begin(); v != votes.end(); v++) {
+      if (abs(v->first - best_d) > 50) continue;
+      if (v->second.first < 10) continue;
+      if (v->second.second > end_p) { end_d = v->first; end_p = v->second.second; }
+    }
+
+    // How far back the repeat reaches only sets repeat_length, so the 80%-identity block will do.
+    int32_t block_start = 0, block_end = 0;
+    homologous_block_extent(seq, best_d, votes[best_d].second, 50, 0.80, 20000, block_start, block_end);
+    // It grows in 50-base steps, so finish the left edge base by base.
+    while ((block_start > 1) && (seq.get_sequence_1(block_start - 1) == seq.get_sequence_1(block_start - 1 + best_d)))
+      block_start--;
+
+    // Where it ends sets the AMP's coordinates, so take it to the base: the last base after which the
+    // copies stop being identical, walked out from the rightmost shared k-mer at the unit's offset.
+    int32_t last = end_p + k - 1;
+    while ((last + 1 + end_d <= seq_length) && (seq.get_sequence_1(last + 1) == seq.get_sequence_1(last + 1 + end_d)))
+      last++;
+
+    const int32_t block_length = last - block_start + 1;
+    if (block_length < min_length) return false;
+    if (end_d <= block_length) return false;   // copies overlap: a tandem array, not two copies
+
+    left_start = block_start;
+    left_end = last;
+    offset = end_d;
+    return true;
+  }
+
+  void MutationPredictor::predictCNbetweenRepeatsToAMP(Settings& settings, Summary& summary, cGenomeDiff& gd,
+                                                       diff_entry_list_t& cn)
+  {
+    (void)summary;
+    if (cn.empty()) return;
+    const double cn_relative_bias = settings.polymorphism_prediction ? estimate_cn_relative_bias(settings, cn) : 0.0;
+
+    // The same allowance predictCNplusRepeatToAMP and predictCNplusRepeatToDEL make, for the same
+    // reason: CNery censors the windows inside a repeat, so a segment's edge lands beside the copy.
+    const int32_t kRepeatBoundarySlop = 3000;
+    // Shortest unannotated repeat believed. A repeat a read can span leaves a junction or a pair
+    // across the duplication and is predictJCplusCNtoAMP's to call; this only has to rule out chance.
+    const int32_t kMinUnannotatedRepeatLength = 100;
+
+    // A CN gain some AMP already cites is explained.
+    set<string> cn_explained;
+    diff_entry_list_t amps = gd.get_list(make_vector<gd_entry_type>(AMP));
+    for (diff_entry_list_t::iterator it = amps.begin(); it != amps.end(); it++)
+      for (size_t e = 0; e < (*it)->_evidence.size(); e++) cn_explained.insert((*it)->_evidence[e]);
+
+    for (diff_entry_list_t::iterator ci = cn.begin(); ci != cn.end(); ci++) {
+      cDiffEntry& c = **ci;
+      if (cn_explained.count(c._id)) continue;
+      int32_t copies = cn_copies(c);
+      if (settings.polymorphism_prediction) {
+        if (from_string<double>(c[COPY_NUMBER]) <= 1.0) continue;
+      } else if (copies < 2) {
+        continue;
+      }
+
+      const string& seq_id = c[SEQ_ID];
+      if (ref_seq_info.seq_id_to_index(seq_id) >= ref_seq_info.size()) continue;
+      cAnnotatedSequence& seq = ref_seq_info[seq_id];
+      const int32_t cn_start = from_string<int32_t>(c[START]);
+      const int32_t cn_end   = from_string<int32_t>(c[END]);
+
+      // The closest pair of DIRECT annotated copies of one family, one at each end -- the search
+      // predictCNplusRepeatToDEL makes. Inverted copies would invert the segment instead.
+      cFeatureLocation* best_r1 = NULL;
+      cFeatureLocation* best_r2 = NULL;
+      int32_t best_distance = 0;
+      for (cFeatureLocationList::iterator i1 = seq.m_repeat_locations.begin(); i1 != seq.m_repeat_locations.end(); i1++) {
+        cFeatureLocation& r1 = *i1;
+        int32_t d1 = (cn_start < r1.get_start_1()) ? (r1.get_start_1() - cn_start)
+                   : ((cn_start > r1.get_end_1()) ? (cn_start - r1.get_end_1()) : 0);
+        if (d1 > kRepeatBoundarySlop) continue;
+        for (cFeatureLocationList::iterator i2 = seq.m_repeat_locations.begin(); i2 != seq.m_repeat_locations.end(); i2++) {
+          cFeatureLocation& r2 = *i2;
+          if (&r2 == &r1) continue;
+          if (r2.get_start_1() <= r1.get_end_1()) continue;
+          if ((*r2.get_feature())["name"] != (*r1.get_feature())["name"]) continue;
+          if (r2.get_strand() != r1.get_strand()) continue;
+          int32_t d2 = (cn_end < r2.get_start_1()) ? (r2.get_start_1() - cn_end)
+                     : ((cn_end > r2.get_end_1()) ? (cn_end - r2.get_end_1()) : 0);
+          if (d2 > kRepeatBoundarySlop) continue;
+          if ((best_r1 == NULL) || (d1 + d2 < best_distance)) {
+            best_r1 = &r1; best_r2 = &r2; best_distance = d1 + d2;
+          }
+        }
+      }
+
+      int32_t position = 0, size = 0, repeat_length = 0;
+      int32_t second_copy_start = 0;   // the unit's unique sequence is [position, second_copy_start - 1]
+      string between;
+      if (best_r1 != NULL) {
+        position = best_r1->get_end_1() + 1;
+        size = best_r2->get_end_1() - best_r1->get_end_1();
+        second_copy_start = best_r2->get_start_1();
+        between = (*best_r1->get_feature())["name"];
+      } else {
+        int32_t left_start = 0, left_end = 0, offset = 0;
+        if (!find_flanking_direct_repeat(seq, cn_start, cn_end, kRepeatBoundarySlop, kMinUnannotatedRepeatLength,
+                                         left_start, left_end, offset)) continue;
+        // Both copies have to be at the CN edges, not merely in the windows around them.
+        const int32_t right_start = left_start + offset, right_end = left_end + offset;
+        const int32_t d1 = (cn_start < left_start) ? (left_start - cn_start) : ((cn_start > left_end) ? (cn_start - left_end) : 0);
+        const int32_t d2 = (cn_end < right_start) ? (right_start - cn_end) : ((cn_end > right_end) ? (cn_end - right_end) : 0);
+        if ((d1 > kRepeatBoundarySlop) || (d2 > kRepeatBoundarySlop)) continue;
+        position = left_end + 1;
+        size = offset;
+        second_copy_start = right_start;
+        between = "repeat";
+        repeat_length = left_end - left_start + 1;
+      }
+      if (size <= kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) continue;
+
+      // The gain has to BE the unit: it must cover everything between the two copies, and nothing
+      // beyond them. The copies themselves are multicopy already, and CNery censors every window with
+      // redundant coverage, so a segment's edge stops where those windows start; redundant_before /
+      // redundant_after (cn_evidence.cpp) say how far the censored run goes on past each edge, and
+      // the edge counts as reaching the copy if the CN plus that run gets to within a tile of it.
+      // Without this, short CN segments that only sat near two copies were read as duplications: a
+      // 900-bp gain beside a 140-bp repeat became a 147-bp AMP with 7 unique bases
+      // (tests/tmv_plasmid_*), and 0.7-2.2 kb gains in an IS630-dense plasmid became 3-4 kb AMPs
+      // (tests/jc_is_copy_merge_*).
+      const int32_t unique_start = position, unique_end = second_copy_start - 1;
+      if (unique_end < unique_start) continue;
+      const int32_t tile = (c.entry_exists("tile_size") && (n(c["tile_size"]) > 0)) ? n(c["tile_size"]) : 100;
+      const int32_t reach_start = cn_start - (c.entry_exists("redundant_before") ? n(c["redundant_before"]) : 0);
+      const int32_t reach_end = cn_end + (c.entry_exists("redundant_after") ? n(c["redundant_after"]) : 0);
+      if ((reach_start > unique_start + tile) || (reach_end < unique_end - tile)) continue;
+      if ((cn_start < unique_start - tile) || (cn_end > unique_end + tile)) continue;
+
+      cDiffEntry mut(AMP);
+      mut._evidence = make_vector<string>(c._id);
+      mut[SEQ_ID] = seq_id;
+      mut[POSITION] = to_string<int32_t>(position);
+      mut[SIZE] = to_string<int32_t>(size);
+
+      if (settings.polymorphism_prediction) {
+        // Coverage only, as in predictCNplusRepeatToAMP: there is no junction to combine it with.
+        cPolymorphicAmpEstimate poly_estimate;
+        if (!estimate_polymorphic_copy_number(NULL, &c, cn_relative_bias, false, poly_estimate)
+            || (poly_estimate.L < settings.polymorphism_amplification_copy_number_cutoff)) continue;
+        assign_polymorphic_amp(settings, poly_estimate, mut);
+      } else {
+        mut[NEW_COPY_NUMBER] = to_string<int32_t>(copies);
+      }
+      mut[BETWEEN] = between;
+      if (repeat_length > 0) mut[REPEAT_LENGTH] = to_string<int32_t>(repeat_length);
+
+      gd.add(mut);
     }
   }
 

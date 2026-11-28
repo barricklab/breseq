@@ -726,11 +726,34 @@ void CNEvidence::ingest_csv_for_seq_id(
       }
     }
 
+    // How many bases of CENSORED (redundant) windows run on from each edge, outside the segment. CNery
+    // cannot measure copy number over a repeat, so a segment stops where the repeat's windows begin
+    // even when the event goes on through it; this says how far the edge could really reach. The
+    // predictor uses it to decide whether a gain covers everything between two repeat copies
+    // (predictCNbetweenRepeatsToAMP). Written only when there is such a run, as most edges have none.
+    //
+    // A window covers [start, start + length - 1]: CNery's win_end is one past it (win_len is
+    // win_end - win_st), the next window's start.
+    int32_t redundant_before = 0, redundant_after = 0;
+    for (size_t i = windows.size(); i-- > 0; ) {
+      const int32_t w_last = windows[i].start + windows[i].length - 1;
+      if (w_last >= start_pos) continue;
+      if ((w_last != start_pos - 1 - redundant_before) || !windows[i].is_redundant) break;
+      redundant_before += windows[i].length;
+    }
+    for (size_t i = 0; i < windows.size(); i++) {
+      if (windows[i].start <= end_pos) continue;
+      if ((windows[i].start != end_pos + 1 + redundant_after) || !windows[i].is_redundant) break;
+      redundant_after += windows[i].length;
+    }
+
     cDiffEntry item(CN);
     item[SEQ_ID] = seq_id;
     item[START] = to_string<int32_t>(start_pos);
     item[END] = to_string<int32_t>(end_pos);
     item["tile_size"] = to_string<uint32_t>(window_size);
+    if (redundant_before > 0) item["redundant_before"] = to_string<int32_t>(redundant_before);
+    if (redundant_after > 0) item["redundant_after"] = to_string<int32_t>(redundant_after);
     item["copy_number"] = cn_copy_number_string(copy_number);
     // Three significant figures, deliberately. This number is CNery's, fitted with scipy and
     // statsmodels (and now divided by a median of its values), and its trailing digits move whenever

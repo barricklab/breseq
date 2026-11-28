@@ -633,9 +633,14 @@ namespace breseq {
   }
 
   // Repeat features within the given interval, on the given strand,
-  // starting at the specified position (not after it). The sequence 
+  // starting at the specified position (not after it). The sequence
   // for these features must already have been inserted.
-  
+  //
+  // `strand` and the strand of `repeated_region` together say how the inserted sequence is
+  // oriented: the copy is the reverse complement of the region exactly when they differ (a MOB
+  // inserted against its source IS element's orientation, an INT from a reverse-strand donor).
+  // An AMP copies its unit forward (+1 against a +1 region), so nothing in it is mirrored.
+
   void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& repeated_ref_seq_info, string& repeated_seq_id, int8_t strand, const cLocation &repeated_region, bool verbose)
   {
     (void) verbose;
@@ -681,10 +686,17 @@ namespace breseq {
 
           // Depending on the strand of the mutation, relative to the
           // copy that we pulled, juggle the starts and ends here.
-          // Note: start_del and end_del do not depend on the strand!! 
+          // Note: start_del and end_del do not depend on the strand!!
           //   (they are always in lowest coords, the highest coords)
-          
-          if(strand * region.get_strand() < 0) {
+          //
+          // Whether the copy is inverted is a property of the COPY -- the requested strand against
+          // the strand of the region it was pulled from -- and is the same for every feature inside
+          // it. It is not the feature's own strand: testing that mirrored every minus-strand feature
+          // of a forward AMP unit (strand +1, region +1) end over end within the unit, and every
+          // nested feature of a MOB whose strand differs from its IS element's.
+          const bool copy_is_inverted = (strand * repeated_region.get_strand() < 0);
+
+          if (copy_is_inverted) {
             //Set start to position plus the difference between the repeat feature's start, and this feature's start
             //Set end to start plus feature length
             int32_t start_1 = pos + (repeated_region.get_end_1() - region.get_end_1()) - start_del;

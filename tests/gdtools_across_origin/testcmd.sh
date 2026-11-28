@@ -102,4 +102,41 @@ TESTCMD="${TESTCMD} \
   && test \$(cut -f1,4,5,6 ${SELF}/output.origin_repeat.second_pass.gd | grep -c '^DEL.origin-shifted.1.1\$') -eq 1 \
   "
 
+# More shapes of the same origin, and the linear-sequence counterpart of the MC case, on
+# origin_repeat_variants.fna (seeded random sequence; see the item comments for its layout):
+#
+#   origin-inverted     (3000 bp, circular) a 300-bp element X ends 30 bases SHORT of the end
+#                       (2671-2970), and its only other copy is INVERTED (1001-1300). Pairs crossing
+#                       the origin have a mate in X placed on the inverted copy, so both sides face
+#                       the same way:
+#     DP 1  1 (+1) / 1001 (+1, redundant). Re-placed at 1 / 2970 (-1): ignore=CIRCULAR_CHROMOSOME.
+#     DP 2  1 (+1) / 1600 (+1, redundant). 1600 is unique sequence: left alone.
+#   plasmid-carrier / plasmid-end (circular) the last 300 bases of plasmid-end are also at
+#                       plasmid-carrier 1001-1300, so the redundant side came back on ANOTHER SEQUENCE:
+#     DP 3  plasmid-carrier 1360 (-1, redundant) / plasmid-end 1 (+1). Re-placed at plasmid-end
+#           1600 (-1), sides swapped into coordinate order: ignore=CIRCULAR_CHROMOSOME.
+#   origin-jc-inverted  (2000 bp, circular) the first 300 bases are repeated, inverted, at 1001-1300:
+#     JC 4  1300 (-1, redundant) / 2000 (-1). Re-placed at 1 (+1) / 2000 (-1), the origin:
+#           ignore=CIRCULAR_CHROMOSOME.
+#   linear-dtr          (3000 bp, LINEAR) an exact 500-bp direct terminal repeat. Read depth tapers to
+#                       nothing at a linear end, and unique coverage is zero across both copies:
+#     MC 5  2501-3000, all but 3 bases in its redundant range: ignore=SEQUENCE_END.
+#     MC 6  1-60, 40 bases outside its redundant range: real missing coverage, left alone.
+#
+# Each re-placed side keeps where it was reported in side_N_placed_at_origin_from (seq:position:strand).
+# A second pass over the output must change nothing.
+CURRENT_OUTPUTS[$i]="${SELF}/output.origin_variants.gd"
+EXPECTED_OUTPUTS[$i]="${SELF}/expected.origin_variants.gd"
+i=$((i+1))
+TESTCMD="${TESTCMD} \
+  && ${GDTOOLS} APPLY -f GFF3 -o ${SELF}/output.origin_variants.gff3 \
+       -r ${DATADIR}/circular_origin_repeat/origin_repeat_variants.fna ${SELF}/origin_variants.topology.gd \
+  && ${GDTOOLS} MUTATIONS -o ${SELF}/output.origin_variants.gd \
+       -r ${SELF}/output.origin_variants.gff3 ${SELF}/origin_variants.evidence.gd \
+  && ${GDTOOLS} MUTATIONS -o ${SELF}/output.origin_variants.second_pass.gd \
+       -r ${SELF}/output.origin_variants.gff3 ${SELF}/output.origin_variants.gd \
+  && bash ${SELF}/check_origin_variants.sh ${SELF}/output.origin_variants.gd \
+  && bash ${SELF}/check_origin_variants.sh ${SELF}/output.origin_variants.second_pass.gd \
+  "
+
 do_test $1 ${SELF}

@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:40:30 27 Nov 2026
-#=PROGRAM	breseq 0.50.0 revision 129f0535a3dd
+#=CREATED	09:41:06 28 Nov 2026
+#=PROGRAM	breseq 0.50.0 revision 43c19b63ebc3
 #=COMMAND	./src/breseq/breseq -j 4 -o ./tests/gene_conversion_1 -r ./tests/gene_conversion_1/output.reference.fna ./tests/gene_conversion_1/output.simulated.fastq
 #=REFSEQ	./tests/gene_conversion_1/output.reference.fna
 #=READSEQ	./tests/gene_conversion_1/output.simulated.fastq
@@ -23,8 +23,8 @@ MC	10	.	NC_001416	28001	29200	0	0	gene_name=–/–	gene_position=intergenic (�
 MC	11	.	NC_001416	37582	45609	50	42	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=18	left_outside_cov=23	locus_tag=–/–	right_inside_cov=20	right_outside_cov=21
 MC	12	.	NC_001416	47317	47317	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=0	left_outside_cov=46	locus_tag=–/–	right_inside_cov=0	right_outside_cov=47
 JC	13	.	NC_001416	28000	-1	NC_001416	29201	1	0	alignment_overlap=0	coverage_minus=21	coverage_plus=18	flanking_left=36	flanking_right=36	frequency=1.000e+00	frequency_lower=9.222e-01	frequency_upper=1.000e+00	junction_effective_depth=37.00	junction_mixture_iterations=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=NC_001416__28000__-1__NC_001416__29201__1__0____36__36__0__0	max_left=35	max_left_minus=35	max_left_plus=31	max_min_left=17	max_min_left_minus=15	max_min_left_plus=17	max_min_right=18	max_min_right_minus=18	max_min_right_plus=16	max_pos_hash_score=70	max_right=35	max_right_minus=35	max_right_plus=34	neg_log10_pos_hash_p_value=0.0	new_junction_coverage=1.03	new_junction_read_count=37	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=37.00	pos_hash_score=33	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=30	side_1_possible_overlap_registers_before_trimming=35	side_1_read_count=0	side_1_redundant=0	side_1_weighted_read_count=0.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	side_2_weighted_read_count=0.00	total_non_overlap_reads=39
-CN	14	.	NC_001416	29001	29200	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	relative_coverage=0	tile_size=100
-CN	15	.	NC_001416	38201	45200	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	relative_coverage=0	tile_size=100
+CN	14	.	NC_001416	29001	29200	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	redundant_before=1000	relative_coverage=0	tile_size=100
+CN	15	.	NC_001416	38201	45200	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	redundant_after=1000	redundant_before=1000	relative_coverage=0	tile_size=100
 UN	16	.	NC_001416	1	8
 UN	17	.	NC_001416	4399	4791
 UN	18	.	NC_001416	16033	16034

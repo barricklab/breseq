@@ -2316,6 +2316,16 @@ string html_format_repeat_name(const string& in_repeat_name)
   return in_repeat_name;
 }
 
+// " between <repeat>" for an AMP whose units are separated by copies of a repeat (between=), or
+// nothing. An unannotated repeat is written between=repeat with its length in repeat_length.
+static string amp_between_description(cDiffEntry& mut)
+{
+  if (!mut.entry_exists("between")) return "";
+  if ((mut["between"] == "repeat") && mut.entry_exists("repeat_length"))
+    return " between " + mut["repeat_length"] + "-bp repeats";
+  return " between " + html_format_repeat_name(mut["between"]);
+}
+
 /*-----------------------------------------------------------------------------
  *  Helper function for formatted_mutation_annotation
  *-----------------------------------------------------------------------------*/
@@ -5140,6 +5150,7 @@ void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       html_mutation_annotation =
       from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
       "duplication" : "amplification";
+      html_mutation_annotation += amp_between_description(mut);
     } break;
       
     default:
@@ -5431,6 +5442,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       html_mutation_annotation =
       from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
       "duplication" : "amplification";
+      html_mutation_annotation += nonbreaking(amp_between_description(mut));
     } break;
       
     default:
