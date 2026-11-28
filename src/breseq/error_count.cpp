@@ -62,7 +62,56 @@ void error_count(
                  ) 
 {
 	error_count_pileup ecp(settings, summary, bam, fasta, outputdir, do_coverage, do_errors, preprocess_stage, min_qual_score, covariates);
-	ecp.do_pileup(settings.call_mutations_seq_id_set());
+
+  const size_t n_threads = static_cast<size_t>(max(1, Settings::pool.size()));
+  if ((n_threads > 1) && ecp.can_be_chunked()) {
+
+    // Chunks, in reference order. Several per thread, so that one slow chunk (a repeat piled
+    // high with reads) does not leave the other threads with nothing to do; not so small that
+    // seeking to each one costs anything.
+    set<string> seq_ids = settings.call_mutations_seq_id_set();
+    uint64_t total_length = 0;
+    vector<pair<string, uint32_t> > targets;
+    for (uint32_t tid = 0; tid < ecp.num_targets(); tid++) {
+      if (!seq_ids.count(ecp.target_name(tid))) continue;
+      targets.push_back(make_pair(string(ecp.target_name(tid)), ecp.target_length(tid)));
+      total_length += ecp.target_length(tid);
+    }
+    ASSERT(targets.size() == seq_ids.size(), "Could not find every reference sequence in BAM file: " + bam);
+
+    const uint32_t chunk_length = static_cast<uint32_t>(max<uint64_t>(50000, total_length / (n_threads * 8) + 1));
+    vector<string> regions;
+    for (size_t t = 0; t < targets.size(); t++) {
+      for (uint32_t start_1 = 1; start_1 <= targets[t].second; start_1 += chunk_length) {
+        uint32_t end_1 = min<uint64_t>(targets[t].second, static_cast<uint64_t>(start_1) + chunk_length - 1);
+        regions.push_back(targets[t].first + ":" + to_string(start_1) + "-" + to_string(end_1));
+      }
+    }
+
+    // One worker object per pool thread, made by the first chunk that thread takes.
+    vector<unique_ptr<error_count_pileup> > workers(n_threads);
+    vector<future<void> > jobs;
+    jobs.reserve(regions.size());
+    for (size_t r = 0; r < regions.size(); r++) {
+      const string* region = &regions[r];
+      jobs.push_back(Settings::pool.push([&, region](int id) {
+        unique_ptr<error_count_pileup>& worker = workers[id];
+        if (!worker)
+          worker.reset(new error_count_pileup(settings, summary, bam, fasta, outputdir, do_coverage, do_errors,
+                                              preprocess_stage, min_qual_score, covariates, true));
+        worker->do_pileup(*region, true);
+      }));
+    }
+    // get() also rethrows anything a job threw.
+    for (size_t r = 0; r < jobs.size(); r++) jobs[r].get();
+
+    for (size_t w = 0; w < workers.size(); w++)
+      if (workers[w]) ecp.add_counts_from(*workers[w]);
+    ecp.finish_chunked_targets();
+
+  } else {
+    ecp.do_pileup(settings.call_mutations_seq_id_set());
+  }
 	if (do_coverage) ecp.print_coverage();
 	if (do_errors) ecp.print_error(readfiles);
 }
@@ -79,8 +128,9 @@ error_count_pileup::error_count_pileup(
                                        bool do_coverage, 
                                        bool do_errors, 
                                        bool preprocess_stage,
-                                       uint8_t min_qual_score, 
-                                       const string& covariates
+                                       uint8_t min_qual_score,
+                                       const string& covariates,
+                                       bool chunk_worker
                                        )
 : pileup_base(bam, fasta)
 , m_settings(_settings)
@@ -91,8 +141,11 @@ error_count_pileup::error_count_pileup(
 , m_preprocess_stage(preprocess_stage)
 , m_min_qual_score(min_qual_score)
 , m_error_table(covariates)
+, m_chunk_worker(chunk_worker)
 {
-  use_io_threads();
+  // A chunk worker seeks to each of its chunks, which empties a read-ahead queue each time, and
+  // the workers are already using the cores.
+  if (!m_chunk_worker) use_io_threads();
 	// reserve enough space for the sequence info:
   vector< vector<string> > seq_ids_by_coverage_group = m_settings.seq_ids_by_coverage_group();
 	m_coverage_group_info.resize(seq_ids_by_coverage_group.size());
@@ -102,10 +155,10 @@ error_count_pileup::error_count_pileup(
   m_error_table.set_read_file_partition(&read_groups(),
                                         make_read_file_partition(read_groups(), m_settings.read_file_sets));
 
-  set_print_progress(true);
-  
+  set_print_progress(!m_chunk_worker);
+
   // Set up to print out file during pileup
-  if (m_error_table.m_per_position)
+  if (m_error_table.m_per_position && !m_chunk_worker)
   {
     string error_counts_file_name = Settings::path_file_name(m_output_dir, m_settings.error_counts_file_name);
     m_error_count_file.open( error_counts_file_name.c_str());
@@ -219,6 +272,12 @@ void error_count_pileup::at_target_end(const uint32_t tid)
   // This calculates the chance of not finding a read that starts at a given position-strand combination.
   // index 0: number of position-strand combinations that didn't have a read start
   // index 1: number that did
+  if (m_preprocess_stage && m_chunk_worker) {
+    pair<uint64_t, uint64_t>& found = m_read_found_starting_at_pos_by_tid[tid];
+    found.first  += m_read_found_starting_at_pos[0];
+    found.second += m_read_found_starting_at_pos[1];
+    return;
+  }
   if (m_preprocess_stage) {
     double total = static_cast<double>(m_read_found_starting_at_pos[0] + m_read_found_starting_at_pos[1]);
     m_summary.preprocess_error_count[target_name(tid)].no_pos_hash_per_position_pr = 1.0;
@@ -228,6 +287,42 @@ void error_count_pileup::at_target_end(const uint32_t tid)
   }
 }
 
+
+/*! Add what a chunk worker counted to this object. See the class declaration.
+ */
+void error_count_pileup::add_counts_from(const error_count_pileup& other)
+{
+  for (size_t g = 0; g < m_coverage_group_info.size(); g++) {
+    vector<uint32_t>& mine = m_coverage_group_info[g].unique_only_coverage;
+    const vector<uint32_t>& theirs = other.m_coverage_group_info[g].unique_only_coverage;
+    if (theirs.size() > mine.size()) mine.resize(theirs.size(), 0);
+    for (size_t i = 0; i < theirs.size(); i++) mine[i] += theirs[i];
+  }
+
+  if (m_do_errors) m_error_table.add_counts(other.m_error_table);
+
+  for (map<uint32_t, pair<uint64_t, uint64_t> >::const_iterator it = other.m_read_found_starting_at_pos_by_tid.begin();
+       it != other.m_read_found_starting_at_pos_by_tid.end(); ++it) {
+    pair<uint64_t, uint64_t>& found = m_read_found_starting_at_pos_by_tid[it->first];
+    found.first  += it->second.first;
+    found.second += it->second.second;
+  }
+}
+
+/*! What at_target_end() does for a whole-sequence pileup, from the chunks' summed counts.
+ */
+void error_count_pileup::finish_chunked_targets()
+{
+  if (!m_preprocess_stage) return;
+  for (map<uint32_t, pair<uint64_t, uint64_t> >::const_iterator it = m_read_found_starting_at_pos_by_tid.begin();
+       it != m_read_found_starting_at_pos_by_tid.end(); ++it) {
+    double total = static_cast<double>(it->second.first + it->second.second);
+    m_summary.preprocess_error_count[target_name(it->first)].no_pos_hash_per_position_pr = 1.0;
+    if (total != 0) {
+      m_summary.preprocess_error_count[target_name(it->first)].no_pos_hash_per_position_pr = static_cast<double>(it->second.first) / total;
+    }
+  }
+}
 
 /*! Print coverage distribution.
   @abstract Creates coverage count table:

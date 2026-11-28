@@ -327,6 +327,9 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
     m_clip_start_position_1 = start_pos_1;
     m_clip_end_position_1 = end_pos_1;
     assert(m_clip_start_position_1 > 0); // prevent underflow of unsigned
+    // Nothing before the clip is handled, so do not walk up to it one position at a time: a
+    // pileup by chunks would do that for every chunk.
+    m_last_position_1 = start_pos_1 - 1;
   }
 
   // sam_itr_queryi uses 0-indexed half-open [start, end)

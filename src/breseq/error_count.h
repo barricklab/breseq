@@ -178,6 +178,13 @@ namespace breseq {
       //* recording counts during error calibration     
       void count_alignment_position(const pileup_wrapper& i, const pileup& p);
       void count_covariate(const covariate_values_t& cv);
+      //* add another table's counts to this one (same covariates). Counts are whole numbers, so
+      //* the sum does not depend on the order tables are added in.
+      void add_counts(const cErrorTable& other)
+      {
+        ASSERT(m_count_table.size() == other.m_count_table.size(), "Error count tables of different sizes cannot be added.");
+        for (size_t i = 0; i < m_count_table.size(); i++) m_count_table[i] += other.m_count_table[i];
+      }
       void counts_to_log10_prob();
       void log10_prob_to_prob();
    
@@ -266,12 +273,27 @@ namespace breseq {
                        bool do_coverage, 
                        bool do_errors, 
                        bool preprocess_stage,
-                       uint8_t min_qual_score, 
-                       const string& covariates
+                       uint8_t min_qual_score,
+                       const string& covariates,
+                       bool chunk_worker = false
                        );
-		
+
 		//! Destructor.
-		virtual ~error_count_pileup();		
+		virtual ~error_count_pileup();
+
+    //! PILEUP BY CHUNKS (see error_count() for the driver)
+    //!
+    //! Everything this pileup produces is a sum over reference positions: the error count table,
+    //! the coverage histogram of each coverage group, and (in the preprocessing stage) the number
+    //! of positions with and without a read start on each reference sequence. So the reference
+    //! can be cut into chunks, each piled up by a worker with a BAM handle of its own, and the
+    //! pieces added. A chunk worker keeps the per-sequence read-start counts instead of turning
+    //! them into a summary value when "its" sequence ends, because for it the end of a chunk is
+    //! not the end of the sequence; the object that collects the pieces does that once, in
+    //! finish_chunked_targets().
+    bool can_be_chunked() const { return !m_error_table.m_per_position; }
+    void add_counts_from(const error_count_pileup& other);
+    void finish_chunked_targets();
 		
 		//! Called for each reference position.
 		virtual void pileup_callback(const pileup& p);
@@ -296,6 +318,8 @@ namespace breseq {
 		vector<coverage_info> m_coverage_group_info; //!< information about each sequence.
     uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
     int32_t m_read_found_starting_at_pos[2]; // 0 none found, 1 found
+    bool m_chunk_worker;
+    map<uint32_t, pair<uint64_t, uint64_t> > m_read_found_starting_at_pos_by_tid; // chunked pileup only
     cErrorTable m_error_table;
     ofstream m_error_count_file;
 	};
