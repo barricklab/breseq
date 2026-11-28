@@ -2768,6 +2768,11 @@ namespace breseq {
       }
     }
 
+    // The reads are gathered here, one item after another on the one BAM handle, and everything
+    // stamped on an entry is decided here. Only the drawing -- a gnuplot run per plot, three plots
+    // per item, which was two thirds of the Output stage on a run with 99 items -- goes to the
+    // thread pool, each job with its own copy of what it draws and its own script and output files.
+    // THE CALLER MUST Settings::sync_threads() before anything looks for the plot files.
     for (diff_entry_list_t::iterator it = dp_list.begin(); it != dp_list.end(); it++) {
       cDiffEntry& dp = **it;
 
@@ -2796,8 +2801,10 @@ namespace breseq {
         size_t total = dp_cap_for_display(plot_reads, max_display, static_cast<uint32_t>(s1_pos));
         if (total) dp["_side_1_dp_plot_message"] = dp_capped_message(max_display, total);
         string svg = settings.evidence_path + "/DP_SIDE_1_" + dp._id + ".svg";
-        render_dp_side_plot(svg, plot_reads, s1_pos, s1_str, mate_prefix, DP_SIDE1_COLOR);
-        make_svg_responsive(svg);
+        Settings::pool.push([svg, plot_reads, s1_pos, s1_str, mate_prefix](int) {
+          render_dp_side_plot(svg, plot_reads, s1_pos, s1_str, mate_prefix, DP_SIDE1_COLOR);
+          make_svg_responsive(svg);
+        });
         dp["_side_1_dp_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);
       }
 
@@ -2811,8 +2818,10 @@ namespace breseq {
         size_t total = dp_cap_for_display(plot_reads, max_display, static_cast<uint32_t>(s2_pos));
         if (total) dp["_side_2_dp_plot_message"] = dp_capped_message(max_display, total);
         string svg = settings.evidence_path + "/DP_SIDE_2_" + dp._id + ".svg";
-        render_dp_side_plot(svg, plot_reads, s2_pos, s2_str, mate_prefix, DP_SIDE2_COLOR);
-        make_svg_responsive(svg);
+        Settings::pool.push([svg, plot_reads, s2_pos, s2_str, mate_prefix](int) {
+          render_dp_side_plot(svg, plot_reads, s2_pos, s2_str, mate_prefix, DP_SIDE2_COLOR);
+          make_svg_responsive(svg);
+        });
         dp["_side_2_dp_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);
       }
 
@@ -2835,8 +2844,10 @@ namespace breseq {
         size_t total = dp_cap_for_display(pairs, max_display, static_cast<uint32_t>(s1_pos) ^ (static_cast<uint32_t>(s2_pos) << 1));
         if (total) dp["_dp_plot_message"] = dp_capped_message(max_display, total);
         string svg = settings.evidence_path + "/DP_" + dp._id + ".svg";
-        render_dp_joined_plot(svg, pairs, s1_pos, s1_str, s2_pos, s2_str);
-        make_svg_responsive(svg);
+        Settings::pool.push([svg, pairs, s1_pos, s1_str, s2_pos, s2_str](int) {
+          render_dp_joined_plot(svg, pairs, s1_pos, s1_str, s2_pos, s2_str);
+          make_svg_responsive(svg);
+        });
         dp["_dp_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);
       }
     }
