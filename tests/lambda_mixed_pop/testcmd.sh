@@ -21,7 +21,13 @@
 #     exits on an UNKNOWN option but this golden would be identical either way. "Change nothing"
 #     was checked when the tests were merged: adding the flags left this expected.gd untouched.
 #
-# stderr goes to a file for that grep and is then replayed, so a failure still shows up in
+# (4) That the pileups split across threads really were split. Their results do not depend on the
+#     chunking, so a change that quietly sent them back down the serial path would leave every
+#     golden untouched. The second grep requires the coverage and error-count pileups to each
+#     report more than one chunk ("chunks", plural), which this 48.5-kb reference gets at -j 4
+#     only because kMinimumPileupChunkLength is small.
+#
+# stderr goes to a file for those greps and is then replayed, so a failure still shows up in
 # test.log.
 
 SELF=`dirname ${BASH_SOURCE}`
@@ -51,6 +57,7 @@ TESTCMD="\
       cat ${SELF}/output.stderr.txt >&2 ; \
       test \$BRESEQ_STATUS -eq 0 ; } \
     && test \$(grep -c 'option is DEPRECATED' ${SELF}/output.stderr.txt) -eq 4 \
+    && test \$(grep -c 'Piled up [0-9]* chunks of the reference' ${SELF}/output.stderr.txt) -ge 2 \
     "
 
 do_test $1 ${SELF}

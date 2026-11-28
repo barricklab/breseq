@@ -51,6 +51,9 @@ struct reference_sequence {
 
 /*! Class to assist in developing pileup-related functionality.
  */
+//! Shortest piece of reference a pileup split across threads is cut into (see error_count()).
+const uint32_t kMinimumPileupChunkLength = 5000;
+
 class pileup_base {
   public:
     //! Type for a list of reference sequences.

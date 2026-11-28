@@ -79,7 +79,10 @@ void error_count(
     }
     ASSERT(targets.size() == seq_ids.size(), "Could not find every reference sequence in BAM file: " + bam);
 
-    const uint32_t chunk_length = static_cast<uint32_t>(max<uint64_t>(50000, total_length / (n_threads * 8) + 1));
+    // The floor is low on purpose: it is what makes the test suite's 48.5-kb lambda runs pile up in
+    // about ten chunks, so the chunk boundaries and the summing are exercised by every
+    // multi-threaded test rather than only by genome-sized data.
+    const uint32_t chunk_length = static_cast<uint32_t>(max<uint64_t>(kMinimumPileupChunkLength, total_length / (n_threads * 8) + 1));
     vector<string> regions;
     for (size_t t = 0; t < targets.size(); t++) {
       for (uint32_t start_1 = 1; start_1 <= targets[t].second; start_1 += chunk_length) {
@@ -108,6 +111,8 @@ void error_count(
     for (size_t w = 0; w < workers.size(); w++)
       if (workers[w]) ecp.add_counts_from(*workers[w]);
     ecp.finish_chunked_targets();
+    cerr << "  Piled up " << regions.size() << " chunk" << ((regions.size() == 1) ? "" : "s") << " of the reference on "
+         << n_threads << " threads" << endl;
 
   } else {
     ecp.do_pileup(settings.call_mutations_seq_id_set());
