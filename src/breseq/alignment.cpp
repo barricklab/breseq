@@ -896,13 +896,12 @@ bool bam_file::read_alignments(alignment_list& alignments, bool paired)
     
     int32_t bytes = sam_read1(m_bam_file, bam_header, this_alignment_bam);
     if (bytes < 0) {
-      // End of file. m_last_alignment still names the last record handed out, and the next call
-      // returns it once more, as a list of its own. That repeat is long-standing behaviour that
-      // results depend on, so it is kept -- but as a COPY of the record. Otherwise this reader
-      // would share a record with the list its caller owns, and counted_ptr's count is not
-      // atomic, so the caller could not pass that list to another thread.
-      if (m_last_alignment.get() != NULL)
-        m_last_alignment = counted_ptr<bam_alignment>(new bam_alignment(*static_cast<const bam1_t*>(m_last_alignment.get())));
+      // End of file. m_last_alignment still names the last record handed out, which is already in
+      // the list being returned. It has to be let go of here: left set, the NEXT call returned
+      // that record again as a list of its own, so every caller that loops until this returns
+      // false saw the last alignment of a file twice, as if it were one more read. (It would also
+      // leave this reader sharing a record with a list its caller may pass to another thread.)
+      m_last_alignment = counted_ptr<bam_alignment>(NULL);
       break;
     }
     
