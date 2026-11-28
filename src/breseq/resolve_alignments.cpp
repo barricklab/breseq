@@ -1250,6 +1250,10 @@ struct MateResolution
   bool aligned_before_filtering = false;
   alignment_list this_reference_alignments;
   alignment_list this_junction_alignments;
+  // Reference alignments within settings.pair_rescue_max_extra_edits of the best score that also pass
+  // test_read_alignment_requirements, best first. Filled only when concordant rescue is on; see
+  // rescue_concordant_pair().
+  alignment_list near_best_reference_alignments;
   uint32_t best_reference_score = 0;
   uint32_t best_junction_score = 0;
   int32_t mapping_quality_difference = 0; // best_junction_score - best_reference_score
@@ -1304,6 +1308,20 @@ static MateResolution resolve_one_mate(
     all_reference_alignments = m.this_reference_alignments;
     if (any_mapped(all_reference_alignments)) m.aligned_before_filtering = true;
     m.best_reference_score = eligible_read_alignments(settings, ref_seq_info, m.this_reference_alignments);
+
+    // A mismatch costs 4 score units (+1 match becomes -3) and an indel at least 5, so this floor
+    // keeps every alignment that could be within the edit cap and drops the rest cheaply. Run after
+    // the best-only pass above, whose scores and best-score tags it reproduces for the alignments it
+    // shares with it.
+    const bool near_best_needed = (settings.pair_rescue_max_log10_likelihood_loss > 0)
+                               || (settings.pair_ambiguity_max_log10_likelihood_loss > 0);
+    if (near_best_needed && (m.best_reference_score > 0)) {
+      const uint32_t edit_cap = max(settings.pair_rescue_max_extra_edits, settings.pair_ambiguity_max_extra_edits);
+      const int32_t floor_score = static_cast<int32_t>(m.best_reference_score)
+                                - 4 * static_cast<int32_t>(edit_cap);
+      m.near_best_reference_alignments = all_reference_alignments;
+      eligible_read_alignments(settings, ref_seq_info, m.near_best_reference_alignments, true, max(1, floor_score));
+    }
   }
 
   // Does this read have eligible candidate junction matches?
@@ -1527,7 +1545,7 @@ static void mark_pair_info(bam_alignment* a1, bam_alignment* a2, bool same_tid,
     // Stamped on BOTH mates, and only when true, so an unambiguous pair costs nothing. Marking one
     // mate would not do: PD reads whichever record holds the positive TLEN, and which one that is
     // has nothing to do with which mate was ambiguous.
-    if (ambiguous_placement) {
+    if (ambiguous_placement && !concordant_alternative_placement(*self)) {   // never downgrade a 2
       uint32_t one = 1;
       self->aux_set(kBreseqAmbiguousPairPlacementBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&one);
     }
@@ -1637,6 +1655,129 @@ static void downselect_to_kept(alignment_list& alignments, const set<bam_alignme
 // (reference target id, reference start). Used to break the tie for a redundant discordant pair so
 // every read from the same multicopy element canonicalizes to ONE copy (see the tie-break block in
 // resolve_reference_pair). A size-1 list returns its sole alignment.
+// Concordant rescue of a pair that no combination of best-score alignments makes concordant.
+//
+// classify_pair() only ever sees each mate's BEST-score alignments, because eligible_read_alignments()
+// prunes the rest first. Between near-identical repeat copies that differ at one base, overlapping
+// mates that disagree at that base -- one with a high-quality call for copy A, the other with a
+// low-quality call for copy B, typically near its 3' end -- each have a unique best alignment, on
+// DIFFERENT copies, and the pair comes out discordant although placing both mates on one copy costs a
+// single low-quality mismatch. Enough such pairs at one locus make a DP (four on Thermincola CM166461,
+// all confirmed reference-consistent by nanopore reads).
+//
+// Among the near-best alignments (MateResolution::near_best_reference_alignments), take the concordant
+// combination(s) that lose the least log10 likelihood against each mate's best alignment, summed over
+// the two mates -- alignment_log10_likelihood() charges a mismatch by its base quality, so a q7 call
+// costs about 1 unit and a q35 call 4 -- when that loss is within
+// settings.pair_rescue_max_log10_likelihood_loss and the extra edits within
+// settings.pair_rescue_max_extra_edits. The mates' alignment lists are replaced by the alignments in
+// those combinations. Returns whether the pair was rescued.
+//
+// Beyond that limit, up to the larger settings.pair_ambiguity_max_log10_likelihood_loss, the pair is
+// left where it is -- re-placing it there would start overruling confident paralog-specific base
+// calls, which made false gene conversions in an LTEE clone -- but it is stamped X4 = 2 so that DP
+// and PD do not count it (concordant_alternative_exists).
+//
+// The search: the cheapest concordant combination(s) within max_loss (log10 units) and max_edits extra
+// mismatches/indels. Returns the summed loss in kAlignmentLogLikelihoodScale units, or -1 if none, and
+// the participating alignments of each mate in keep_1 / keep_2.
+static int32_t cheapest_concordant_near_best(const cReferenceSequences& ref_seq_info,
+                                             MateResolution& m1, MateResolution& m2,
+                                             const string& majority_orientation, double distance_cutoff,
+                                             double max_log10_loss, uint32_t max_extra_edits,
+                                             set<bam_alignment*>& keep_1, set<bam_alignment*>& keep_2)
+{
+  keep_1.clear(); keep_2.clear();
+  if (max_log10_loss <= 0) return -1;
+  if (m1.near_best_reference_alignments.empty() || m2.near_best_reference_alignments.empty()) return -1;
+  // Nothing to choose between: the best alignments are all there is.
+  if ((m1.near_best_reference_alignments.size() == m1.this_reference_alignments.size())
+      && (m2.near_best_reference_alignments.size() == m2.this_reference_alignments.size())) return -1;
+
+  struct Cost { int32_t loss; int32_t extra_edits; };
+
+  // Loss and extra edits of every near-best alignment of one mate, against that mate's best ones.
+  auto mate_costs = [&](MateResolution& m, map<bam_alignment*, Cost>& costs) {
+    int32_t best_ll = 0; int32_t best_edits = 0; bool first = true;
+    for (alignment_list::iterator it = m.this_reference_alignments.begin(); it != m.this_reference_alignments.end(); it++) {
+      const int32_t ll = alignment_log10_likelihood(*(it->get()), ref_seq_info);
+      const int32_t edits = static_cast<int32_t>(alignment_mismatches(*(it->get()), ref_seq_info));
+      if (first || (ll > best_ll)) best_ll = ll;
+      if (first || (edits < best_edits)) best_edits = edits;
+      first = false;
+    }
+    for (alignment_list::iterator it = m.near_best_reference_alignments.begin(); it != m.near_best_reference_alignments.end(); it++) {
+      Cost c;
+      c.loss = max(0, best_ll - alignment_log10_likelihood(*(it->get()), ref_seq_info));
+      c.extra_edits = max(0, static_cast<int32_t>(alignment_mismatches(*(it->get()), ref_seq_info)) - best_edits);
+      costs[it->get()] = c;
+    }
+  };
+  map<bam_alignment*, Cost> costs_1, costs_2;
+  mate_costs(m1, costs_1);
+  mate_costs(m2, costs_2);
+
+  const int32_t max_loss = static_cast<int32_t>(floor(max_log10_loss * kAlignmentLogLikelihoodScale + 0.5));
+  const int32_t max_edits = static_cast<int32_t>(max_extra_edits);
+
+  int32_t best_total = -1;
+  for (alignment_list::iterator ia = m1.near_best_reference_alignments.begin(); ia != m1.near_best_reference_alignments.end(); ia++) {
+    bam_alignment* a = ia->get();
+    const Cost& ca = costs_1[a];
+    if ((ca.loss > max_loss) || (ca.extra_edits > max_edits)) continue;
+    for (alignment_list::iterator ib = m2.near_best_reference_alignments.begin(); ib != m2.near_best_reference_alignments.end(); ib++) {
+      bam_alignment* b = ib->get();
+      if (a->reference_target_id() != b->reference_target_id()) continue;
+      const Cost& cb = costs_2[b];
+      const int32_t total = ca.loss + cb.loss;
+      if ((total > max_loss) || (ca.extra_edits + cb.extra_edits > max_edits)) continue;
+      if ((best_total >= 0) && (total > best_total)) continue;
+      OrientationDistance od = compute_orientation_and_distance(a, b);   // mate order
+      if ((od.orientation != majority_orientation) || (od.distance > distance_cutoff)) continue;
+      if ((best_total < 0) || (total < best_total)) { best_total = total; keep_1.clear(); keep_2.clear(); }
+      keep_1.insert(a);
+      keep_2.insert(b);
+    }
+  }
+  return best_total;
+}
+
+static bool rescue_concordant_pair(const Settings& settings, const cReferenceSequences& ref_seq_info,
+                                   MateResolution& m1, MateResolution& m2,
+                                   const string& majority_orientation, double distance_cutoff)
+{
+  set<bam_alignment*> keep_1, keep_2;
+  if (cheapest_concordant_near_best(ref_seq_info, m1, m2, majority_orientation, distance_cutoff,
+                                    settings.pair_rescue_max_log10_likelihood_loss, settings.pair_rescue_max_extra_edits,
+                                    keep_1, keep_2) < 0) return false;
+
+  m1.this_reference_alignments = m1.near_best_reference_alignments;
+  m2.this_reference_alignments = m2.near_best_reference_alignments;
+  downselect_to_kept(m1.this_reference_alignments, keep_1);
+  downselect_to_kept(m2.this_reference_alignments, keep_2);
+  return true;
+}
+
+// A pair left discordant that a concordant near-best combination within the larger ambiguity limit
+// would explain: stamp X4 = 2 on every alignment of both mates, so DP and PD do not count it. Nothing is
+// moved. Returns whether it was stamped.
+static bool concordant_alternative_exists(const Settings& settings, const cReferenceSequences& ref_seq_info,
+                                          MateResolution& m1, MateResolution& m2,
+                                          const string& majority_orientation, double distance_cutoff)
+{
+  set<bam_alignment*> keep_1, keep_2;
+  if (cheapest_concordant_near_best(ref_seq_info, m1, m2, majority_orientation, distance_cutoff,
+                                    settings.pair_ambiguity_max_log10_likelihood_loss, settings.pair_ambiguity_max_extra_edits,
+                                    keep_1, keep_2) < 0) return false;
+  uint32_t two = 2;
+  for (int mate = 0; mate < 2; mate++) {
+    alignment_list& l = (mate == 0) ? m1.this_reference_alignments : m2.this_reference_alignments;
+    for (alignment_list::iterator it = l.begin(); it != l.end(); it++)
+      it->get()->aux_set(kBreseqAmbiguousPairPlacementBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&two);
+  }
+  return true;
+}
+
 static bam_alignment* pick_lowest_alignment(alignment_list& alignments)
 {
   bam_alignment* best = NULL;
@@ -2077,6 +2218,8 @@ void load_junction_alignments(
     // Count read pairs that receive BAM pair flags here (the FINAL pass), split concordant/discordant.
     uint64_t mapped_pairs = 0;
     uint64_t concordant_pairs = 0;
+    uint64_t rescued_pairs = 0;   // concordant only through rescue_concordant_pair()
+    uint64_t ambiguous_discordant_pairs = 0;   // left discordant, but not counted by DP/PD (concordant_alternative_exists)
 
 #ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
     string discordant_pairs_file_name = Settings::file_name(settings.discordant_pairs_file_name, "#", rfs.m_base_name);
@@ -2162,6 +2305,21 @@ void load_junction_alignments(
           // concordant combination (a no-op if the mate was already unique/already concordant).
           downselect_to_kept(m1.this_reference_alignments, pairing.keep_mate1);
           downselect_to_kept(m2.this_reference_alignments, pairing.keep_mate2);
+        }
+        else if (rescue_concordant_pair(settings, ref_seq_info, m1, m2, majority_orientation, distance_cutoff))
+        {
+          // Concordant on near-best alignments: rescue_concordant_pair() has already narrowed both
+          // lists, so from here on it is treated as any other concordant pair. The placement was
+          // CHOSEN among candidates, which is what the ambiguous-placement stamp records.
+          pairing.any_concordant_combo_exists = true;
+          m1_placements = max(m1_placements, m1.near_best_reference_alignments.size());
+          m2_placements = max(m2_placements, m2.near_best_reference_alignments.size());
+          ++rescued_pairs;
+        }
+        else if (concordant_alternative_exists(settings, ref_seq_info, m1, m2, majority_orientation, distance_cutoff))
+        {
+          // Still discordant -- nothing moved -- but not counted by DP or PD (X4 = 2, stamped above).
+          ++ambiguous_discordant_pairs;
         }
 #ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
         else if (pairing.any_same_tid_combo_exists)
@@ -2332,6 +2490,12 @@ void load_junction_alignments(
       print_progress_line(progress_message.str());
     }
     end_progress_line();
+    if (settings.pair_rescue_max_log10_likelihood_loss > 0)
+      cerr << "    Read pairs made concordant by near-best placement: " << rescued_pairs
+           << " of " << mapped_pairs << " mapped pairs" << endl;
+    if (settings.pair_ambiguity_max_log10_likelihood_loss > 0)
+      cerr << "    Discordant read pairs not counted for DP/PD (a concordant near-best placement exists): "
+           << ambiguous_discordant_pairs << endl;
 
     // Final paired-mapping-distance record: carry the fit fields from the preliminary (stage-03)
     // record and attach the actual concordant/mapped pair counts from this flag-assignment pass.

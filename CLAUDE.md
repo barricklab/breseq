@@ -406,6 +406,38 @@ ignored there because a sequence end is where their statistic stops being measur
 artifact, and a cross-sequence DP sits at two contig ends *by construction*. Adding DP to that rule
 would silently discard every translocation call.
 
+**Concordant rescue of pairs between near-identical copies** (`rescue_concordant_pair`,
+`resolve_alignments.cpp`; `--pair-rescue-max-log10-likelihood-loss`, default 3,
+`--pair-rescue-max-extra-edits`, default 3). `classify_pair` only sees each mate's BEST-score
+alignments, because `eligible_read_alignments` prunes the rest first. So overlapping mates on two
+repeat copies that differ at one base -- one mate with a good call for copy A, the other with a
+low-quality call for copy B, usually near its 3' end -- each placed uniquely on a different copy and
+became a discordant pair; four such DPs on a Thermincola Illumina run were all reference-consistent by
+nanopore. When no best-score combination is concordant, near-best alignments (kept only for this,
+`MateResolution::near_best_reference_alignments`) are searched for a concordant combination whose
+summed `alignment_log10_likelihood` loss over the two mates is within the limit; a mismatch costs
+log10(3(1-e)/e) for its base quality (about 1 at q7, 2.5 at q20, 4 at q35). Rescued pairs get the X4
+ambiguous-placement stamp, and stage 07 prints how many there were. The limit is a log10 prior-odds
+bound and does NOT scale with read length: bases that read the same on both copies, errors included,
+cancel out of the ratio. 3 was chosen on data, and the reason not to raise it is specific: 3 cleared all
+four Thermincola DPs (1.5 cleared two) with no call changed in any test or on Tolypothrix, but at 5 and
+8 `tests/long_ltee_ara_p3_30k_pe150` gained gene conversions the curated LTEE genome diff does not have
+(CON 1421875/233, CON 3903379/314, CON 3903693/923; at 8 the curated single SNP 3903294 became a
+1,361-bp CON). Above 3 the rescue starts overruling confident paralog-specific calls, which pulls reads
+onto the wrong copy, and the gene-conversion predictor reads their donor alleles as a conversion.
+So there is a second, larger limit for COUNTING (`--pair-ambiguity-max-log10-likelihood-loss`,
+default 8, with `--pair-ambiguity-max-extra-edits`, default 6): a pair whose concordant alternative
+costs more than the rescue limit but no more than this one is left where it is -- nothing moves, so
+RA, coverage, JC and MC are untouched -- but is stamped `X4:i:2` (`concordant_alternative_placement`)
+and neither DP (seeding, side classification, pair gathering) nor PD (which skips any non-zero X4)
+counts it. On the same clone this removed six accepted DPs, each joining copies of a repeat or
+paralog (IS, rRNA-operon and prophage regions) and none matched by the curated genome diff, with
+every mutation call unchanged; on Thermincola it set aside 11 pairs beyond the 90 rescued. The cost,
+accepted knowingly: an event between two DIVERGED repeat copies puts its real pairs inside the
+counting margin too, so they stop counting -- `tests/long_ltee_ara_m1_40k_pe36` loses the 46-pair DP
+behind its 23,293-bp DEL at 2031703 and `long_ltee_ara_p3_30k_pe150` the two DPs behind CON 1604567.
+Both calls stand on their MC/JC/RA evidence, but a call that rested on such a DP alone would be lost.
+
 **Pair handling is linear, so pairs across a circular origin are lost — FUTURE WORK.** Nothing in
 `compute_orientation_and_distance`, `classify_pair` or `mark_pair_info` (`resolve_alignments.cpp`),
 PD's gap model (`pd_evidence.cpp`, `identify_mutations.cpp` seed ring) or the stage-3 fit

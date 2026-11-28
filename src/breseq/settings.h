@@ -430,6 +430,17 @@ namespace breseq
 		double   require_match_fraction;   // Default = 0.9     COMMAND-LINE OPTION
     //! ignore reads with this many or more mismatches (I+D+MM)
     int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
+
+    //! Concordant rescue of a read pair (resolve_alignments.cpp): when no combination of the two
+    //! mates' best-score alignments is concordant, accept a concordant combination of near-best
+    //! alignments whose summed log10 likelihood loss is at most this (0 = OFF), adding at most
+    //! pair_rescue_max_extra_edits mismatches/indels over the best alignments.
+    double   pair_rescue_max_log10_likelihood_loss;   // Default = 3; 0 = OFF EXPERT OPTION
+    uint32_t pair_rescue_max_extra_edits;             // Default = 3       EXPERT OPTION
+    //! Beyond the rescue limit and up to this one, such a pair is left where it is but not counted for
+    //! DP or PD evidence (X4 = 2). Must be 0 or at least the rescue limit.
+    double   pair_ambiguity_max_log10_likelihood_loss; // Default = 8; 0 = OFF EXPERT OPTION
+    uint32_t pair_ambiguity_max_extra_edits;           // Default = 6       EXPERT OPTION
     
     //! Settings: Candidate Junction Prediction
 

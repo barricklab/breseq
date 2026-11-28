@@ -154,6 +154,8 @@ namespace breseq {
     if (!paired || mate_unmapped) return 3;   // unpaired
 
     if (!a.proper_pair()) {
+      // Placed discordant, but a concordant near-best placement explains it (X4 = 2): not counted.
+      if (concordant_alternative_placement(a)) return 0;
       // Discordant: the mate must land at the OTHER side in its crossing orientation.
       if (static_cast<int32_t>(a.mate_reference_target_id()) != c.other_tid) return 0;
       int32_t mpos = a.mate_start_1();
@@ -356,6 +358,7 @@ namespace breseq {
         // never set) -- and be counted as a supporting pair. dp_classify_side_read already screens
         // these out (category 3, unpaired); this branch bypasses it, so it needs its own guard.
         if (a.unmapped() || !a.is_paired() || a.proper_pair() || (a.flag() & BAM_FMUNMAP)) return;
+        if (concordant_alternative_placement(a)) return;   // as in dp_classify_side_read
         const bool is_read2 = (a.flag() & BAM_FREAD2) != 0;
         if (m_ctx.geometry.faces_right(a.reversed(), is_read2) != m_ctx.cross_fwd) return;
         if (static_cast<int32_t>(a.mate_reference_target_id()) != m_ctx.other_tid) return;

@@ -43,6 +43,12 @@ bool ambiguous_pair_placement(const alignment_wrapper& a)
   return a.aux_get_i(kBreseqAmbiguousPairPlacementBAMTag, v) && (v != 0);
 }
 
+bool concordant_alternative_placement(const alignment_wrapper& a)
+{
+  uint32_t v;
+  return a.aux_get_i(kBreseqAmbiguousPairPlacementBAMTag, v) && (v == 2);
+}
+
 string alignment_wrapper::read_char_stranded_sequence_1(uint32_t start_1, uint32_t end_1) const { 
   ASSERT(start_1 <= end_1, "Start (" + to_string(start_1) + ") must be less than end (" + to_string(end_1) + ").");
   
@@ -1177,7 +1183,7 @@ void bam_file::write_alignments(
     // alignments that SURVIVED downselection.
     uint32_t ambiguous_placement;
     if (a.aux_get_i(kBreseqAmbiguousPairPlacementBAMTag, ambiguous_placement) && ambiguous_placement) {
-      aux_tags_ss << "\t" << kBreseqAmbiguousPairPlacementBAMTag << ":i:1";
+      aux_tags_ss << "\t" << kBreseqAmbiguousPairPlacementBAMTag << ":i:" << ambiguous_placement;   // 1, or 2: see the tag
     }
 
     string aux_tags = aux_tags_ss.str();

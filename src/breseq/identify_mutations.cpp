@@ -1932,8 +1932,10 @@ void identify_mutations_pileup::pileup_callback_body(const pileup& p) {
       //## here (piggybacking on this per-read loop) to avoid a second per-column scan; guarded to
       //## the first insert slot and to the read's start column.
       if ((insert_count == 0) && !_dp_groups.empty() && (i->reference_start_1() == position)) {
+        // A pair a concordant near-best placement explains (X4 = 2) does not seed DP either.
         if (i->is_paired() && !i->unmapped() && !i->proper_pair() &&
-            !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP))) {
+            !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP)) &&
+            !concordant_alternative_placement(*i)) {
           int gi = dp_group_for(p, *i);
           if ((gi >= 0) && _dp_groups[gi].has_geometry) {
             const dp_group& g = _dp_groups[gi];

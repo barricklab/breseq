@@ -533,6 +533,8 @@ bool mate_never_aligned(const alignment_wrapper& a);
 //  coherent across every pair there and looks exactly like a real collective shift.
 //  Stamped by mark_pair_info (resolve_alignments.cpp), re-emitted by write_alignments.
 bool ambiguous_pair_placement(const alignment_wrapper& a);
+// X4 == 2: placed discordant, but a concordant near-best placement exists; DP and PD do not count it.
+bool concordant_alternative_placement(const alignment_wrapper& a);
 
 /*! class pileup_alignment
  @abstract Represents a single alignment within a pileup.

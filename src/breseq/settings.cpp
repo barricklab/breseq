@@ -98,8 +98,14 @@ namespace breseq
   // leftmost mate's X1 and therefore implements its own stated intent -- "a tie-broken multi-mapping
   // placement has an arbitrary distance" -- for only half of the affected pairs.
   //
-  // DP and MP deliberately do NOT read it: DP uses redundancy as evidence that a side sits on a
+  // DP and MP deliberately do NOT read value 1: DP uses redundancy as evidence that a side sits on a
   // multicopy element, and MP only records it.
+  //
+  // Value 2 is stronger: the pair was placed DISCORDANT, but a concordant combination of near-best
+  // alignments exists within --pair-ambiguity-max-log10-likelihood-loss (and beyond the rescue limit,
+  // or the pair would have been rescued instead -- rescue_concordant_pair, resolve_alignments.cpp).
+  // Its discordance may be a single low-quality base between near-identical copies, so neither DP
+  // nor PD counts it (concordant_alternative_placement()). Never downgraded to 1.
   const char* kBreseqAmbiguousPairPlacementBAMTag = "X4";
 
   string Settings::global_bin_path;
@@ -429,7 +435,11 @@ namespace breseq
     ("junction-minimum-candidate-pos-hash-score", "Minimum number of distinct spanning read start positions required to create a junction candidate for further testing", 2, NORMAL_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, NORMAL_OPTION)
     ("junction-side-quality-cutoff", "A read supporting a junction has a low-quality side when the mean base quality of its bases on one side of the breakpoint (at least a quarter of the read, up to 20) is below this value and at least 10 below the mean on the other side. This is the signature of a read that skipped a hairpin or other secondary structure during sequencing: good up to the breakpoint, miscalled after it.", 15, EXPERT_OPTION)
-    ("junction-low-quality-side-p-value-cutoff", "Reject a junction (LOW_QUALITY_SIDE) when the number of reads supporting it that have a low-quality side is improbably high for the library: a one-sided binomial test against the rate at which ordinary reads of the same read file would be flagged if cut at the same positions. Such reads also do not seed candidate junctions. (0 = OFF for both)", "0.001", EXPERT_OPTION)
+    ("pair-rescue-max-log10-likelihood-loss", "When no combination of a read pair's best-scoring alignments is concordant, place the pair on a concordant combination of near-best alignments if that costs at most this many log10 units of likelihood in total over the two mates. Mismatches are costed by base quality, so a low-quality base call that alone made the pair discordant costs little. (0 = OFF)", "3", EXPERT_OPTION)
+    ("pair-rescue-max-extra-edits", "Upper limit on the extra mismatches and indels, over the two mates' best alignments, that --pair-rescue-max-log10-likelihood-loss may accept.", "3", EXPERT_OPTION)
+    ("pair-ambiguity-max-log10-likelihood-loss", "A read pair left discordant that a concordant combination of near-best alignments would explain at a cost of at most this many log10 units (more than --pair-rescue-max-log10-likelihood-loss, or it would have been re-placed) is kept where it is but not counted for discordant pair (DP) or pair distance (PD) evidence. Must be 0 or at least the rescue limit. (0 = OFF)", "8", EXPERT_OPTION)
+    ("pair-ambiguity-max-extra-edits", "Upper limit on the extra mismatches and indels that --pair-ambiguity-max-log10-likelihood-loss may accept.", "6", EXPERT_OPTION)
+    ("junction-low-quality-side-p-value-cutoff","Reject a junction (LOW_QUALITY_SIDE) when the number of reads supporting it that have a low-quality side is improbably high for the library: a one-sided binomial test against the rate at which ordinary reads of the same read file would be flagged if cut at the same positions. Such reads also do not seed candidate junctions. (0 = OFF for both)", "0.001", EXPERT_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", NORMAL_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = 1)", "", NORMAL_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, NORMAL_OPTION)
@@ -1094,6 +1104,13 @@ namespace breseq
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
     this->junction_side_quality_cutoff = from_string<uint32_t>(options["junction-side-quality-cutoff"]);
     this->junction_low_quality_side_p_value_cutoff = from_string<double>(options["junction-low-quality-side-p-value-cutoff"]);
+    this->pair_rescue_max_log10_likelihood_loss = from_string<double>(options["pair-rescue-max-log10-likelihood-loss"]);
+    this->pair_rescue_max_extra_edits = from_string<uint32_t>(options["pair-rescue-max-extra-edits"]);
+    this->pair_ambiguity_max_log10_likelihood_loss = from_string<double>(options["pair-ambiguity-max-log10-likelihood-loss"]);
+    this->pair_ambiguity_max_extra_edits = from_string<uint32_t>(options["pair-ambiguity-max-extra-edits"]);
+    ASSERT((this->pair_ambiguity_max_log10_likelihood_loss == 0)
+           || (this->pair_ambiguity_max_log10_likelihood_loss >= this->pair_rescue_max_log10_likelihood_loss),
+           "--pair-ambiguity-max-log10-likelihood-loss must be 0 (OFF) or at least --pair-rescue-max-log10-likelihood-loss");
     this->junction_allow_suboptimal_matches = options.count("junction-allow-suboptimal-matches");
     this->junction_weight_reads = !options.count("junction-no-read-weighting");
     
@@ -1649,6 +1666,10 @@ namespace breseq
     this->require_match_length = 0;         
     this->require_match_fraction = 0.9; // CL value overrides
     this->maximum_read_mismatches = -1;
+    this->pair_rescue_max_log10_likelihood_loss = 3.0;
+    this->pair_rescue_max_extra_edits = 3;
+    this->pair_ambiguity_max_log10_likelihood_loss = 8.0;
+    this->pair_ambiguity_max_extra_edits = 6;
 
     this->bowtie2_junction_maximum_alignments_to_consider_per_read = 2000;
     this->bowtie2_genome_maximum_alignments_to_consider_per_read = 2000;
