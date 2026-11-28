@@ -43,7 +43,7 @@ void samtools_sort(const string& unsorted_bam_file_name, const string& sorted_ba
   cerr << "[system] " << cmd << endl;
 
   string stderr_tmp = sorted_bam_file_name + ".stderr.tmp";
-  int ret = system((cmd + " 2>" + double_quote(stderr_tmp)).c_str());
+  int ret = system_without_global_lock((cmd + " 2>" + double_quote(stderr_tmp)).c_str());
 
   ifstream err_file(stderr_tmp.c_str());
   string line;

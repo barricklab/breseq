@@ -54,6 +54,10 @@
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <spawn.h>
+#include <sys/wait.h>
+
+extern char** environ;   // for posix_spawn; declared here, outside any namespace
 
 // C++
 // Containers
@@ -1628,13 +1632,71 @@ inline ostream &operator<<( ostream &out, const formatted_double &fd ) {
   return out;
 }
   
+//! Runs a command through /bin/sh and returns its wait status, as system() does.
+//!
+//! Used in place of system() because Apple's C library holds one process-wide lock for the whole
+//! of a system() call, so a command issued from a second thread does not START until the first
+//! thread's command has exited. That made the main thread wait for a copy number prediction that
+//! had been started in the background precisely so that it would not. Here each caller waits only
+//! for its own child.
+//!
+//! Like system(), SIGINT and SIGQUIT are ignored in this process while any command is running
+//! (the terminal sends them to the command as well, and its failure is then reported in the
+//! normal way). Signal dispositions belong to the process, hence the count of running commands.
+inline int system_without_global_lock(const char* command)
+{
+  static std::mutex s_mutex;
+  static int s_running = 0;
+  static struct sigaction s_saved_int, s_saved_quit;
+
+  posix_spawnattr_t attr;
+  posix_spawnattr_init(&attr);
+  {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    if (s_running++ == 0) {
+      struct sigaction ignore;
+      memset(&ignore, 0, sizeof(ignore));
+      ignore.sa_handler = SIG_IGN;
+      sigemptyset(&ignore.sa_mask);
+      sigaction(SIGINT, &ignore, &s_saved_int);
+      sigaction(SIGQUIT, &ignore, &s_saved_quit);
+    }
+    // The command gets the dispositions this process had before it began ignoring them.
+    sigset_t to_default;
+    sigemptyset(&to_default);
+    if (s_saved_int.sa_handler != SIG_IGN) sigaddset(&to_default, SIGINT);
+    if (s_saved_quit.sa_handler != SIG_IGN) sigaddset(&to_default, SIGQUIT);
+    posix_spawnattr_setsigdefault(&attr, &to_default);
+    posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGDEF);
+  }
+
+  char* const argv[] = { const_cast<char*>("sh"), const_cast<char*>("-c"), const_cast<char*>(command), NULL };
+  pid_t pid;
+  int status = -1;
+  if (posix_spawn(&pid, "/bin/sh", NULL, &attr, argv, ::environ) == 0) {
+    while (waitpid(pid, &status, 0) == -1) {
+      if (errno != EINTR) { status = -1; break; }
+    }
+  }
+  posix_spawnattr_destroy(&attr);
+
+  {
+    std::lock_guard<std::mutex> lock(s_mutex);
+    if (--s_running == 0) {
+      sigaction(SIGINT, &s_saved_int, NULL);
+      sigaction(SIGQUIT, &s_saved_quit, NULL);
+    }
+  }
+  return status;
+}
+
 inline int SYSTEM(string command, bool silent = false, bool ignore_errors = false, bool escape_shell_chars = true)
 {
   if (escape_shell_chars) {
     command = cString(command).escape_shell_chars();
   }
   if (!silent) cerr << "[system] " << command << endl;
-  int return_value = system(command.c_str());
+  int return_value = system_without_global_lock(command.c_str());
   
   string error_message = "Error running command:\n[system] " + command + "\nResult code: " + to_string(return_value);
   if (ignore_errors)
