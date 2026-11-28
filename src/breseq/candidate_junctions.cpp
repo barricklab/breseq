@@ -556,7 +556,7 @@ namespace breseq {
              << "," << it->start_1
              << "," << it->end_1;
       }
-      *csv << endl;
+      *csv << '\n';
     };
 
     bool keep_going = true;
@@ -718,7 +718,7 @@ namespace breseq {
     ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
     csv << "orientation,distance,count" << endl;
     for (map<pair<string, int64_t>, uint32_t>::const_iterator it = distance_counts.begin(); it != distance_counts.end(); it++) {
-      csv << it->first.first << "," << it->first.second << "," << it->second << endl;
+      csv << it->first.first << "," << it->first.second << "," << it->second << '\n';
     }
     csv.close();
 
@@ -730,7 +730,7 @@ namespace breseq {
       region_csv << "orientation,region,distance,count" << endl;
       for (map<string, map<int64_t, uint32_t> >::const_iterator rit = region_distance_counts.begin(); rit != region_distance_counts.end(); rit++)
         for (map<int64_t, uint32_t>::const_iterator dit = rit->second.begin(); dit != rit->second.end(); dit++)
-          region_csv << rit->first << "," << dit->first << "," << dit->second << endl;
+          region_csv << rit->first << "," << dit->first << "," << dit->second << '\n';
     }
   }
 
@@ -782,7 +782,7 @@ namespace breseq {
     ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
     csv << "orientation,distance,count" << endl;
     for (map<pair<string, int64_t>, uint32_t>::const_iterator it = distance_counts.begin(); it != distance_counts.end(); it++) {
-      csv << it->first.first << "," << it->first.second << "," << it->second << endl;
+      csv << it->first.first << "," << it->first.second << "," << it->second << '\n';
     }
     csv.close();
 
@@ -794,7 +794,7 @@ namespace breseq {
       region_csv << "orientation,region,distance,count" << endl;
       for (map<string, map<int64_t, uint32_t> >::const_iterator rit = region_distance_counts.begin(); rit != region_distance_counts.end(); rit++)
         for (map<int64_t, uint32_t>::const_iterator dit = rit->second.begin(); dit != rit->second.end(); dit++)
-          region_csv << rit->first << "," << dit->first << "," << dit->second << endl;
+          region_csv << rit->first << "," << dit->first << "," << dit->second << '\n';
     }
   }
 

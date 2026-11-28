@@ -320,7 +320,7 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
     // No reads here, so every coverage column is zero -- including each read group's repeat.
     size_t zero_columns = num_coverage_columns * (m_per_read_group ? (1 + num_read_group_columns()) : 1);
     for (size_t c = 0; c < zero_columns; c++) m_output_table << d << 0;
-    m_output_table << std::endl;
+    m_output_table << '\n';
 
     // Add to the positions, but don't add to the coverage
     m_region_num_positions++;
@@ -499,7 +499,7 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
       m_rg_region_average_coverage[g]        += rg_unique_cov[t] + rg_unique_cov[b] + rg_redundant_cov[t] + rg_redundant_cov[b];
     }
   }
-  m_output_table << std::endl;
+  m_output_table << '\n';   // not endl: there is a row per position, and endl would flush the file for each
 }
   
   

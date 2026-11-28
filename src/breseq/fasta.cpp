@@ -92,11 +92,11 @@ namespace breseq {
 
   void cFastaFile::write_sequence(const cFastaSequence &sequence) {
     
-    (*this) << ">" << sequence.get_name() << endl;
+    (*this) << ">" << sequence.get_name() << '\n';
     
     int32_t start_1 = 1;
     while (start_1 <= (int32_t)sequence.get_sequence_length()) {
-      (*this) << sequence.get_sequence_1(start_1, min<int32_t>(start_1 + m_bases_per_line - 1, sequence.get_sequence_length())) << endl;
+      (*this) << sequence.get_sequence_1(start_1, min<int32_t>(start_1 + m_bases_per_line - 1, sequence.get_sequence_length())) << '\n';
       start_1 += m_bases_per_line;
     }
 

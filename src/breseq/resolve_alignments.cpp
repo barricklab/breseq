@@ -1690,7 +1690,7 @@ static void write_discordant_pair_row(
                                       int64_t distance
                                       )
 {
-  out << read_number << "," << orientation << "," << seq_id_1 << "," << start_1 << "," << seq_id_2 << "," << start_2 << "," << distance << endl;
+  out << read_number << "," << orientation << "," << seq_id_1 << "," << start_1 << "," << seq_id_2 << "," << start_2 << "," << distance << '\n';
 }
 #endif
 

@@ -1816,7 +1816,7 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool no_sequence) {
         if (region.end_is_indeterminate())
           columns[ATTRIBUTES] += "end";
         
-        out << join(columns, "\t") << endl;
+        out << join(columns, "\t") << '\n';
       }
 
 

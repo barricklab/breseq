@@ -119,8 +119,8 @@ namespace breseq {
   
   inline ostream& operator<<(ostream& out, const cFastaSequence& fasta_sequence)
   {
-    out << ">" <<fasta_sequence.get_name() << endl;
-    out << fasta_sequence.get_sequence() << endl;
+    out << ">" <<fasta_sequence.get_name() << '\n';
+    out << fasta_sequence.get_sequence() << '\n';
     return out;
   }
 
