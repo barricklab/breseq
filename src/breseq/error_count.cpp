@@ -424,7 +424,11 @@ void plot_error_rates(const string& in_file, const string& out_file)
   }
   if (!found_value) return;
 
-  int log10_min_error_rate = static_cast<int>(floor(log10(min_error_rate)));
+  // At least one decade below 1. When every plotted value is an error rate of exactly 1 -- a quality
+  // score that occurs only on miscalled bases, e.g. a handful of q10 calls in an otherwise q30+ read
+  // set -- floor(log10(1)) = 0 made the range [1e0:1], which gnuplot refuses ("Can't plot with an
+  // empty y range!"), stopping breseq.
+  int log10_min_error_rate = min(-1, static_cast<int>(floor(log10(min_error_rate))));
   ostringstream y_min_oss;
   y_min_oss << "1e" << log10_min_error_rate;
 
