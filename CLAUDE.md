@@ -485,6 +485,89 @@ Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PF
 
 All statistics and plotting are native C++; no R dependency remains. Diagnostic plots (coverage distribution, coverage overview, error rates, JC precision/sensitivity) are drawn by writing a gnuplot script to a temp file and invoking `gnuplot` as a subprocess via the `run_gnuplot_script()` helper in `common.h`.
 
+## Performance
+
+A round of speed work in November 2026 (`371e9e8d`..`d93d0665`) cut total wall time by 40-54% on
+three *E. coli* libraries at `-j 8`, with every golden unchanged. Read this before optimizing further.
+
+**Ground rules.** A performance change must leave the short and long goldens byte-identical and give
+the same output at any `-j`. A change that moves a golden is a results change and is handled
+separately (the one exception so far was a real bug, `f741c44d`: `bam_file::read_alignments`
+returned the last record of a file twice). Measure with `tests/benchmark_stage_times.py` on an
+**idle** machine, alternating the old and new binary over three rounds; stage times from a shared
+machine are not comparable. Do not rebuild while a benchmark or test run is using the binary.
+
+**Where the time is now** (seconds; 36 bp SE / 2x101 / 2x150 against REL606, medians of 3):
+
+| Stage | Before | After |
+|---|---|---|
+| Read and reference input | 27 / 12 / 11 | 11 / 8 / 10 |
+| Read alignment (bowtie2) | 72 / 25 / 30 | 71 / 24 / 29 |
+| Preprocessing alignments | 54 / 42 / 43 | 22 / 16 / 18 |
+| Re-alignment to junction candidates | 22 / 8 / 10 | 22 / 9 / 10 |
+| Resolving best read alignments | 62 / 48 / 44 | 35 / 24 / 25 |
+| Tabulating error counts | 14 / 18 / 18 | 2 / 3 / 2 |
+| Examining read alignment evidence | 54 / 69 / 70 | 4 / 7 / 8 |
+| Copy number (CNery; part not hidden behind the pair stages) | 29 / 32 / 54 | 28 / 21 / 44 |
+| Output | 5 / 15 / 17 | 5 / 7 / 14 |
+| **Total** | 354 / 301 / 328 | 211 / 139 / 183 |
+
+bowtie2 and CNery are now the two largest stages and neither is breseq's own code.
+
+**What was done, and the machinery it left behind:**
+- **Evidence pileup** (`identify_mutations.cpp`): a fast path for columns where every read matches
+  the reference; a per-cell cache of read-base likelihoods; a bound that skips the allele fit when
+  no variant can reach the score cutoff (`print_column_counts()` reports how many columns took each
+  path); and the pileup itself run in chunks of the reference on `Settings::pool`.
+- **Chunked pileups** (`error_count.cpp`, `identify_mutations.cpp`, `pileup_base`): chunk length is
+  `max(kMinimumPileupChunkLength, total/(threads*8)+1)`, one worker object per pool thread. An item
+  belongs to the chunk it starts in; a worker warms up before its chunk and runs on past the end
+  until idle (`stop_pileup()`). Both print "Piled up N chunks of the reference on T threads", and
+  `tests/lambda_mixed_pop/testcmd.sh` requires that line so the short suite exercises chunking.
+- **BAM I/O**: an htslib thread pool on breseq's readers and writers (`set_bam_io_threads`),
+  intermediates written at compression level 1 (`kIntermediateBAMWriteMode`), `-@` on the
+  `samtools view` in the bowtie2 pipe.
+- **Writer threads** (`AsyncAlignmentWriter`, `alignment.h`): the resolved reference alignments and
+  the pooled best alignments are written on a thread of their own. `counted_ptr` counts are not
+  atomic, so `push()` TAKES the list and the caller must hold no other copy of its records.
+- **FASTQ input** (`fastq.cpp`): one quality converter per file instead of per read; one reader
+  thread per input file.
+- **Overlapped stages** (`breseq_cmdline.cpp`): CNery starts when the evidence stage ends and runs
+  behind the DP/MP/PD stages; the bowtie2 index, faidx index and trims are built while the reads are
+  converted. Each is a `std::future` collected at the stage that used to do the work, so a restarted
+  run falls back to doing it there.
+- **`SYSTEM()` no longer calls `system()`** (`system_without_global_lock`, `common.h`). Apple's libc
+  holds a process-wide lock for the whole of a `system()` call, so a command from a second thread
+  did not start until the first thread's had exited. Never call `system()` directly.
+- **Output**: the DP evidence plots are drawn on the pool (three gnuplot runs per DP item).
+- **Flushes**: a file with a row per position, feature or pair must end rows with `'\n'`, not
+  `endl`. One `endl` in the pair-distance histogram (3.8 million rows) cost 5 s.
+
+**Traps met on the way:**
+- A stage that shows 0 s after a change has probably moved its time elsewhere: read the WHOLE stage
+  table. Backgrounded CNery showed 0 s while the main thread sat blocked in the next stage.
+- Timing a stage: run once with `-k`, delete `output/output.done` plus that stage's done-file, and
+  pipe stderr through a timestamper. The macOS `sample` profiler hung on breseq; temporary chrono
+  timers worked.
+- Skipping junction re-alignment for reads that match the reference perfectly is NOT
+  results-neutral: junction alignments feed read weighting.
+- DP, MP and PD already hide behind CNery, so parallelizing them gains nothing; after the evidence
+  stage the critical path is CNery, then Output.
+
+**Not done, in rough order of promise:**
+1. Collapse duplicate or near-identical junction candidates before re-alignment (changes results;
+   the re-alignment and resolve stages scale with the candidate count).
+2. A bowtie2 option study (`-i`, `-k`, `-D`/`-R`, `-L`): adopt a setting only if no call changes on
+   the short and long suites; bowtie2 seeds tie-breaking from read names, so compare identical
+   inputs. `bowtie2-build --threads` for large references is untested for index identity.
+3. Fewer rejected RA items in consensus mode, by a frequency bound next to the score bound (smaller
+   GD files are welcome; polymorphism mode may need to be an exception).
+4. Output on 2x150 is still 14 s and has not been broken down; the remaining serial part of the DP
+   plots is the read gathering on one BAM handle.
+5. Start CNery before local realignment, as soon as the coverage table is joined.
+6. The pair-distance histogram is dense to the largest distance seen; writing only what the plot
+   shows would need a check of who else reads it.
+
 ## Output Structure
 
 breseq writes to `-o <output_dir>` (default: current directory):
