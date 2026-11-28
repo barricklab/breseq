@@ -881,7 +881,9 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   {
     ofstream hist_out(hist_table_file_name.c_str());
     ASSERT(hist_out.is_open(), "Could not write to file: " + hist_table_file_name);
-    for (uint32_t i = 0; i <= N; i++) hist_out << i << "\t" << n[i] << endl;
+    // '\n', not endl: there is a row for every base of distance up to the largest seen, millions
+    // of them when one pair spans most of a chromosome, and flushing each took 5 seconds.
+    for (uint32_t i = 0; i <= N; i++) hist_out << i << "\t" << n[i] << '\n';
     hist_out.close();
   }
 
