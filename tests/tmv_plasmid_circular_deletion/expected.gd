@@ -1,20 +1,20 @@
 #=GENOME_DIFF	1.0
-#=CREATED	13:49:50 25 Sep 2026
-#=PROGRAM	breseq 0.50.0 revision f30111c975ee
-#=COMMAND	./src/breseq/breseq -j 4 --predict-discordant-pairs -o tests/tmv_plasmid_circular_deletion -r tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
-#=REFSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
-#=READSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz
-#=READSEQ	tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=CREATED	13:02:50 28 Nov 2026
+#=PROGRAM	breseq 0.50.0 revision 43c19b63ebc3
+#=COMMAND	./src/breseq/breseq -j 4 --predict-discordant-pairs -o ./tests/tmv_plasmid_circular_deletion -r ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=REFSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
+#=READSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz
+#=READSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
 #=CONVERTED-BASES	2733978
 #=CONVERTED-READS	18356
 #=INPUT-BASES	2738037
 #=INPUT-READS	18386
 #=MAPPED-BASES	2298942
 #=MAPPED-READS	15452
-DEL	1	5,6,8,202	TMV-plasmid	10205	7344	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=17548	position_start=10205	ref_seq=7344-bp
+DEL	1	5,6,8,199	TMV-plasmid	10205	7344	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=17548	position_start=10205	ref_seq=7344-bp
 RA	2	.	TMV-plasmid	1565	0	C	T	allele_frequencies=T:1.000e+00	deleted=1	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=7.129e-01	frequency_upper=1.000e+00	ks_quality_p_value=1.00000e+00	major_base=T	major_cov=1/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=1/3	prediction=consensus	ref_cov=0/0	score=10.1	total_cov=1/3
 RA	3	.	TMV-plasmid	5198	0	A	G	allele_frequencies=G:1.000e+00	deleted=1	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=7.981e-01	frequency_upper=1.000e+00	ks_quality_p_value=1.00000e+00	major_base=G	major_cov=3/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/3	prediction=consensus	ref_cov=0/0	score=18.1	total_cov=3/3
-RA	4	.	TMV-plasmid	7566	0	T	A	allele_frequencies=A:1.260e-01,C:2.458e-03,T:8.715e-01	consensus_reject=FREQUENCY_CUTOFF	fisher_strand_p_value=7.55961e-01	frequency=1.260e-01	frequency_lower=1.075e-01	frequency_upper=1.461e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=T	major_cov=359/355	major_frequency=8.715e-01	minor_base=A	minor_cov=56/51	new_cov=56/51	prediction=polymorphism	ref_cov=359/355	score=201.5	snp_type=intergenic	total_cov=418/408
+RA	4	.	TMV-plasmid	7566	0	T	A	allele_frequencies=A:1.260e-01,C:2.451e-03,T:8.716e-01	consensus_reject=FREQUENCY_CUTOFF	fisher_strand_p_value=7.55961e-01	frequency=1.260e-01	frequency_lower=1.075e-01	frequency_upper=1.461e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=T	major_cov=359/355	major_frequency=8.716e-01	minor_base=A	minor_cov=56/51	new_cov=56/51	prediction=polymorphism	ref_cov=359/355	score=201.5	snp_type=intergenic	total_cov=418/408
 MC	5	.	TMV-plasmid	1	7137	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=1	left_outside_cov=NA	locus_tag=–/–	right_inside_cov=41	right_outside_cov=815
 MC	6	.	TMV-plasmid	10205	10411	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=84	left_outside_cov=859	locus_tag=–/–	right_inside_cov=1	right_outside_cov=NA
 JC	7	.	TMV-plasmid	7033	1	TMV-plasmid	10253	-1	0	alignment_overlap=0	coverage_minus=22	coverage_plus=17	flanking_left=151	flanking_right=151	frequency=8.539e-01	frequency_lower=7.379e-01	frequency_upper=9.318e-01	junction_effective_depth=44.50	junction_mixture_iterations=1	junction_possible_overlap_registers=145	junction_possible_overlap_registers_before_trimming=147	key=TMV-plasmid__7033__1__TMV-plasmid__10253__-1__0____151__151__0__0	max_left=149	max_left_minus=149	max_left_plus=147	max_min_left=72	max_min_left_minus=71	max_min_left_plus=72	max_min_right=75	max_min_right_minus=75	max_min_right_plus=60	max_pos_hash_score=296	max_right=150	max_right_minus=150	max_right_plus=138	neg_log10_pos_hash_p_value=2.0	new_junction_coverage=0.15	new_junction_read_count=38	new_junction_reference_weighted_read_count=0.00	new_junction_weighted_read_count=38.00	pos_hash_score=28	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.04	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=145	side_1_possible_overlap_registers_before_trimming=147	side_1_read_count=10	side_1_redundant=0	side_1_weighted_read_count=10.00	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.01	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=145	side_2_possible_overlap_registers_before_trimming=147	side_2_read_count=3	side_2_redundant=0	side_2_weighted_read_count=3.00	total_non_overlap_reads=39
@@ -85,133 +85,130 @@ UN	71	.	TMV-plasmid	301	301
 UN	72	.	TMV-plasmid	304	304
 UN	73	.	TMV-plasmid	306	772
 UN	74	.	TMV-plasmid	779	1544
-UN	75	.	TMV-plasmid	1564	1564
-UN	76	.	TMV-plasmid	1566	1567
-UN	77	.	TMV-plasmid	1569	1571
-UN	78	.	TMV-plasmid	1576	1576
-UN	79	.	TMV-plasmid	1579	1579
-UN	80	.	TMV-plasmid	1582	1583
-UN	81	.	TMV-plasmid	1586	1586
-UN	82	.	TMV-plasmid	1590	1592
-UN	83	.	TMV-plasmid	1598	1598
-UN	84	.	TMV-plasmid	1600	1754
-UN	85	.	TMV-plasmid	1764	1764
-UN	86	.	TMV-plasmid	1774	1774
-UN	87	.	TMV-plasmid	1777	1777
-UN	88	.	TMV-plasmid	1779	1779
-UN	89	.	TMV-plasmid	1781	1781
-UN	90	.	TMV-plasmid	1785	1785
-UN	91	.	TMV-plasmid	1958	1958
-UN	92	.	TMV-plasmid	1964	1964
-UN	93	.	TMV-plasmid	1969	2427
-UN	94	.	TMV-plasmid	2430	2430
-UN	95	.	TMV-plasmid	2435	2435
-UN	96	.	TMV-plasmid	2441	2441
-UN	97	.	TMV-plasmid	2540	2540
-UN	98	.	TMV-plasmid	2547	2548
-UN	99	.	TMV-plasmid	2552	2552
-UN	100	.	TMV-plasmid	2563	2563
-UN	101	.	TMV-plasmid	2570	2879
-UN	102	.	TMV-plasmid	2882	2882
-UN	103	.	TMV-plasmid	2888	2888
-UN	104	.	TMV-plasmid	2935	2936
-UN	105	.	TMV-plasmid	2938	2938
-UN	106	.	TMV-plasmid	2944	2944
-UN	107	.	TMV-plasmid	2952	2956
-UN	108	.	TMV-plasmid	2989	2989
-UN	109	.	TMV-plasmid	3024	3031
-UN	110	.	TMV-plasmid	3037	3037
-UN	111	.	TMV-plasmid	3044	3044
-UN	112	.	TMV-plasmid	3056	3056
-UN	113	.	TMV-plasmid	3062	3062
-UN	114	.	TMV-plasmid	3070	3070
-UN	115	.	TMV-plasmid	3072	3072
-UN	116	.	TMV-plasmid	3076	3076
-UN	117	.	TMV-plasmid	3109	3109
-UN	118	.	TMV-plasmid	3181	3181
-UN	119	.	TMV-plasmid	3183	3189
-UN	120	.	TMV-plasmid	3194	3195
-UN	121	.	TMV-plasmid	3199	3199
-UN	122	.	TMV-plasmid	3202	3202
-UN	123	.	TMV-plasmid	3204	3204
-UN	124	.	TMV-plasmid	3206	3206
-UN	125	.	TMV-plasmid	3213	3214
-UN	126	.	TMV-plasmid	3216	3216
-UN	127	.	TMV-plasmid	3218	3219
-UN	128	.	TMV-plasmid	3222	3222
-UN	129	.	TMV-plasmid	3224	3225
-UN	130	.	TMV-plasmid	3228	3229
-UN	131	.	TMV-plasmid	3235	3235
-UN	132	.	TMV-plasmid	3239	3292
-UN	133	.	TMV-plasmid	3298	3322
-UN	134	.	TMV-plasmid	3408	3408
-UN	135	.	TMV-plasmid	3416	3416
-UN	136	.	TMV-plasmid	3438	3576
-UN	137	.	TMV-plasmid	3582	3582
-UN	138	.	TMV-plasmid	3739	3739
-UN	139	.	TMV-plasmid	3758	3758
-UN	140	.	TMV-plasmid	3763	3802
-UN	141	.	TMV-plasmid	3837	3837
-UN	142	.	TMV-plasmid	3842	3842
-UN	143	.	TMV-plasmid	3846	3846
-UN	144	.	TMV-plasmid	3864	3864
-UN	145	.	TMV-plasmid	3866	3877
-UN	146	.	TMV-plasmid	3879	3883
-UN	147	.	TMV-plasmid	3887	3887
-UN	148	.	TMV-plasmid	3891	3892
-UN	149	.	TMV-plasmid	3894	3894
-UN	150	.	TMV-plasmid	3896	3896
-UN	151	.	TMV-plasmid	3900	3900
-UN	152	.	TMV-plasmid	3903	3904
-UN	153	.	TMV-plasmid	3906	3907
-UN	154	.	TMV-plasmid	3909	3913
-UN	155	.	TMV-plasmid	3915	3915
-UN	156	.	TMV-plasmid	3917	3921
-UN	157	.	TMV-plasmid	3926	3927
-UN	158	.	TMV-plasmid	3929	3930
-UN	159	.	TMV-plasmid	3932	3932
-UN	160	.	TMV-plasmid	3934	3934
-UN	161	.	TMV-plasmid	3937	3938
-UN	162	.	TMV-plasmid	3940	4236
-UN	163	.	TMV-plasmid	4239	4241
-UN	164	.	TMV-plasmid	4391	4391
-UN	165	.	TMV-plasmid	4393	4393
-UN	166	.	TMV-plasmid	4395	4395
-UN	167	.	TMV-plasmid	4397	4398
-UN	168	.	TMV-plasmid	4401	4401
-UN	169	.	TMV-plasmid	4403	4407
-UN	170	.	TMV-plasmid	4409	4409
-UN	171	.	TMV-plasmid	4416	4416
-UN	172	.	TMV-plasmid	4418	4432
-UN	173	.	TMV-plasmid	4434	4434
-UN	174	.	TMV-plasmid	4436	4682
-UN	175	.	TMV-plasmid	4686	4686
-UN	176	.	TMV-plasmid	4831	4831
-UN	177	.	TMV-plasmid	4846	4846
-UN	178	.	TMV-plasmid	4850	5173
-UN	179	.	TMV-plasmid	5299	5299
-UN	180	.	TMV-plasmid	5303	5400
-UN	181	.	TMV-plasmid	5406	5406
-UN	182	.	TMV-plasmid	5483	5483
-UN	183	.	TMV-plasmid	5493	5493
-UN	184	.	TMV-plasmid	5509	5542
-UN	185	.	TMV-plasmid	5545	5551
-UN	186	.	TMV-plasmid	5557	5558
-UN	187	.	TMV-plasmid	5562	5562
-UN	188	.	TMV-plasmid	5564	5564
-UN	189	.	TMV-plasmid	5586	5586
-UN	190	.	TMV-plasmid	5595	5595
-UN	191	.	TMV-plasmid	5598	5598
-UN	192	.	TMV-plasmid	5625	5625
-UN	193	.	TMV-plasmid	5634	5634
-UN	194	.	TMV-plasmid	5643	5643
-UN	195	.	TMV-plasmid	5673	5673
-UN	196	.	TMV-plasmid	5677	5677
-UN	197	.	TMV-plasmid	5688	6662
-UN	198	.	TMV-plasmid	6800	6800
-UN	199	.	TMV-plasmid	6802	6802
-UN	200	.	TMV-plasmid	6804	6888
-UN	201	.	TMV-plasmid	10254	10411
-DP	202	.	TMV-plasmid	7138	1	TMV-plasmid	10204	-1	background_e_value=2.396e-03	candidate_discordant_count=23	concordant_count=0.0	discordant_count=21	distinct_discordant_count=20	expected_concordant_count=5.3	frequency=1.0000	frequency_lower=0.8609	frequency_upper=1.0000	neg_log10_discordance_p_value=0.2	new_junction_coverage=3.75	side_1_annotate_key=gene	side_1_concordant_count=0	side_1_coverage=0.00	side_1_discordant_count=21	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=604	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=22	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=637
-PD	203	.	TMV-plasmid	7504	-1	TMV-plasmid	7579	1	ambiguous_pair_count=14	candidate_covering_count=41	distinct_pair_count=3	frequency=0.4286	frequency_lower=0.1288	frequency_upper=0.7747	normal_pair_count=4	position_range=145	reject=PAIR_DISTANCE_SCORE	score=0.3	seed_z_score=2.66	shifted_pair_count=3	side_1_annotate_key=gene	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_2_annotate_key=gene	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	size_shift=74	size_shift_lower=66	size_shift_upper=76	total_pair_count=21
-PD	204	.	TMV-plasmid	9672	-1	TMV-plasmid	9673	1	ambiguous_pair_count=18	candidate_covering_count=28	distinct_pair_count=5	frequency=0.3846	frequency_lower=0.1657	frequency_upper=0.6452	normal_pair_count=8	position_range=3	reject=PAIR_DISTANCE_SCORE	score=0.5	seed_z_score=-2.84	shifted_pair_count=5	side_1_annotate_key=gene	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_2_annotate_key=gene	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	size_shift=-253	size_shift_lower=-255	size_shift_upper=-250	total_pair_count=31
+UN	75	.	TMV-plasmid	1564	1567
+UN	76	.	TMV-plasmid	1569	1576
+UN	77	.	TMV-plasmid	1579	1579
+UN	78	.	TMV-plasmid	1582	1583
+UN	79	.	TMV-plasmid	1586	1586
+UN	80	.	TMV-plasmid	1590	1592
+UN	81	.	TMV-plasmid	1597	1598
+UN	82	.	TMV-plasmid	1600	1754
+UN	83	.	TMV-plasmid	1764	1764
+UN	84	.	TMV-plasmid	1774	1774
+UN	85	.	TMV-plasmid	1777	1777
+UN	86	.	TMV-plasmid	1779	1779
+UN	87	.	TMV-plasmid	1781	1781
+UN	88	.	TMV-plasmid	1785	1785
+UN	89	.	TMV-plasmid	1958	1958
+UN	90	.	TMV-plasmid	1964	1964
+UN	91	.	TMV-plasmid	1969	2427
+UN	92	.	TMV-plasmid	2430	2430
+UN	93	.	TMV-plasmid	2435	2435
+UN	94	.	TMV-plasmid	2441	2441
+UN	95	.	TMV-plasmid	2540	2540
+UN	96	.	TMV-plasmid	2547	2548
+UN	97	.	TMV-plasmid	2552	2552
+UN	98	.	TMV-plasmid	2563	2563
+UN	99	.	TMV-plasmid	2570	2879
+UN	100	.	TMV-plasmid	2882	2882
+UN	101	.	TMV-plasmid	2888	2888
+UN	102	.	TMV-plasmid	2935	2936
+UN	103	.	TMV-plasmid	2938	2938
+UN	104	.	TMV-plasmid	2944	2944
+UN	105	.	TMV-plasmid	2952	2956
+UN	106	.	TMV-plasmid	2989	2989
+UN	107	.	TMV-plasmid	3024	3031
+UN	108	.	TMV-plasmid	3037	3037
+UN	109	.	TMV-plasmid	3044	3044
+UN	110	.	TMV-plasmid	3056	3056
+UN	111	.	TMV-plasmid	3062	3062
+UN	112	.	TMV-plasmid	3070	3070
+UN	113	.	TMV-plasmid	3072	3072
+UN	114	.	TMV-plasmid	3076	3076
+UN	115	.	TMV-plasmid	3109	3109
+UN	116	.	TMV-plasmid	3181	3181
+UN	117	.	TMV-plasmid	3183	3189
+UN	118	.	TMV-plasmid	3194	3195
+UN	119	.	TMV-plasmid	3199	3199
+UN	120	.	TMV-plasmid	3202	3202
+UN	121	.	TMV-plasmid	3204	3204
+UN	122	.	TMV-plasmid	3206	3206
+UN	123	.	TMV-plasmid	3213	3214
+UN	124	.	TMV-plasmid	3216	3216
+UN	125	.	TMV-plasmid	3218	3219
+UN	126	.	TMV-plasmid	3222	3222
+UN	127	.	TMV-plasmid	3224	3225
+UN	128	.	TMV-plasmid	3228	3229
+UN	129	.	TMV-plasmid	3235	3235
+UN	130	.	TMV-plasmid	3239	3292
+UN	131	.	TMV-plasmid	3298	3322
+UN	132	.	TMV-plasmid	3408	3408
+UN	133	.	TMV-plasmid	3416	3416
+UN	134	.	TMV-plasmid	3438	3576
+UN	135	.	TMV-plasmid	3582	3582
+UN	136	.	TMV-plasmid	3739	3739
+UN	137	.	TMV-plasmid	3758	3758
+UN	138	.	TMV-plasmid	3763	3802
+UN	139	.	TMV-plasmid	3837	3837
+UN	140	.	TMV-plasmid	3842	3842
+UN	141	.	TMV-plasmid	3846	3846
+UN	142	.	TMV-plasmid	3864	3864
+UN	143	.	TMV-plasmid	3866	3877
+UN	144	.	TMV-plasmid	3879	3883
+UN	145	.	TMV-plasmid	3887	3887
+UN	146	.	TMV-plasmid	3891	3892
+UN	147	.	TMV-plasmid	3894	3894
+UN	148	.	TMV-plasmid	3896	3896
+UN	149	.	TMV-plasmid	3900	3900
+UN	150	.	TMV-plasmid	3903	3904
+UN	151	.	TMV-plasmid	3906	3907
+UN	152	.	TMV-plasmid	3909	3913
+UN	153	.	TMV-plasmid	3915	3915
+UN	154	.	TMV-plasmid	3917	3921
+UN	155	.	TMV-plasmid	3926	3927
+UN	156	.	TMV-plasmid	3929	3930
+UN	157	.	TMV-plasmid	3932	3932
+UN	158	.	TMV-plasmid	3934	3934
+UN	159	.	TMV-plasmid	3937	3938
+UN	160	.	TMV-plasmid	3940	4236
+UN	161	.	TMV-plasmid	4239	4241
+UN	162	.	TMV-plasmid	4391	4391
+UN	163	.	TMV-plasmid	4393	4395
+UN	164	.	TMV-plasmid	4397	4399
+UN	165	.	TMV-plasmid	4401	4401
+UN	166	.	TMV-plasmid	4404	4407
+UN	167	.	TMV-plasmid	4409	4409
+UN	168	.	TMV-plasmid	4411	4411
+UN	169	.	TMV-plasmid	4416	4416
+UN	170	.	TMV-plasmid	4418	4432
+UN	171	.	TMV-plasmid	4434	4682
+UN	172	.	TMV-plasmid	4686	4686
+UN	173	.	TMV-plasmid	4831	4831
+UN	174	.	TMV-plasmid	4846	4846
+UN	175	.	TMV-plasmid	4850	5173
+UN	176	.	TMV-plasmid	5299	5299
+UN	177	.	TMV-plasmid	5303	5400
+UN	178	.	TMV-plasmid	5406	5406
+UN	179	.	TMV-plasmid	5483	5483
+UN	180	.	TMV-plasmid	5493	5493
+UN	181	.	TMV-plasmid	5509	5542
+UN	182	.	TMV-plasmid	5545	5551
+UN	183	.	TMV-plasmid	5557	5558
+UN	184	.	TMV-plasmid	5562	5562
+UN	185	.	TMV-plasmid	5564	5564
+UN	186	.	TMV-plasmid	5586	5586
+UN	187	.	TMV-plasmid	5595	5595
+UN	188	.	TMV-plasmid	5598	5598
+UN	189	.	TMV-plasmid	5625	5625
+UN	190	.	TMV-plasmid	5634	5634
+UN	191	.	TMV-plasmid	5643	5643
+UN	192	.	TMV-plasmid	5673	5673
+UN	193	.	TMV-plasmid	5677	5677
+UN	194	.	TMV-plasmid	5688	6662
+UN	195	.	TMV-plasmid	6800	6800
+UN	196	.	TMV-plasmid	6802	6802
+UN	197	.	TMV-plasmid	6804	6888
+UN	198	.	TMV-plasmid	10254	10411
+DP	199	.	TMV-plasmid	7138	1	TMV-plasmid	10204	-1	background_e_value=2.396e-03	candidate_discordant_count=23	concordant_count=0.0	discordant_count=21	distinct_discordant_count=20	expected_concordant_count=5.3	frequency=1.0000	frequency_lower=0.8609	frequency_upper=1.0000	neg_log10_discordance_p_value=0.2	new_junction_coverage=3.75	side_1_annotate_key=gene	side_1_concordant_count=0	side_1_coverage=0.00	side_1_discordant_count=21	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=621	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=22	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=611
+PD	200	.	TMV-plasmid	7504	-1	TMV-plasmid	7579	1	ambiguous_pair_count=14	candidate_covering_count=41	distinct_pair_count=3	frequency=0.4286	frequency_lower=0.1288	frequency_upper=0.7747	normal_pair_count=4	position_range=145	reject=PAIR_DISTANCE_SCORE	score=0.3	seed_z_score=2.66	shifted_pair_count=3	side_1_annotate_key=gene	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_2_annotate_key=gene	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	size_shift=74	size_shift_lower=66	size_shift_upper=76	total_pair_count=21
+PD	201	.	TMV-plasmid	9672	-1	TMV-plasmid	9673	1	ambiguous_pair_count=18	candidate_covering_count=28	distinct_pair_count=5	frequency=0.3846	frequency_lower=0.1657	frequency_upper=0.6452	normal_pair_count=8	position_range=3	reject=PAIR_DISTANCE_SCORE	score=0.5	seed_z_score=-2.84	shifted_pair_count=5	side_1_annotate_key=gene	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_2_annotate_key=gene	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	size_shift=-253	size_shift_lower=-255	size_shift_upper=-250	total_pair_count=31

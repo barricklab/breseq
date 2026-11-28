@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:41:17 28 Nov 2026
+#=CREATED	13:01:47 28 Nov 2026
 #=PROGRAM	breseq 0.50.0 revision 43c19b63ebc3
 #=COMMAND	./src/breseq/breseq -j 3 -o ./tests/jc_is_copy_merge_1 -r ./tests/jc_is_copy_merge_1/../data/annamia_is630/AP025630_is630_windows.gbk.gz ./tests/jc_is_copy_merge_1/../data/annamia_is630/DRR285493_subset_1.fastq.gz ./tests/jc_is_copy_merge_1/../data/annamia_is630/DRR285493_subset_2.fastq.gz
 #=REFSEQ	./tests/jc_is_copy_merge_1/../data/annamia_is630/AP025630_is630_windows.gbk.gz
@@ -25,8 +25,8 @@ SNP	11	19	AP025630	75158	G	gene_name=–/–	gene_position=intergenic (–/–)	
 SNP	12	20	AP025630	75160	C	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=snp_intergenic	position_end=75160	position_start=75160	ref_seq=A	snp_type=intergenic
 RA	13	.	AP025630	37757	1	.	C	allele_frequencies=C:5.607e-01,.:4.393e-01	consensus_reject=FREQUENCY_CUTOFF	fisher_strand_p_value=6.64418e-01	frequency=5.607e-01	frequency_lower=5.143e-01	frequency_upper=6.065e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=9.58012e-01	locus_tag=–/–	major_base=C	major_cov=85/109	major_frequency=5.607e-01	minor_base=.	minor_cov=71/82	new_cov=85/109	prediction=polymorphism	ref_cov=71/82	score=493.9	snp_type=intergenic	total_cov=156/191
 RA	14	.	AP025630	37760	1	.	T	allele_frequencies=T:4.378e-01,.:5.622e-01	consensus_reject=FREQUENCY_CUTOFF	fisher_strand_p_value=7.46173e-01	frequency=4.378e-01	frequency_lower=3.921e-01	frequency_upper=4.842e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=.	major_cov=87/108	major_frequency=5.622e-01	minor_base=T	minor_cov=71/82	new_cov=71/82	prediction=polymorphism	ref_cov=87/108	score=300.1	snp_type=intergenic	total_cov=158/190
-RA	15	.	AP025630	37836	1	.	T	allele_frequencies=T:9.965e-01,.:3.472e-03	fisher_strand_p_value=2.60316e-01	frequency=9.965e-01	frequency_lower=9.874e-01	frequency_upper=9.997e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=3.75135e-01	locus_tag=–/–	major_base=T	major_cov=156/199	major_frequency=9.965e-01	minor_base=.	minor_cov=0/3	new_cov=156/199	prediction=consensus	ref_cov=0/3	score=649.1	snp_type=intergenic	total_cov=156/202
-RA	16	.	AP025630	37845	1	.	T	allele_frequencies=T:9.969e-01,.:3.147e-03	fisher_strand_p_value=1.00000e+00	frequency=9.969e-01	frequency_lower=9.882e-01	frequency_upper=9.998e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=6.82353e-01	locus_tag=–/–	major_base=T	major_cov=146/193	major_frequency=9.969e-01	minor_base=.	minor_cov=0/1	new_cov=146/193	prediction=consensus	ref_cov=0/1	score=587.4	snp_type=intergenic	total_cov=146/194
+RA	15	.	AP025630	37836	1	.	T	allele_frequencies=T:9.965e-01,.:3.472e-03	fisher_strand_p_value=2.60316e-01	frequency=9.965e-01	frequency_lower=9.874e-01	frequency_upper=9.997e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=3.75135e-01	locus_tag=–/–	major_base=T	major_cov=156/199	major_frequency=9.965e-01	minor_base=.	minor_cov=0/3	new_cov=156/199	prediction=consensus	ref_cov=0/3	score=648.9	snp_type=intergenic	total_cov=156/202
+RA	16	.	AP025630	37845	1	.	T	allele_frequencies=T:9.969e-01,.:3.147e-03	fisher_strand_p_value=1.00000e+00	frequency=9.969e-01	frequency_lower=9.882e-01	frequency_upper=9.998e-01	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=6.82353e-01	locus_tag=–/–	major_base=T	major_cov=146/193	major_frequency=9.969e-01	minor_base=.	minor_cov=0/1	new_cov=146/193	prediction=consensus	ref_cov=0/1	score=587.2	snp_type=intergenic	total_cov=146/194
 RA	17	.	AP025630	69220	1	.	A	allele_frequencies=A:1.000e+00	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.641e-01	frequency_upper=1.000e+00	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=A	major_cov=33/38	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=33/38	prediction=consensus	ref_cov=1/0	score=38.7	snp_type=intergenic	total_cov=34/38
 RA	18	.	AP025630	69229	1	.	A	allele_frequencies=A:1.000e+00	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=9.699e-01	frequency_upper=1.000e+00	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=A	major_cov=37/39	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=37/39	prediction=consensus	ref_cov=0/0	score=45.8	snp_type=intergenic	total_cov=37/39
 RA	19	.	AP025630	75158	0	A	G	allele_frequencies=G:1.000e+00	fisher_strand_p_value=1.00000e+00	frequency=1.000e+00	frequency_lower=8.242e-01	frequency_upper=1.000e+00	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	ks_quality_p_value=1.00000e+00	locus_tag=–/–	major_base=G	major_cov=3/4	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/4	prediction=consensus	ref_cov=0/0	score=19.4	snp_type=intergenic	total_cov=3/4
@@ -186,244 +186,242 @@ UN	172	.	AP025630	33141	33141
 UN	173	.	AP025630	33145	33147
 UN	174	.	AP025630	33149	33154
 UN	175	.	AP025630	33156	33171
-UN	176	.	AP025630	33173	33173
-UN	177	.	AP025630	33175	33183
-UN	178	.	AP025630	33185	33197
-UN	179	.	AP025630	33199	33199
-UN	180	.	AP025630	33201	33208
-UN	181	.	AP025630	33210	33210
-UN	182	.	AP025630	33213	33218
-UN	183	.	AP025630	33792	33792
-UN	184	.	AP025630	33797	33797
-UN	185	.	AP025630	33801	34879
-UN	186	.	AP025630	34882	34885
-UN	187	.	AP025630	34887	34888
-UN	188	.	AP025630	34890	34894
-UN	189	.	AP025630	34896	34903
-UN	190	.	AP025630	38304	38304
-UN	191	.	AP025630	38329	38330
-UN	192	.	AP025630	38334	38335
-UN	193	.	AP025630	38339	38344
-UN	194	.	AP025630	38346	38346
-UN	195	.	AP025630	38354	38354
-UN	196	.	AP025630	38366	38443
-UN	197	.	AP025630	38884	38884
-UN	198	.	AP025630	38887	38887
-UN	199	.	AP025630	38890	38890
-UN	200	.	AP025630	38904	38907
-UN	201	.	AP025630	38909	38912
-UN	202	.	AP025630	38914	40584
-UN	203	.	AP025630	40586	40587
-UN	204	.	AP025630	40656	42090
-UN	205	.	AP025630	42092	42092
-UN	206	.	AP025630	42094	42106
-UN	207	.	AP025630	42108	45534
-UN	208	.	AP025630	45539	45539
-UN	209	.	AP025630	45541	45543
-UN	210	.	AP025630	45545	45547
-UN	211	.	AP025630	45551	45628
-UN	212	.	AP025630	45630	45631
-UN	213	.	AP025630	45638	45653
-UN	214	.	AP025630	45821	45891
-UN	215	.	AP025630	45893	45894
-UN	216	.	AP025630	45897	45897
-UN	217	.	AP025630	45902	45903
-UN	218	.	AP025630	45906	45922
-UN	219	.	AP025630	45932	45932
-UN	220	.	AP025630	45938	45939
-UN	221	.	AP025630	46106	46109
-UN	222	.	AP025630	46130	46130
-UN	223	.	AP025630	46649	46652
-UN	224	.	AP025630	46660	46660
-UN	225	.	AP025630	46663	46664
-UN	226	.	AP025630	46666	46670
-UN	227	.	AP025630	46688	46688
-UN	228	.	AP025630	46690	46690
-UN	229	.	AP025630	46693	46693
-UN	230	.	AP025630	46700	46700
-UN	231	.	AP025630	46702	46705
-UN	232	.	AP025630	46708	46708
-UN	233	.	AP025630	46711	46712
-UN	234	.	AP025630	46714	46715
-UN	235	.	AP025630	47540	48522
-UN	236	.	AP025630	48524	48524
-UN	237	.	AP025630	48526	48533
-UN	238	.	AP025630	48535	48536
-UN	239	.	AP025630	49365	49366
-UN	240	.	AP025630	49371	49371
-UN	241	.	AP025630	49373	49373
-UN	242	.	AP025630	49375	49375
-UN	243	.	AP025630	49377	49379
-UN	244	.	AP025630	49383	49383
-UN	245	.	AP025630	49385	49400
-UN	246	.	AP025630	49403	51507
-UN	247	.	AP025630	51736	51738
-UN	248	.	AP025630	51742	51748
-UN	249	.	AP025630	51750	51753
-UN	250	.	AP025630	51755	51756
-UN	251	.	AP025630	51758	51758
-UN	252	.	AP025630	51760	52077
-UN	253	.	AP025630	52079	52080
-UN	254	.	AP025630	52082	52082
-UN	255	.	AP025630	52182	58167
-UN	256	.	AP025630	58170	58170
-UN	257	.	AP025630	58174	58176
-UN	258	.	AP025630	58178	58178
-UN	259	.	AP025630	58180	58180
-UN	260	.	AP025630	58207	58208
-UN	261	.	AP025630	58210	58210
-UN	262	.	AP025630	58212	58212
-UN	263	.	AP025630	58215	58215
-UN	264	.	AP025630	58219	58219
-UN	265	.	AP025630	58264	58265
-UN	266	.	AP025630	58267	58267
-UN	267	.	AP025630	58269	58270
-UN	268	.	AP025630	58272	58274
-UN	269	.	AP025630	58276	58283
-UN	270	.	AP025630	58286	58286
-UN	271	.	AP025630	58288	60518
-UN	272	.	AP025630	60678	62209
-UN	273	.	AP025630	62211	62211
-UN	274	.	AP025630	62213	62213
-UN	275	.	AP025630	62220	62220
-UN	276	.	AP025630	62222	62222
-UN	277	.	AP025630	62224	62224
-UN	278	.	AP025630	62295	62295
-UN	279	.	AP025630	62297	62299
-UN	280	.	AP025630	62302	62303
-UN	281	.	AP025630	62305	62305
-UN	282	.	AP025630	62307	63346
-UN	283	.	AP025630	63348	63350
-UN	284	.	AP025630	63352	63353
-UN	285	.	AP025630	63355	63356
-UN	286	.	AP025630	63358	63358
-UN	287	.	AP025630	63360	63368
-UN	288	.	AP025630	63370	63371
-UN	289	.	AP025630	63374	63379
-UN	290	.	AP025630	63400	63400
-UN	291	.	AP025630	63438	63439
-UN	292	.	AP025630	63446	63446
-UN	293	.	AP025630	63451	63451
-UN	294	.	AP025630	63453	63454
-UN	295	.	AP025630	63456	64751
-UN	296	.	AP025630	64753	64754
-UN	297	.	AP025630	64756	64756
-UN	298	.	AP025630	64760	64760
-UN	299	.	AP025630	64762	64762
-UN	300	.	AP025630	64764	64774
-UN	301	.	AP025630	64776	64781
-UN	302	.	AP025630	64783	64784
-UN	303	.	AP025630	64787	64787
-UN	304	.	AP025630	64790	64794
-UN	305	.	AP025630	64796	64796
-UN	306	.	AP025630	64799	64799
-UN	307	.	AP025630	64801	64802
-UN	308	.	AP025630	64804	64808
-UN	309	.	AP025630	64812	64814
-UN	310	.	AP025630	64816	64818
-UN	311	.	AP025630	64820	64820
-UN	312	.	AP025630	64822	64822
-UN	313	.	AP025630	64824	64824
-UN	314	.	AP025630	64829	64834
-UN	315	.	AP025630	64836	64838
-UN	316	.	AP025630	64840	64841
-UN	317	.	AP025630	64843	64843
-UN	318	.	AP025630	64845	64855
-UN	319	.	AP025630	64857	64857
-UN	320	.	AP025630	64860	65930
-UN	321	.	AP025630	66121	66121
-UN	322	.	AP025630	66126	66211
-UN	323	.	AP025630	66213	66215
-UN	324	.	AP025630	66217	66219
-UN	325	.	AP025630	66221	66221
-UN	326	.	AP025630	66223	66223
-UN	327	.	AP025630	66225	66225
-UN	328	.	AP025630	66228	66235
-UN	329	.	AP025630	66237	66242
-UN	330	.	AP025630	66244	66244
-UN	331	.	AP025630	66246	66256
-UN	332	.	AP025630	66258	66258
-UN	333	.	AP025630	66261	66265
-UN	334	.	AP025630	66267	66268
-UN	335	.	AP025630	66270	66272
-UN	336	.	AP025630	66274	66275
-UN	337	.	AP025630	66277	66278
-UN	338	.	AP025630	66280	66290
-UN	339	.	AP025630	66292	66293
-UN	340	.	AP025630	66296	66301
-UN	341	.	AP025630	66303	66314
-UN	342	.	AP025630	66316	66317
-UN	343	.	AP025630	66319	66320
-UN	344	.	AP025630	66322	66328
-UN	345	.	AP025630	66331	66331
-UN	346	.	AP025630	66333	66333
-UN	347	.	AP025630	66335	66338
-UN	348	.	AP025630	66341	66341
-UN	349	.	AP025630	66344	66346
-UN	350	.	AP025630	66348	66362
-UN	351	.	AP025630	66365	68771
-UN	352	.	AP025630	68937	68938
-UN	353	.	AP025630	68940	68960
-UN	354	.	AP025630	68962	68963
-UN	355	.	AP025630	68965	68973
-UN	356	.	AP025630	68975	68982
-UN	357	.	AP025630	68984	68989
-UN	358	.	AP025630	68991	69106
-UN	359	.	AP025630	69311	70725
-UN	360	.	AP025630	70733	70733
-UN	361	.	AP025630	70739	70739
-UN	362	.	AP025630	70761	70766
-UN	363	.	AP025630	70768	70769
-UN	364	.	AP025630	70771	70772
-UN	365	.	AP025630	70775	70776
-UN	366	.	AP025630	70959	70961
-UN	367	.	AP025630	70963	70963
-UN	368	.	AP025630	70966	70966
-UN	369	.	AP025630	70968	70970
-UN	370	.	AP025630	70972	70976
-UN	371	.	AP025630	70978	70979
-UN	372	.	AP025630	70981	70987
-UN	373	.	AP025630	70989	70993
-UN	374	.	AP025630	70996	70996
-UN	375	.	AP025630	70998	70998
-UN	376	.	AP025630	71000	75088
-UN	377	.	AP025630	75169	75169
-UN	378	.	AP025630	75172	79807
-UN	379	.	AP025630	79809	79811
-UN	380	.	AP025630	79813	79814
-UN	381	.	AP025630	79816	79816
-UN	382	.	AP025630	79818	79818
-UN	383	.	AP025630	79968	79968
-UN	384	.	AP025630	79970	79971
-UN	385	.	AP025630	79973	79975
-UN	386	.	AP025630	79977	79977
-UN	387	.	AP025630	79979	79987
-UN	388	.	AP025630	79989	79989
-UN	389	.	AP025630	79991	79993
-UN	390	.	AP025630	79996	81244
-DP	391	.	AP025630	2211	1	AP025630	32644	1	background_e_value=0.000e+00	candidate_discordant_count=427	concordant_count=NA	discordant_count=62	distinct_discordant_count=62	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=5.19	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=62	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=repeat	side_2_concordant_count=6	side_2_coverage=NA	side_2_discordant_count=64	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1143/1143 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1301
-DP	392	.	AP025630	2211	1	AP025630	40655	-1	background_e_value=1.675e-237	candidate_discordant_count=172	concordant_count=NA	discordant_count=113	distinct_discordant_count=113	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=9.45	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=113	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=repeat	side_2_concordant_count=0	side_2_coverage=NA	side_2_discordant_count=117	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=690
-DP	393	.	AP025630	2211	1	AP025630	46010	1	background_e_value=2.886e-28	candidate_discordant_count=38	concordant_count=0.0	discordant_count=33	distinct_discordant_count=33	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.9132	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=2.76	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=37	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=33	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1719
-DP	394	.	AP025630	2211	1	AP025630	68745	1	background_e_value=7.237e-38	candidate_discordant_count=46	concordant_count=0.0	discordant_count=41	distinct_discordant_count=41	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.9295	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=3.43	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=41	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=41	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1036
-DP	395	.	AP025630	2211	1	AP025630	69312	-1	background_e_value=1.636e-10	candidate_discordant_count=21	concordant_count=0.0	discordant_count=12	distinct_discordant_count=12	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.7791	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=1.00	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=12	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=12	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=2876
-DP	396	.	AP025630	2975	1	AP025630	51508	-1	background_e_value=6.531e-63	candidate_discordant_count=65	concordant_count=0.0	discordant_count=8	distinct_discordant_count=8	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.6877	frequency_upper=1.0000	neg_log10_discordance_p_value=0.1	new_junction_coverage=0.67	pooled_discordant_count=9	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=13	side_1_coverage=NA	side_1_discordant_count=8	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (379/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=688	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=41	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1270
-DP	397	.	AP025630	3353	-1	AP025630	69316	-1	background_e_value=2.555e-13	candidate_discordant_count=24	concordant_count=0.0	discordant_count=26	distinct_discordant_count=26	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.8912	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=2.18	side_1_annotate_key=repeat	side_1_concordant_count=32	side_1_coverage=NA	side_1_discordant_count=26	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=682	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=27	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=2876
-DP	398	.	AP025630	3353	1	AP025630	21294	-1	background_e_value=2.614e-121	candidate_discordant_count=104	concordant_count=30.0	discordant_count=7	distinct_discordant_count=7	expected_concordant_count=12.0	frequency=0.1892	frequency_lower=0.0923	frequency_upper=0.3262	neg_log10_discordance_p_value=0.2	new_junction_coverage=0.59	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=27	side_1_coverage=NA	side_1_discordant_count=14	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=524	side_2_annotate_key=gene	side_2_concordant_count=30	side_2_coverage=2.51	side_2_discordant_count=15	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1349
-DP	399	.	AP025630	3353	1	AP025630	21294	1	background_e_value=2.886e-28	candidate_discordant_count=38	concordant_count=29.0	discordant_count=7	distinct_discordant_count=7	expected_concordant_count=12.0	frequency=0.1944	frequency_lower=0.0950	frequency_upper=0.3344	neg_log10_discordance_p_value=0.2	new_junction_coverage=0.59	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=27	side_1_coverage=NA	side_1_discordant_count=11	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=524	side_2_annotate_key=gene	side_2_concordant_count=29	side_2_coverage=2.43	side_2_discordant_count=8	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=36
-DP	400	.	AP025630	4032	1	AP025630	10085	-1	background_e_value=3.636e-134	candidate_discordant_count=112	concordant_count=NA	discordant_count=11	distinct_discordant_count=11	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=0.92	side_1_annotate_key=repeat	side_1_concordant_count=30	side_1_coverage=NA	side_1_discordant_count=11	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_redundant=1	side_1_unpaired_count=513	side_2_annotate_key=repeat	side_2_concordant_count=0	side_2_coverage=NA	side_2_discordant_count=33	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1/1141 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=844
-DP	401	.	AP025630	10085	-1	AP025630	20344	-1	background_e_value=7.697e-112	candidate_discordant_count=98	concordant_count=NA	discordant_count=3	distinct_discordant_count=3	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=1.0	new_junction_coverage=0.25	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=19	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=repeat	side_2_concordant_count=54	side_2_coverage=NA	side_2_discordant_count=3	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1143/1143 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=>	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1326
-DP	402	.	AP025630	10085	-1	AP025630	20550	1	background_e_value=2.614e-121	candidate_discordant_count=104	concordant_count=50.0	discordant_count=18	distinct_discordant_count=18	expected_concordant_count=12.0	frequency=0.2647	frequency_lower=0.1786	frequency_upper=0.3668	neg_log10_discordance_p_value=0.0	new_junction_coverage=1.51	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=19	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=gene	side_2_concordant_count=50	side_2_coverage=4.18	side_2_discordant_count=18	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=42
-DP	403	.	AP025630	10085	-1	AP025630	37181	1	background_e_value=0.000e+00	candidate_discordant_count=390	concordant_count=NA	discordant_count=17	distinct_discordant_count=17	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=1.42	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=18	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=repeat	side_2_concordant_count=212	side_2_coverage=NA	side_2_discordant_count=17	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1114/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1278
-DP	404	.	AP025630	10085	-1	AP025630	45638	-1	background_e_value=1.812e-05	candidate_discordant_count=15	concordant_count=0.0	discordant_count=1	distinct_discordant_count=1	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.0500	frequency_upper=1.0000	neg_log10_discordance_p_value=2.1	new_junction_coverage=0.08	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=4	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=1	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1817
-DP	405	.	AP025630	10085	-1	AP025630	46290	1	background_e_value=2.301e-40	candidate_discordant_count=48	concordant_count=0.0	discordant_count=6	distinct_discordant_count=6	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.6070	frequency_upper=1.0000	neg_log10_discordance_p_value=0.3	new_junction_coverage=0.50	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=6	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=6	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1719
-DP	406	.	AP025630	14196	-1	AP025630	34942	-1	background_e_value=0.000e+00	candidate_discordant_count=665	concordant_count=NA	discordant_count=1	distinct_discordant_count=1	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=2.1	new_junction_coverage=0.08	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=37	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1142 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=2158	side_2_annotate_key=repeat	side_2_concordant_count=125	side_2_coverage=NA	side_2_discordant_count=1	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=1056
-DP	407	.	AP025630	19458	1	AP025630	38767	-1	background_e_value=2.084e-113	candidate_discordant_count=99	concordant_count=8.0	discordant_count=98	distinct_discordant_count=98	expected_concordant_count=12.0	frequency=0.9245	frequency_lower=0.8679	frequency_upper=0.9619	neg_log10_discordance_p_value=0.0	new_junction_coverage=8.20	side_1_annotate_key=gene	side_1_concordant_count=8	side_1_coverage=0.67	side_1_discordant_count=98	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (257/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=>	side_1_locus_tag=0	side_1_unpaired_count=1669	side_2_annotate_key=repeat	side_2_concordant_count=2	side_2_coverage=NA	side_2_discordant_count=98	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=889
-DP	408	.	AP025630	19541	1	AP025630	35097	1	background_e_value=2.581e-129	candidate_discordant_count=109	concordant_count=11.0	discordant_count=109	distinct_discordant_count=109	expected_concordant_count=12.0	frequency=0.9083	frequency_lower=0.8528	frequency_upper=0.9477	neg_log10_discordance_p_value=0.0	new_junction_coverage=9.12	side_1_annotate_key=gene	side_1_concordant_count=11	side_1_coverage=0.92	side_1_discordant_count=109	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (340/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=>	side_1_locus_tag=0	side_1_unpaired_count=1562	side_2_annotate_key=repeat	side_2_concordant_count=125	side_2_coverage=NA	side_2_discordant_count=109	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=820
-DP	409	.	AP025630	21294	-1	AP025630	38294	-1	background_e_value=3.897e-118	candidate_discordant_count=102	concordant_count=30.0	discordant_count=41	distinct_discordant_count=41	expected_concordant_count=12.0	frequency=0.5775	frequency_lower=0.4729	frequency_upper=0.6770	neg_log10_discordance_p_value=0.0	new_junction_coverage=3.43	side_1_annotate_key=gene	side_1_concordant_count=30	side_1_coverage=2.51	side_1_discordant_count=42	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=1349	side_2_annotate_key=repeat	side_2_concordant_count=7	side_2_coverage=NA	side_2_discordant_count=61	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=954
-DP	410	.	AP025630	22046	-1	AP025630	45435	1	background_e_value=1.226e-02	candidate_discordant_count=11	concordant_count=7.0	discordant_count=10	distinct_discordant_count=10	expected_concordant_count=12.0	frequency=0.5882	frequency_lower=0.3640	frequency_upper=0.7881	neg_log10_discordance_p_value=0.0	new_junction_coverage=0.84	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=gene	side_1_concordant_count=14	side_1_coverage=1.17	side_1_discordant_count=10	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=1360	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=10	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1719
-DP	411	.	AP025630	26597	-1	AP025630	37181	1	background_e_value=2.215e-90	candidate_discordant_count=84	concordant_count=5.0	discordant_count=28	distinct_discordant_count=28	expected_concordant_count=12.0	frequency=0.8485	frequency_lower=0.7075	frequency_upper=0.9383	neg_log10_discordance_p_value=0.0	new_junction_coverage=2.34	side_1_annotate_key=gene	side_1_concordant_count=5	side_1_coverage=0.42	side_1_discordant_count=31	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (200/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=>	side_1_locus_tag=0	side_1_unpaired_count=40	side_2_annotate_key=repeat	side_2_concordant_count=212	side_2_coverage=NA	side_2_discordant_count=30	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1114/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1278
-DP	412	.	AP025630	32644	1	AP025630	38294	-1	background_e_value=2.614e-121	candidate_discordant_count=104	concordant_count=NA	discordant_count=81	distinct_discordant_count=81	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=6.78	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=83	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=1301	side_2_annotate_key=repeat	side_2_concordant_count=7	side_2_coverage=NA	side_2_discordant_count=81	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=954
-DP	413	.	AP025630	36889	1	AP025630	47059	-1	background_e_value=6.920e-08	candidate_discordant_count=18	concordant_count=0.0	discordant_count=10	distinct_discordant_count=10	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.7411	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=0.84	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=204	side_1_coverage=NA	side_1_discordant_count=10	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_redundant=1	side_1_unpaired_count=862	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=12	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=0
-DP	414	.	AP025630	37181	1	AP025630	68719	-1	background_e_value=5.441e-04	candidate_discordant_count=13	concordant_count=NA	discordant_count=5	distinct_discordant_count=5	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.5	new_junction_coverage=0.42	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=212	side_1_coverage=NA	side_1_discordant_count=5	side_1_gene_name=IS630_224	side_1_gene_position=noncoding (1114/1114 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=1278	side_2_annotate_key=repeat	side_2_concordant_count=0	side_2_coverage=NA	side_2_discordant_count=5	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1/1142 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=2686
-DP	415	.	AP025630	38294	-1	AP025630	51508	1	background_e_value=1.812e-05	candidate_discordant_count=15	concordant_count=0.0	discordant_count=1	distinct_discordant_count=1	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.0500	frequency_upper=1.0000	neg_log10_discordance_p_value=0.1	new_junction_coverage=0.08	pooled_discordant_count=9	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=7	side_1_coverage=NA	side_1_discordant_count=1	side_1_gene_name=IS630_224	side_1_gene_position=noncoding (1/1114 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=954	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=1	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1957
-DP	416	.	AP025630	38294	-1	AP025630	68889	-1	background_e_value=1.226e-02	candidate_discordant_count=11	concordant_count=0.0	discordant_count=2	distinct_discordant_count=2	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.2236	frequency_upper=1.0000	neg_log10_discordance_p_value=1.5	new_junction_coverage=0.17	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=7	side_1_coverage=NA	side_1_discordant_count=9	side_1_gene_name=IS630_224	side_1_gene_position=noncoding (1/1114 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=954	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=2	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=2790
+UN	176	.	AP025630	33173	33183
+UN	177	.	AP025630	33185	33197
+UN	178	.	AP025630	33199	33199
+UN	179	.	AP025630	33201	33208
+UN	180	.	AP025630	33210	33210
+UN	181	.	AP025630	33213	33218
+UN	182	.	AP025630	33792	33792
+UN	183	.	AP025630	33797	33797
+UN	184	.	AP025630	33801	34879
+UN	185	.	AP025630	34882	34885
+UN	186	.	AP025630	34887	34888
+UN	187	.	AP025630	34890	34894
+UN	188	.	AP025630	34896	34903
+UN	189	.	AP025630	38304	38304
+UN	190	.	AP025630	38329	38330
+UN	191	.	AP025630	38334	38335
+UN	192	.	AP025630	38339	38344
+UN	193	.	AP025630	38346	38346
+UN	194	.	AP025630	38354	38354
+UN	195	.	AP025630	38366	38443
+UN	196	.	AP025630	38884	38884
+UN	197	.	AP025630	38887	38887
+UN	198	.	AP025630	38890	38890
+UN	199	.	AP025630	38904	38907
+UN	200	.	AP025630	38909	38912
+UN	201	.	AP025630	38914	40584
+UN	202	.	AP025630	40586	40587
+UN	203	.	AP025630	40656	42090
+UN	204	.	AP025630	42092	42092
+UN	205	.	AP025630	42094	42106
+UN	206	.	AP025630	42108	45534
+UN	207	.	AP025630	45539	45539
+UN	208	.	AP025630	45541	45543
+UN	209	.	AP025630	45545	45547
+UN	210	.	AP025630	45551	45628
+UN	211	.	AP025630	45630	45631
+UN	212	.	AP025630	45638	45653
+UN	213	.	AP025630	45821	45891
+UN	214	.	AP025630	45893	45894
+UN	215	.	AP025630	45897	45897
+UN	216	.	AP025630	45902	45903
+UN	217	.	AP025630	45906	45922
+UN	218	.	AP025630	45932	45932
+UN	219	.	AP025630	45938	45939
+UN	220	.	AP025630	46106	46109
+UN	221	.	AP025630	46130	46130
+UN	222	.	AP025630	46649	46652
+UN	223	.	AP025630	46660	46660
+UN	224	.	AP025630	46663	46664
+UN	225	.	AP025630	46666	46670
+UN	226	.	AP025630	46688	46688
+UN	227	.	AP025630	46690	46690
+UN	228	.	AP025630	46693	46693
+UN	229	.	AP025630	46700	46700
+UN	230	.	AP025630	46702	46705
+UN	231	.	AP025630	46708	46708
+UN	232	.	AP025630	46711	46712
+UN	233	.	AP025630	46714	46715
+UN	234	.	AP025630	47540	48522
+UN	235	.	AP025630	48524	48524
+UN	236	.	AP025630	48526	48533
+UN	237	.	AP025630	48535	48536
+UN	238	.	AP025630	49365	49366
+UN	239	.	AP025630	49371	49371
+UN	240	.	AP025630	49373	49373
+UN	241	.	AP025630	49375	49375
+UN	242	.	AP025630	49377	49379
+UN	243	.	AP025630	49383	49383
+UN	244	.	AP025630	49385	49400
+UN	245	.	AP025630	49403	51507
+UN	246	.	AP025630	51742	51748
+UN	247	.	AP025630	51750	51753
+UN	248	.	AP025630	51755	51756
+UN	249	.	AP025630	51758	51758
+UN	250	.	AP025630	51760	52077
+UN	251	.	AP025630	52079	52080
+UN	252	.	AP025630	52082	52082
+UN	253	.	AP025630	52182	58167
+UN	254	.	AP025630	58170	58170
+UN	255	.	AP025630	58174	58176
+UN	256	.	AP025630	58178	58178
+UN	257	.	AP025630	58180	58180
+UN	258	.	AP025630	58207	58208
+UN	259	.	AP025630	58210	58210
+UN	260	.	AP025630	58212	58212
+UN	261	.	AP025630	58215	58215
+UN	262	.	AP025630	58219	58219
+UN	263	.	AP025630	58264	58265
+UN	264	.	AP025630	58267	58267
+UN	265	.	AP025630	58269	58270
+UN	266	.	AP025630	58272	58274
+UN	267	.	AP025630	58276	58283
+UN	268	.	AP025630	58286	58286
+UN	269	.	AP025630	58288	60518
+UN	270	.	AP025630	60678	62209
+UN	271	.	AP025630	62211	62211
+UN	272	.	AP025630	62213	62213
+UN	273	.	AP025630	62220	62220
+UN	274	.	AP025630	62222	62222
+UN	275	.	AP025630	62224	62224
+UN	276	.	AP025630	62295	62295
+UN	277	.	AP025630	62297	62299
+UN	278	.	AP025630	62302	62303
+UN	279	.	AP025630	62305	62305
+UN	280	.	AP025630	62307	63346
+UN	281	.	AP025630	63348	63350
+UN	282	.	AP025630	63352	63353
+UN	283	.	AP025630	63355	63356
+UN	284	.	AP025630	63358	63358
+UN	285	.	AP025630	63360	63368
+UN	286	.	AP025630	63370	63371
+UN	287	.	AP025630	63374	63379
+UN	288	.	AP025630	63400	63400
+UN	289	.	AP025630	63438	63439
+UN	290	.	AP025630	63446	63446
+UN	291	.	AP025630	63451	63451
+UN	292	.	AP025630	63453	63454
+UN	293	.	AP025630	63456	64751
+UN	294	.	AP025630	64753	64754
+UN	295	.	AP025630	64756	64756
+UN	296	.	AP025630	64760	64760
+UN	297	.	AP025630	64762	64762
+UN	298	.	AP025630	64764	64774
+UN	299	.	AP025630	64776	64781
+UN	300	.	AP025630	64783	64784
+UN	301	.	AP025630	64787	64787
+UN	302	.	AP025630	64790	64794
+UN	303	.	AP025630	64796	64796
+UN	304	.	AP025630	64799	64799
+UN	305	.	AP025630	64801	64802
+UN	306	.	AP025630	64804	64808
+UN	307	.	AP025630	64812	64814
+UN	308	.	AP025630	64816	64818
+UN	309	.	AP025630	64820	64820
+UN	310	.	AP025630	64822	64822
+UN	311	.	AP025630	64824	64824
+UN	312	.	AP025630	64829	64834
+UN	313	.	AP025630	64836	64838
+UN	314	.	AP025630	64840	64841
+UN	315	.	AP025630	64843	64843
+UN	316	.	AP025630	64845	64855
+UN	317	.	AP025630	64857	64857
+UN	318	.	AP025630	64860	65930
+UN	319	.	AP025630	66121	66121
+UN	320	.	AP025630	66126	66211
+UN	321	.	AP025630	66213	66215
+UN	322	.	AP025630	66217	66219
+UN	323	.	AP025630	66221	66221
+UN	324	.	AP025630	66223	66223
+UN	325	.	AP025630	66225	66225
+UN	326	.	AP025630	66228	66235
+UN	327	.	AP025630	66237	66242
+UN	328	.	AP025630	66244	66244
+UN	329	.	AP025630	66246	66256
+UN	330	.	AP025630	66258	66258
+UN	331	.	AP025630	66261	66265
+UN	332	.	AP025630	66267	66268
+UN	333	.	AP025630	66270	66272
+UN	334	.	AP025630	66274	66275
+UN	335	.	AP025630	66277	66278
+UN	336	.	AP025630	66280	66290
+UN	337	.	AP025630	66292	66293
+UN	338	.	AP025630	66296	66301
+UN	339	.	AP025630	66303	66314
+UN	340	.	AP025630	66316	66317
+UN	341	.	AP025630	66319	66320
+UN	342	.	AP025630	66322	66328
+UN	343	.	AP025630	66331	66331
+UN	344	.	AP025630	66333	66333
+UN	345	.	AP025630	66335	66338
+UN	346	.	AP025630	66341	66341
+UN	347	.	AP025630	66344	66346
+UN	348	.	AP025630	66348	66362
+UN	349	.	AP025630	66365	68771
+UN	350	.	AP025630	68937	68938
+UN	351	.	AP025630	68940	68960
+UN	352	.	AP025630	68962	68963
+UN	353	.	AP025630	68965	68973
+UN	354	.	AP025630	68975	68982
+UN	355	.	AP025630	68984	68989
+UN	356	.	AP025630	68991	69106
+UN	357	.	AP025630	69311	70725
+UN	358	.	AP025630	70733	70733
+UN	359	.	AP025630	70739	70739
+UN	360	.	AP025630	70761	70766
+UN	361	.	AP025630	70768	70769
+UN	362	.	AP025630	70771	70772
+UN	363	.	AP025630	70775	70776
+UN	364	.	AP025630	70959	70961
+UN	365	.	AP025630	70963	70963
+UN	366	.	AP025630	70966	70966
+UN	367	.	AP025630	70968	70970
+UN	368	.	AP025630	70972	70976
+UN	369	.	AP025630	70978	70979
+UN	370	.	AP025630	70981	70987
+UN	371	.	AP025630	70989	70993
+UN	372	.	AP025630	70996	70996
+UN	373	.	AP025630	70998	70998
+UN	374	.	AP025630	71000	75088
+UN	375	.	AP025630	75169	75169
+UN	376	.	AP025630	75172	79807
+UN	377	.	AP025630	79809	79811
+UN	378	.	AP025630	79813	79814
+UN	379	.	AP025630	79816	79816
+UN	380	.	AP025630	79818	79818
+UN	381	.	AP025630	79968	79968
+UN	382	.	AP025630	79970	79971
+UN	383	.	AP025630	79973	79975
+UN	384	.	AP025630	79977	79977
+UN	385	.	AP025630	79979	79987
+UN	386	.	AP025630	79989	79989
+UN	387	.	AP025630	79991	79993
+UN	388	.	AP025630	79996	81244
+DP	389	.	AP025630	2211	1	AP025630	32644	1	background_e_value=0.000e+00	candidate_discordant_count=427	concordant_count=NA	discordant_count=62	distinct_discordant_count=62	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=5.19	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=62	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=repeat	side_2_concordant_count=6	side_2_coverage=NA	side_2_discordant_count=64	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1143/1143 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1301
+DP	390	.	AP025630	2211	1	AP025630	40655	-1	background_e_value=1.675e-237	candidate_discordant_count=172	concordant_count=NA	discordant_count=113	distinct_discordant_count=113	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=9.45	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=113	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=repeat	side_2_concordant_count=0	side_2_coverage=NA	side_2_discordant_count=117	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=690
+DP	391	.	AP025630	2211	1	AP025630	46010	1	background_e_value=2.886e-28	candidate_discordant_count=38	concordant_count=0.0	discordant_count=33	distinct_discordant_count=33	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.9132	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=2.76	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=37	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=33	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1719
+DP	392	.	AP025630	2211	1	AP025630	68745	1	background_e_value=7.237e-38	candidate_discordant_count=46	concordant_count=0.0	discordant_count=41	distinct_discordant_count=41	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.9295	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=3.43	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=41	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=41	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1036
+DP	393	.	AP025630	2211	1	AP025630	69312	-1	background_e_value=1.636e-10	candidate_discordant_count=21	concordant_count=0.0	discordant_count=12	distinct_discordant_count=12	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.7791	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=1.00	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=12	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=709	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=12	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=2876
+DP	394	.	AP025630	2975	1	AP025630	51508	-1	background_e_value=6.531e-63	candidate_discordant_count=65	concordant_count=0.0	discordant_count=8	distinct_discordant_count=8	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.6877	frequency_upper=1.0000	neg_log10_discordance_p_value=0.1	new_junction_coverage=0.67	pooled_discordant_count=9	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=13	side_1_coverage=NA	side_1_discordant_count=8	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (379/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=688	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=41	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1268
+DP	395	.	AP025630	3353	-1	AP025630	69316	-1	background_e_value=2.555e-13	candidate_discordant_count=24	concordant_count=0.0	discordant_count=26	distinct_discordant_count=26	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.8912	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=2.18	side_1_annotate_key=repeat	side_1_concordant_count=32	side_1_coverage=NA	side_1_discordant_count=26	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=682	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=27	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=2876
+DP	396	.	AP025630	3353	1	AP025630	21294	-1	background_e_value=2.614e-121	candidate_discordant_count=104	concordant_count=30.0	discordant_count=7	distinct_discordant_count=7	expected_concordant_count=12.0	frequency=0.1892	frequency_lower=0.0923	frequency_upper=0.3262	neg_log10_discordance_p_value=0.2	new_junction_coverage=0.59	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=27	side_1_coverage=NA	side_1_discordant_count=14	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=524	side_2_annotate_key=gene	side_2_concordant_count=30	side_2_coverage=2.51	side_2_discordant_count=15	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1349
+DP	397	.	AP025630	3353	1	AP025630	21294	1	background_e_value=2.886e-28	candidate_discordant_count=38	concordant_count=29.0	discordant_count=7	distinct_discordant_count=7	expected_concordant_count=12.0	frequency=0.1944	frequency_lower=0.0950	frequency_upper=0.3344	neg_log10_discordance_p_value=0.2	new_junction_coverage=0.59	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=27	side_1_coverage=NA	side_1_discordant_count=11	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=524	side_2_annotate_key=gene	side_2_concordant_count=29	side_2_coverage=2.43	side_2_discordant_count=8	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=36
+DP	398	.	AP025630	4032	1	AP025630	10085	-1	background_e_value=3.636e-134	candidate_discordant_count=112	concordant_count=NA	discordant_count=11	distinct_discordant_count=11	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=0.92	side_1_annotate_key=repeat	side_1_concordant_count=30	side_1_coverage=NA	side_1_discordant_count=11	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_redundant=1	side_1_unpaired_count=513	side_2_annotate_key=repeat	side_2_concordant_count=0	side_2_coverage=NA	side_2_discordant_count=33	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1/1141 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=844
+DP	399	.	AP025630	10085	-1	AP025630	20344	-1	background_e_value=7.697e-112	candidate_discordant_count=98	concordant_count=NA	discordant_count=3	distinct_discordant_count=3	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=1.0	new_junction_coverage=0.25	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=19	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=repeat	side_2_concordant_count=54	side_2_coverage=NA	side_2_discordant_count=3	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1143/1143 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=>	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1326
+DP	400	.	AP025630	10085	-1	AP025630	20550	1	background_e_value=2.614e-121	candidate_discordant_count=104	concordant_count=50.0	discordant_count=18	distinct_discordant_count=18	expected_concordant_count=12.0	frequency=0.2647	frequency_lower=0.1786	frequency_upper=0.3668	neg_log10_discordance_p_value=0.0	new_junction_coverage=1.51	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=19	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=gene	side_2_concordant_count=50	side_2_coverage=4.18	side_2_discordant_count=18	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=42
+DP	401	.	AP025630	10085	-1	AP025630	37181	1	background_e_value=0.000e+00	candidate_discordant_count=390	concordant_count=NA	discordant_count=17	distinct_discordant_count=17	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=1.42	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=18	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=repeat	side_2_concordant_count=212	side_2_coverage=NA	side_2_discordant_count=17	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1114/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1278
+DP	402	.	AP025630	10085	-1	AP025630	45638	-1	background_e_value=1.812e-05	candidate_discordant_count=15	concordant_count=0.0	discordant_count=1	distinct_discordant_count=1	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.0500	frequency_upper=1.0000	neg_log10_discordance_p_value=2.1	new_junction_coverage=0.08	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=4	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=1	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1817
+DP	403	.	AP025630	10085	-1	AP025630	46290	1	background_e_value=2.301e-40	candidate_discordant_count=48	concordant_count=0.0	discordant_count=6	distinct_discordant_count=6	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.6070	frequency_upper=1.0000	neg_log10_discordance_p_value=0.3	new_junction_coverage=0.50	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=6	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1141 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=844	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=6	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1719
+DP	404	.	AP025630	14196	-1	AP025630	34942	-1	background_e_value=0.000e+00	candidate_discordant_count=665	concordant_count=NA	discordant_count=1	distinct_discordant_count=1	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=2.1	new_junction_coverage=0.08	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=0	side_1_coverage=NA	side_1_discordant_count=37	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1/1142 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=2158	side_2_annotate_key=repeat	side_2_concordant_count=125	side_2_coverage=NA	side_2_discordant_count=1	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=1056
+DP	405	.	AP025630	19458	1	AP025630	38767	-1	background_e_value=2.084e-113	candidate_discordant_count=99	concordant_count=8.0	discordant_count=98	distinct_discordant_count=98	expected_concordant_count=12.0	frequency=0.9245	frequency_lower=0.8679	frequency_upper=0.9619	neg_log10_discordance_p_value=0.0	new_junction_coverage=8.20	side_1_annotate_key=gene	side_1_concordant_count=8	side_1_coverage=0.67	side_1_discordant_count=98	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (257/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=>	side_1_locus_tag=0	side_1_unpaired_count=1669	side_2_annotate_key=repeat	side_2_concordant_count=2	side_2_coverage=NA	side_2_discordant_count=98	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=889
+DP	406	.	AP025630	19541	1	AP025630	35097	1	background_e_value=2.581e-129	candidate_discordant_count=109	concordant_count=11.0	discordant_count=109	distinct_discordant_count=109	expected_concordant_count=12.0	frequency=0.9083	frequency_lower=0.8528	frequency_upper=0.9477	neg_log10_discordance_p_value=0.0	new_junction_coverage=9.12	side_1_annotate_key=gene	side_1_concordant_count=11	side_1_coverage=0.92	side_1_discordant_count=109	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (340/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=>	side_1_locus_tag=0	side_1_unpaired_count=1562	side_2_annotate_key=repeat	side_2_concordant_count=125	side_2_coverage=NA	side_2_discordant_count=109	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_redundant=1	side_2_unpaired_count=820
+DP	407	.	AP025630	21294	-1	AP025630	38294	-1	background_e_value=3.897e-118	candidate_discordant_count=102	concordant_count=30.0	discordant_count=41	distinct_discordant_count=41	expected_concordant_count=12.0	frequency=0.5775	frequency_lower=0.4729	frequency_upper=0.6770	neg_log10_discordance_p_value=0.0	new_junction_coverage=3.43	side_1_annotate_key=gene	side_1_concordant_count=30	side_1_coverage=2.51	side_1_discordant_count=42	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=1349	side_2_annotate_key=repeat	side_2_concordant_count=7	side_2_coverage=NA	side_2_discordant_count=61	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=954
+DP	408	.	AP025630	22046	-1	AP025630	45435	1	background_e_value=1.226e-02	candidate_discordant_count=11	concordant_count=7.0	discordant_count=10	distinct_discordant_count=10	expected_concordant_count=12.0	frequency=0.5882	frequency_lower=0.3640	frequency_upper=0.7881	neg_log10_discordance_p_value=0.0	new_junction_coverage=0.84	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=gene	side_1_concordant_count=14	side_1_coverage=1.17	side_1_discordant_count=10	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_unpaired_count=1360	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=10	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1719
+DP	409	.	AP025630	26597	-1	AP025630	37181	1	background_e_value=2.215e-90	candidate_discordant_count=84	concordant_count=5.0	discordant_count=28	distinct_discordant_count=28	expected_concordant_count=12.0	frequency=0.8485	frequency_lower=0.7075	frequency_upper=0.9383	neg_log10_discordance_p_value=0.0	new_junction_coverage=2.34	side_1_annotate_key=gene	side_1_concordant_count=5	side_1_coverage=0.42	side_1_discordant_count=31	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (200/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=>	side_1_locus_tag=0	side_1_unpaired_count=40	side_2_annotate_key=repeat	side_2_concordant_count=212	side_2_coverage=NA	side_2_discordant_count=30	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1114/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=1278
+DP	410	.	AP025630	32644	1	AP025630	38294	-1	background_e_value=2.614e-121	candidate_discordant_count=104	concordant_count=NA	discordant_count=81	distinct_discordant_count=81	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.0	new_junction_coverage=6.78	side_1_annotate_key=repeat	side_1_concordant_count=6	side_1_coverage=NA	side_1_discordant_count=83	side_1_gene_name=IS630_443_IS630__protein:plasmid:121150	side_1_gene_position=noncoding (1143/1143 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=1301	side_2_annotate_key=repeat	side_2_concordant_count=7	side_2_coverage=NA	side_2_discordant_count=81	side_2_gene_name=IS630_224	side_2_gene_position=noncoding (1/1114 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=954
+DP	411	.	AP025630	36889	1	AP025630	47059	-1	background_e_value=6.920e-08	candidate_discordant_count=18	concordant_count=0.0	discordant_count=10	distinct_discordant_count=10	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.7411	frequency_upper=1.0000	neg_log10_discordance_p_value=0.0	new_junction_coverage=0.84	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=204	side_1_coverage=NA	side_1_discordant_count=10	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_redundant=1	side_1_unpaired_count=862	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=12	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=0
+DP	412	.	AP025630	37181	1	AP025630	68719	-1	background_e_value=5.441e-04	candidate_discordant_count=13	concordant_count=NA	discordant_count=5	distinct_discordant_count=5	expected_concordant_count=12.0	frequency=NA	frequency_lower=NA	frequency_upper=NA	neg_log10_discordance_p_value=0.5	new_junction_coverage=0.42	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=212	side_1_coverage=NA	side_1_discordant_count=5	side_1_gene_name=IS630_224	side_1_gene_position=noncoding (1114/1114 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=1278	side_2_annotate_key=repeat	side_2_concordant_count=0	side_2_coverage=NA	side_2_discordant_count=5	side_2_gene_name=IS630_443_IS630__protein:plasmid:121150	side_2_gene_position=noncoding (1/1142 nt)	side_2_gene_product=Complete IS630 family IS element	side_2_gene_strand=<	side_2_locus_tag=0	side_2_redundant=1	side_2_unpaired_count=2686
+DP	413	.	AP025630	38294	-1	AP025630	51508	1	background_e_value=1.812e-05	candidate_discordant_count=15	concordant_count=0.0	discordant_count=1	distinct_discordant_count=1	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.0500	frequency_upper=1.0000	neg_log10_discordance_p_value=0.1	new_junction_coverage=0.08	pooled_discordant_count=9	reject=DISCORDANT_PAIR_FREQUENCY,DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=7	side_1_coverage=NA	side_1_discordant_count=1	side_1_gene_name=IS630_224	side_1_gene_position=noncoding (1/1114 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=954	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=1	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=1958
+DP	414	.	AP025630	38294	-1	AP025630	68889	-1	background_e_value=1.226e-02	candidate_discordant_count=11	concordant_count=0.0	discordant_count=2	distinct_discordant_count=2	expected_concordant_count=12.0	frequency=1.0000	frequency_lower=0.2236	frequency_upper=1.0000	neg_log10_discordance_p_value=1.5	new_junction_coverage=0.17	reject=DISCORDANT_PAIR_SUPPORT	side_1_annotate_key=repeat	side_1_concordant_count=7	side_1_coverage=NA	side_1_discordant_count=9	side_1_gene_name=IS630_224	side_1_gene_position=noncoding (1/1114 nt)	side_1_gene_product=Complete IS630 family IS element	side_1_gene_strand=<	side_1_locus_tag=0	side_1_redundant=1	side_1_unpaired_count=954	side_2_annotate_key=gene	side_2_concordant_count=0	side_2_coverage=0.00	side_2_discordant_count=2	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_unpaired_count=2790

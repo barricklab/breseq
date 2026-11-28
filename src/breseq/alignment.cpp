@@ -1299,7 +1299,8 @@ void bam_file::write_moved_alignment(
 	}
 
 	// If we are operating on the opposite read strand,
-	// Reverse complement sequence, reverse quals, and toggle strand bit
+	// Reverse complement sequence, reverse quals, and toggle strand bit (the bit is toggled where the
+	// flag is written, below)
 	if (read_strand == -1)
 	{
 		seq = reverse_complement(seq);
@@ -1616,9 +1617,18 @@ void bam_file::write_moved_alignment(
 	//// Create the BAM line and write it
 	////
 
+  // The strand bit has to follow the sequence. When read_strand is -1 the read was reverse-
+  // complemented above to put it on the reference's forward strand, so relative to the REFERENCE it
+  // lies on the opposite strand to the one its junction alignment records. Leaving 0x10 as it was
+  // flagged every such piece on the wrong strand -- both pieces of a read crossing a circular origin,
+  // for one, so its pair read as FF/RR in an FR library -- and fed the wrong strand into the RA
+  // strand counts and the error table's read-position covariate.
+  uint32_t moved_flag = apply_mate_flag(fix_flags(a.flag()), rg);
+  if (read_strand == -1) moved_flag ^= BAM_FREVERSE;
+
   vector<string> ll = make_vector<string>
 		(a.read_name() + "-M" + to_string(junction_side))
-		(to_string(apply_mate_flag(fix_flags(a.flag()), rg)))
+		(to_string(moved_flag))
 		(seq_id)
 		(to_string(reference_match_start))
     ("255")
