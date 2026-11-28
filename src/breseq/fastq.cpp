@@ -18,6 +18,10 @@
 
 *****************************************************************************/
 
+#include <deque>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include "fastq.h"
 
 #include <zlib.h>
@@ -79,6 +83,79 @@ namespace breseq {
     size_t trim_mate_pair_junction_adapter(cFastqSequence& seq);
     void warn_mate_pair_junction_adapter(const string& file_name, const double fraction, const string& adapter_name, const bool trimming);
   }
+
+
+  // READING A FASTQ FILE ON A THREAD OF ITS OWN
+  //
+  // Parsing reads out of a FASTQ file is most of the conversion pass, and a pass over a pair of
+  // files parsed one and then the other, read by read. Each source here runs on its own thread
+  // and hands its reads over in batches, in order, so the two files of a pair are parsed side by
+  // side and the pass itself only filters and writes. The source is called from that one thread
+  // only, with ONE sequence object reused from read to read, exactly as the pass used to call it
+  // (cFastqFile::read_sequence leaves some fields of the object alone, so that matters).
+  class cPrefetchedSequenceSource {
+  public:
+    cPrefetchedSequenceSource(std::function<bool(cFastqSequence&)> source)
+    : m_source(source), m_source_done(false), m_stop(false), m_next(0), m_thread(&cPrefetchedSequenceSource::run, this) {}
+
+    ~cPrefetchedSequenceSource()
+    {
+      {
+        unique_lock<mutex> lock(m_mutex);
+        m_stop = true;
+        m_not_full.notify_all();
+      }
+      m_thread.join();
+    }
+
+    bool next(cFastqSequence& sequence)
+    {
+      if (m_next >= m_current.size()) {
+        unique_lock<mutex> lock(m_mutex);
+        while (m_batches.empty() && !m_source_done) m_not_empty.wait(lock);
+        if (m_batches.empty()) return false;
+        m_current.swap(m_batches.front());
+        m_batches.pop_front();
+        m_next = 0;
+        m_not_full.notify_one();
+      }
+      sequence = std::move(m_current[m_next++]);
+      return true;
+    }
+
+  private:
+    static const size_t kBatchSize = 1024;
+    static const size_t kMaximumBatches = 16;
+
+    void run()
+    {
+      cFastqSequence sequence;
+      bool more = true;
+      while (more) {
+        vector<cFastqSequence> batch;
+        batch.reserve(kBatchSize);
+        while ((batch.size() < kBatchSize) && (more = m_source(sequence))) batch.push_back(sequence);
+
+        unique_lock<mutex> lock(m_mutex);
+        while ((m_batches.size() >= kMaximumBatches) && !m_stop) m_not_full.wait(lock);
+        if (m_stop) break;
+        if (!batch.empty()) m_batches.push_back(std::move(batch));
+        m_not_empty.notify_one();
+      }
+      unique_lock<mutex> lock(m_mutex);
+      m_source_done = true;
+      m_not_empty.notify_all();
+    }
+
+    std::function<bool(cFastqSequence&)> m_source;
+    mutex m_mutex;
+    condition_variable m_not_empty, m_not_full;
+    deque<vector<cFastqSequence> > m_batches;
+    bool m_source_done, m_stop;
+    vector<cFastqSequence> m_current;   // touched only by the consumer
+    size_t m_next;
+    thread m_thread;
+  };
 
   AnalyzeFastqSummary normalize_fastq(
                                         const string &file_name,
@@ -203,6 +280,14 @@ namespace breseq {
       cReadSubsampler subsampler(read_keep_fraction);
       uint32_t on_read = 1;
       cFastqSequence original_sequence;
+
+      // Declared last so that it is stopped first, before anything it could still be feeding.
+      unique_ptr<cPrefetchedSequenceSource> prefetched;
+      if (num_threads > 1) {
+        prefetched.reset(new cPrefetchedSequenceSource(get_next_sequence));
+        cPrefetchedSequenceSource* source = prefetched.get();
+        get_next_sequence = [source](cFastqSequence& seq) -> bool { return source->next(seq); };
+      }
 
       while (get_next_sequence(original_sequence)) {
 
@@ -470,6 +555,10 @@ namespace breseq {
     int32_t numerical_quality_offset_adjustment = prelim_offset - static_cast<int32_t>(format_to_chr_offset[quality_format]);
 
     size_t buffered_idx = 0;
+    // Made once, not once per read: building a converter fills a table from several string-keyed
+    // maps, and doing that for every read cost more than reading the read. The quality format is
+    // settled by this point, and this source is used for one pass only.
+    cFastqQualityConverter fqc_for_offset(quality_format, "SANGER");
     auto get_buffered_then_stream = [&](cFastqSequence& seq) -> bool {
       if (buffered_idx < buffered_reads.size()) {
         seq = std::move(buffered_reads[buffered_idx++]);
@@ -480,7 +569,6 @@ namespace breseq {
         }
         return true;
       }
-      cFastqQualityConverter fqc_for_offset(quality_format, "SANGER");
       return input_fastq_file.read_sequence(seq, fqc_for_offset);
     };
 
@@ -769,6 +857,17 @@ namespace breseq {
 
       cFastqSequence orig_r1, orig_r2;
 
+      // The two files are parsed side by side. Declared last so that they are stopped first.
+      unique_ptr<cPrefetchedSequenceSource> prefetched_r1, prefetched_r2;
+      if (num_threads > 1) {
+        prefetched_r1.reset(new cPrefetchedSequenceSource(get_next_r1));
+        prefetched_r2.reset(new cPrefetchedSequenceSource(get_next_r2));
+        cPrefetchedSequenceSource* source_r1 = prefetched_r1.get();
+        cPrefetchedSequenceSource* source_r2 = prefetched_r2.get();
+        get_next_r1 = [source_r1](cFastqSequence& seq) -> bool { return source_r1->next(seq); };
+        get_next_r2 = [source_r2](cFastqSequence& seq) -> bool { return source_r2->next(seq); };
+      }
+
       while (get_next_r1(orig_r1)) {
         if (!get_next_r2(orig_r2)) {
           cerr << "  Warning: R2 file ended before R1 in paired FASTQ processing. Files may have different read counts." << endl;
@@ -972,6 +1071,10 @@ namespace breseq {
     trim_junction_adapter = is_mate_pair_library && trim_mate_pair_junction_adapters;
 
     size_t buffered_idx = 0;
+    // Made once, not once per read: building a converter fills a table from several string-keyed
+    // maps, and doing that for every read cost more than reading the read. The quality format is
+    // settled by this point, and this source is used for one pass only.
+    cFastqQualityConverter fqc_for_offset(quality_format, "SANGER");
     auto get_buffered_then_stream_r1 = [&](cFastqSequence& seq) -> bool {
       if (buffered_idx < buffered_reads.size()) {
         seq = std::move(buffered_reads[buffered_idx++]);
@@ -982,7 +1085,6 @@ namespace breseq {
         }
         return true;
       }
-      cFastqQualityConverter fqc_for_offset(quality_format, "SANGER");
       return r1_input.read_sequence(seq, fqc_for_offset);
     };
 
