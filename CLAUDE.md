@@ -406,6 +406,22 @@ ignored there because a sequence end is where their statistic stops being measur
 artifact, and a cross-sequence DP sits at two contig ends *by construction*. Adding DP to that rule
 would silently discard every translocation call.
 
+**Pair handling is linear, so pairs across a circular origin are lost — FUTURE WORK.** Nothing in
+`compute_orientation_and_distance`, `classify_pair` or `mark_pair_info` (`resolve_alignments.cpp`),
+PD's gap model (`pd_evidence.cpp`, `identify_mutations.cpp` seed ring) or the stage-3 fit
+(`best_pair_orientation_and_distance`, `candidate_junctions.cpp`) knows a sequence is circular. A pair
+whose mate CROSSES the origin is junction-best on the origin junction and is never classified (the
+paired loop's `else` branch; its `-M1`/`-M2` pieces are written later with no pair fields), and a pair
+whose mates STRADDLE it is measured as RF about a sequence length apart. Both are the long fragments
+covering a position near the origin, so within one maximum fragment length of it the surviving pairs
+look short and PD saw a size shift with no event (a 6,114-bp Salmonella plasmid at 620x: PD 510 bp
+from the end, -170 bp). For now a PD within `distance_cutoff` of a circular origin is
+`ignore=CIRCULAR_CHROMOSOME`, like the origin's JC, DP and MC. A real fix would make those functions
+wrap-aware on circular sequences (including the concordant-crossing accumulator, whose gap would
+otherwise cover the whole interior), hold an origin-crossing pair until its junction resolves so the
+near `-M` piece can carry the pair fields (`write_moved_alignment`; the mate is otherwise already
+written by then), and let PD represent a gap that wraps the origin.
+
 `MP` counts only reads whose mate produced **no alignment at all** — not merely reads flagged
 `BAM_FMUNMAP`, which also covers mates the aligner placed and breseq then rejected on
 `--require-match-fraction` (see `kBreseqMateNeverAlignedBAMTag`). `SC`, `MP` and `PD` are each

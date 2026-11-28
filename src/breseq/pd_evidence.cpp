@@ -703,6 +703,7 @@ namespace breseq {
     double   score;            // -log10 of the genome-wide e-value, filled in after the null is fitted
     bool     snapped;
     bool     contig_end;
+    bool     circular_origin;
     bool     inconsistent;
     bool     suppressed;
   };
@@ -1021,6 +1022,17 @@ namespace breseq {
       // Marked IGNORE rather than rejected: an artifact of the reference's shape.
       c.contig_end = !ref_seq_info.is_circular(r.seq_id) &&
                      ((b <= static_cast<int32_t>(pair_median)) || (b >= seqlen - static_cast<int32_t>(pair_median)));
+      // The same artifact at the origin of a CIRCULAR sequence, from a different cause: pair handling
+      // is linear, so a pair whose fragment runs across the origin is never measured -- a mate that
+      // crosses it is aligned to the origin junction and the pair is not classified, and a pair whose
+      // mates sit either side of it is measured as an RF pair about a sequence length apart. Those are
+      // the LONG fragments covering a position near the origin, so within one maximum fragment length
+      // (distance_cutoff, not pair_median) the surviving pairs look short: on a 6,114-bp plasmid at
+      // 620x a PD 510 bp from the end reported a -170-bp shift with no insertion. See CLAUDE.md (PD)
+      // for what a real fix would take.
+      const int32_t origin_window = max(static_cast<int32_t>(pair_median), static_cast<int32_t>(ceil(distance_cutoff)));
+      c.circular_origin = ref_seq_info.is_circular(r.seq_id) &&
+                          ((b <= origin_window) || (b >= seqlen - origin_window));
       c.suppressed = false;
       calls.push_back(c);
     }
@@ -1180,6 +1192,7 @@ namespace breseq {
       pd[SIDE_2_STRAND] = to_string(+1);
 
       if (c.contig_end) pd[IGNORE] = "CONTIG_END";
+      if (c.circular_origin) pd[IGNORE] = "CIRCULAR_CHROMOSOME";
 
       pd[PD_SIZE_SHIFT] = to_string(c.delta);
       pd[PD_SIZE_SHIFT_LOWER] = to_string(c.delta_lower);
